@@ -171,34 +171,37 @@ use Hum::EMBL::Utils qw( EMBLdate );
         # CC   *     9546 9645: gap of      100 bp
         # CC   *     9646    20744: contig of 11099 bp in length
         # CC   *    20745 20844: gap of      100 bp
-
-
-        # Comments
-	my $reads_cc = $embl->newCC;
-	$reads_cc->list($pdmp->make_read_comments());
+        $embl->newCC->list(
+            '-------------- Genome Center',
+            'Center: Sanger Centre',
+            'Center code: SC',
+            'Web site: http://www.sanger.ac.uk',
+            'Contact: humquery@sanger.ac.uk',
+            '-------------- Project Information',
+            "Center project name: $project",
+            '-------------- Summary Statistics',
+            'Assembly program: XGAP4; version 4.5',     # This is a lie
+            $pdmp->make_read_comments(),
+            $pdmp->make_consensus_quality_summary(),
+            $pdmp->make_consensus_length_report(),
+            $pdmp->make_q20_depth_report(),
+            '--------------',
+            $pdmp->make_fragment_summary($embl, $number_Ns, @contig_pos),
+        );
         
-        # This is a lie:
-	$embl->newCC->list("Assembly program: XGAP4; version 4.5");
+#        my $unfin_cc = $embl->newCC;
+#        $unfin_cc->list(
+#"IMPORTANT: This sequence is unfinished and does not necessarily
+#represent the correct sequence.  Work on the sequence is in progress and
+#the release of this data is based on the understanding that the sequence
+#may change as work continues.  The sequence may be contaminated with
+#foreign sequence from E.coli, yeast, vector, phage etc.");
+#        $embl->newXX;
         
-        # Quality reports
-	$embl->newCC->list($pdmp->make_consensus_quality_summary(),
-			   $pdmp->make_consensus_length_report());
-	$embl->newCC->list($pdmp->make_q20_depth_report());
-	$embl->newXX;
-
-        my $unfin_cc = $embl->newCC;
-        $unfin_cc->list(
-"IMPORTANT: This sequence is unfinished and does not necessarily
-represent the correct sequence.  Work on the sequence is in progress and
-the release of this data is based on the understanding that the sequence
-may change as work continues.  The sequence may be contaminated with
-foreign sequence from E.coli, yeast, vector, phage etc.");
-        $embl->newXX;
-        
-        my $contig_cc = $embl->newCC;
-        $contig_cc->list(
-            "Order of segments is not known; 800 n's separate segments.",
-            map "Contig_ID: $_  Length: $contig_lengths{$_}bp", $pdmp->contig_list );
+        #my $contig_cc = $embl->newCC;
+        #$contig_cc->list(
+        #    "Order of segments is not known; 800 n's separate segments.",
+        #    map "Contig_ID: $_  Length: $contig_lengths{$_}bp", $pdmp->contig_list );
         $embl->newXX;
     
         # Feature table source feature
@@ -237,15 +240,15 @@ foreign sequence from E.coli, yeast, vector, phage etc.");
                     }
                 }
                 
-                # Add gap features
-                unless ($i == $#contig_pos) {
-                    my $spacer = $embl->newFT;
-                    $spacer->key('misc_feature');
-                    my $loc = $spacer->newLocation;
-	            $loc->exons([$end + 1, $end + $number_Ns]);
-	            $loc->strand('W');
-                    $spacer->addQualifierStrings('note', 'gap of unknown length');
-                }
+                ## Add gap features
+                #unless ($i == $#contig_pos) {
+                #    my $spacer = $embl->newFT;
+                #    $spacer->key('misc_feature');
+                #    my $loc = $spacer->newLocation;
+                #$loc->exons([$end + 1, $end + $number_Ns]);
+                #$loc->strand('W');
+                #    $spacer->addQualifierStrings('note', 'gap of unknown length');
+                #}
 	    }
         }
         $embl->newXX;
@@ -260,6 +263,27 @@ foreign sequence from E.coli, yeast, vector, phage etc.");
     }
 }
 
+sub make_fragment_summary {
+    my( $pdmp, $embl, $spacer_length, @contig_pos ) = @_;
+    
+    my( @list );
+    for (my $i = 0; $i < @contig_pos; $i++) {
+        my ($contig, $start, $end) = @{$contig_pos[$i]};
+        my $frag = sprintf("* %8d %8d contig of %d bp in length",
+            $start, $end, $end - $start + 1);
+        if (my $group = $pdmp->contig_chain($contig)) {
+            $frag .= "; group $group";
+        }
+        push(@list, $frag);
+        unless ($i == $#contig_pos) {
+            push(@list,
+                sprintf("* %8d %8d gap of unknown length",
+                    $end + 1, $end + $spacer_length, $spacer_length)
+            );
+        }
+    }
+    return @list;
+}
 
 sub make_read_comments {
     my ($pdmp) = @_;
