@@ -461,7 +461,7 @@ sub revcomp_contig {
 sub cleanup_contigs {
     my( $pdmp, $cutoff ) = @_;
 
-    $cutoff = 1000 unless defined $cutoff;
+    $cutoff = 2000 unless defined $cutoff;
 
     # Remove any detected contamination
     foreach my $contig ($pdmp->contig_list) {
