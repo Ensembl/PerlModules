@@ -641,7 +641,7 @@ sub add_genes_FT {
                     $ft->addQualifier($product);
 
                     # Get just the remarks we need
-                    @remarks = $g->at('Visible.Remark[1]');
+                    @remarks = get_visible_remarks($g);
                     foreach my $remark (@remarks[$r..$#remarks]) {
                         $ft->addQualifierStrings('note', "$remark");
                     }
@@ -677,7 +677,9 @@ sub add_genes_FT {
 sub make_product_qualifier {
     my( $pdmp, $g, $name, $pseudo ) = @_;
     
-    if (my $remark = $g->at('Visible.Remark[1]')) {
+    my ($remark) = get_visible_remarks($g);
+    
+    if ($remark) {        
         my( $prod_qual );
         if ($g->at('Properties.Pseudogene')) {
             # EMBL don't allow the /product qualifier for pseudogenes
@@ -693,9 +695,25 @@ sub make_product_qualifier {
         
         return $product;
     } else {
-        die "No description in Visible.Remark for '$name'\n";
+        die "No description under Visible.Remark for '$name'\n";
     }
     
+}
+
+sub get_visible_remarks {
+    my( $g ) = @_;
+    
+    my @rem = map $_->name, $g->at('Visible.Remark[1]');
+    foreach my $r (@rem) {
+        if (! $r and $r eq "") {
+            my $name = $g->name;
+            die "Error: Invisible empty string under Visible.Remark in Sequence '$name'\n",
+              "This can be fixed by parsing in the following:\n\n",
+              qq{Sequence "$name"\n},
+              qq{-D Remark ""\n\n},;
+        }
+    }
+    return @rem;
 }
 
 BEGIN {
