@@ -372,8 +372,12 @@ sub add_FT_entries {
     sub seq_center_lines {
         my( $pdmp ) = @_;
         
-        my $center_num = $pdmp->funded_by || $pdmp->sequenced_by || 5;
-        my $genome_center_lines = $sequencing_center{$center_num};
+        my( $genome_center_lines );
+        foreach my $num ($pdmp->funded_by, $pdmp->sequenced_by, 5) {
+            last if $genome_center_lines = $sequencing_center{$num};
+        }
+        confess "No Genome Center text found" unless $genome_center_lines;
+        
         my @seq_center = (
             '-------------- Genome Center',
             @$genome_center_lines,
