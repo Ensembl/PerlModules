@@ -50,13 +50,26 @@ sub _reserve_random_port {
     socket($sock, PF_INET, SOCK_STREAM, $tcp);
 
     # Choose an unoccupied port at random
-    my $base = 55000;
-    my $port = 0;
+    my $base        = 55000;
+    my $port        = 0;
+    my $tries       = 0;
+    my $max_tries   = 1000;
     until ($port) {
+        $tries++;
         $port = $base + int(rand 5000);
-        warn "Trying port '$port'\n";
-        last if bind($sock, sockaddr_in($port, INADDR_ANY));
+        print STDERR "\nTrying port '$port' ...";
+        if (bind($sock, sockaddr_in($port, INADDR_ANY))) {
+            print STDERR " Free\n";
+            last;
+        } else {
+            print STDERR " $!\n";
+        }
         $port = 0;
+        
+        # Don't loop for ever!
+        if ($tries >= $max_tries) {
+            confess "Failed to find free port";
+        }
     }
     
     $self->{'_reserved_socket'} = $sock;
@@ -64,6 +77,7 @@ sub _reserve_random_port {
     return $port;
 }
 
+# Call before starting server to free the port.
 sub _release_reserved_port {
     my( $self ) = @_;
     
@@ -91,8 +105,7 @@ sub timeout_string {
 }
 
 sub additional_server_parameters {
-    #return('-silent');
-    return;
+    return('-silent');
 }
 
 sub ace_handle {

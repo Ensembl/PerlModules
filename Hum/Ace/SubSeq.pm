@@ -62,24 +62,6 @@ sub process_ace_start_end_transcript_seq {
         $strand = -1;
     }
     $self->strand($strand);
-
-    # Is this a partial CDS?
-    my( $start_phase );
-    {
-        my( $s_n_f, $codon_start );
-        eval{ ($s_n_f, $codon_start) = map "$_", $t_seq->at('Properties.Start_not_found')->row() };
-        if ($s_n_f) {
-            $codon_start ||= 1;
-        }
-        if ($codon_start and $t_seq->at('Properties.Coding.CDS')) {
-            unless ($codon_start =~ /^[123]$/) {
-                confess("Bad codon start ('$codon_start') in '$t_seq'");
-            }
-            
-            # Store phase in AceDB convention (not EnsEMBL)
-            $start_phase = $codon_start;
-        }
-    }
     
     # Make the exons
     foreach ($t_seq->at('Structure.From.Source_exons[1]')) {
@@ -107,6 +89,34 @@ sub process_ace_start_end_transcript_seq {
     
     my @exons = $self->get_all_Exons
         or confess "No exons in '", $self->name, "'";
+
+    # Add CDS coordinates
+    if (my $cds = $t_seq->at('Properties.Coding.CDS[1]')) {
+        my @cds_coords = map $_->name, $cds->row;
+        if (@cds_coords == 2) {
+            $self->set_translation_region_from_cds_coords(@cds_coords);
+        } else {
+            warn "ERROR: Got ", scalar(@cds_coords), " coordinates from Properties.Coding.CDS";
+        }
+    }
+
+    # Is this a partial CDS?
+    my( $start_phase );
+    {
+        my( $s_n_f, $codon_start );
+        eval{ ($s_n_f, $codon_start) = map "$_", $t_seq->at('Properties.Start_not_found')->row() };
+        if ($s_n_f) {
+            $codon_start ||= 1;
+        }
+        if ($codon_start and $t_seq->at('Properties.Coding.CDS')) {
+            unless ($codon_start =~ /^[123]$/) {
+                confess("Bad codon start ('$codon_start') in '$t_seq'");
+            }
+            
+            # Store phase in AceDB convention (not EnsEMBL)
+            $start_phase = $codon_start;
+        }
+    }
     
     # Add the phase to the first exon
     if (defined $start_phase) {
@@ -140,6 +150,7 @@ sub clone {
         clone_Sequence
         GeneMethod
         strand
+        translation_region
         })
     {
         $new->$meth($old->$meth());
@@ -264,10 +275,57 @@ sub end {
     return $exons[$#exons]->end;
 }
 
+sub set_translation_region_from_cds_coords {
+    my( $self, @coords ) = @_;
+    
+    my $strand = $self->strand;
+    my @exons = $self->get_all_Exons;
+    if ($strand == -1) {
+        @exons = reverse @exons;
+    }
+    
+    my( @t_region );
+    my $pos = 0;
+    foreach my $ex (@exons) {    
+        my $start = $pos + 1;
+        my $end   = $pos + $ex->length;
+        
+        for (my $i = 0; $i < @coords;) {
+            my $c = $coords[$i];
+            if ($c <= $end) {
+                shift @coords;
+                
+                if ($strand == 1) {
+                    push   (@t_region, $ex->start +  $c - $start);
+                }
+                else {
+                    unshift(@t_region, $ex->end   - ($c - $start));
+                }
+            } else {
+                $i++;
+            }
+        }
+        
+        last unless @coords;
+        $pos = $end;
+    }
+    
+    if (@coords == 0 and @t_region == 2) {
+        #print STDERR "translation_region = [@t_region]\n";
+        $self->translation_region(@t_region);
+    } else {
+        confess "Failed to find coordinates (",
+            join(',', @coords),
+            ") in transcript of length ",
+            $pos + 1;
+    }
+}
+
 sub translation_region {
     my( $self, $start, $end ) = @_;
     
     if (defined $start) {
+
         foreach ($start, $end) {
             unless (/^\d+$/) {
                 confess "Bad pos (start = '$start', end = '$end')";
