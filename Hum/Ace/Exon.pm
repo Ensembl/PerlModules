@@ -12,6 +12,21 @@ sub new {
     return bless {}, $pkg;
 }
 
+sub clone {
+    my( $old ) = @_;
+    
+    my $new = ref($old)->new;
+    foreach my $meth (qw{
+        start
+        end
+        phase
+        })
+    {
+        $new->$meth($old->$meth());
+    }
+    return $new;
+}
+
 sub start {
     my( $self, $start ) = @_;
     

@@ -53,11 +53,6 @@ sub process_ace_transcript {
 sub process_ace_start_end_transcript_seq {
     my( $self, $start, $end, $t_seq ) = @_;
 
-    # Get the ace Method
-    if (my $meth = $t_seq->at('Method[1]')) {
-        $self->ace_method($meth->name);
-    }
-
     # Sort out the strand
     my( $strand );
     if ($start < $end) {
@@ -133,6 +128,31 @@ sub process_ace_start_end_transcript_seq {
     $self->validate;
 }
 
+sub clone {
+    my( $old ) = @_;
+    
+    # Make new SubSeq object
+    my $new = ref($old)->new;
+    
+    # Copy scalar fields
+    foreach my $meth (qw{
+        name
+        clone_Sequence
+        GeneMethod
+        strand
+        })
+    {
+        $new->$meth($old->$meth());
+    }
+
+    # Clone each exon, and add to new SubSeq
+    foreach my $old_ex ($old->get_all_Exons) {
+        my $new_ex = $old_ex->clone;
+        $new->add_Exon($new_ex);
+    }
+    return $new;
+}
+
 sub name {
     my( $self, $name ) = @_;
     
@@ -151,13 +171,13 @@ sub clone_Sequence {
     return $self->{'_clone_Sequence'};
 }
 
-sub ace_method {
-    my( $self, $ace_method ) = @_;
+sub GeneMethod {
+    my( $self, $GeneMethod ) = @_;
     
-    if ($ace_method) {
-        $self->{'_ace_method'} = $ace_method;
+    if ($GeneMethod) {
+        $self->{'_GeneMethod'} = $GeneMethod;
     }
-    return $self->{'_ace_method'} || confess "ace_method not set";
+    return $self->{'_GeneMethod'};
 }
 
 sub strand {
@@ -187,15 +207,6 @@ sub is_sorted {
         $self->{'_is_sorted'} = $flag ? 1 : 0;
     }
     return $self->{'_is_sorted'};
-}
-
-sub is_archival {
-    my( $self, $flag ) = @_;
-    
-    if (defined $flag) {
-        $self->{'_is_archival'} = $flag ? 1 : 0;
-    }
-    return $self->{'_is_archival'};
 }
 
 
@@ -255,6 +266,68 @@ sub end {
     return $exons[$#exons]->end;
 }
 
+sub translation_region {
+    my( $self, $start, $end ) = @_;
+    
+    if (defined $start) {
+        foreach ($start, $end) {
+            unless (/^\d+$/) {
+                confess "Bad pos (start = '$start', end = '$end')";
+            }
+        }
+        confess "start '$start' not less than end '$end'"
+            unless $start < $end;
+        $self->{'_translation_region'} = [$start, $end];
+    }
+    if (my $pn = $self->{'_translation_region'}) {
+        return @$pn;
+    } else {
+        return($self->start, $self->end);
+    }
+}
+
+sub cds_coords {
+    my( $self ) = @_;
+    
+    my @t_region    = $self->translation_region;
+    my @exons       = $self->get_all_Exons;
+    my $strand      = $self->strand;
+    my( @cds_coords );
+    my $cds_length = 0;
+    if ($strand == 1) {
+        foreach my $exon (@exons) {
+            my $start = $exon->start;
+            my $end   = $exon->end;
+            for (my $i = 0; $i < @t_region; $i++) {
+                my $pos = $t_region[$i];
+                if ($pos >= $start and $pos <= $end) {
+                    $cds_coords[$i] = $pos - $start + 1 + $cds_length;
+                }
+            }
+            $cds_length += $exon->length;
+        }
+    } else {
+        @t_region = reverse @t_region;
+        foreach my $exon (reverse @exons) {
+            my $start = $exon->start;
+            my $end   = $exon->end;
+            for (my $i = 0; $i < @t_region; $i++) {
+                my $pos = $t_region[$i];
+                if ($pos >= $start and $pos <= $end) {
+                    $cds_coords[$i] = $end - $pos + 1 + $cds_length;
+                }
+            }
+            $cds_length += $exon->length;
+        }
+    }
+    
+    unless ($cds_coords[0] and $cds_coords[1]) {
+        confess("Failed to find translation region coords in exons");
+    }
+    
+    return @cds_coords;
+}
+
 sub subseq_length {
     my( $self ) = @_;
     
@@ -264,6 +337,7 @@ sub subseq_length {
 sub validate {
     my( $self ) = @_;
     
+    my( $t_start, $t_end ) = $self->translation_region;
     my( $last_end );
     foreach my $ex ($self->get_all_Exons) {
         my $start = $ex->start;
@@ -275,7 +349,22 @@ sub validate {
                 if $start <= $last_end;
         }
         $last_end = $end;
+        
+        if ($t_start and $t_start >= $start and $t_start <= $end) {
+            $t_start = 0;
+        }
+        if ($t_end and $t_end >= $start and $t_end <= $end) {
+            $t_end = 0;
+        }
     }
+    my $err = "";
+    if ($t_start) {
+        $err .= "Translation start '$t_start' doesn't overlap any Exon\n";
+    }
+    if ($t_end) {
+        $err .= "Translation end '$t_end' doesn't overlap any Exon\n";
+    }
+    confess $err if $err;
 }
 
 sub contains_all_exons {
@@ -339,35 +428,46 @@ sub as_ace_file_format_text {
     my $end         = $self->end;
     my $strand      = $self->strand;
     my @exons       = $self->get_all_Exons;
-    my $method      = $self->ace_method;
+    my $method      = $self->GeneMethod;
     
     my $clone = $clone_seq->name
         or confess "No sequence name in clone_Sequence";
     
+    # Position in parent sequence
     my $out = qq{\nSequence "$clone"\n}
         . qq{-D SubSequence "$name"\n};
     if ($strand == 1) {
-        $out .= qq{SubSequence "$name" $start $end\n};
+        $out .= qq{SubSequence "$name"  $start $end\n};
     } else {
-        $out .= qq{SubSequence "$name" $end $start\n};
+        $out .= qq{SubSequence "$name"  $end $start\n};
     }
     
     $out .= qq{\n-D Sequence "$name"\n};
     
     $out .= qq{\nSequence "$name"\n}
-        . qq{Method "$method"\n}
         . qq{Source "$clone"\n};
+    
+    
+    if ($method) {
+        my $mn = $method->name;
+        $out .= qq{Method "$mn"\n};
+        if ($method->is_coding) {
+            my( $cds_start, $cds_end ) = $self->cds_coords;
+            $out .= qq{CDS  $cds_start $cds_end\n};
+        }
+    }
+    
     if ($strand == 1) {
         foreach my $ex (@exons) {
             my $x = $ex->start - $start + 1;
             my $y = $ex->end   - $start + 1;
-            $out .= qq{Source_Exons $x $y\n};
+            $out .= qq{Source_Exons  $x $y\n};
         }
     } else {
         foreach my $ex (reverse @exons) {
             my $x = $end - $ex->end   + 1;
             my $y = $end - $ex->start + 1;
-            $out .= qq{Source_Exons $x $y\n};
+            $out .= qq{Source_Exons  $x $y\n};
         }
     }
     

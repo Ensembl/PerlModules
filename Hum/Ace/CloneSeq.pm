@@ -79,6 +79,22 @@ sub add_SubSeq {
     push(@{$self->{'_SubSeq_list'}}, $SubSeq);
 }
 
+sub replace_SubSeq {
+    my( $self, $sub ) = @_;
+    
+    my $name = $sub->name;
+    my $ss_list = $self->{'_SubSeq_list'}
+        or confess "No SubSeq list";
+    for (my $i = 0; $i < @$ss_list; $i++) {
+        my $this = $ss_list->[$i];
+        if ($this->name eq $name) {
+            splice(@$ss_list, $i, 1, $sub);
+            return 1;
+        }
+    }
+    confess "No such SubSeq to replace '$name'";
+}
+
 sub get_all_SubSeqs {
     my( $self ) = @_;
     

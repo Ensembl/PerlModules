@@ -4,11 +4,26 @@
 package Hum::Ace::GeneMethod;
 
 use strict;
+use Carp;
 
 sub new {
     my( $pkg ) = @_;
     
     return bless {}, $pkg;
+}
+
+sub new_from_ace_tag {
+    my( $pkg, $tag ) = @_;
+    
+    my $self = $pkg->new;
+    $self->name($tag->name);
+    my $color = $tag->at('Display.Colour[1]')
+        or confess "No color";
+    $self->color($color->name);
+    if (my $cds_color = $tag->at('Display.CDS_Colour[1]')) {
+        $self->cds_color($cds_color->name);
+    }
+    return $self;
 }
 
 sub name {
@@ -42,11 +57,27 @@ sub is_mutable {
     my( $self, $flag ) = @_;
     
     if (defined $flag) {
-        $self->{'_is_mutable'} = $flag ? 1 : 0;
+        my $value = $self->{'_is_mutable'};
+        if (defined $value) {
+            confess "attempt to change read-only property";
+        } else {
+            $self->{'_is_mutable'} = $flag ? 1 : 0;
+        }
     }
     return $self->{'_is_mutable'};
 }
 
+sub is_coding {
+    my( $self ) = @_;
+    
+    ### Bad to base on just method name
+    my $name = $self->name;
+    if ($name =~ /(pseudo|mrna)/i) {
+        return 0;
+    } else {
+        return 1;
+    }
+}
 
 1;
 

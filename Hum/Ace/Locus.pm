@@ -317,7 +317,7 @@ sub make_transcript_sets {
         # one clone, then we need to rely on a hand-made
         # list of names which make the isoform.
         my $set_names_lister = $self->set_names_lister
-                or confess "No set_names_lister subroutine";
+            or confess "No set_names_lister subroutine";
         foreach my $names (&$set_names_lister($self->name)) {
             
             my( @s );
@@ -507,7 +507,7 @@ sub make_transcript {
         }
         push(@golden_exons, @clone_exons);
     }
-    
+        
     warn "no exons" and return unless @golden_exons;
     
     # Order @golden exons so that they run
