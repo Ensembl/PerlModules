@@ -19,10 +19,71 @@ sub new {
 sub new_from_set_name {
     my( $pkg, $set_name ) = @_;
 
+    if ($set_name =~ /=/) {
+        return $pkg->_new_from_soft_set_name($set_name);
+    } else {
+        return $pkg->_new_from_hard_set_name($set_name);
+    }
+}
+
+{
+    my %tag_sprintf_pat = (
+        'species'   => ' AND sc.species_name = "%s" ',
+        'chr'       => ' AND sc.chr_name = "%s" ',
+        );
+
+    sub _new_from_soft_set_name {
+        my( $pkg, $set_query ) = @_;
+        
+        my $sql = q{
+            SELECT s.sequence_name
+            FROM species_chromosome sc
+              , sequence s
+              , ana_sequence a
+            WHERE sc.chromosome_id = s.chromosome_id
+              AND s.seq_id = a.seq_id
+              AND a.is_current = 'Y'
+            };
+
+        foreach my $tv (split /,/, $set_query) {
+            my ($tag, @val) = split /=/, $tv;
+            confess "Bad tag-value pair '$tv' in '$set_query'"
+                unless @val == 1;
+            if (my $pat = $tag_sprintf_pat{$tag}) {
+                $sql .= sprintf($pat, $val[0]);
+            } else {
+                confess "Tag '$tag' in '$set_query' is unknown.  Known tags:\n",
+                    map("  $_\n", keys %tag_sprintf_pat);
+            }
+        }
+        
+        $sql .= q{ ORDER BY s.sequence_name };
+        
+        warn $sql;
+        
+        my $sth = prepare_statement($sql);
+        $sth->execute;
+        my( @seq_name );
+        while (my ($s) = $sth->fetchrow) {
+            push(@seq_name, $s);
+        }
+        
+        my $self = $pkg->new;
+        $self->set_name($set_query);
+        $self->set_description("Soft set built from '$set_query'");
+        $self->add_sequence_by_name(@seq_name);
+
+        return $self;
+    }
+}
+
+sub _new_from_hard_set_name {
+    my( $pkg, $set_name ) = @_;
+
     my $sth = prepare_statement(qq{
         SELECT aset.set_id
            , aset.set_description
-		       , s.sequence_name
+	   , s.sequence_name
         FROM ana_set aset
           , ana_sequence_set ss
           , ana_sequence a
