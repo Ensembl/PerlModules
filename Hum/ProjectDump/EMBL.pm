@@ -60,7 +60,7 @@ sub embl_checksum {
         my( $pdmp ) = @_;
 
         my $project = $pdmp->project_name;
-        my $acc     = $pdmp->accession || 'AL000000';
+        my $acc     = $pdmp->accession || '';
         my @sec     = $pdmp->secondary;
         my $embl_id = $pdmp->embl_name || 'ENTRYNAME';
         my $author  = $pdmp->author;
