@@ -180,6 +180,16 @@ sub is_sorted {
     return $self->{'_is_sorted'};
 }
 
+sub is_archival {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_is_archival'} = $flag ? 1 : 0;
+    }
+    return $self->{'_is_archival'};
+}
+
+
 ### Methods to record type?
 
 sub sort_Exons {
