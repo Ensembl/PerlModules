@@ -55,7 +55,7 @@ sub acefile_status_id {
         confess "Can't modify acefile_status_id"
             if $self->{'_acefile_status_id'};
         confess "Unknown acefile_status_id '$acefile_status_id'"
-            unless $self->is_valid_ace_status_id($acefile_status_id);
+            unless $self->_is_valid_ace_status_id($acefile_status_id);
                                     
         $self->{'_acefile_status_id'} = $acefile_status_id;
     }
@@ -94,11 +94,14 @@ sub task_name {
         }
 
         $store_acefile ||= prepare_statement(q{
-            INSERT ana_acefile( acefile_name
+            INSERT ana_acefile (acefile_name
               , acefile_status_id
               , ana_seq_id
-              , creation_time
-            VALUES(?,?,?,?,?,FROM_UNIXTIME(?))
+              , creation_time)
+            VALUES(?
+            , ?
+            , ?
+            , FROM_UNIXTIME(?))
             });
         $store_acefile->execute(
             $acefile_name,
@@ -156,17 +159,20 @@ sub task_name {
         } else {
             # Add a new row
             confess "$acefile_name latest date: $latest. Earliest date not defined"
-                if $latest;
+                if $latest;##?
             my $task_name = $self->task_name
                 or confess "task_name is empty";
             $add_dates ||= prepare_statement(q{
-                INSERT ana_task_version( acefile_name
+                INSERT ana_task_version (acefile_name
                   , task_name
                   , earliest_date
-                  , latest_date )
-                VALUES (?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?))                
+                  , latest_date)
+                VALUES (?
+                    , ?
+                    , FROM_UNIXTIME(?)
+                    , FROM_UNIXTIME(?))                
                 });
-            $update_latest_date->execute(
+            $add_dates->execute(
                 $acefile_name,
                 $task_name,
                 $time,
@@ -179,7 +185,7 @@ sub task_name {
 {
     my %valid_ace_status_id;
     
-    sub is_valid_ace_status_id {
+    sub _is_valid_ace_status_id {
         my ($self, $ace_status_id) = @_;
         
         my @valid_ace_status_id;
@@ -200,34 +206,50 @@ sub task_name {
     }
 }
 
-{
-    my %valid_task_name;
-    
-    sub is_valid_task_name {
-        my ($self, $task_name) = @_;
-        
-        my @valid_task_name;
-                
-        unless (%valid_task_name){
-            my $sth = prepare_statement (q{
-            SELECT task_name
-            FROM ana_task });
-                        
-            $sth->execute;            
-            while (my $valid_task_name = $sth->fetchrow) {
-                push (@valid_task_name, $valid_task_name);
-            }                        
-            %valid_task_name = map {$_, 1} @valid_task_name;
-        }
-        return $valid_task_name{$task_name};
-    }
-}
+
 
 1;
 
 __END__
 
 =head1 NAME - Hum::AnaStatus::AceFile
+
+=head1 METHODS  
+
+=ovr4 
+
+=item new
+
+my $acefile = Hum::AnaStatus::AceFile->new
+
+Creates a new AceFile object
+
+=item ana_seq_id
+
+This reports the ana_sequence id.
+
+=item acefile_name
+
+The name of the acefile.
+
+=item acefile_status_id
+
+The status of the acefile.
+
+=item task_name
+
+The task of the acefile
+
+=item creation_time
+
+The time when the acefile was created.
+
+=item store
+
+This method stores acefile object values and updates the task dates 
+in the Submissions database.
+
+=back
 
 =head1 AUTHOR
 

@@ -29,7 +29,6 @@ sub new_from_sequence_name {
           AND a.ana_seq_id = status.ana_seq_id
           AND status.is_current = 'Y'
           AND a.is_current = 'Y'
-          AND status.is_current = 'Y'
           AND s.sequence_name = ?
         });
 
@@ -54,6 +53,7 @@ sub new_from_sequence_name {
         
         my $self = bless {}, $pkg;
         
+        $self->sequence_name($seq_name);
         $self->analysis_directory($analysis_directory);
         $self->analysis_priority($analysis_priority);
         $self->seq_id($seq_id);
@@ -89,7 +89,7 @@ sub new_from_sequence_name {
         confess "Sequence already has status '$status'"
             if $status == $self->status_id;
         confess "Unknown status_id '$status'"
-            unless $self->is_valid_status_id($status);
+            unless $self->_is_valid_status_id($status);
 
         my $ana_seq_id = $self->ana_seq_id
             or confess "No ana_seq_id in object";
@@ -130,8 +130,8 @@ sub new_from_sequence_name {
     sub set_annotator_uname {
         my ($self, $annotator_uname ) = @_;
         
-        confess "missing annotator_uname" unless $annotator_uname;
-        $self->annotator_uname($annotator_uname);##?
+        confess "annotator_uname not defined" unless $annotator_uname;
+        $self->annotator_uname($annotator_uname);
         
         my $ana_seq_id = $self->ana_seq_id
             or confess "No ana_seq_id in object";
@@ -156,7 +156,7 @@ sub status_id {
     
     if ($status_id) {
         confess "Unknown status_id '$status_id'"
-            unless $self->is_valid_status_id($status_id);
+            unless $self->_is_valid_status_id($status_id);
         confess "Can't modify status_id"
             if $self->{'_status_id'};
         $self->{'_status_id'} = $status_id;
@@ -168,7 +168,7 @@ sub status_id {
 {
    my %valid_status_id;
     
-    sub is_valid_status_id {
+    sub _is_valid_status_id {
         my ($self, $status_id) = @_;
         
         my @valid_status_id;
@@ -267,7 +267,7 @@ sub annotator_uname {
     
     if ($annotator_uname) {
         confess "Unknown annotator '$annotator_uname'"
-            unless $self->is_valid_annotator($annotator_uname);
+            unless $self->_is_valid_annotator($annotator_uname);
         confess "Can't modify annotator_uname"
             if $self->{'_annotator_uname'};
         $self->{'_annotator_uname'} = $annotator_uname;
@@ -278,7 +278,7 @@ sub annotator_uname {
 {
     my( %valid_annotators );
 
-    sub is_valid_annotator {
+    sub _is_valid_annotator {
         my( $self, $annotator ) = @_;
                 
         unless (%valid_annotators){
@@ -298,6 +298,19 @@ sub annotator_uname {
     }
 }
 
+
+sub sequence_name {
+    my ( $self, $seq_name ) = @_;
+
+    if ($seq_name) {
+        confess "Can't modify seq_name"
+            if $self->{'_seq_name'};
+        $self->{'_seq_name'} = $seq_name;
+    }
+    return $self->{'_seq_name'};
+}
+
+
 {
     my( $get_acefile_data );
 
@@ -310,8 +323,7 @@ sub annotator_uname {
         $get_acefile_data ||= prepare_statement(q{
             SELECT acefile_name
               , acefile_status_id
-              , task_name
-              , creation_time
+              , UNIX_TIMESTAMP(creation_time)
             FROM ana_acefile
             WHERE ana_seq_id = ?
             });
@@ -320,16 +332,14 @@ sub annotator_uname {
         my( @acefiles );
         while ( my($acefile_name,
             $acefile_status_id,
-            $task_name,
             $creation_time ) = $get_acefile_data->fetchrow) {
                 my $acefile = Hum::AnaStatus::AceFile->new;
                 $acefile->ana_seq_id($ana_seq_id);
                 $acefile->acefile_name($acefile_name);
                 $acefile->acefile_status_id($acefile_status_id);
-                $acefile->task_name($task_name);
                 $acefile->creation_time($creation_time);
                                 
-                push(@acefiles, $self);
+                push(@acefiles, $acefile);
         }
         return @acefiles;
     }
@@ -341,6 +351,9 @@ sub new_AceFile_from_filename_and_time {
     
     my $ana_seq_id = $self->ana_seq_id
         or confess "No ana_seq_id";
+    confess "File name not defined" unless $file_name;
+    $time ||= time;
+
     unless ($time =~ /^\d+$/) {
         my $unix_time = timeace($time)
             or confess "Bad time '$time'";
@@ -350,10 +363,14 @@ sub new_AceFile_from_filename_and_time {
     my ($seq_name, $acefile_name) =
         $file_name =~ /(.+?)\.([a-zA-Z].*)\.ace$/;
     confess "Not my acefile '$file_name'" unless
-        $seq_name eq $self->seq_name;
+        $seq_name eq $self->sequence_name;
     my $acefile = Hum::AnaStatus::AceFile->new;
     $acefile->acefile_name($acefile_name);
     $acefile->creation_time($time);
+    $acefile->acefile_status_id(1);
+    $acefile->ana_seq_id($ana_seq_id);
+    
+    $acefile->store;
     return $acefile;
 }
 
@@ -372,23 +389,45 @@ __END__
 
 =item new_from_sequence_name
 
-my $ana_seq = Hum::AnaStatus::Sequence->new_from_sequence_name('dJ354B12');
+my $ana_seq = 
+    Hum::AnaStatus::Sequence->new_from_sequence_name ('dJ354B12');
 
 Given a humace sequence name, returns a new
 object, or throws an exception if it isn't found
-in the database
+in the Submissions database
+
+=back
+
+=head1 STORE METHODS    
+
+The following methods store the values of their fields in the 
+Submissions database
 
 =item set_status
 
-$ana_seq->set_status(3);
+$ana_seq->set_status (3);
+
+This method changes the status of an analysis-sequence object
+in the database, or throws an exception when the new status is
+equal to the previous status. 
 
 =item set_annotator_uname
 
-$ana_seq->set_annotator_uname('ak1');
+$ana_seq->set_annotator_uname ('ak1');
 
-=item new_AceFile
+This method stores the annotator username assigned to a sequence.  
 
-my $ace_file = $ana_seq->new_AceFile($acefile_name);
+=item new_AceFile_from_filename_and_time
+
+my $ace_file =
+ $ana_seq->new_AceFile_from_filename_and_time (acefile_name, creation_time);
+ 
+Given the name of an acefile and its creation time (in unix-time
+or in ace-time format), this method returns an AceFile object and stores
+its values in the Submissions database. 
+If the time is not specified, the current time will be assigned to the
+AceFile object.
+
 
 =item lock_sequence
 
@@ -405,27 +444,27 @@ their fields, they dont' allow you to set them
 
 =item ana_seq_id
 
+This reports the ana_sequence id.
+
 =item seq_id
+
+This reports the sequence id.
 
 =item status_id
 
-The number of the status currently held
+This method returns the status number currently held.
 
 =item status_date
 
-The date the current status was assigned.
-
-=item status_description
-
-The description of this status
+The date when the current status was assigned.
 
 =item analysis_directory
 
-Analysis directory location
+This method resports the full path of the analysis directory.
 
 =item analysis_priority
 
-Assigned analysis priority
+The priority of the assigned analysis.
 
 =item annotator_uname
 
@@ -434,7 +473,7 @@ annotate this sequence.
 
 =item get_all_AceFiles
 
-Returns a list of Hum::AnaStatus::AceFile objects
+Returns a list of all Hum::AnaStatus::AceFile objects
 associated with this sequence.
 
 =back
