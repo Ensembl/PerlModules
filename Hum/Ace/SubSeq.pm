@@ -80,12 +80,12 @@ sub new_from_start_end_fox_subseq {
         $self->downstream_subseq_name($as->[0]);
     }
 
-    # Parse Supporting evidence tags
-    foreach my $type (qw{ Protein_match EST_match cDNA_match }) {
-        foreach my $evidence ($txt->get_values($type)) {
-        $self->add_SupportingEvidence_accession($type, @$evidence);
-        }
-    }
+    ## Parse Supporting evidence tags
+    #foreach my $type (qw{ Protein_match EST_match cDNA_match }) {
+    #    foreach my $evidence ($txt->get_values($type)) {
+    #    $self->add_SupportingEvidence_accession($type, @$evidence);
+    #    }
+    #}
     
     my @exons = $self->get_all_Exons
         or confess "No exons in '", $self->name, "'";
