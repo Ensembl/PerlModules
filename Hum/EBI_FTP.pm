@@ -22,7 +22,6 @@ use vars qw( @ISA );
 
 sub new {
     my( $pkg, $host ) = @_;
-    #$host ||= 'gin.ebi.ac.uk';
     $host ||= 'ftp.ebi.ac.uk';
     my $ftp = Net::FTP->new($host);
     $ftp->login() or confess "Can't login() to '$host'";

@@ -81,8 +81,18 @@ sub sub_sequence {
         confess "Coordinate '$y' is off end of sequence length '$seq_length'";
     }
     
+    if ($x < 1) {
+        confess "Start '$x' is before the start of the sequence";
+    }
+    
     my $seq_string = $seq_obj->sequence_string;
-    my $sub_seq_string = substr($seq_string, ($x - 1), ($y - $x + 1));
+    my $offset = $x - 1;
+    my $length = $y - $x + 1;
+    my $sub_seq_string = substr($seq_string, $offset, $length);
+    my $actual_length = length($sub_seq_string);
+    if ($length != $actual_length) {
+        confess "substr got '$actual_length', not '$length' from sequence";
+    }
     
     my $sub_seq = ref($seq_obj)->new;
     $sub_seq->sequence_string($sub_seq_string);

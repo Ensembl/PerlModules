@@ -49,15 +49,17 @@ $cgp_path{'EU'}="$ext_path/EU";
 $cgp_path{'EF'}="$ext_path/EF";
 
 my $ftp_structure = {
-        'Human'         => [ 'human/sequences', 'Chr_' ],
-        'Mouse'         => [ 'mouse',           'Chr_' ],
-        'Chicken'       => [ 'chicken'                 ],
-        'Fugu'          => [ 'fugu'                    ],
-        'Zebrafish'     => [ 'zebrafish'               ],
-        'Drosophila'    => [ 'drosophila/sequences'    ],
-        'Arabidopsis'   => [ 'arabidopsis'             ],
-        'B.floridae'    => [ 'b_floridae'              ],
-        };
+    'Human'         => [ 'human/sequences', 'Chr_' ],
+    'Mouse'         => [ 'mouse',           'Chr_' ],
+    'Chicken'       => [ 'chicken'                 ],
+    'Fugu'          => [ 'fugu'                    ],
+    'Zebrafish'     => [ 'zebrafish'               ],
+    'Drosophila'    => [ 'drosophila/sequences'    ],
+    'Arabidopsis'   => [ 'arabidopsis'             ],
+    'B.floridae'    => [ 'b_floridae'              ],
+    };
+
+my $humace_queue = "$humpub/humace/queue";
 
 # Hash containing config info
 %humConf = (
@@ -96,7 +98,7 @@ my $ftp_structure = {
 
     PUBLIC_HUMAN_DISK => '/nfs/repository/p100',
     HUMACE_DUMP   => '/nfs/humace/humpub/backup',
-    HUMACE_QUEUE => "$humpub/humace/queue",
+    HUMACE_QUEUE => $humace_queue,
     HUMACESERVER_HOST     => $ace_host{'humace'},
     HUMACESERVER_PORT     => $ace_port{'humace'},
     HUMGIFACESERVER_PORT  => $ace_port{'humace-live-ro'},
@@ -104,8 +106,20 @@ my $ftp_structure = {
     HUMACE_CLIENT_TIMEOUT => 1200,
     HUMACE_INCREMENTAL     => "$humpub/data/Humace_Incremental/CURRENT",
     HUMACE_INCREMENTAL_DIR => "$humpub/data/Humace_Incremental",
+    
+    SPECIES_ANALYSIS_ROOT => {
+        'Human'         => "$humpub/analysis/projects",
+        'Mouse'         => "$humpub/analysis/non-human/mouse",
+        'Zebrafish'     => "$humpub_disk1/analysis/zebrafish",
+        },
+    SPECIES_ACE_QUEUE => {
+        'Human'         => $humace_queue,
+        'Mouse'         => "/nfs/humace/humpub/musace/queue",
+        'Zebrafish'     => "/nfs/humace/humpub/zface/queue",
+        },
     ANALYSIS_ROOT => "$humpub/analysis/projects",
     LINK_ANALYSIS_ROOT => "$humpub/analysis/links",
+    
     EMBL_FILE_DIR => "$humpub/data/EMBL",
     EMBL_SUMMARY_EMAIL => "$humpub/data/EMBL_summary_email",
     CONFIG_DEFAULT => "$humpub/scripts/haceprep.cfg",

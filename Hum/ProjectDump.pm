@@ -262,7 +262,7 @@ sub sequence_name {
 
 sub htgs_phase {
     my( $pdmp, $value ) = @_;
-    
+        
     if (defined $value) {
         $value =~ /^(1|3)$/
             or confess "Value of htgs_phase '$value' can only be '1' or '3'";

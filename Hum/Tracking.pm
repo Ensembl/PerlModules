@@ -620,7 +620,7 @@ sub unfinished_accession {
             join(', ', map "'$_->[0]'", @$ans);
     } else {
         if ($dummy_flag) {
-            return 'AL000000';
+            return 'ACCESSION';
         } else {
             die "No accession found for projectname '$project'";
         }
