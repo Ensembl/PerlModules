@@ -41,6 +41,7 @@ sub new_from_ana_job_id {
         
         my $self = $pkg->new;
         $self->ana_job_id($ana_job_id);
+        $self->ana_seq_id($ana_seq_id);
         $self->task_name($task_name);
         $self->submit_time($submit_time);
         $self->lsf_job_id($lsf_job_id);
