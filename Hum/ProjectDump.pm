@@ -5,7 +5,8 @@ use strict;
 use Carp;
 use Hum::Submission qw( sub_db acc_data );
 use Hum::Tracking 'track_db';
-use Hum::ProjectDump::EMBL; # --> uses Hum::EMBL
+use Hum::ProjectDump::EMBL;
+use Hum::EMBL;
 use Hum::EBI_FTP;
 use Hum::Conf qw( FTP_ROOT FTP_GHOST );
 use File::Path;

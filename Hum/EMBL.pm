@@ -37,6 +37,8 @@ BEGIN {
        '//' => 'Hum::EMBL::Line::End',
     );
     
+    my( %_registered_class );
+    
     sub import {
         my $pkg = shift;
 
@@ -48,7 +50,7 @@ BEGIN {
         # Generate access methods for each line type package,
         # giving them the same name as the package.
         my %packages = map {$_, 1} values %_handler;
-        foreach my $class (keys %packages) {
+        CLASS: foreach my $class (keys %packages) {
         
             # Load line modules not in Hum/EMBL/Line.pm (scary)
             {
@@ -62,6 +64,17 @@ BEGIN {
             }
         
             my ($name) = $class =~ /([^:]+)$/;
+
+            # Don't try and regenerate access methods if we
+            # already done so for this class
+            if (my $reg_class = $_registered_class{$name}) {
+                confess("Can't make methods under '$name' for class '$class':\n",
+                    "$name is already registered with '$reg_class'")
+                    unless $class eq $reg_class;
+                next CLASS;
+            } else {
+                $_registered_class{$name} = $class;
+            }
 
             # Don't redefine existing subroutines
             my $func = "${pkg}::$name";
@@ -101,18 +114,29 @@ BEGIN {
         }
     }
     
+    sub default_handler {
+        my $pkg = shift;
+        $pkg->import(@_);
+    }
+    
     sub new {
-        my( $proto ) = @_;
+        my $proto = shift;
+        
         my($class, %handler);
 
-        if(ref($proto)) {
+        if (ref($proto)) {
             # $proto is an object
             $class = ref($proto);
             %handler = %{$proto->{'handler'}};
         } else {
             # $proto is a package name
             $class = $proto;
-            %handler = %_handler;
+            if (@_) {
+                confess "Odd number of arguments to new()" if @_ % 2;
+                %handler = @_;
+            } else {
+                %handler = %_handler;
+            }
         }
 
         return bless {
