@@ -421,22 +421,31 @@ sub add_all_PolyA_from_ace {
 
     my $mRNA = $self->exon_Sequence;
 
-    foreach my $site ($ace->at('Feature.polyA[1]')) {
-        my($sig_pos, $site_pos, $score, $name) = map $_->name, $site->row;
-        my $signal = $mRNA
-            ->sub_sequence($sig_pos, $sig_pos + 5)
-            ->sequence_string;
-        my $cons = Hum::Ace::PolyA::Consensus->fetch_by_signal($signal);
-
-        ( $sig_pos) = $self->remap_coords_mRNA_to_genomic($sig_pos);
-        ($site_pos) = $self->remap_coords_mRNA_to_genomic($site_pos);
-
-        my $p = Hum::Ace::PolyA->new;
-        $p->signal_position($sig_pos);
-        $p->site_position($site_pos);
-        $p->consensus($cons);
-        
-        $self->add_PolyA($p);
+    eval{
+	foreach my $site ($ace->at('Feature.polyA[1]')) {
+	    my($sig_pos, $site_pos, $score, $name) = map $_->name, $site->row;
+	    my $signal = $mRNA
+		->sub_sequence($sig_pos, $sig_pos + 5)
+		    ->sequence_string;
+	    my $cons = Hum::Ace::PolyA::Consensus->fetch_by_signal($signal);
+	    
+	    ( $sig_pos) = $self->remap_coords_mRNA_to_genomic($sig_pos);
+	    ($site_pos) = $self->remap_coords_mRNA_to_genomic($site_pos);
+	    
+	    my $p = Hum::Ace::PolyA->new;
+	    $p->signal_position($sig_pos);
+	    $p->site_position($site_pos);
+	    $p->consensus($cons);
+	    
+	    $self->add_PolyA($p);
+	}
+    };
+    if($@){
+	if(!$self->is_truncated){
+	    print "Transcript ".$self->name.
+		" extends beyond this genomic region - cannot be edited\n";
+	    $self->is_truncated(1);
+	}
     }
 }
 
@@ -532,11 +541,21 @@ sub exon_Sequence {
     
     my $seq_str = '';
     foreach my $exon ($self->get_all_Exons) {
-        my $start = $exon->start;
-        my $end   = $exon->end;
-        $seq_str .= $clone_seq
-            ->sub_sequence($start, $end)
-            ->sequence_string;
+	my $start = $exon->start;
+	my $end   = $exon->end;
+	eval{
+	    $seq_str .= $clone_seq
+		->sub_sequence($start, $end)
+		->sequence_string;
+	};
+	if($@){
+	    if(!$self->is_truncated){
+		print "Transcript ".$self->name.
+		    " extends beyond this genomic region - cannot be edited\n";
+		$self->is_truncated(1);
+		$seq_str .= abs($end-$start+1)x'X';
+	    }
+	}
     }
     $seq->sequence_string($seq_str);
     
@@ -715,6 +734,15 @@ sub is_archival {
         $self->{'_is_archival'} = $flag ? 1 : 0;
     }
     return $self->{'_is_archival'};
+}
+
+sub is_truncated {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_is_truncated'} = $flag ? 1 : 0;
+    }
+    return $self->{'_is_truncated'};
 }
 
 ### Methods to record type?

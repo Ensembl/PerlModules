@@ -52,7 +52,8 @@ use Hum::AnaStatus::EnsAnalysis;
         # and work around memory cycle in DBAdaptor
         foreach my $db (values %ens_db_cache) {
             if (my $aptr = $db->get_cached_db_adaptor) {
-                $aptr->_db_handle->disconnect;
+                #$aptr->_db_handle->disconnect;
+                $aptr->db_handle->disconnect;
             }
             foreach my $key (keys %$db) {
                 $db->{$key} = undef;
