@@ -88,6 +88,14 @@ sub process_ace_start_end_transcript_seq {
         $self->add_Exon($exon);
     }
     
+    # Parse Contines_from and Continues_as
+    if (my ($from) = $t_seq->at('Structure.Continued_from[1]')) {
+        $self->upstream_subseq_name($from->name);
+    }
+    if (my ($as) = $t_seq->at('Structure.Continues_as[1]')) {
+        $self->downstream_subseq_name($as->name);
+    }
+    
     my @exons = $self->get_all_Exons
         or confess "No exons in '", $self->name, "'";
 
@@ -119,7 +127,6 @@ sub process_ace_start_end_transcript_seq {
             $start_phase = $codon_start;
         }
     }
-    
     # Add the phase to the first exon
     if (defined $start_phase) {
         my( $start_exon );
@@ -155,6 +162,8 @@ sub clone {
         translation_region
         start_not_found
           end_not_found
+        upstream_subseq_name
+        downstream_subseq_name
         })
     {
         $new->$meth($old->$meth());
@@ -204,6 +213,24 @@ sub end_not_found {
         $self->{'_end_not_found'} = $flag ? 1 : 0;
     }
     return $self->{'_end_not_found'} || 0;
+}
+
+sub upstream_subseq_name {
+    my( $self, $name ) = @_;
+    
+    if (defined $name) {
+        $self->{'_upstream_subseq_name'} = $name;
+    }
+    return $self->{'_upstream_subseq_name'};
+}
+
+sub downstream_subseq_name {
+    my( $self, $name ) = @_;
+    
+    if (defined $name) {
+        $self->{'_downstream_subseq_name'} = $name;
+    }
+    return $self->{'_downstream_subseq_name'};
 }
 
 sub clone_Sequence {
@@ -278,7 +305,7 @@ sub translatable_Sequence {
             $end += 1 - $phase;
         }
         
-        printf STDERR "Translateable exon  %5d - %-5d\n", $start, $end;
+        #printf STDERR "Translateable exon  %5d - %-5d\n", $start, $end;
         
         $seq_str .= $clone_seq
             ->sub_sequence($start, $end)
@@ -635,6 +662,8 @@ sub ace_string {
         . qq{-D Source_Exons\n}
         . qq{-D Start_not_found\n}
         . qq{-D End_not_found\n}
+        . qq{-D Continued_from\n}
+        . qq{-D Continues_as\n}
         
         . qq{\nSequence "$name"\n}
         . qq{Source "$clone"\n}
@@ -655,6 +684,13 @@ sub ace_string {
     }
     if ($self->end_not_found) {
         $out .= qq{End_not_found\n};
+    }
+    
+    if (my $from = $self->upstream_subseq_name) {
+        $out .= qq{Continued_from "$from"\n};
+    }
+    if (my $as = $self->downstream_subseq_name) {
+        $out .= qq{Continues_as "$as"\n};
     }
     
     if ($strand == 1) {
