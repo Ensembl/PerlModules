@@ -31,7 +31,13 @@ sub seq_end {
 sub chr_length {
     my( $self ) = @_;
     
-    return $self->seq_end - $self->seq_start + 1;
+    my $len = $self->seq_end - $self->seq_start + 1;
+    if ($len < 1) {
+        die sprintf("For sequence %s chr_length = $len which is less than 1! (start = %d  end = %d)\n",
+            $self->accession_sv, $self->seq_start, $self->seq_end),
+            "This sequence may be redundant, or its overlaps are wrong\n";
+    }
+    return $len;
 }
 
 sub strand {
