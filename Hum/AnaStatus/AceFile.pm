@@ -15,15 +15,36 @@ sub new {
     return $self;
 }
 
-sub creation_time {
-    my ( $self, $creation_time ) = @_;
+sub get_all_for_ana_seq_id {
+    my( $pkg, $ana_seq_id ) = @_;
+    
+    confess "No ana_seq_id given" unless $ana_seq_id;
+    
+    my $fetch_acefile_data = prepare_statement(qq{
+        SELECT a.acefile_name
+          , a.acefile_status_id
+          , UNIX_TIMESTAMP(a.creation_time)
+          , UNIX_TIMESTAMP(v.earliest_date)
+          , UNIX_TIMESTAMP(v.latest_date)
+        FROM ana_acefile a
+          , ana_task_version v
+        WHERE a.acefile_name = v.acefile_name
+          AND ana_seq_id = $ana_seq_id
+        });
+    $fetch_acefile_data->execute;
 
-    if ($creation_time) {
-        confess "Can't modify creation_time"
-            if $self->{'_creation_time'};
-        $self->{'_creation_time'} = $creation_time;
+    my( @list );
+    while (my $row = $fetch_acefile_data->fetchrow_arrayref) {
+        my $acefile = $pkg->new;
+        $acefile->ana_seq_id        ($ana_seq_id);
+        $acefile->acefile_name      ($row->[0]);
+        $acefile->acefile_status_id ($row->[1]);
+        $acefile->creation_time     ($row->[2]);
+        $acefile->earliest_date     ($row->[3]);
+        $acefile->latest_date       ($row->[4]);
+        push(@list, $acefile);
     }
-    return $self->{'_creation_time'};
+    return @list;
 }
 
 sub ana_seq_id {
@@ -62,20 +83,52 @@ sub acefile_status_id {
     return $self->{'_acefile_status_id'};
 }
 
+sub creation_time {
+    my ( $self, $creation_time ) = @_;
+
+    if ($creation_time) {
+        confess "Can't modify creation_time"
+            if $self->{'_creation_time'};
+        $self->{'_creation_time'} = $creation_time;
+    }
+    return $self->{'_creation_time'};
+}
+
+sub earliest_date {
+    my ( $self, $earliest_date ) = @_;
+
+    if ($earliest_date) {
+        confess "Can't modify earliest_date"
+            if $self->{'_earliest_date'};
+        $self->{'_earliest_date'} = $earliest_date;
+    }
+    return $self->{'_earliest_date'};
+}
+
+sub latest_date {
+    my ( $self, $latest_date ) = @_;
+
+    if ($latest_date) {
+        confess "Can't modify latest_date"
+            if $self->{'_latest_date'};
+        $self->{'_latest_date'} = $latest_date;
+    }
+    return $self->{'_latest_date'};
+}
 
 sub acefile_status_id_name {
     my ( $self, $acefile_status_id ) = @_;
 
-			my %status_dict =  (
-                                '1' => 'Begin',
-                                '2' => 'Complete',
-                                '3' => 'Loaded',
-                                '4' => 'Load Error',
-                                '5' => 'Compressed',
-                                '6' => 'Deleted',
-                                '7' => 'Create Error',
-                                '%' => 'Any'
-								);
+    my %status_dict =  (
+        '1' => 'Begin',
+        '2' => 'Complete',
+        '3' => 'Loaded',
+        '4' => 'Load Error',
+        '5' => 'Compressed',
+        '6' => 'Deleted',
+        '7' => 'Create Error',
+        '%' => 'Any'
+        );
 								
 
     if ($acefile_status_id) {
@@ -153,6 +206,20 @@ sub task_name {
         $self->{'_task_name'} = $task_name;
     }
     return $task_name;
+}
+
+{
+    my( $time, $day_sec );
+
+    sub age_in_days {
+        my( $self ) = @_;
+
+        $time    ||= time;
+        $day_sec ||= 24 * 60 * 60;
+        
+        my $latest = $self->latest_date;
+        return( ($time - $latest) / $day_sec );
+    }
 }
 
 sub store {

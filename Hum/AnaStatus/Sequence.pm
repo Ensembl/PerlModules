@@ -17,6 +17,38 @@ sub new {
     return bless {}, $pkg;
 }
 
+sub get_all_for_sequence_name_root {
+    my( $pkg, $seq_root ) = @_;
+    
+    my $sth = prepare_statement(qq{
+        SELECT s.sequence_name
+        FROM project_dump d
+          , sequence s
+        WHERE d.seq_id = s.seq_id
+          AND d.is_current = 'Y'
+          AND d.htgs_phase = 3
+          AND s.sequence_name LIKE '$seq_root%'
+        });
+    $sth->execute;
+    
+    my( @seq_names );
+    while (my ($n) = $sth->fetchrow) {
+        next unless $n =~ /^$seq_root[A-Z]?$/;
+        push(@seq_names, $n);
+    }
+    
+    confess "No sequence names like '$seq_root%'"
+        unless @seq_names;
+    
+    my( @seq );
+    foreach my $name (@seq_names) {
+        my $s = $pkg->new_from_sequence_name($name);
+        push(@seq, $s);
+    }
+    
+    return @seq;
+}
+
 {
     my $_std_query = q{
         SELECT a.analysis_directory
@@ -545,26 +577,10 @@ sub AceFile_hash {
         my $ana_seq_id = $self->ana_seq_id
             or confess "No ana_seq_id in object";
 
-        my $fetch_acefile_data = prepare_statement(qq{
-            SELECT acefile_name
-              , acefile_status_id
-              , UNIX_TIMESTAMP(creation_time)
-            FROM ana_acefile
-            WHERE ana_seq_id = $ana_seq_id
-            });
-        $fetch_acefile_data->execute;
-
-        while ( my($acefile_name,
-            $acefile_status_id,
-            $creation_time ) = $fetch_acefile_data->fetchrow) {
-
-            my $acefile = Hum::AnaStatus::AceFile->new;
-            $acefile->ana_seq_id($ana_seq_id);
-            $acefile->acefile_name($acefile_name);
-            $acefile->acefile_status_id($acefile_status_id);
-            $acefile->creation_time($creation_time);
-
-            $self->add_AceFile($acefile);
+        foreach my $acefile (Hum::AnaStatus::AceFile
+            ->get_all_for_ana_seq_id($ana_seq_id))
+        {
+               $self->add_AceFile($acefile);
         }
     }
     return $self->{'_acefile'};

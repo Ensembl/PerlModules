@@ -43,6 +43,8 @@ sub new_from_set_name {
         push(@seq_name, $name);
     }
 
+    confess "No such set '$set_name'" unless $set_id;
+
     my $self = $pkg->new;
     $self->set_id($set_id);
     $self->set_name($set_name);
@@ -156,6 +158,29 @@ sub store {
     }
 
     return 1;
+}
+
+sub delete_from_db {
+    my( $self ) = @_;
+    
+    my $set_id = $self->set_id
+        or confess "Set not stored in database";
+    
+    my $delete_sequences = prepare_statement(qq{
+        DELETE FROM ana_sequence_set WHERE set_id = $set_id
+        });
+    $delete_sequences->execute;
+    confess "Nothing deleted from ana_sequence_set"
+        unless $delete_sequences->rows;
+    
+    my $delete_set = prepare_statement(qq{
+        DELETE FROM ana_set WHERE set_id = $set_id
+        });
+    $delete_set->execute;
+    confess "Nothing deleted from ana_set"
+        unless $delete_set->rows;
+    
+    $self->{'_set_name'} = undef;
 }
 
 1;
