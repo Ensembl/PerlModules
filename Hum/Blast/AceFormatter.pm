@@ -65,13 +65,13 @@ sub format_Subject {
     my $acedb_method_name = $self->acedb_method_name
         or confess "acedb_method_name not defined";
     
-    my $format = qq{\nSequence "$query_name"\n};
-
-    # Print the subject
+    my $prefix = $self->db_prefix;
     my $subject_name = $subject->subject_name
         or confess "subject_name not defined";
-    my $prefix = $self->db_prefix;
     $subject_name = "$prefix$subject_name" if $prefix;
+
+    my $query_format   = qq{\nSequence "$query_name"\n};
+    my $subject_format = qq{\nSequence "$subject_name"\n-D $acedb_homol_tag "$query_name"\n};
     foreach my $hsp ($subject->get_all_HSPs) {
         my $score = $hsp->score or confess "No score in HSP";
         my(@coords) = map $hsp->$_(), qw{ query_start query_end subject_start subject_end };
@@ -83,10 +83,11 @@ sub format_Subject {
             }
         }
         
-        $format .= qq{$acedb_homol_tag  "$subject_name"  "$acedb_method_name"  $score  @coords\n};
+        $query_format   .= qq{$acedb_homol_tag  "$subject_name"  "$acedb_method_name"  $score  @coords\n};
+        $subject_format .= qq{$acedb_homol_tag  "$query_name"  "$acedb_method_name"  $score  @coords[2,3,0,1]\n};
     }
     
-    return $format;
+    return $query_format . $subject_format;
 }
 
 1;
