@@ -26,24 +26,14 @@ use vars qw( @EXPORT_OK @ISA );
 @ISA = qw( Exporter );
 @EXPORT_OK = qw( processExists );
 
-# Wether to print warnings - reset by new method
-my $VERBOSE = 1;
-# Only print warning if $VERBOSE is set
-sub scream (@) {
-    if ($VERBOSE) {
-    	warn @_;
-    }
-    return 1;
-}
-
-# Select ps command for host type
-my %psCommands = (
-                  dec_osf => 'ps -A',
-		  linux   => 'ps -ax',
-		  solaris => 'ps -A'
-		  # Ignoring SGIs, since not under LSF
-		  );
 sub psCommand ($) {
+    # Select ps command for host type
+    my %psCommands = (
+                      dec_osf => 'ps -A',
+		      linux   => 'ps -ax',
+		      solaris => 'ps -A'
+		      # Ignoring SGIs, since not under LSF
+		      );
     my $ostype = shift;
     return $psCommands{ $ostype };
 }
@@ -62,31 +52,22 @@ sub home {
 sub new {
     my $pkg = shift;
     my $lockFile = shift;
-    
-    # $VERBOSE defaults to 1 if not set by argument to new()
-    if (@_) {
-    	$VERBOSE = shift;
-    } else {
-    	$VERBOSE = 1;
-    }
-    
+
     # Must have a name for the lockfile!
     unless ($lockFile) {
-    	scream "No lockfile name supplied";
-	return;
+    	croak("No lockfile name supplied");
     }
     
     # Give filename ".lock" extension if none supplied
-    unless ($lockFile =~ /.+\..+$/) {
-    	# Remove trailing dots
-    	$lockFile =~ s/\.+$//;
+    unless ($lockFile =~ /.+\.[^\.]+$/) {
+    	$lockFile =~ s/\.+$//; # Remove trailing dots
 	$lockFile = $lockFile . ".lock";
     }
     
     # Check for existing lockfile
     if (-e $lockFile) {
     	# Read host and process ID from lockfile
-    	open LOCK, "< $lockFile" or scream("Can't open lockfile [ $lockFile ] : $!") and return;
+    	open LOCK, "< $lockFile" or croak("Can't open lockfile [ $lockFile ] : $!");
 	my ($hostName, $processID) = split / /, <LOCK>, 2;
 	close LOCK;
 	
@@ -97,26 +78,23 @@ sub new {
 	    my $status = processExists( $hostName, $processID );
 	    
 	    if ($status eq 'RUN') {
-	    	scream("Process still running [ $hostName - $processID ]\n");
-		return;
+	    	croak("Process still running [ $hostName - $processID ]\n");
 	    }
 	    elsif ($status eq 'DEAD') {
 	    	unlink( $lockFile ) == 1
-		    or scream("Can't unlink old lock [ $lockFile ] : $!") and return;
+		    or croak("Can't unlink old lock [ $lockFile ] : $!");
 	    }
 	    else {
-	    	scream("Error from processExists: $status");
-		return;
+	    	croak("Error from processExists: $status");
 	    }
 	} else {
-	    scream("Can't parse lockfile [ $lockFile ]");
-	    return;
+	    croak("Can't parse lockfile [ $lockFile ]");
 	}
     }
     
     # Haven't returned, so create a lock file
     open NEWLOCK, "> $lockFile"
-    	or scream("Can't open [ $lockFile ] for write: $!") and return;
+    	or croak("Can't open [ $lockFile ] for write: $!");
     print NEWLOCK hostname(), ' ', $$;
     close NEWLOCK;
     
@@ -161,8 +139,6 @@ sub processExists {
 sub DESTROY {
     my $lock = shift;
     
-    return unless $lock->lock();
-    
     my $file = $lock->file();
     my $homeDir = $lock->home();
     
@@ -181,8 +157,16 @@ __END__
 =head1 SYNOPSIS
 
     use Hum::Lock;
-    $lock = Hum::Lock->new('anaScript.lock')
-    	or die "Can't set lockfile";
+
+    my $lock; # Lock will be removed when it goes
+              # out of scope.
+    eval {
+        # new method is fatal on failure
+        $lock = Hum::Lock->new('anaScript.lock');
+    };
+    if ($@) {
+        die "Can't set lock: $@\n";
+    }
     print "Host: ", $lock->host(),
     	"\nProcessID: ", $lock->pid(), "\n";
     
@@ -196,15 +180,14 @@ object.
 
 =item new
 
-    $lock = Hum::Lock->new( $filename, $verbosity_flag );
+    $lock = Hum::Lock->new( $filename );
 
 The only call you need to use.  Creates the lock
 file I<$filename>, and returns a lock object on
-success, or undef on failure.  Failure will warn
-about the error encountered, unless the
-I<$verbosity_flag> is set to a false value.  If
-I<filename> doesn't contain a file extension, then
-".lock" is appended to it.
+success, or croaks on failure.  If I<filename>
+doesn't contain a file extension, then ".lock" is
+appended to it.  The B<lsrun> command must be
+available on the machine.
 
 =item processExists
 
@@ -217,15 +200,14 @@ exportable from Hum::Lock.
 
 =item DESTROY
 
-The I<DESTROY> method is used to remove the lock
-file created when the lock object goes out of
-scope, and should also be called if the script
-dies.
+The I<DESTROY> method is used to automatically
+remove the lock file created when the lock object
+goes out of scope, or if the script dies.
 
 =item Lock Variables
 
-The lock object contains a number of variables,
-accessed by the following methods
+The lock object contains a two variables, which
+are accessed by the following methods:
 
 =over 4
 
