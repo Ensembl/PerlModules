@@ -31,108 +31,269 @@ sub embl_checksum {
     return $pdmp->embl_file->Sequence->embl_checksum;
 }
 
+sub make_embl {
+    my( $pdmp ) = @_;
+
+    my $project = $pdmp->project_name;
+    my $acc     = $pdmp->accession || '';
+    my @sec     = $pdmp->secondary;
+    my $embl_id = $pdmp->embl_name || 'ENTRYNAME';
+    my $author  = $pdmp->author;
+    my $species = $pdmp->species;
+    my $chr     = $pdmp->chromosome;
+    my $map     = $pdmp->fish_map;
+    my( $ext_clone );
+    {
+        my $e = external_clone_name($project);
+        $ext_clone = $e->{$project}
+            or die "Can't make external clone name";
+    }
+    my $date = EMBLdate();
+    my $binomial = species_binomial($species)
+        or die "Can't get latin name for '$species'";
+
+    # Get the DNA, base quality string,
+    # and map of contig positions.
+    my($dna, $base_quality, $contig_map) = $pdmp->embl_sequence_and_contig_map;
+    my $seqlength = length($dna);
+
+    # New embl file object
+    my $embl = Hum::EMBL->new();
+
+    # ID line
+    my $id = $embl->newID;
+    $id->entryname($embl_id);
+    $id->dataclass('standard');
+    $id->molecule('DNA');
+    $id->division('HTG'); ### I assume this is the same for other organisms
+    $id->seqlength($seqlength);
+    $embl->newXX;
+
+    # AC line
+    my $ac = $embl->newAC;
+    $ac->primary($acc);
+    $ac->secondaries(@sec) if @sec;
+    $embl->newXX;
+
+    # AC * line
+    my $ac_star = $embl->newAC_star;
+    my $identifier = '_'. uc $project;
+    $ac_star->identifier($identifier);
+    $embl->newXX;
+
+    # DE line
+    my $de = $embl->newDE;
+    $de->list("$species DNA sequence *** SEQUENCING IN PROGRESS *** from clone $ext_clone");
+    $embl->newXX;
+
+    # KW line
+    $pdmp->add_keywords($embl);
+
+    # Organism
+    add_Organism($embl, $species);
+    $embl->newXX;
+
+    # Reference
+    my $ref = $embl->newReference;
+    $ref->number(1);
+    $ref->authors($author);
+    $ref->locations("Submitted ($date) to the EMBL/Genbank/DDBJ databases.",
+                    'Sanger Centre, Hinxton, Cambridgeshire, CB10 1SA, UK.',
+                    'E-mail enquiries: humquery@sanger.ac.uk',
+                    'Clone requests: clonerequest@sanger.ac.uk');
+    $embl->newXX;
+
+    $pdmp->add_headers($embl, $contig_map);
+    $embl->newXX;
+
+    # Feature table source feature
+    my( $libraryname ) = library_and_vector( $project );
+    add_source_FT( $embl, $seqlength, $binomial, $ext_clone,
+                   $chr, $map, $libraryname );
+
+    # Feature table assembly fragments
+    $pdmp->add_FT_assembly_fragments($embl, $contig_map);
+    $embl->newXX;
+
+    # Sequence
+    $embl->newSequence->seq($dna);
+
+    # Base Quality
+    $embl->newBQ_star->quality($base_quality);
+
+    $embl->newEnd;
+
+    return $embl;
+}
+
 {
     my $number_Ns = 100;
     my $padding_Ns = 'n'  x $number_Ns;
     my $padding_Zeroes = "\0" x $number_Ns;
 
-    sub make_embl {
+    sub embl_sequence_and_contig_map {
         my( $pdmp ) = @_;
-
-        my $project = $pdmp->project_name;
-        my $acc     = $pdmp->accession || '';
-        my @sec     = $pdmp->secondary;
-        my $embl_id = $pdmp->embl_name || 'ENTRYNAME';
-        my $author  = $pdmp->author;
-        my $species = $pdmp->species;
-        my $chr     = $pdmp->chromosome;
-        my $map     = $pdmp->fish_map;
-        my( $ext_clone );
-        {
-            my $e = external_clone_name($project);
-            $ext_clone = $e->{$project}
-                or die "Can't make external clone name";
-        }
-        my $date = EMBLdate();
-        my $binomial = species_binomial($species)
-            or die "Can't get latin name for '$species'";
 
         # Make the sequence
         my $dna          = "";
         my $base_quality = "";
-	my $pos = 0;
+        my $pos = 0;
 
-	my @contig_pos; # [contig name, start pos, end pos]
+        my @contig_map; # [contig name, start pos, end pos]
         foreach my $contig ($pdmp->contig_list) {
             my $con  = $pdmp->DNA        ($contig);
             my $qual = $pdmp->BaseQuality($contig);
-            
+
 	    my $contig_length = length($$con);
-            
+
             # Add padding if we're not at the start
             if ($dna) {
-		$dna          .= $padding_Ns;
+	        $dna          .= $padding_Ns;
                 $base_quality .= $padding_Zeroes;
-		$pos          += $number_Ns;
+	        $pos          += $number_Ns;
 	    }
-            
+
             # Append dna and quality
             $dna          .= $$con;
             $base_quality .= $$qual if $qual;
-            
+
             # Record coordinates
 	    my $contig_start = $pos + 1;
 	    $pos += $contig_length;
 	    my $contig_end = $pos;
-	    push(@contig_pos, [$contig, $contig_start, $contig_end]);
+	    push(@contig_map, [$contig, $contig_start, $contig_end]);
         }
-        my $seqlength = length($dna);
 
-        # New embl file object
-        my $embl = Hum::EMBL->new();
-        
-        # ID line
-        my $id = $embl->newID;
-        $id->entryname($embl_id);
-        $id->dataclass('standard');
-        $id->molecule('DNA');
-        $id->division('HTG'); ### I assume this is the same for other organisms
-        $id->seqlength($seqlength);
-        $embl->newXX;
-        
-        # AC line
-        my $ac = $embl->newAC;
-        $ac->primary($acc);
-        $ac->secondaries(@sec) if @sec;
-        $embl->newXX;
-        
-        # AC * line
-        my $ac_star = $embl->newAC_star;
-        my $identifier = '_'. uc $project;
-        $ac_star->identifier($identifier);
-        $embl->newXX;
+        return( $dna, $base_quality, \@contig_map );
+    }
+}
+
+sub make_fragment_summary {
+    my( $pdmp, $embl, $contig_map ) = @_;
+
+    my( @list );
+    for (my $i = 0; $i < @$contig_map; $i++) {
+        my ($contig, $start, $end) = @{$contig_map->[$i]};
+        my $frag = sprintf("* %8d %8d contig of %d bp in length",
+            $start, $end, $end - $start + 1);
+        if (my $group = $pdmp->contig_chain($contig)) {
+            $frag .= "; fragment_chain $group";
+        }
+        push(@list, $frag);
+    }
+    return @list;
+}
+
+sub add_FT_assembly_fragments {
+    my( $pdmp, $embl, $contig_map ) = @_;
+
+    my %embl_end = (
+        Left  => 'SP6',
+        Right => 'T7',
+    );
+
+    for (my $i = 0; $i < @$contig_map; $i++) {
+	my ($contig, $start, $end) = @{$contig_map->[$i]};
+	my $fragment = $embl->newFT;
+	$fragment->key('misc_feature');
+	my $loc = $fragment->newLocation;
+	$loc->exons([$start, $end]);
+	$loc->strand('W');
+	$fragment->addQualifierStrings('note', "assembly_fragment:$contig");
+
+        # Add note if this is part of a group ordered by read-pairs
+        if (my $group = $pdmp->contig_chain($contig)) {
+            $fragment->addQualifierStrings('note', "fragment_chain:$group");
+        }
+
+        # Mark the left and right end contigs
+        if (my $vec_end = $pdmp->vector_ends($contig)) {
+            foreach my $end ('Left', 'Right') {
+                if (my $side = $vec_end->{$end}) {
+                    $fragment->addQualifierStrings('note', "clone_end:$embl_end{$end}");
+                    $fragment->addQualifierStrings('note', "vector_side:$side");
+                }
+            }
+        }
+    }
+}
+
+sub add_headers {
+    my( $pdmp, $embl, $contig_map ) = @_;
+}
+
+sub add_custom_header {
+    my( $pdmp, $embl ) = @_;
     
-        # DE line
-        my $de = $embl->newDE;
-        $de->list("$species DNA sequence *** SEQUENCING IN PROGRESS *** from clone $ext_clone");
-        $embl->newXX;
-        
-        # KW line
-        add_keywords($embl, $pdmp);
+    return 0;
+}
+
+sub add_default_header {
+    my( $pdmp, $embl, $contig_map ) = @_;
     
-        # Organism
-        add_Organism($embl, $species);
-        $embl->newXX;
-        
-        # Reference
-        my $ref = $embl->newReference;
-        $ref->number(1);
-        $ref->authors($author);
-        $ref->locations("Submitted ($date) to the EMBL/Genbank/DDBJ databases.",
-                        'Sanger Centre, Hinxton, Cambridgeshire, CB10 1SA, UK.',
-                        'E-mail enquiries: humquery@sanger.ac.uk',
-                        'Clone requests: clonerequest@sanger.ac.uk');
-        $embl->newXX;
+    my $project = $pdmp->project_name;
+    
+    my $draft_or_unfinished = is_shotgun_complete($project)
+        ? 'working draft'
+        : 'unfinished';
+
+    $embl->newCC->list(
+        '-------------- Genome Center',
+        'Center: Sanger Centre',
+        'Center code: SC',
+        'Web site: http://www.sanger.ac.uk',
+        'Contact: humquery@sanger.ac.uk',
+        '-------------- Project Information',
+        "Center project name: $project",
+        '-------------- Summary Statistics',
+        'Assembly program: XGAP4; version 4.5',
+        $pdmp->make_read_comments(),
+        $pdmp->make_consensus_quality_summary(),
+        $pdmp->make_consensus_length_report(),
+        $pdmp->make_q20_depth_report(),
+        '--------------',
+        "* NOTE: This is a '$draft_or_unfinished' sequence. It currently",
+        "* consists of ". scalar(@$contig_map) ." contigs. The true order of the pieces is",
+        "* not known and their order in this sequence record is",
+        "* arbitrary.  Where the contigs adjacent to the vector can",
+        "* be identified, they are labelled with 'clone_end' in the",
+        "* feature table.  Some order and orientation information",
+        "* can tentatively be deduced from paired sequencing reads",
+        "* which have been identified to span the gap between two",
+        "* contigs.  These are labelled as part of the same",
+        "* 'fragment_chain', and the order and relative orientation",
+        "* of the pieces within a fragment_chain is reflected in",
+        "* this file.  Gaps between the contigs are represented as",
+        "* runs of N, but the exact sizes of the gaps are unknown.",
+        "* This record will be updated with the finished sequence as",
+        "* soon as it is available and the accession number will be",
+        "* preserved.",
+
+        $pdmp->make_fragment_summary($embl, $contig_map),
+    );   
+}
+
+=pod         
+
+  NOTE: This is a 'working draft' sequence. It currently
+  consists of 10 contigs.  The true order of the pieces is
+  not known and their order in this sequence record is
+  arbitrary.  Where the contigs adjacent to the vector can
+  be identified, they are labelled with 'clone_end' in the
+  feature table.  Some order and orientation information
+  can tentatively be deduced from paired sequencing reads
+  which have been identified to span the gap between two
+  contigs.  These are labelled as part of the same
+  'fragment_chain', and the order and relative orientation
+  of the pieces within a fragment_chain is reflected in
+  this file.  Gaps between the contigs are represented as
+  runs of N, but the exact sizes of the gaps are unknown.
+  This record will be updated with the finished sequence as
+  soon as it is available and the accession number will be
+  preserved.
+
+=cut
+
         
         # CC   -------------- Genome Center
         # CC   Center: Whitehead Institute/ MIT Center for Genome Research
@@ -166,155 +327,9 @@ sub embl_checksum {
         # CC   *     9546 9645: gap of      100 bp
         # CC   *     9646    20744: contig of 11099 bp in length
         # CC   *    20745 20844: gap of      100 bp
-        
-        my $draft_or_unfinished = is_shotgun_complete($project)
-            ? 'working draft'
-            : 'unfinished';
-        
-        $embl->newCC->list(
-            '-------------- Genome Center',
-            'Center: Sanger Centre',
-            'Center code: SC',
-            'Web site: http://www.sanger.ac.uk',
-            'Contact: humquery@sanger.ac.uk',
-            '-------------- Project Information',
-            "Center project name: $project",
-            '-------------- Summary Statistics',
-            'Assembly program: XGAP4; version 4.5',
-            $pdmp->make_read_comments(),
-            $pdmp->make_consensus_quality_summary(),
-            $pdmp->make_consensus_length_report(),
-            $pdmp->make_q20_depth_report(),
-            '--------------',
-            "* NOTE: This is a '$draft_or_unfinished' sequence. It currently",
-            "* consists of ". scalar(@contig_pos) ." contigs. The true order of the pieces is",
-            "* not known and their order in this sequence record is",
-            "* arbitrary.  Where the contigs adjacent to the vector can",
-            "* be identified, they are labelled with 'clone_end' in the",
-            "* feature table.  Some order and orientation information",
-            "* can tentatively be deduced from paired sequencing reads",
-            "* which have been identified to span the gap between two",
-            "* contigs.  These are labelled as part of the same",
-            "* 'fragment_chain', and the order and relative orientation",
-            "* of the pieces within a fragment_chain is reflected in",
-            "* this file.  Gaps between the contigs are represented as",
-            "* runs of N, but the exact sizes of the gaps are unknown.",
-            "* This record will be updated with the finished sequence as",
-            "* soon as it is available and the accession number will be",
-            "* preserved.",
-
-            # Old comment was:
-            #'* is not known and their order in this sequence record is',
-            #'* arbitrary. Gaps between the contigs are represented as',
-            #'* runs of N, but the exact sizes of the gaps are unknown.',
-            #'* This record will be updated with the finished sequence',
-            #'* as soon as it is available and the accession number will',
-            #'* be preserved.',
-            
-            $pdmp->make_fragment_summary($embl, $number_Ns, @contig_pos),
-        );   
-             
-             
-=pod         
-
-  NOTE: This is a 'working draft' sequence. It currently
-  consists of 10 contigs.  The true order of the pieces is
-  not known and their order in this sequence record is
-  arbitrary.  Where the contigs adjacent to the vector can
-  be identified, they are labelled with 'clone_end' in the
-  feature table.  Some order and orientation information
-  can tentatively be deduced from paired sequencing reads
-  which have been identified to span the gap between two
-  contigs.  These are labelled as part of the same
-  'fragment_chain', and the order and relative orientation
-  of the pieces within a fragment_chain is reflected in
-  this file.  Gaps between the contigs are represented as
-  runs of N, but the exact sizes of the gaps are unknown.
-  This record will be updated with the finished sequence as
-  soon as it is available and the accession number will be
-  preserved.
-
-=cut
-
-
-#        my $unfin_cc = $embl->newCC;
-#        $unfin_cc->list(
-#"IMPORTANT: This sequence is unfinished and does not necessarily
-#represent the correct sequence.  Work on the sequence is in progress and
-#the release of this data is based on the understanding that the sequence
-#may change as work continues.  The sequence may be contaminated with
-#foreign sequence from E.coli, yeast, vector, phage etc.");
-#        $embl->newXX;
-        
-        #my $contig_cc = $embl->newCC;
-        #$contig_cc->list(
-        #    "Order of segments is not known; 800 n's separate segments.",
-        #    map "Contig_ID: $_  Length: $contig_lengths{$_}bp", $pdmp->contig_list );
-        $embl->newXX;
-    
-        # Feature table source feature
-        my( $libraryname ) = library_and_vector( $project );
-        add_source_FT( $embl, $seqlength, $binomial, $ext_clone,
-                       $chr, $map, $libraryname );
-        
-        # Feature table assembly fragments
-        {
-            my %embl_end = (
-                Left  => 'SP6',
-                Right => 'T7',
-            );
-            
-	    for (my $i = 0; $i < @contig_pos; $i++) {
-	        my ($contig, $start, $end) = @{$contig_pos[$i]};
-	        my $fragment = $embl->newFT;
-	        $fragment->key('misc_feature');
-	        my $loc = $fragment->newLocation;
-	        $loc->exons([$start, $end]);
-	        $loc->strand('W');
-	        $fragment->addQualifierStrings('note', "assembly_fragment:$contig");
-                
-                # Add note if this is part of a group ordered by read-pairs
-                if (my $group = $pdmp->contig_chain($contig)) {
-                    $fragment->addQualifierStrings('note', "fragment_chain:$group");
-                }
-                
-                # Mark the left and right end contigs
-                if (my $vec_end = $pdmp->vector_ends($contig)) {
-                    foreach my $end ('Left', 'Right') {
-                        if (my $side = $vec_end->{$end}) {
-                            $fragment->addQualifierStrings('note', "clone_end:$embl_end{$end}");
-                            $fragment->addQualifierStrings('note', "vector_side:$side");
-                        }
-                    }
-                }
-                
-                ## Add gap features
-                #unless ($i == $#contig_pos) {
-                #    my $spacer = $embl->newFT;
-                #    $spacer->key('misc_feature');
-                #    my $loc = $spacer->newLocation;
-                #$loc->exons([$end + 1, $end + $number_Ns]);
-                #$loc->strand('W');
-                #    $spacer->addQualifierStrings('note', 'gap of unknown length');
-                #}
-	    }
-        }
-        $embl->newXX;
-    
-        # Sequence
-        $embl->newSequence->seq($dna);
-        
-        # Base Quality
-        $embl->newBQ_star->quality($base_quality);
-        
-        $embl->newEnd;
-        
-        return $embl;
-    }
-}
 
 sub add_keywords {
-    my( $embl, $pdmp ) = @_;
+    my( $pdmp, $embl ) = @_;
     
     my $kw = $embl->newKW;
     my @kw_list = ('HTG', 'HTGS_PHASE1');
@@ -348,28 +363,6 @@ sub send_warning_email {
         or confess "Can't open pipe to mailx : $!";
     print WARN_MAIL map "$_\n", @report;
     close WARN_MAIL or confess "Error sending warning email : $!";
-}
-
-sub make_fragment_summary {
-    my( $pdmp, $embl, $spacer_length, @contig_pos ) = @_;
-    
-    my( @list );
-    for (my $i = 0; $i < @contig_pos; $i++) {
-        my ($contig, $start, $end) = @{$contig_pos[$i]};
-        my $frag = sprintf("* %8d %8d contig of %d bp in length",
-            $start, $end, $end - $start + 1);
-        if (my $group = $pdmp->contig_chain($contig)) {
-            $frag .= "; fragment_chain $group";
-        }
-        push(@list, $frag);
-        #unless ($i == $#contig_pos) {
-        #    push(@list,
-        #        sprintf("* %8d %8d gap of unknown length",
-        #            $end + 1, $end + $spacer_length, $spacer_length)
-        #    );
-        #}
-    }
-    return @list;
 }
 
 sub make_read_comments {
