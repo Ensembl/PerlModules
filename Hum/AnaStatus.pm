@@ -13,6 +13,7 @@ use Hum::Submission 'prepare_statement';
 @EXPORT_OK = qw{
     add_seq_id_dir 
     add_new_sequence_entry
+    make_entered_status
     };
 
 {
@@ -23,12 +24,33 @@ use Hum::Submission 'prepare_statement';
         
         $sth ||= prepare_statement(q{
             INSERT ana_sequence( ana_seq_id
-                  , is_current
-                  , seq_id
-                  , analysis_directory)
+              , is_current
+              , seq_id
+              , analysis_directory)
             VALUES (NULL,'Y',?,?)
             });
         $sth->execute($seq_id, $ana_dir);
+        my $ana_seq_id = $sth->{'insertid'};
+        
+        make_status_entered($ana_seq_id);
+    }
+}
+
+{
+    my( $sth );
+
+    sub make_status_entered {
+        my( $ana_seq_id ) = @_;
+        
+        $sth ||= prepare_statement(q{
+            INSERT ana_status( ana_seq_id
+              , is_current
+              , status_date
+              , status_id)
+            VALUES (?,'Y',NOW(),1)
+            });
+        # status_id of 1 = "Entered"
+        $sth->execute($ana_seq_id);
     }
 }
 
