@@ -84,6 +84,9 @@ sub make_embl {
     $pdmp->add_Headers($embl, $contig_map);
     $embl->newXX;
 
+    # Feature table header
+    $embl->newFH;
+
     # Feature table source feature
     my( $libraryname ) = library_and_vector( $project );
     add_source_FT( $embl, $seqlength, $binomial, $ext_clone,
