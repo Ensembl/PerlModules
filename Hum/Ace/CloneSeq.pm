@@ -162,11 +162,12 @@ sub trim_SubSeq_to_golden_path {
         my $end   = $exon->end;
         
         if ($end < $golden_start or $start > $golden_end) {
+            #printf STDERR "Trimmed exon  %10d  %-10d  %s\n",
+            #    $exon->start, $exon->end, $self->ace_name;
+            #print STDERR "i=$i  #ex_list=$#ex_list\n";
             # Delete exons which are outside the golden path
             $sub->delete_Exon($exon);
-            if (($strand == 1 and $i == 0) or ($strand == -1 and $i == $#ex_list)) {
-                $sub->start_not_found(0);
-            }
+            $sub->start_not_found(0) if $i == 0;
         } else {
             # Trim exons to golden path
             if ($start < $golden_start) {
