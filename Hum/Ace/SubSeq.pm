@@ -675,6 +675,12 @@ sub translation_region {
     }
 }
 
+sub unset_translation_region {
+    my( $self ) = @_;
+    
+    $self->{'_translation_region'} = undef;
+}
+
 sub cds_coords {
     my( $self ) = @_;
     
