@@ -4,6 +4,7 @@
 package Hum::Ace::CloneSeq;
 
 use strict;
+use Hum::Sequence::DNA;
 use Carp;
 
 sub new {
@@ -134,6 +135,39 @@ sub new_SubSeq_from_ace_subseq_tag {
     
     $sub->validate;
     return $sub;    # May have zero Exons
+}
+
+sub Sequence {
+    my( $self, $seq ) = @_;
+    
+    if ($seq) {
+        $self->{'_sequence_dna_object'} = $seq;
+    }
+    return $self->{'_sequence_dna_object'};
+}
+
+sub store_Sequence_from_ace_handle {
+    my( $self, $ace ) = @_;
+    
+    my $seq = $self->new_Sequence_from_ace_handle($ace);
+    $self->Sequence($seq);
+}
+
+sub new_Sequence_from_ace_handle {
+    my( $self, $ace ) = @_;
+    
+    my $name = $self->ace_name;
+    my $dna_obj = $ace->fetch(DNA => $name);
+    if ($dna_obj) {
+        my $dna_str = $dna_obj->fetch->at;
+        #warn "Got DNA string ", length($dna_str), " long";
+        my $seq = Hum::Sequence::DNA->new;
+        $seq->name($name);
+        $seq->sequence_string($dna_str);
+        return $seq;
+    } else {
+        confess "No DNA object '$name'";
+    }
 }
 
 1;

@@ -142,13 +142,13 @@ sub name {
     return $self->{'_name'} || confess "name not set";
 }
 
-sub clone_seq_name {
-    my( $self, $clone_seq_name ) = @_;
+sub clone_Sequence {
+    my( $self, $seq ) = @_;
     
-    if ($clone_seq_name) {
-        $self->{'_clone_seq_name'} = $clone_seq_name;
+    if ($seq) {
+        $self->{'_clone_Sequence'} = $seq;
     }
-    return $self->{'_clone_seq_name'};
+    return $self->{'_clone_Sequence'};
 }
 
 sub ace_method {
@@ -331,15 +331,18 @@ sub contains_all_exons {
 sub as_ace_file_format_text {
     my( $self ) = @_;
         
-    my $name    = $self->name
+    my $name        = $self->name
         or confess "name not set";
-    my $clone   = $self->clone_seq_name
-        or confess "clone name not set";
-    my $start   = $self->start;
-    my $end     = $self->end;
-    my $strand  = $self->strand;
-    my @exons   = $self->get_all_Exons;
-    my $method  = $self->ace_method;
+    my $clone_seq   = $self->clone_Sequence
+        or confess "no clone_Sequence";
+    my $start       = $self->start;
+    my $end         = $self->end;
+    my $strand      = $self->strand;
+    my @exons       = $self->get_all_Exons;
+    my $method      = $self->ace_method;
+    
+    my $clone = $clone_seq->name
+        or confess "No sequence name in clone_Sequence";
     
     my $out = qq{\nSequence "$clone"\n}
         . qq{-D SubSequence "$name"\n};

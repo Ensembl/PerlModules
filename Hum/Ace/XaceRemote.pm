@@ -30,6 +30,7 @@ sub send_command {
     my( $self, @command ) = @_;
     
     my $com_str = join(' ; ', @command);
+    warn "Sending: '$com_str'\n";
     my @xrem_com = (
         'xremote',
         -id         => $self->xace_window_id,
@@ -40,6 +41,36 @@ sub send_command {
     } else {
         confess "Failed xremote: (@xrem_com) : $?";
     }
+}
+
+sub show_SubSeq {
+    my( $self, $subseq, $pad ) = @_;
+    
+    unless (defined $pad) {
+        $pad = 1000;
+    }
+    my $seq     = $subseq->clone_Sequence or confess "No clone_Sequence";
+    my $start   = $subseq->start - $pad;
+    my $end     = $subseq->end   + $pad;
+    my $strand  = $subseq->strand;
+    
+    my $seq_name = $seq->name
+        or confess "sequence_name not set";
+    
+    # Trim start and end to within sequence
+    if ($start < 1) {
+        $start = 1;
+    }
+    if ($end > $seq->sequence_length) {
+        $end = $seq->sequence_length;
+    }
+    
+    my @com = ('gif', "seqget $seq_name", "seqdisplay -visible_coords $start $end");
+    if ($strand == -1) {
+        push(@com, "seqactions -rev_comp");
+    }
+    
+    $self->send_command(@com);
 }
 
 sub show_sequence {
