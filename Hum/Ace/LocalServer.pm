@@ -57,8 +57,39 @@ sub path {
 sub ace_handle {
     my( $self ) = @_;
     
-    my $host = $self->host;
-    my $port = $self->port;
+    # Get cached ace handle
+    my $ace = $self->{'_ace_handle'};
+    
+    # Test if it is valid
+    my( $ping );
+    eval{ $ping = $ace->ping; };
+    
+    # Connect if invalid
+    unless ($ping) {
+        my $host = $self->host;
+        my $port = $self->port;
+        my $max_time = 5 * 60;
+        my $try_interval = 2;
+        for (my $i = 0; $i < $max_time; $i += $try_interval) {
+            $ace = Ace->connect(
+                -HOST       => $host,
+                -PORT       => $port,
+                -TIMEOUT    => 60,
+                );
+            if ($ace) {
+                $ace->auto_save(0);
+                last;
+            } else {
+                sleep $try_interval;
+            }
+        }
+        if ($ace) {
+            $self->{'_ace_handle'} = $ace;
+        } else {
+            confess("Can't connect to db on '$host' port '$port' :\n", Ace->error);
+        }
+    }
+    return $ace;
 }
 
 sub server_executable {
@@ -89,17 +120,19 @@ sub restart_server {
 sub kill_server {
     my( $self ) = @_;
     
-    my $pid = $self->server_pid
-        or return 0;
-    if (kill, "TERM", $pid) {
+    my $pid = $self->server_pid or return;
+    if (kill "TERM", $pid) {
         return 1;
     } else {
-        confess "Failed to kill server; pid = '$pid'";
+        warn "Failed to kill server; pid = '$pid' : $!";
+        return 0;
     }
 }
 
 sub start_server {
     my( $self ) = @_;
+    
+    $self->make_server_wrm;
     
     my $path = $self->path
         or confess "path not set";
@@ -120,6 +153,32 @@ sub start_server {
     else {
         confess "Can't fork : $!";
     }
+}
+
+sub make_server_wrm {
+    my( $self ) = @_;
+    
+    local *WRM;
+    
+    my $path = $self->path
+        or confess "path not set";
+    my $wspec = "$path/wspec";
+    confess "No wspec directory"
+        unless -d $wspec;
+    my $server_wrm = "$wspec/server.wrm";
+    return if -e $server_wrm;
+    
+    open WRM, "> $server_wrm"
+        or die "Can't create '$server_wrm' : $!";
+    print WRM "\nWRITE_ACCESS_DIRECTORY  $wspec\n",
+        "\nREAD_ACCESS_DIRECTORY  PUBLIC\n\n";
+    close WRM;
+}
+
+sub DESTROY {
+    my( $self ) = @_;
+    
+    $self->kill_server;
 }
 
 1;
