@@ -31,6 +31,7 @@ James Gilbert email B<jgrg@sanger.ac.uk>
 =cut
 
 use strict;
+use Carp;
 
 my (@libs, @path);
 
@@ -75,7 +76,6 @@ $ENV{'TAGDB'}     = "$staden_home/tables/TAGDB";
 
 # List of dirs for PATH
 @path = (qw(
-	    /nfs/disk100/humpub/OSFbin
 	    /nfs/disk100/humpub/scripts
 	    /usr/local/pubseq/scripts
 	    /usr/local/badger/bin
@@ -91,6 +91,16 @@ $ENV{'TAGDB'}     = "$staden_home/tables/TAGDB";
 	    /usr/etc
 	    /usr/bsd
 	    ), "$staden_home/bin");
+
+if ($^O eq 'dec_osf') {
+    unshift(@path, '/nfs/disk100/humpub/OSFbin');
+}
+elsif ($^O eq 'linux') {
+    unshift(@path, '/nfs/disk100/humpub/LINUXbin');
+}
+else {
+    confess "Unknown operating system '$^O'";
+}
 
 # Set PATH environment
 $ENV{PATH} = join ':', @path;
