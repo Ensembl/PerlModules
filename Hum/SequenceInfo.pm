@@ -308,7 +308,7 @@ sub update_htgs_phase {
     my $db_id = $self->db_id      or confess "object already has a db_id";
     my $phase = $self->htgs_phase or confess "htgs_phase not set";
     my $sth = track_db->prepare_cached(q{
-        UPDATE sequence SET htgs_phase = ? WHERE id_sequence = ?
+        UPDATE sequence SET id_htgsphase = ? WHERE id_sequence = ?
         });
     $sth->execute($phase, $db_id);
 }
