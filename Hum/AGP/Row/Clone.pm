@@ -57,6 +57,10 @@ sub accession_sv {
 sub elements {
     my( $self ) = @_;
     
+    unless ($self->strand) {
+        confess "Strand not set\n";
+    }
+    
     return (
         'F',
         $self->accession_sv,

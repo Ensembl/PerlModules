@@ -113,8 +113,12 @@ sub _process_contig {
         
         # Add gap if no overlap
         unless ($over) {
+            # Set strand for current clone
+            $cl->strand($strand || 1);
+            
             $self->insert_missing_overlap_pad;
             $strand = undef;
+            $cl = $self->new_Clone_from_tpf_Clone($contig->[$i]);
             next;
         }
         
@@ -127,7 +131,6 @@ sub _process_contig {
                 $self->insert_missing_overlap_pad;
                 $strand = undef;
                 $miss_join = 3;
-                warn "Double 3prime join direction\n";
             }
             $cl->seq_end($pa->position);
         } else {
@@ -135,7 +138,6 @@ sub _process_contig {
                 $self->insert_missing_overlap_pad;
                 $strand = undef;
                 $miss_join = 5;
-                warn "Double 5prime join direction\n";
             }
             $cl->seq_start($pa->position);
         }
