@@ -295,8 +295,8 @@ http://www.sanger.ac.uk/Projects/C_elegans/wormpep');
     my $zeb_repeat =
 'Repeat names beginning "Dr" were identified by the Recon repeat discovery
 system (Zhirong Bao and Sean Eddy, submitted), and those beginning "drr"
-were identified by Rick Waterman (Steve Johnson lab, WashU).  For further
-information see http://www/Projects/D_rerio/fishmask.shtml';
+were identified by Rick Waterman (Stephen Johnson lab, WashU).  For
+further information see http://www/Projects/D_rerio/fishmask.shtml';
 
     sub add_standard_CC {
         my( $pdmp, $embl ) = @_;
