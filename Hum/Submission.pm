@@ -14,6 +14,7 @@ use vars qw( @ISA @EXPORT_OK );
                  acc_data
                  create_lock
                  destroy_lock
+                 die_if_dumped_recently
                  prepare_statement
                  timeace
                  ghost_path
@@ -159,7 +160,30 @@ sub destroy_lock {
     }
 }
 
+{
+    my( $last_dump );
 
+    sub die_if_dumped_recently {
+        my( $project, $hr ) = @_;
+
+        $last_dump ||= prepare_statement(q{
+            SELECT UNIX_TIMESTAMP(d.dump_time), d.dump_time
+            FROM project_acc a
+              , project_dump d
+            WHERE a.sanger_id = d.sanger_id
+              AND a.project_name = ?
+            });
+        $last_dump->execute($project);
+
+        if (my($dump_int, $dump_time) = $last_dump->fetchrow) {
+            my $limit = time() - ($hr * 60 * 60);
+            if ($dump_int > $limit) {
+                die "Project '$project' was last dumped on '$dump_time', which is less than ${hr}h ago";
+            }
+        }
+        return 1;
+    }
+}
 
 {
 
