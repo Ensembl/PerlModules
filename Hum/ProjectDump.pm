@@ -135,7 +135,7 @@ sub new_from_sanger_id {
           , s.sequence_name
           , s.sequence_version
           , s.embl_checksum
-          , s.embl_length
+          , s.unpadded_length
           , s.contig_count
           , s.file_path
         FROM project_dump d
@@ -218,21 +218,19 @@ BEGIN {
         return length($$dna);
     }
     
-    sub embl_length {
+    sub unpadded_length {
         my( $pdmp, $length ) = @_;
         
         if ($pdmp->{'_DNA'}) {            
-            ### This assumes we'll always have 800n's between contigs in EMBL!
-            $length = 800 * ($pdmp->contig_count - 1);
             foreach my $contig ($pdmp->contig_list) {
                 $length += $pdmp->contig_length($contig);
             }
             return $length;
         } else {
             if (defined $length) {
-                $pdmp->{'_embl_length'} = $length;
+                $pdmp->{'_unpadded_length'} = $length;
             }
-            return $pdmp->{'_embl_length'};
+            return $pdmp->{'_unpadded_length'};
         }
     }
     
@@ -537,7 +535,7 @@ sub store_dump {
  | sequence_name    | varchar(20)  |      | MUL |         |                |
  | sequence_version | int(11)      | YES  |     | NULL    |                |
  | embl_checksum    | int(11)      |      | MUL | 0       |                |
- | embl_length      | int(11)      |      | MUL | 0       |                |
+ | unpadded_length  | int(11)      |      | MUL | 0       |                |
  | contig_count     | int(11)      |      |     | 0       |                |
  | file_path        | varchar(200) |      |     |         |                |
  +------------------+--------------+------+-----+---------+----------------+
@@ -550,7 +548,7 @@ BEGIN {
         sequence_name
         sequence_version
         embl_checksum
-        embl_length
+        unpadded_length
         contig_count
         file_path
     );
@@ -565,7 +563,7 @@ BEGIN {
             . q{) VALUES (NULL,?,?,?,?,?,?)}
             );
         $insert->execute(map $pdmp->$_(), @fields);
-        return $insert->{'insertid'};
+        return $insert->{'insertid'};   # The auto_incremented value
     }
 }
 

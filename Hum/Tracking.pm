@@ -71,7 +71,7 @@ sub is_finished {
         WHERE projectname = '$project'
           AND status IN(20,21,22,23,27,28,29)
           AND iscurrent = 1
-    ));
+        ));
     
     return @$ans ? $ans->[0][0] : 0;
 }
@@ -93,7 +93,7 @@ sub is_shotgun_complete {
         FROM project_status 
         WHERE status IN(15,30)
         AND projectname = '$project'
-    ));
+        ));
 
     return $ans->[0][0];
 }
@@ -111,13 +111,16 @@ the library and the name of the library vector
 sub library_and_vector {
     my( $project ) = @_;
     
-    my $ans = ref_from_query(qq(
-                                select l.libraryname, l.vectorname
-                                from clone_project cp, clone c, library l
-                                where
-                                    cp.clonename = c.clonename and
-                                    c.libraryname = l.libraryname and
-                                    cp.projectname = '$project' ));
+    my $ans = ref_from_query(qq(                           
+        SELECT l.libraryname
+          , l.vectorname
+        FROM clone_project cp
+          , clone c
+          , library l
+        WHERE cp.clonename = c.clonename
+          AND c.libraryname = l.libraryname
+          AND cp.projectname = '$project'
+        ));
     if (@$ans) {
         return(@{$ans->[0]});
     } else {
@@ -190,10 +193,10 @@ sub expand_project_name {
     my( $name ) = @_;
     
     my $ans = ref_from_query(qq(
-                                 select clonename
-                                 from clone_project
-                                 where projectname = '$name'
-                                ));
+        SELECT clonename
+        FROM clone_project
+        WHERE projectname = '$name'
+        ));
     
     if (@$ans == 1) {
         return $ans->[0][0];
@@ -215,10 +218,10 @@ sub clone_from_project {
     my( $proj ) = @_;
     
     my $ans = ref_from_query(qq(
-                                 select clonename
-                                 from clone_project
-                                 where projectname = '$proj'
-                                ));
+        SELECT clonename
+        FROM clone_project
+        WHERE projectname = '$proj'
+        ));
     
     if (@$ans == 1) {
         return $ans->[0][0];
@@ -241,10 +244,10 @@ sub project_from_clone {
     my( $clone ) = @_;
     
     my $ans = ref_from_query(qq(
-                                 select projectname
-                                 from clone_project
-                                 where clonename = '$clone'
-                                ));
+        SELECT projectname
+        FROM clone_project
+        WHERE clonename = '$clone'
+        ));
     
     if (@$ans == 1) {
         return $ans->[0][0];
@@ -276,16 +279,19 @@ sub external_clone_name {
     my $proj_list = join(',', map "'$_'", @projects) or return;
     
     my $ans = ref_from_query(qq(
-                                 select p.projectname, c.clonename,
-                                     l.internal_prefix, l.external_prefix
-                                 from clone c, clone_project cp,
-                                     project p, library l
-                                 where
-                                     l.libraryname = c.libraryname and
-                                     c.clonename = cp.clonename and
-                                     cp.projectname = p.projectname and
-                                     p.projectname in($proj_list)
-                                ));
+        SELECT p.projectname
+          , c.clonename
+          , l.internal_prefix
+          , l.external_prefix
+        FROM clone c
+          , clone_project cp
+          , project p
+          , library l
+        WHERE l.libraryname = c.libraryname
+          AND c.clonename = cp.clonename
+          AND cp.projectname = p.projectname
+          AND p.projectname IN($proj_list)
+        ));
         
     my %proj = map { $_->[0], [@{$_}[1,2,3]] } @$ans;
     
@@ -294,9 +300,11 @@ sub external_clone_name {
     if (@missing) {
         my $miss_list = join(',', map "'$_'", @missing);
         my $ans = ref_from_query(qq(
-                                     select projectname, clonename
-                                     from clone_project
-                                     where projectname in($miss_list)  ));
+            SELECT projectname
+              , clonename
+            FROM clone_project
+            WHERE projectname IN($miss_list)
+            ));
         if (@$ans) {
             foreach (@$ans) {
                 $proj{$_->[0]} = [$_->[1]];
@@ -340,12 +348,13 @@ sub find_project_directories {
     my $projects = join(',', map "'$_'", @name_list);
     
     my $ans = ref_from_query(qq(
-                                 select p.projectname, o.online_path
-                                 from project p, online_data o
-                                 where
-                                     p.id_online = o.id_online and
-                                     o.is_available = 1 and
-                                     p.projectname in ($projects)
+                                SELECT p.projectname
+                                  , o.online_path
+                                FROM project p
+                                  , online_data o
+                                WHERE p.id_online = o.id_online
+                                  AND o.is_available = 1
+                                  AND p.projectname IN($projects)
                                 ));
 
     # Store results in %dir
@@ -380,14 +389,14 @@ matches, or no matches, are fatal.
 sub finished_accession {
     my( $project, $suffix ) = @_;
     
-    my $query = qq( select accession
-                    from finished_submission
-                    where projectname = '$project' 
-                      and suffix );
+    my $query = qq( SELECT accession
+                    FROM finished_submission
+                    WHERE projectname = '$project'
+                      AND suffix );
     if ($suffix) {
         $query .= qq( = '$suffix' );
     } else {
-        $query .= qq( is null );
+        $query .= qq( IS NULL );
     }
 
     my $ans = ref_from_query( $query );
@@ -416,9 +425,11 @@ sub entry_name {
     
     # Get the entryname for this accession
 
-    my $ans = ref_from_query(qq( select name
-                                 from embl_submission
-                                 where accession = '$acc' ));
+    my $ans = ref_from_query(qq( 
+                                SELECT name
+                                FROM embl_submission
+                                WHERE accession = '$acc'
+                                ));
     my( $entry_name );
     if (@$ans > 1) {
         die "Multiple names for accession '$acc' : ",
@@ -449,9 +460,11 @@ fatal.
 sub unfinished_accession {
     my( $project, $dummy_flag ) = @_;
     
-    my $query = qq( select accession
-                    from unfinished_submission
-                    where projectname = '$project' );
+    my $query = qq( 
+                    SELECT accession
+                    FROM unfinished_submission
+                    WHERE projectname = '$project'
+                    );
 
     my $ans = ref_from_query( $query );
     if (@$ans == 1) {
@@ -486,12 +499,13 @@ sub localisation_data {
     my( $chr );
     {
         my $ans = ref_from_query(qq(
-                                    select cd.chromosome
-                                    from chromosomedict cd,
-                                        clone c, clone_project cp
-                                    where cd.id_dict = c.chromosome
-                                        and c.clonename = cp.clonename
-                                        and cp.projectname = '$project' ));
+                                    SELECT cd.chromosome
+                                    FROM chromosomedict cd
+                                      , clone c
+                                      , clone_project cp
+                                    WHERE cd.id_dict = c.chromosome
+                                      AND c.clonename = cp.clonename
+                                      AND cp.projectname = '$project' ));
         if (@$ans) {
 	    $chr = $ans->[0][0];
 	} else {
@@ -503,11 +517,12 @@ sub localisation_data {
     my( $fish, $map );
     {
         my $ans = ref_from_query(qq(
-                                    select remark
-                                    from project_status
-                                    where status = 9
-                                    and projectname = '$project'
-                                    order by statusdate desc ));
+                                    SELECT remark
+                                    FROM project_status
+                                    WHERE status = 9
+                                      AND projectname = '$project'
+                                    ORDER BY statusdate DESC
+                                    ));
         eval{ $fish = $ans->[0][0] };
         if ($fish) {
             $map = fishParse( $fish )
@@ -526,8 +541,9 @@ sub fishData {
                                 SELECT remark
                                 FROM project_status
                                 WHERE status = 9
-                                AND projectname = '$project'
-                                ORDER BY statusdate DESC ));
+                                  AND projectname = '$project'
+                                ORDER BY statusdate DESC
+                                ));
     my( $map );
     if (@$ans) {
         $map = fishParse( $ans->[0][0] )
@@ -568,14 +584,17 @@ sub project_finisher {
     my( $project ) = @_;
 
     my $query = qq(
-                   select p.forename, p.surname
-                   from project_role pr, team_person_role tpr, person p
-                   where pr.id_role = tpr.id_role and
-                         tpr.id_person = p.id_person and
-                         pr.projectname = '$project' and
-                         tpr.roletype = 'Finishing'
-                   order by pr.assigned_from desc
-                   );
+                    SELECT p.forename
+                      , p.surname
+                    FROM project_role pr
+                      , team_person_role tpr
+                      , person p
+                    WHERE pr.id_role = tpr.id_role
+                      AND tpr.id_person = p.id_person
+                      AND pr.projectname = '$project'
+                      AND tpr.roletype = 'Finishing'
+                    ORDER BY pr.assigned_from DESC
+                    );
     my $ans = ref_from_query( $query );
     
     my( $forename, $surname );
@@ -605,13 +624,16 @@ sub project_team_leader {
     my( $project ) = @_;
 
     my $query = qq(
-                   select p.forename, p.surname
-                   from project_owner o, team t, person p
-                   where o.teamname = t.teamname and
-                         t.teamleader = p.id_person and
-                         o.projectname = '$project'
-                   order by o.owned_from desc
-                   );
+                    SELECT p.forename
+                      , p.surname
+                    FROM project_owner o
+                      , team t
+                      , person p
+                    WHERE o.teamname = t.teamname
+                      AND t.teamleader = p.id_person
+                      AND o.projectname = '$project'
+                    ORDER BY o.owned_from DESC
+                    );
     my $ans = ref_from_query( $query );
     
     my( $forename, $surname );
