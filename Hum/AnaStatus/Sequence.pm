@@ -23,13 +23,17 @@ sub new_from_sequence_name {
           , UNIX_TIMESTAMP(status.status_date)
           , s.embl_checksum
           , person.annotator_uname
+          , sc.chr_name
+          , sc.species_name
         FROM sequence s
           , ana_sequence a
           , ana_status status
+          , species_chromosome sc
         LEFT JOIN ana_sequence_person person
           ON a.ana_seq_id = person.ana_seq_id                        
         WHERE s.seq_id = a.seq_id
           AND a.ana_seq_id = status.ana_seq_id
+          AND s.chromosome_id = sc.chromosome_id
           AND status.is_current = 'Y'
           AND a.is_current = 'Y'
           AND s.sequence_name = ?
@@ -52,7 +56,9 @@ sub new_from_sequence_name {
             $status_id,
             $status_date,
             $embl_checksum,
-            $annotator_uname
+            $annotator_uname,
+            $chr_name,
+            $species_name
            ) = @{$ans->[0]};
         
         my $self = bless {}, $pkg;
@@ -312,6 +318,44 @@ sub annotator_uname {
         $self->{'_annotator_uname'} = $annotator_uname;
     }
     return $self->{'_annotator_uname'};
+}
+
+sub chr_name {
+    my ( $self, $chr_name ) = @_;
+    
+    if ($chr_name) {
+        confess "Can't modify chr_name"
+            if $self->{'_chr_name'};
+        $self->{'_chr_name'} = $chr_name;
+    }
+    if (my $chr = $self->{'_chr_name'}) {
+        if ($chr eq 'UNKNOWN') {
+            return;
+        } else {
+            return $chr;
+        }
+    } else {
+        return;
+    }
+}
+
+sub species_name {
+    my ( $self, $species_name ) = @_;
+    
+    if ($species_name) {
+        confess "Can't modify species_name"
+            if $self->{'_species_name'};
+        $self->{'_species_name'} = $species_name;
+    }
+    if (my $species = $self->{'_species_name'}) {
+        if ($species eq 'UNKNOWN') {
+            return;
+        } else {
+            return $species;
+        }
+    } else {
+        return;
+    }
 }
 
 {

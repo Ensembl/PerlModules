@@ -16,6 +16,7 @@ use vars qw( @ISA @EXPORT_OK );
                  destroy_lock
                  die_if_dumped_recently
                  prepare_statement
+                 submission_disconnect
                  acetime
                  timeace
                  ghost_path
@@ -72,11 +73,15 @@ sub ref_from_query {
         return $sth;
     }
     
-    END {
+    sub submission_disconnect {
         foreach my $sth (@active_statement_handles) {
             $sth->finish if $sth;
         }
         $db->disconnect if $db;
+    }
+    
+    END {
+        submission_disconnect();
     }
 }
 
