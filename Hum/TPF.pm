@@ -220,6 +220,7 @@ sub _express_fetch_TPF_Clones_hash {
           , r.remark
           , l.internal_prefix
           , l.external_prefix
+          , c.remark
         FROM tpf_row r
           , clone c
           , library l
@@ -231,9 +232,9 @@ sub _express_fetch_TPF_Clones_hash {
     my $sth = prepare_cached_track_statement($sql);
     $sth->execute($self->db_id);
     my( $clone_id, $clone_rank, $clonename, $contigname,
-        $remark, $int_pre, $ext_pre );
+        $remark, $int_pre, $ext_pre, $remark );
     $sth->bind_columns(\$clone_id, \$clone_rank, \$clonename, \$contigname,
-        \$remark, \$int_pre, \$ext_pre );
+        \$remark, \$int_pre, \$ext_pre, \$clone_remark );
     
     my $rank_clone = {};
     while ($sth->fetch) {
@@ -241,8 +242,14 @@ sub _express_fetch_TPF_Clones_hash {
         $clone->db_id($clone_id);
         $clone->contig_name($contigname);
         $clone->sanger_clone_name($clonename);
-        $clone->set_intl_clone_name_from_sanger_int_ext($clonename, $int_pre, $ext_pre);
         $clone->remark($remark);
+        
+        if ($clone_remark =~ /MULTIPLE/) {
+            $clone->is_multi_clone(1);
+        }
+        elsif ($clone_remark !~ /UNKNOWN/) {
+            $clone->set_intl_clone_name_from_sanger_int_ext($clonename, $int_pre, $ext_pre);
+        }
         
         $rank_clone->{$clone_rank} = $clone;
     }

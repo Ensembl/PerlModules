@@ -17,6 +17,15 @@ sub new {
         }, $pkg;
 }
 
+sub allow_unfinished {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_allow_unfinished'} = $flag ? 1 : 0;
+    }
+    return $self->{'_allow_unfinished'};
+}
+
 sub missing_overlap_pad {
     my( $self, $overlap_pad ) = @_;
     
@@ -90,6 +99,7 @@ sub process_TPF {
 
     my @rows = $tpf->fetch_all_Rows;
     my $contig = [];
+    my $unfin_flag = $self->allow_unfinished;
     for (my $i = 0; $i < @rows; $i++) {
         my $row = $rows[$i];
         if ($row->is_gap) {
@@ -99,7 +109,16 @@ sub process_TPF {
             $gap->chr_length($row->gap_length || $self->unknown_gap_length);
             $gap->remark($row->remark);
         } else {
-            push(@$contig, $row);
+            my $inf = $row->SequenceInfo;
+            if ($unfin_flag or ($inf and $inf->htgs_phase == 3)) {
+                push(@$contig, $row);
+            } else {
+                $self->_process_contig($contig) if @$contig;
+                $contig = [];
+                my $gap = $self->new_Gap;
+                $gap->chr_length(50_000);
+                $gap->remark('Unfinished_sequence');
+            }
         }
     }
     $self->_process_contig($contig) if @$contig;
