@@ -7,6 +7,8 @@ use strict;
 use Carp;
 use Hum::Submission qw( prepare_statement timeace );
 use Hum::AnaStatus::AceFile;
+use Bio::SeqIO;
+
 
 sub new_from_sequence_name {
     my ($pkg, $seq_name) = @_;
@@ -187,6 +189,27 @@ sub status_id {
             %valid_status_id = map {$_, 1} @valid_status_id;
         }
         return $valid_status_id{$status_id};
+    }
+}
+
+
+sub get_dna_seq {
+    my  ( $self ) = @_;
+
+    my $ana_dir = $self->analysis_directory;
+    my $seq_name = $self->sequence_name;
+    my $seq_file = "$ana_dir/$seq_name.seq";
+    my $dna_seq_in = Bio::SeqIO->new(
+        -FORMAT => 'fasta',
+        -FILE   => $seq_file,
+        );
+    my $dna_seq = $dna_seq_in->next_seq;
+
+    if ($dna_seq){
+        return $dna_seq;
+    } else {
+        print STDERR "Failed to read Bio::Seq from fasta file '$seq_file'\n";
+        return;
     }
 }
 
