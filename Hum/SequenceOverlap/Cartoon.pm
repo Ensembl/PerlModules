@@ -17,7 +17,7 @@ sub rpp {
     if ($rpp) {
         $self->{'_rpp'} = $rpp;
     }
-    return $self->{'_rpp'} || 200;
+    return $self->{'_rpp'} || 500;
 }
 
 sub pad {
@@ -35,7 +35,7 @@ sub clone_thickness {
     if ($clone_thickness) {
         $self->{'_clone_thickness'} = $clone_thickness;
     }
-    return $self->{'_clone_thickness'} || 2;
+    return $self->{'_clone_thickness'} || 3;
 }
 
 
@@ -45,7 +45,7 @@ sub gif {
     my $width  = $self->image_width;
     my $height = $self->image_height;
     my $img = $self->get_Image($width, $height);
-    my $color = $self->color_index('black');
+    my $grey = $self->color_index('SlateBlue');
     
     my $rpp   = $self->rpp;
     my $pad   = $self->pad;
@@ -57,19 +57,19 @@ sub gif {
     my $len_b = $inf_b->sequence_length;
     
     # Set up origin
-    my $x = $pad;
+    my $x = 12 * $self->font->width;
     my $y = $pad + $self->font->height;
     
     my @rect_a = ($x, $y, $x + ($len_a / $rpp), $y + $self->clone_thickness);
-    $img->filledRectangle(@rect_a, $color);
+    $img->filledRectangle(@rect_a, $grey);
     $self->draw_top_label($self->a_Position, @rect_a);
     
     # Move origin to draw second sequence
     $x += ($len_a - $over) / $rpp;
     $y += $pad;
     
-    my @rect_b = ($x, $y, $x + ($len_a / $rpp), $y + $self->clone_thickness);
-    $img->filledRectangle(@rect_b, $color);
+    my @rect_b = ($x, $y, $x + ($len_b / $rpp), $y + $self->clone_thickness);
+    $img->filledRectangle(@rect_b, $grey);
     $self->draw_bottom_label($self->b_Position, @rect_b);
     
     return $img->gif;
@@ -89,11 +89,12 @@ sub setup_colors {
     my( $self ) = @_;
     
     my $img = $self->get_Image;
-    $self->{'_colors'}{'NavajoWhite'} = $img->colorAllocate(255,222,173);
-    $self->{'_colors'}{'white'} = $img->colorAllocate(255,255,255);
-    $self->{'_colors'}{'black'} = $img->colorAllocate(0,0,0);
-    $self->{'_colors'}{'LightSeaGreen'} = $img->colorAllocate(32,178,170);
-    
+    #$self->{'_colors'}{'NavajoWhite'}   = $img->colorAllocate(255,222,173);
+    $self->{'_colors'}{'white'}         = $img->colorAllocate(255,255,255);
+    $self->{'_colors'}{'SlateBlue'}     = $img->colorAllocate(106,90,205);
+    $self->{'_colors'}{'black'}         = $img->colorAllocate(0,0,0);
+    #$self->{'_colors'}{'DarkSlateGrey'} = $img->colorAllocate(47,79,79);
+    #$self->{'_colors'}{'LightSeaGreen'} = $img->colorAllocate(32,178,170);
 }
 
 sub color_index {
@@ -111,7 +112,8 @@ sub color_index {
 sub draw_top_label {
     my( $self, $pos, @rect ) = @_;
     
-    my $color = $self->color_index('black');
+    my $grey  = $self->color_index('SlateBlue');
+    my $black = $self->color_index('black');
     my $pad = $self->pad;
     my $img = $self->get_Image;
     my $inf = $pos->SequenceInfo;
@@ -123,29 +125,37 @@ sub draw_top_label {
         $poly->addPt($x, $y);
         $poly->addPt($x - $pad, $y);
         $poly->addPt($x - $pad, $y - $pad);
-        $img->filledPolygon($poly, $color);
+        $img->filledPolygon($poly, $grey);
         
-        ($x, $y) = @rect[0,1];
+        my $x1 = $x - (2 * $pad) - $self->text_length($label);
+        my $x2 = $rect[0];
+        $x = $x1 < $x2 ? $x1 : $x2;
         $y -= $font->height;
-        $img->string($font, $x, $y, $label, $color);
+        $img->string($font, $x, $y, $label, $black);
     } else {
         my $poly = GD::Polygon->new;
         my($x, $y) = @rect[0,1];
         $poly->addPt($x, $y);
         $poly->addPt($x + $pad, $y);
         $poly->addPt($x + $pad, $y - $pad);
-        $img->filledPolygon($poly, $color);
+        $img->filledPolygon($poly, $grey);
         
-        $x += $pad * 2;
         $y -= $font->height;
-        $img->string($font, $x + (2 * $pad), $y, $label, $color);
+        $img->string($font, $x + (2 * $pad), $y, $label, $black);
     }
+}
+
+sub text_length {
+    my( $self, $txt ) = @_;
+    
+    return $self->font->width * length($txt);
 }
 
 sub draw_bottom_label {
     my( $self, $pos, @rect ) = @_;
     
-    my $color = $self->color_index('black');
+    my $grey  = $self->color_index('SlateBlue');
+    my $black = $self->color_index('black');
     my $pad = $self->pad;
     my $img = $self->get_Image;
     my $inf = $pos->SequenceInfo;
@@ -157,19 +167,21 @@ sub draw_bottom_label {
         $poly->addPt($x, $y);
         $poly->addPt($x + $pad, $y);
         $poly->addPt($x + $pad, $y + $pad);
-        $img->filledPolygon($poly, $color);
+        $img->filledPolygon($poly, $grey);
         
-        $img->string($font, $x + (2 * $pad), $y + 1, $label, $color);
+        $img->string($font, $x + (2 * $pad), $y + 1, $label, $black);
     } else {
         my $poly = GD::Polygon->new;
         my($x, $y) = @rect[2,3];
         $poly->addPt($x, $y);
         $poly->addPt($x - $pad, $y);
         $poly->addPt($x - $pad, $y + $pad);
-        $img->filledPolygon($poly, $color);
+        $img->filledPolygon($poly, $grey);
         
-        ($x, $y) = @rect[0,3];
-        $img->string($font, $x, $y + 1, $label, $color);
+        my $x1 = $x - (2 * $pad) - $self->text_length($label);
+        my $x2 = $rect[0];
+        $x = $x1 < $x2 ? $x1 : $x2;
+        $img->string($font, $x, $y + 1, $label, $black);
     }
 }
 
@@ -183,11 +195,13 @@ sub image_width {
     my $scale = $self->rpp;
     my $pad   = $self->pad;
     my $wid_1 = $self->a_Position->SequenceInfo->sequence_length;
-    my $wid_2 = $self->a_Position->SequenceInfo->sequence_length;
+    my $wid_2 = $self->b_Position->SequenceInfo->sequence_length;
     my $over  = $self->overlap_length;
 
     my $width = $wid_1 + $wid_2 - $over;
-    return ($pad * 2) + ($width / $scale);
+    $width = $wid_1 if $width < $wid_1;
+    $width = $wid_2 if $width < $wid_2;
+    return + (2 * $pad) + (24 * $self->font->width) + ($width / $scale);
 }
 
 
