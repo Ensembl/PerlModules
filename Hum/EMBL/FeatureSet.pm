@@ -23,8 +23,6 @@ sub newFeature {
 sub sortByPosition {
     my( $set ) = @_;
     
-    warn "[@$set]";
-    
     # Get the start and end for each feature
     my @sort = map {[$_->location->start, $_->location->end, $_]} @$set;
     
