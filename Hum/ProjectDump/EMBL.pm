@@ -24,22 +24,6 @@ Hum::EMBL->import(
     'BQ *' => 'Hum::EMBL::Line::BQ_star',
     );
 
-# Overrides method in Hum::ProjectDump
-sub embl_checksum {
-    my( $pdmp ) = @_;
-    
-    return $pdmp->embl_file->Sequence->embl_checksum;
-}
-
-# Overrides method in Hum::ProjectDump
-sub htgs_phase {
-    my( $pdmp ) = @_;
-    
-    $pdmp->{'_actual_htgs_phase'} ||=
-        Hum::Tracking::is_finished($pdmp->project_name) ? 3 : 1;
-    return $pdmp->{'_actual_htgs_phase'};
-}
-
 sub make_embl {
     my( $pdmp ) = @_;
 
@@ -284,6 +268,23 @@ sub add_FT_entries {
                   'http://www.genomecorp.com'],
         );
 
+    sub add_external_draft_CC {
+        my( $pdmp, $embl ) = @_;
+        
+        # Special comment for sequences where the draft
+        # was produced externally
+        if (my $inst = $pdmp->draft_institute) {
+            if (my $remark = $ext_institute_remark{$inst}) {
+                $embl->newCC->list(@$remark);
+                $embl->newXX;
+            } else {
+                confess "No remark for institute '$inst'";
+            }
+        }
+    }
+}
+
+{
     my %sequencing_center = (
         5  => ['Center: Wellcome Trust Sanger Institute',
                'Center code: SC',
@@ -298,17 +299,8 @@ sub add_FT_entries {
     sub add_Headers {
         my( $pdmp, $embl, $contig_map ) = @_;
 
-        # Special comment for sequences where the draft
-        # was produced externally
-        if (my $inst = $pdmp->draft_institute) {
-            if (my $remark = $ext_institute_remark{$inst}) {
-                $embl->newCC->list(@$remark);
-                $embl->newXX;
-            } else {
-                confess "No remark for institute '$inst'";
-            }
-        }
-
+        $pdmp->add_external_draft_CC($embl);
+        
         my $project = $pdmp->project_name;
 
         my $draft_or_unfinished = is_shotgun_complete($project)

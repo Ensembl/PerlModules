@@ -13,6 +13,22 @@ use vars qw{ @ISA };
 @ISA = qw{ Hum::ProjectDump::EMBL };
 
 
+# Overrides method in Hum::ProjectDump
+sub embl_checksum {
+    my( $pdmp ) = @_;
+    
+    return $pdmp->embl_file->Sequence->embl_checksum;
+}
+
+# Overrides method in Hum::ProjectDump
+sub htgs_phase {
+    my( $pdmp ) = @_;
+    
+    $pdmp->{'_actual_htgs_phase'} ||=
+        Hum::Tracking::is_finished($pdmp->project_name) ? 3 : 1;
+    return $pdmp->{'_actual_htgs_phase'};
+}
+
 sub store_dump {
     my( $pdmp ) = @_;
     

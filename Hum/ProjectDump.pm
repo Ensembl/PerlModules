@@ -301,7 +301,8 @@ sub external_clone_name {
     my( $pdmp ) = @_;
     
     unless ($pdmp->{'_external_clone_name'}) {
-        my $project = $pdmp->project_name;
+        my $project = $pdmp->project_name
+            or confess "No project_name";
         my $e = Hum::Tracking::external_clone_name($project);
         my $ext_clone = $e->{$project}
             or die "Can't make external clone name";
@@ -545,7 +546,7 @@ sub read_fasta_file {
             $dna = $pdmp->new_dna_ref($contig);
         } else {
             chomp;
-            $$dna .= $_;
+            $$dna .= lc $_;
         }
     }
     

@@ -451,7 +451,8 @@ clones.
 sub external_clone_name {
     my( @projects ) = @_;
     
-    my $proj_list = join(',', map "'$_'", @projects) or return;
+    confess "no project names" unless grep $_, @projects;
+    my $proj_list = join(',', map "'$_'", @projects);
     
     my $ans = ref_from_query(qq(
         SELECT cp.projectname
