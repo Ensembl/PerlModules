@@ -7,10 +7,10 @@ use strict;
 use Carp;
 
 sub new {
-    my( $pkg, $filename ) = @_;
+    my( $pkg, $path ) = @_;
     
     my $self = bless {}, $pkg;
-    $self->filename($filename) if $filename;
+    $self->path($path) if $path;
     return $self;
 }
 
@@ -42,23 +42,23 @@ sub write_access {
     return $self->{'_flag'};
 }
 
-sub filename {
-    my( $self, $filename ) = @_;
+sub path {
+    my( $self, $path ) = @_;
     
-    if ($filename) {
-        $self->{'_filename'} = $filename;
+    if ($path) {
+        $self->{'_path'} = $path;
     } else {
-        return $self->{'_filename'} || confess "filename not set";
+        return $self->{'_path'} || confess "path not set";
     }
 }
 
-sub build_filename {
-    my( $self, $build_filename ) = @_;
+sub build_path {
+    my( $self, $build_path ) = @_;
     
-    if ($build_filename) {
-        $self->{'_build_filename'} = $build_filename;
+    if ($build_path) {
+        $self->{'_build_path'} = $build_path;
     } else {
-        return $self->{'_build_filename'} || confess "build_filename not set";
+        return $self->{'_build_path'} || confess "build_path not set";
     }
 }
 
@@ -72,12 +72,9 @@ sub db_name {
         $db_name = $self->{'_db_name'};
     }
     
-    # ... or get it from the filename
+    # ... or get it from the path
     unless ($db_name) {
-        my $filename = $self->filename;
-        ($db_name) = $filename =~ m{([^/]+)$};
-        confess "Couldn't make db_name from filename '$filename'" 
-            unless $db_name;
+        $db_name = $self->_file_name($self->path);
     }
     
     return $db_name;
@@ -120,13 +117,29 @@ sub db_name {
 }
 
 sub _device_number {
-    my( $self, $filename ) = @_;
+    my( $self, $path ) = @_;
     
-    my ($dir) = $filename =~ m{^(.*/)};
-    $dir = '.' unless defined $dir;
+    my $dir = $self->_dir_name($path);
     my $dev_num = (stat($dir))[0]
-        or confess "Can't get device number for '$filename' (dir='$dir')";
+        or confess "Can't get device number for '$path' (dir='$dir')";
     return $dev_num;
+}
+
+sub _dir_name {
+    my( $self, $path ) = @_;
+    
+    my ($dir) = $path =~ m{^(.*)/};
+    $dir = '.' unless defined $dir;
+    warn "Returning dir='$dir'\n";
+    return $dir;
+}
+
+sub _file_name {
+    my( $self, $path ) = @_;
+    
+    my ($file) = $path =~ m{([^/]+)$}
+        or confess "Can't parse file from '$path'";
+    return $file;
 }
 
 sub do_indexing {
@@ -136,14 +149,14 @@ sub do_indexing {
         unless $self->write_access;
 
     # These three methods all fatal if not set:
-    my $type     = $self->type;
-    my $build    = $self->build_filename;
-    my $filename = $self->filename;
+    my $type    = $self->type;
+    my $build   = $self->build_path;
+    my $path    = $self->path;
     
-    confess "Names for new and old databases are both '$filename'"
-        if $filename eq $build;
-    unless ($self->_device_number($filename) == $self->_device_number($build)) {
-        confess "Can't index '$filename' and '$build' are on different filesystems";
+    confess "Names for new and old databases are both '$path'"
+        if $path eq $build;
+    unless ($self->_device_number($path) == $self->_device_number($build)) {
+        confess "Can't index '$path' and '$build' are on different filesystems";
     }
     
     # Make a title for the blast database
@@ -185,17 +198,20 @@ sub do_indexing {
     }
     
     if ($error_flag) {
-        confess "Creation of blast database '$filename' from '$build' failed:\n",
+        confess "Creation of blast database '$path' from '$build' failed:\n",
             @outLines;
     } 
 }
 
-sub rename_build_to_filename {
+sub rename_build_to_path {
     my( $self ) = @_;
     
+    confess "Can't rename: Don't have write access"
+        unless $self->write_access;
+    
     my $type     = $self->type;
-    my $build    = $self->build_filename;
-    my $filename = $self->filename;
+    my $build    = $self->build_path;
+    my $path = $self->path;
 
     my( @extn );
     if ($type eq 'NUCLEOTIDE') {
@@ -210,7 +226,7 @@ sub rename_build_to_filename {
     
     # Rename new files to blast_db name
     foreach my $ex (@extn) {
-        my( $from, $to ) = ("$build$ex", "$filename$ex");
+        my( $from, $to ) = ("$build$ex", "$path$ex");
         rename($from, $to)
             or confess "Error renaming '$from' to '$to' : $!";
     }
@@ -232,9 +248,9 @@ sub _make_db_title {
         push(@title, "version=$version");
     }
     
-    if (my @parts = $self->parts) {
-        my $part_def = join('of', @parts);
-        push(@title, "parts=$part_def");
+    if (my @part = $self->part) {
+        my $part_def = join('of', @part);
+        push(@title, "part=$part_def");
     }
     
     return join('|', @title);
@@ -243,15 +259,16 @@ sub _make_db_title {
 sub actual_file_size {
     my( $self ) = @_;
     
-    my $filename = $self->filename;
-    return -s $filename;
+    my $path = $self->path;
+    $self->{'_actual_file_size'} ||= -s $path;
+    return $self->{'_actual_file_size'};
 }
 
 sub actual_build_file_size {
     my( $self ) = @_;
     
-    my $filename = $self->build_filename;
-    return -s $filename;
+    my $path = $self->build_path;
+    return -s $path;
 }
 
 sub date {
@@ -284,7 +301,7 @@ sub size {
     return $self->{'_size'};
 }
 
-sub parts {
+sub part {
     my( $self, $i, $n ) = @_;
     
     $self->read_db_details;
@@ -300,10 +317,10 @@ sub parts {
         if ($i > $n) {
             confess "Part number '$i' is greater than number of parts '$n'";
         }
-        $self->{'_parts'} = [$i, $n];
+        $self->{'_part'} = [$i, $n];
     }
 
-    if (my $d = $self->{'_parts'}) {
+    if (my $d = $self->{'_part'}) {
         return @$d;
     } else {
         return;
@@ -338,7 +355,7 @@ sub check_file_size {
 sub _read_db_title {
     my( $self ) = @_;
     
-    my $file = $self->filename;
+    my $file = $self->path;
     my $type = $self->type;
     
     # We only look at the version 1 index files,
@@ -417,14 +434,14 @@ __END__
     my $blast_db = Hum::Blast::DB->new;
     $blast_db->db_name('dbEST');
     $blast_db->write_access(1); # To allow indexing
-    $blast_db->parts(2,6);      # File 2 of 6
+    $blast_db->part(2,6);      # File 2 of 6
     $blast_db->type('NUCLEOTIDE');
     
     # Set the name of the database file on success:
-    $blast_db->filename('/nfs/disk100/pubseq/dbEST-2');
+    $blast_db->path('/nfs/disk100/pubseq/dbEST-2');
     
     # Set the name of the new fasta file
-    $blast_db->build_filename('/nfs/disk100/pubseq/build/dbEST-2');
+    $blast_db->build_path('/nfs/disk100/pubseq/build/dbEST-2');
     
     # Index for both 1.4/wublast and NCBI Blast 2
     # (This is fatal on failure.)
@@ -433,7 +450,7 @@ __END__
     
     ### Read info from an existing blast db ###
     my $blast_db = Hum::Blast::DB->new;
-    $blast_db->filename('/nfs/disk100/pubseq/dbEST-2');
+    $blast_db->path('/nfs/disk100/pubseq/dbEST-2');
     
     # Get the date this was
     my $date = $blast_db->date;
@@ -476,22 +493,22 @@ and B<PROTEIN>.
 Set write_access to TRUE if you want to index a
 blast database.
 
-=item B<filename>
+=item B<path>
 
-    $blast_db->filename('/data/blastdb/dbEST-1');
+    $blast_db->path('/data/blastdb/dbEST-1');
 
-Must be set.  This is the filename of the
-existing indexed database, or the filename of the
+Must be set.  This is the path of the
+existing indexed database, or the path of the
 database once indexing is complete.
 
-=item B<build_filename>
+=item B<build_path>
 
-    $blast_db->build_filename('/data/blastdb/dbEST-1.build');
+    $blast_db->build_path('/data/blastdb/dbEST-1.build');
 
 The name of the file to be indexed.  If indexing
 is successful, it (and its index files) are
-renamed to the value of B<filename>.  This file
-must be on the same device as B<filename>.
+renamed to the value of B<path>.  This file
+must be on the same device as B<path>.
 
 =item B<db_name>
 
@@ -499,7 +516,7 @@ must be on the same device as B<filename>.
 
 =item B<do_indexing>
 
-=item B<rename_build_to_filename>
+=item B<rename_build_to_path>
 
 =item B<actual_file_size>
 
@@ -511,7 +528,7 @@ must be on the same device as B<filename>.
 
 =item B<size>
 
-=item B<parts>
+=item B<part>
 
 =item B<read_db_details>
 

@@ -23,7 +23,9 @@ sub newFeature {
 sub sortByPosition {
     my( $set ) = @_;
     
-    # Get the star and end for each feature
+    warn "[@$set]";
+    
+    # Get the start and end for each feature
     my @sort = map {[$_->location->start, $_->location->end, $_]} @$set;
     
     # Sort on start and ends
