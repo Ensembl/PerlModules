@@ -44,6 +44,7 @@ sub ref_from_query {
 
     my $dbh = sub_db();
 
+
     my $sth = $dbh->prepare( $query );
     $sth->execute;
     return $sth->fetchall_arrayref;
@@ -58,9 +59,16 @@ sub ref_from_query {
     sub sub_db () {
         unless ($db) {
             my $user = (getpwuid($<))[0];
+                       
+            my $dbname;            
+            if ($ENV{'SUB_DB_HOST'}) { 
+                $dbname = $ENV{'SUB_DB_HOST'};
+            }else {
+                $dbname = "submissions";
+            }
             
             # Make the database connection
-            $db = DBI->connect("DBI:mysql:host=humsrv1;port=3399;database=submissions;user=$user",
+            $db = DBI->connect("DBI:mysql:host=humsrv1;port=3399;database=$dbname;user=$user",
                                undef, undef, {RaiseError => 1})
                 or die "Can't connect to submissions database as '$user' ",
                 DBI::errstr();
