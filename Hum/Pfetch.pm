@@ -16,6 +16,7 @@ use vars qw{@ISA @EXPORT_OK};
     };
 
 sub get_server {
+    local $^W = 0;
     foreach my $host_port (@$PFETCH_SERVER_LIST) {
         my($host, $port) = @$host_port;
         my $server = IO::Socket::INET->new(
