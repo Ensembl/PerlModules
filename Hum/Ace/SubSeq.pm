@@ -962,7 +962,7 @@ sub valid_exon_coordinates {
         my $start = $ex->start;
         my $end   = $ex->end;
         confess "Illegal start-end ($start-$end)"
-            unless $start < $end;
+            unless $start <= $end;
         if ($last_end) {
             confess "Exon [$start-$end] overlap with previous (ends at $last_end)"
                 if $start <= $last_end;
