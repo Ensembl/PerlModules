@@ -179,9 +179,11 @@ sub location_from_subsequence {
         # Sort exons descending by their ends
         @exons = sort { $b->[1] <=> $a->[1] } @exons;
         foreach my $e (@exons) {
-            foreach (@$e) {
+            my( $x, $y ) = @$e;
+            foreach ($x, $y) {
                 $_ = $start + 1 - $_;
             }
+            $e = [$y, $x];
         }
     } else {
         confess("Can't get order from $start - $end");
