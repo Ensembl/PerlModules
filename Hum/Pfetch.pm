@@ -112,27 +112,28 @@ sub get_descriptions {
     return @desc_list;
 }
 
-sub get_lengths {
-    my( @id_list ) = @_;
+sub get_lengths { # : list_reference -> hash_reference
+	my $name_lp = shift @_;
     
-    confess "No names provided" unless @id_list;
+    confess "No names provided" unless @$name_lp;
     
     my $server = get_server();
-    print $server "-l @id_list\n";
-    my( @length_list );
-    for (my $i = 0; $i < @id_list; $i++) {
+    print $server "-l @$name_lp\n";
+
+	my $length_hp = {};
+
+    for (my $i = 0; $i < @$name_lp; $i++) {
+		my $name = $name_lp->[$i];
         my $length = <$server>;
 		if(! $length) {
-			warn "The length of $id_list[$i] is missing";
+			warn "The length of $name is missing";
 		}
         chomp $length;
-        if ($length eq 'no match') {
-            $length_list[$i] = undef;
-        } else {
-            $length_list[$i] = $length;
+        if ($length ne 'no match') {
+			$length_hp->{$name} = $length;
         }
     }
-    return @length_list;
+    return $length_hp;
 }
 
 sub get_EMBL_entries {
