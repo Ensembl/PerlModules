@@ -82,16 +82,6 @@ sub makeListAccessFuncs {
     }
 }
 
-sub entry {
-    my( $line, $entry ) = @_;
-    
-    if ($entry) {
-        $line->{'_entry'} = $entry;
-    } else {
-        return $line->{'_entry'};
-    }
-}
-
 # Sets the string and empties the data hash
 # if called with arguments.
 # Returns the stored string
@@ -440,25 +430,25 @@ use vars qw( @ISA );
 
 BEGIN {
     @ISA = qw( Hum::EMBL::Line );
-    Hum::EMBL::Line::SV->makeFieldAccessFuncs(qw( version ));
+    Hum::EMBL::Line::SV->makeFieldAccessFuncs(qw( accession version ));
 }
 
 sub parse {
     my( $line, $s ) = @_;
     
-    my( $version ) = $$s =~ /^SV   \S+\.(\d+)/
+    my( $acc, $version ) = $$s =~ /^SV   (\S+)\.(\d+)/
         or die "Can't parse SV line: $$s";
-    $line->version( $version );
+    $line->accession( $acc     );
+    $line->version  ( $version );
 }
 
 sub compose {
     my( $line ) = @_;
     
-    ### This will blow up if there aren't any entries in the AC class ###
-    my $ac = $line->entry->AC->primary();
+    my $acc     = $line->accession;
+    my $version = $line->version;
     
-    my $version = $line->version();
-    return $line->string("SV   $ac.$version\n");
+    return $line->string("SV   $acc.$version\n");
 }
 
 ###############################################################################

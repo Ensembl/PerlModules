@@ -111,7 +111,6 @@ BEGIN {
                     my $embl = shift;
 
                     my $line = $class->new(@_);
-                    $line->entry( $embl );
                     $embl->addLine( $line );
                     return $line;
                 };
@@ -126,11 +125,11 @@ BEGIN {
         if(ref($proto)) {
             # $proto is an object
             $class = ref($proto);
-            $handler = $proto->{'handler'};
+            $handler = \%{$proto->{'handler'}};
         } else {
             # $proto is a package name
             $class = $proto;
-            $handler = \%_handler;
+            $handler = {%_handler};
         }
 
         return bless {
@@ -204,7 +203,6 @@ sub lines {
     my( $embl, $lines ) = @_;
     
     if ($lines) {
-        foreach (@$lines) { $_->entry($embl); }
         $embl->{'_lines'} = $lines;
     } else {
         return @{$embl->{'_lines'}};
@@ -220,6 +218,7 @@ sub addLine {
         confess "No line provided to addLine()";
     }
 }
+
 
 1;
 
