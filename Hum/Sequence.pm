@@ -69,6 +69,26 @@ sub embl_checksum {
     return Hum::EMBL::Utils::crc32(\$seq);
 }
 
+sub sub_sequence {
+    my( $seq_obj, $x, $y ) = @_;
+    
+    if ($x > $y) {
+        confess "Start '$x' greater than end '$y'";
+    }
+    
+    my $seq_length = $seq_obj->sequence_length;
+    if ($y > $seq_length) {
+        confess "Coordinate '$y' is off end of sequence length '$seq_length'";
+    }
+    
+    my $seq_string = $seq_obj->sequence_string;
+    my $sub_seq_string = substr($seq_string, ($x - 1), ($y - $x + 1));
+    
+    my $sub_seq = ref($seq_obj)->new;
+    $sub_seq->sequence_string($sub_seq_string);
+    return $sub_seq;
+}
+
 sub fasta_string {
     my( $seq_obj ) = @_;
     
