@@ -109,7 +109,14 @@ sub three_prime {
 sub parse {
     my( $loc, $s ) = @_;
     
-    if ($$s =~ /complement/) {
+    # If the location contains multiple complement
+    # tags, then the order of the exons will need
+    # to be reversed
+    my $C_count = 0;
+    while ($$s =~ /complement/g) {
+        $C_count++;
+    }
+    if ($C_count) {
         $loc->strand('C');
     } else {
         $loc->strand('W');
@@ -123,6 +130,9 @@ sub parse {
         push( @exons, [$1, $2] );
     }
     if (@exons) {
+        if ($C_count > 1) {
+            @exons = reverse @exons;
+        }
         $loc->exons(@exons);
     } elsif (my ($i) = $$s =~ /(\d+)/) {
         # Single base pair
