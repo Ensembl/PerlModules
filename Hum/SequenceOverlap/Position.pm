@@ -131,7 +131,7 @@ sub store {
     
     my $info = $self->SequenceInfo;
     $info->store unless $info->db_id;
-    
+    print "Entering into SEQUENCE_OVERLAP with dovetail >" . $self->dovetail_length ."<\n"; 
     # REPLACE instead of INSERT?
     my $sth = track_db->prepare_cached(q{
         INSERT INTO sequence_overlap(
