@@ -4,7 +4,7 @@
 package Hum::Ace::Locus;
 
 use strict;
-use Carp;
+use Carp qw{ confess cluck };
 
 use Hum::Fox::AceData::Locus;
 use Hum::Fox::AceData::SubSequence;
@@ -85,6 +85,19 @@ sub gene_type_prefix {
     return $self->{'_gene_type_prefix'} || '';
 }
 
+
+sub is_truncated {
+    my( $self, $is_truncated ) = @_;
+    
+    #cluck "called is_truncated";
+    
+    if (defined $is_truncated) {
+        $self->{'_is_truncated'} = $is_truncated ? 1 : 0;
+    }
+    return $self->{'_is_truncated'} || 0;
+}
+
+
 {
     ### Gene types need to be set from set of transcripts
     ### Need to propagate Unprocessed/Processed Pseudogene
@@ -107,8 +120,13 @@ sub gene_type_prefix {
         #print STDERR $ace_locus->asString;
         $self->name($ace_locus->name);
 
-        if (my $ott = $ace_locus->at('Otter_id[1]')) {
+        if (my $ott = $ace_locus->at('Otter.Locus_id[1]')) {
             $self->otter_id($ott->name);
+        }
+
+        if ($ace_locus->at('Otter.Truncated')) {
+            $self->is_truncated(1);
+            #warn $self->name, " is truncated";
         }
 
         my( @pos_name );
@@ -157,7 +175,7 @@ sub gene_type_prefix {
         if ($gene_type) {
             $self->gene_type($gene_type);
         } else {
-            warn("No Gene type for locus '$ace_locus' :\n", $ace_locus->asString);
+            #warn("No Gene type for locus '$ace_locus' :\n", $ace_locus->asString);
         }        
     }
 }
@@ -286,8 +304,14 @@ sub is_new_format {
     my $old_format = 0;
     my $new_format = 0;
     
+    my $err = '';
     foreach my $sub ($self->get_all_SubSeqs) {
+        my $sub_name  = $sub->name;
         my $meth_name = $sub->GeneMethod->name;
+        next if $meth_name =~ /^GD/;
+        
+        $err .= sprintf "  %12s  %-s\n", $sub_name, $meth_name;
+        
         if ($meth_name =~ /supported_CDS/) {
             $old_format = 1;
         }
@@ -306,7 +330,7 @@ sub is_new_format {
     if ($old_format == $new_format) {
         if ($old_format and $new_format) {
             confess "Locus '", $self->name,
-                "' has both old and new format SubSequences\n";
+                "' has both old and new format SubSequences:\n", $err;
         } else {
             # Default to new_format - this happens
             # when the Locus doesn't contain a CDS.

@@ -736,13 +736,15 @@ sub is_archival {
     return $self->{'_is_archival'};
 }
 
-sub is_truncated {
-    my( $self, $flag ) = @_;
+sub is_mutable {
+    my( $self ) = @_;
     
-    if (defined $flag) {
-        $self->{'_is_truncated'} = $flag ? 1 : 0;
+    if (my $locus = $self->Locus) {
+        if ($locus->is_truncated) {
+            return 0;
+        }
     }
-    return $self->{'_is_truncated'};
+    return $self->GeneMethod->is_mutable;
 }
 
 ### Methods to record type?

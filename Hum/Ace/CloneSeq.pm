@@ -371,6 +371,28 @@ sub express_data_fetch {
       }
     } 
 
+    # Store clone spans.  These are used to show the annotator
+    # the borders between clones in the fMap display, and to
+    # choose the names of new sequences created in XaceSeqChooser
+    my $cle_list = $ace->raw_query('show -a Clone_left_end');
+    my $cle_txt = Hum::Ace::AceText->new($cle_list);
+    my( %name_pos );
+    foreach my $cle ($cle_txt->get_values('Clone_left_end')) {
+        my ($name, $left) = @$cle;
+        $name_pos{$name} = [$left];
+    }
+    my $cre_list = $ace->raw_query('show -a Clone_right_end');
+    my $cre_txt = Hum::Ace::AceText->new($cre_list);
+    foreach my $cre ($cre_txt->get_values('Clone_right_end')) {
+        my ($name, $right) = @$cre;
+        my $pos_array = $name_pos{$name} or die "Missing Clone_left_end tag for '$name'";
+        push(@$pos_array, $right);
+    }
+    while (my ($name, $pos) = each %name_pos) {
+        die "Missing Clone_right_end tag for '$name'" unless @$pos == 2;
+        $self->add_clone_span($name, @$pos);
+    }
+
     my $sub_list = $ace->raw_query('show -a Subsequence');
     my $txt = Hum::Ace::AceText->new($sub_list);
     
@@ -512,6 +534,27 @@ sub get_all_PolyAs {
     }
 }
 
+sub add_clone_span {
+    my( $self, $name, $start, $end ) = @_;
+    
+    print STDERR "Adding: $self, $name, $start, $end\n";
+    
+    my $list = $self->{'_clone_span_list'} ||= [];
+    push(@$list, [$name, $start, $end]);
+}
+
+sub clone_name_overlapping {
+    my( $self, $pos ) = @_;
+    
+    print STDERR "Getting: $self, $pos\n";
+    
+    my $list = $self->{'_clone_span_list'} or return;
+    foreach my $span (@$list) {
+        if ($pos >= $span->[1] and $pos <= $span->[2]) {
+            return $span->[0];
+        }
+    }
+}
 
 #sub DESTROY {
 #    my( $self ) = @_;
