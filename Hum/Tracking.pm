@@ -32,7 +32,7 @@ use vars qw( @ISA @EXPORT_OK );
 
 @EXPORT_OK = qw( expand_project_name ref_from_query
                  find_project_directories
-                 finised_accession );
+                 finised_accession external_clone_name );
 
 =pod
 
@@ -94,6 +94,48 @@ sub expand_project_name {
     } else {
         return $name;
     }
+}
+
+=pod
+
+=head2 HASH_REF = external_clone_name( LIST )
+
+Given a list of project names, it returns a
+reference to a hash, the keys of which are the
+Sanger project names, and the values the
+internationally approved convention for naming
+clones.
+
+=cut
+
+sub external_clone_name {
+    my( @projects ) = @_;
+    
+    my $proj_list = join(',', map "'$_'", @projects) or return;
+    
+    my $ans = ref_from_query(qq(
+                                 select p.projectname, c.clonename,
+                                     l.internal_prefix, l.external_prefix
+                                 from clone c, clone_project cp,
+                                     project p, library l
+                                 where
+                                     l.libraryname = c.libraryname and
+                                     c.clonename = cp.clonename and
+                                     cp.projectname = p.projectname and
+                                     p.projectname in($proj_list)
+                                ));
+    return unless @$ans;
+    
+    my %proj = map { $_->[0], [@{$_}[1,2,3]] } @$ans;
+    
+    foreach my $p (keys %proj) {
+        my( $clone, $int, $ext ) = @{$proj{$p}};
+        
+        $clone =~ s/^$int// or confess "Can't remove '$int' from '$clone'";
+        $proj{$p} = "$ext-$clone";
+    }
+    
+    return \%proj;
 }
 
 =pod
