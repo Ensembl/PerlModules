@@ -5,7 +5,7 @@ use strict;
 use Carp;
 use Exporter;
 use File::Copy 'copy';
-use File::Path 'mkpath';
+use File::Path 'mkpath', 'rmtree';
 use Programs 'cksum';
 use vars qw( @ISA @EXPORT_OK );
 
@@ -22,25 +22,19 @@ use vars qw( @ISA @EXPORT_OK );
 sub mirror_copy_dir {
     my( $from, $to ) = @_;
     
-    local *FROM;
-    opendir FROM, $from or die "Can't opendir('$from') : $!";
+    my %from_dir = dir_hash($from);
     my @utime = (stat($from))[8,9];
     unless (-d $to) {
         mkpath($to);
         die "Can't mkpath('$to')" unless -d $to;
     }
     
-    my %dirlist = map {$_, -d "$from/$_" ? 1 : 0}
-        grep ! /^\.{1,2}$/,     # Skip "." and ".."
-        readdir FROM;
-    closedir FROM;
-    
-    foreach my $f (keys %dirlist) {
+    foreach my $f (keys %from_dir) {
         my $from_file = "$from/$f";
         my $to_file   = "$to/$f";
-        if ($dirlist{$f}) {
+        if ($from_dir{$f} eq 'd') {
             # File is a directory
-            safe_copy_dir($from_file, $to_file);
+            mirror_copy_dir($from_file, $to_file);
         } else {
             eval {
                 mirror_copy_file($from_file, $to_file);
@@ -48,8 +42,42 @@ sub mirror_copy_dir {
             warn $@ if $@;
         }
     }
+    
+    my %to_dir = dir_hash($to);
+    while (my($f, $type) = each %to_dir) {
+        unless($from_dir{$f}) {
+            remove_entry("$to/$f", $type);
+        }
+    }
+    
     # Preserve access and modification time on new dir
     utime(@utime, $to);
+}
+
+sub remove_entry {
+    my( $path, $type ) = @_;
+    
+    if ($type eq 'f') {
+        unlink($path);
+    }
+    elsif ($type eq 'd') {
+        rmtree($path);
+    }
+    else {
+        confess("Unknown type '$type'");
+    }
+}
+
+sub dir_hash {
+    my( $dir ) = @_;
+    
+    local *DIR;
+    opendir(DIR, $dir) or die "Can't opendir('$dir') : $!";
+    my %dirhash = map {$_, (-d "$dir/$_") ? 'd' : 'f'}
+        grep ! /^\.{1,2}$/,     # Skip "." and ".."
+        readdir DIR;
+    closedir DIR;
+    return %dirhash;
 }
 
 sub mirror_copy_file {
@@ -180,7 +208,9 @@ Recursively copies all directories and files from
 directory C<$from_dir> to C<$to_dir> using
 B<mirror_copy_file>.  Like a "tar pipe", access
 and modification times of files and directories
-are preserved.  All errors are FATAL.
+are preserved.  Any directories or files present
+in C<$from_dir> but not in C<$to_dir> will be
+removed from C<$to_dir>.  All errors are FATAL.
 
 =head2 mirror_copy_file
 
