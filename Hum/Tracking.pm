@@ -37,6 +37,7 @@ use vars qw( @ISA @EXPORT_OK );
                 entry_name
                 expand_project_name
                 external_clone_name
+                intl_clone_name
                 find_project_directories
                 finished_accession
                 fishData
@@ -434,6 +435,54 @@ sub project_from_clone {
         return $ans->[0][0];
     } else {
         return;
+    }
+}
+
+=pod
+
+=head2 STRING = intl_clone_name( STRING )
+
+Given the name of a clone, returns the
+International Clone name for that clone.
+
+=cut
+
+
+{
+    my( %clone_intl );
+    
+    sub intl_clone_name {
+        my( $clone ) = @_;
+        
+        confess "Missing clone argument" unless $clone;
+        
+        my( $intl );
+        unless ($intl = $clone_intl{$clone}) {
+            my $sth = prepare_track_statement(q{
+                SELECT l.internal_prefix
+                  , l.external_prefix
+                FROM clone c
+                  , library l
+                WHERE l.libraryname = c.libraryname
+                  AND c.clonename = ?
+                });
+            $sth->execute($clone);
+            my ($int, $ext) = $sth->fetchrow;
+            $sth->finish;
+            
+            my $short = uc $clone;
+            if ($int) {
+                $int = uc $int;
+                $short =~ s/^$int//;
+            } else {
+                warn "No entry in Oracle CLONE table for '$clone'\n";
+            }
+            $ext ||= 'XX';
+            
+            $intl = $clone_intl{$clone} = "$ext-$short";
+        }
+        
+        return $intl;
     }
 }
 

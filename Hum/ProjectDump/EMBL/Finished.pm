@@ -11,6 +11,7 @@ use Hum::Tracking qw{
     library_and_vector
     prepare_track_statement
     project_from_clone
+    intl_clone_name
     };
 use Hum::ProjectDump::EMBL;
 use Hum::EMBL::LocationUtils qw{
@@ -19,7 +20,6 @@ use Hum::EMBL::LocationUtils qw{
     location_from_homol_block
     };
 use Hum::EmblUtils qw{
-    extCloneName
     projectAndSuffix
     };
 use Hum::Ace::CloneSeq;
@@ -225,22 +225,8 @@ except for a short overlap.");
         foreach my $c_tag (grep $_ ne $name, $ace->at("Structure.Clone_${end}_end[1]")) {
             warn "clone tag: $c_tag\n";
             if (my $c_pos = $c_tag->at) {
-                my $cl = $c_tag->fetch;
-                my( $project ) = projectAndSuffix( $cl );
-                
-                # Project may not be finished yet
-                $project ||= project_from_clone("$cl");
-                
-                if ($project) {
-                    my $ext_name = extCloneName( $project );
-                    if ($ext_name) {
-                        push(@lines, "The true $end end of clone $ext_name is at $c_pos in this sequence.");
-                    } else {
-                        warn "Can't make external name for '$cl'\n";
-                    }
-                } else {
-                    warn "No project for clone '$cl'\n";
-                }
+                my $ext_name = intl_clone_name($c_tag->name);
+                push(@lines, "The true $end end of clone $ext_name is at $c_pos in this sequence.");
             }
         }
     }
@@ -983,9 +969,7 @@ BEGIN {
 		$this_seq = lc $this_seq;
 
                 # Give the correct international clone name for the other sequence
-                my $ext_name = extCloneName( project_from_clone($other_clone) )
-                    or warn "Assembly_tags: Can't get external name for '$other_clone'"
-                    and next ROW;
+                my $ext_name = intl_clone_name($other_clone);
 		$other_clone = "clone $ext_name";
 		$this_seq .= ' in this entry';
 

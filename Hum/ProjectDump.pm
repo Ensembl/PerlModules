@@ -385,9 +385,9 @@ sub external_clone_name {
     unless ($pdmp->{'_external_clone_name'}) {
         my $project = $pdmp->project_name
             or confess "No project_name";
-        my $e = Hum::Tracking::external_clone_name($project);
-        my $ext_clone = $e->{$project}
-            or die "Can't make external clone name";
+        my $clone = Hum::Tracking::clone_from_project($project)
+            or confess "No clone for project '$project'";
+        my $ext_clone = Hum::Tracking::intl_clone_name($clone);
         $pdmp->{'_external_clone_name'} = $ext_clone;
     }
     return $pdmp->{'_external_clone_name'};
