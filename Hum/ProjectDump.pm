@@ -17,6 +17,60 @@ use Hum::Conf qw( FTP_ROOT FTP_GHOST FTP_STRUCTURE );
 use Symbol 'gensym';
 use File::Path;
 
+{
+    my( $sth );
+
+    sub fill_in_project_check_for_project {
+        my( $pkg, $project ) = @_;
+
+        $sth ||= prepare_track_statement(q{
+            SELECT c.sequenced_by
+              , c.funded_by
+            FROM clone_project cp
+              , clone c
+            WHERE cp.clonename = c.clonename
+              AND cp.projectname = ?
+            });
+        $sth->execute($project);
+        my ($seq_by, $fund_by) = $sth->fetchrow;
+        $sth->finish;
+        
+        my $is_present = prepare_statement(qq{
+            SELECT count(*)
+            FROM project_check
+            WHERE project_name = '$project'
+            });
+        $is_present->execute;
+        my ($count) = $is_present->fetchrow;
+        
+        if ($count) {
+            my $update = prepare_statement(qq{
+                UPDATE project_check
+                SET sequenced_by = $seq_by
+                  , funded_by = $fund_by
+                WHERE project_name = '$project'
+                });
+            $update->execute;
+        } else {
+            my $insert = prepare_statement(qq{
+                INSERT project_check (project_name
+                      , is_active
+                      , check_time
+                      , modify_time
+                      , sequenced_by
+                      , funded_by)
+                VALUES ('$project'
+                      , 'N'
+                      , '0000-00-00 00:00:00'
+                      , '0000-00-00 00:00:00'
+                      , $seq_by
+                      , $fund_by)
+                });
+            $insert->execute;
+        }
+    }
+}
+
 sub new {
     my( $pkg ) = @_;
 
