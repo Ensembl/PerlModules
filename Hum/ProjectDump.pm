@@ -109,7 +109,6 @@ BEGIN {
         project_suffix
         sanger_id
         seq_id
-        sequence_version
     );
     
     # Make scalar field access functions
@@ -412,7 +411,6 @@ sub read_submission_data {
           , d.htgs_phase
           , s.seq_id
           , s.sequence_name
-          , s.sequence_version
           , s.embl_checksum
           , s.unpadded_length
           , s.contig_count
@@ -1852,7 +1850,6 @@ sub is_htgs_activefin {
     my( $insert );
     my @fields = qw(
         sequence_name
-        sequence_version
         embl_checksum
         unpadded_length
         contig_count
