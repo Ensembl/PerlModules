@@ -164,6 +164,15 @@ sub score {
     return $score;
 }
 
+sub hash_key {
+    my( $self ) = @_;
+    
+    my $site_pos = $self->site_position;
+    my $sig_pos  = $self->signal_position;
+    my $signal   = $self->consensus->signal;
+    return "$signal ($site_pos-$sig_pos)";
+}
+
 1;
 
 __END__

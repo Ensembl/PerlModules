@@ -703,6 +703,7 @@ sub cds_coords {
     my( $self ) = @_;
     
     my @t_region   = $self->translation_region;
+    @t_region = reverse(@t_region) if $self->strand == -1;
     my @cds_coords = $self->remap_coords_genomic_to_mRNA(@t_region);
     
     my $err = "";
