@@ -57,6 +57,7 @@ my $ftp_structure = {
     'Drosophila'    => [ 'drosophila/sequences'    ],
     'Arabidopsis'   => [ 'arabidopsis'             ],
     'B.floridae'    => [ 'b_floridae'              ],
+    'Gibbon'        => [ 'gibbon'                  ],
     };
 
 my $humace_queue = "$humpub/humace/queue";
@@ -111,11 +112,13 @@ my $humace_queue = "$humpub/humace/queue";
         'Human'         => "$humpub/analysis/projects",
         'Mouse'         => "$humpub_disk1/analysis/mouse",
         'Zebrafish'     => "$humpub_disk1/analysis/zebrafish",
+        'Gibbon'        => "$humpub_disk1/analysis/gibbon",
         },
     SPECIES_ACE_QUEUE => {
         'Human'         => $humace_queue,
         'Mouse'         => "/nfs/humace/humpub/musace/queue",
         'Zebrafish'     => "/nfs/humace/humpub/zface/queue",
+        'Gibbon'        => "/nfs/humace/humpub/gibbace/queue",
         },
     ANALYSIS_ROOT => "$humpub/analysis/projects",
     LINK_ANALYSIS_ROOT => "$humpub/analysis/links",
