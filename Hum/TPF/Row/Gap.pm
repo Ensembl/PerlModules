@@ -26,7 +26,7 @@ sub type_string {
     
     my $type = $self->type or confess "type not set";
     if ($type == 5) {
-        return 'CENTROMERE';
+        return 'type-4';
     } else {
         return "type-$type";
     }
@@ -45,7 +45,7 @@ sub string {
     my( $self ) = @_;
     
     return join("\t",
-        'GAP',
+        ($self->type == 5 ? 'CENTROMERE' : 'GAP'),
         $self->type_string,
         $self->gap_length || '?')
         . "\n";
