@@ -49,7 +49,7 @@ sub new_from_EnsEMBL_DBAdaptor {
     confess "'localhost' isn't good enough for a hostname"
         if $host eq 'localhost';
     
-    return $pkg->_fetch_where(qq{ db_name = '$dbname' AND host = '$host' AND user = '$user' });
+    return $pkg->_fetch_where(qq{ db_name = '$db_name' AND host = '$host' AND user = '$user' });
 }
 
 sub new_from_ensembl_db_id {

@@ -14,6 +14,7 @@ use Hum::AnaStatus qw{
 use Hum::AnaStatus::AceFile;
 use Hum::AnaStatus::Job;
 use Hum::AnaStatus::AceDatabase;
+use Hum::AnaStatus::EnsAnalysis;
 
 # These two methods are for compatability with the Hum::Fox system
 sub moniker {
@@ -803,6 +804,23 @@ sub get_all_Jobs {
     return @$ajl;
 }
 
+sub get_all_EnsAnalysis {
+    my( $self ) = @_;
+    
+    my $ana_seq_id = $self->ana_seq_id
+        or confess "ana_seq_id not set";
+    return Hum::AnaStatus::EnsAnalysis
+        ->fetch_all_for_ana_seq_id($ana_seq_id);
+}
+
+sub get_all_completed_EnsAnalysis {
+    my( $self ) = @_;
+    
+    my $ana_seq_id = $self->ana_seq_id
+        or confess "ana_seq_id not set";
+    return Hum::AnaStatus::EnsAnalysis
+        ->fetch_all_complete_for_ana_seq_id($ana_seq_id);
+}
 
 1;
 
@@ -911,6 +929,18 @@ annotate this sequence.
 
 Returns a list of all Hum::AnaStatus::AceFile objects
 associated with this sequence.
+
+=item get_all_EnsAnalysis
+
+Returns a list of all the
+Hum::AnaStatus::EnsAnalysis objects for this
+sequence.
+
+=item get_all_completed_EnsAnalysis
+
+Returns a list of only the completed
+Hum::AnaStatus::EnsAnalysis objects for this
+sequence.
 
 =back
 
