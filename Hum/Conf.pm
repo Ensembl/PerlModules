@@ -90,6 +90,11 @@ my $humace_queue = "$humpub/humace/queue";
         [qw{ pubseq.internal.sanger.ac.uk    22100 }],
         ],
 
+    PFETCH_ARCHIVE_SERVER_LIST => [
+        [qw{ cbi2.internal.sanger.ac.uk      23100 }],
+        [qw{ pubseq.internal.sanger.ac.uk    23100 }],
+        ],
+
     HUMACE_DIR    => "/nfs/humace/humpub/humace",
     HUMACE_RO_DIR => '/nfs/humace/humpub/humace-live-ro',
 

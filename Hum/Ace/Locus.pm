@@ -836,7 +836,8 @@ sub make_transcript {
         $self->extract_transcript_remarks($mrna, $transcript_remarks);
         if ($cds) {
             $is_coding = 1;
-            $self->extract_transcript_remarks($cds, $transcript_remarks);
+            $self->extract_transcript_remarks($cds, $transcript_remarks)
+                unless $cds == $mrna;
         }
 
         # Check that mRNA and CDS are on the same strand
@@ -1154,19 +1155,19 @@ sub extract_transcript_remarks {
     my( $self, $subseq, $remarks_hash ) = @_;
     
     my $i = keys %$remarks_hash;
-    foreach my $remark ($subseq->remarks) {
+    my @remarks = (
+        $subseq->remarks,
+        map("Annotation_remark- $_", $subseq->annotation_remarks),
+        );
+    foreach my $remark (@remarks) {
+        $remark =~ s/continue.?\s+(as|from)\s+\S+(\s+in\s+\S+)?//ig;
+        $remark =~ s/[,\s]*variant\s*\d+\s*$//ig;
+        next unless $remark =~ /\w/;
         unless ($remarks_hash->{$remark}) {
             $remarks_hash->{$remark} = $i;
             $i++;
         }
     }
-    foreach my $remark (map "Annotation_remark- $_", $subseq->annotation_remarks) {
-        unless ($remarks_hash->{$remark}) {
-            $remarks_hash->{$remark} = $i;
-            $i++;
-        }
-    }
-
 }
 
 sub record_t_start_point {

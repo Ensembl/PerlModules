@@ -6,7 +6,7 @@ package Hum::Pfetch;
 use strict;
 use Carp;
 use Hum::EMBL;
-use Hum::Conf 'PFETCH_SERVER_LIST';
+use Hum::Conf qw{ PFETCH_SERVER_LIST PFETCH_ARCHIVE_SERVER_LIST };
 use IO::Socket;
 use Exporter;
 
@@ -20,9 +20,24 @@ use vars qw{@ISA @EXPORT_OK};
     };
 
 sub get_server {
+    return _connect_to_server(
+        'pfetch',
+        $PFETCH_SERVER_LIST);
+}
+
+sub get_archive_server {
+    return _connect_to_server(
+        'pfetch arvhive',
+        $PFETCH_ARCHIVE_SERVER_LIST);
+}
+
+sub _connect_to_server {
+    my( $type, $server_list ) = @_;
     local $^W = 0;
-    foreach my $host_port (@$PFETCH_SERVER_LIST) {
+    
+    foreach my $host_port (@$server_list) {
         my($host, $port) = @$host_port;
+        #warn "Trying '$host:$port'\n";
         my $server = IO::Socket::INET->new(
             PeerAddr => $host,
             PeerPort => $port,
@@ -35,7 +50,7 @@ sub get_server {
             return $server;
         }
     }
-    confess "No pfetch servers available";
+    confess "No $type servers available";
 }
 
 sub get_Sequences {
@@ -45,16 +60,36 @@ sub get_Sequences {
     
     my $server = get_server();
     print $server "-q @id_list\n";
-    my( @seq_list );
+    my( @seq_list, @missing_i );
     for (my $i = 0; $i < @id_list; $i++) {
         chomp( my $seq_string = <$server> );
-        if ($seq_string ne 'no match') {
+        if ($seq_string eq 'no match') {
+            # Add to list of indexes of missing sequences
+            push(@missing_i, $i);
+        } else {
             my $seq = Hum::Sequence->new;
             $seq->name($id_list[$i]);
             $seq->sequence_string($seq_string);
             $seq_list[$i] = $seq;
         }
     }
+    
+    # Try for any missing sequences from the archive server.
+    if (@missing_i) {
+        $server = get_archive_server();
+        print $server "-q @id_list[@missing_i]\n";
+        for (my $i = 0; $i < @missing_i; $i++) {
+            my $id_index = $missing_i[$i];
+            chomp( my $seq_string = <$server> );
+            if ($seq_string ne 'no match') {
+                my $seq = Hum::Sequence->new;
+                $seq->name($id_list[$id_index]);
+                $seq->sequence_string($seq_string);
+                $seq_list[$id_index] = $seq;
+            }
+        }
+    }
+    
     return @seq_list;
 }
 
