@@ -451,6 +451,8 @@ sub revcomp_contig {
     $$qual = reverse($$qual);
     
     if (my $v_end = $pdmp->vector_ends($contig)) {
+        use Data::Dumper;
+        warn "$contig=", Dumper($v_end);
         while (my($end, $side) = each %$v_end) {
             if ($side eq 'left') {
                 $v_end->{$end} = 'right';
@@ -511,58 +513,6 @@ sub cleanup_contigs {
     confess "No significant contigs found" unless $pdmp->contig_count;
     
     # Check that dna and basequality strings are all the same length
-    $pdmp->validate_contig_lengths;
-}
-
-sub old_cleanup_contigs {
-    my( $pdmp, $cutoff ) = @_;
-
-    $cutoff = 1000 unless defined $cutoff;
-
-    foreach my $contig ($pdmp->contig_list) {
-        my $dna  = $pdmp->DNA($contig);
-        my $qual = $pdmp->BaseQuality($contig);
-
-        # Depad BaseQuality array
-        my $pos = length($$dna);
-        while (($pos = rindex($$dna, '-', $pos)) >= 0) {
-	    #splice(@$qual, $pos, 1);
-	    substr($qual, $pos, 1) = '';
-	    $pos--;
-        }
-        # Depad DNA
-        $$dna =~ s/\-//g;
-
-        # Report traling n's
-        {
-            my $n = 0;
-            for (my $i = (length($$dna) - 1);
-                 substr($$dna, $i, 1) eq 'n';
-                 $i--) {
-                print STDERR '.';
-                $n++;
-            }
-            if ($n) {
-                warn "\nIn project '", $pdmp->project_name,
-                    "' contig '$contig' has $n trailing n's\n";
-            }
-        }
-        ## Trim trailing n's from the contig
-        #if ($$dna =~ s/(n+)$//) {
-        #    my $n_len = length($&);
-        #    my $n_pre = length($`);
-        #    splice(@$qual, $n_pre, $n_len);
-        #    print "Stripped $n_len n's from contig $n\n";
-        #}
-
-        # Filter out contigs shorter than minimum contig length
-	if (length($$dna) < $cutoff) {
-            $pdmp->delete_contig($contig);
-        }
-    }
-    
-    confess "No significant contigs found" unless $pdmp->contig_count;
-    
     $pdmp->validate_contig_lengths;
 }
 
@@ -758,8 +708,8 @@ sub parse_contig_tags {
 	if ($key eq "Assembled_from") {
             my ($read, $cs, $ce, $rs, $re) = @values;
 	    push(@af, [$read, $cs, $ce, $rs, $re]);
-	    my $dirn = ($cs > $ce);
-	    if ($dirn) { ($cs, $ce) = ($ce, $cs); }
+	    my $reverse = ($cs > $ce);
+	    if ($reverse) { ($cs, $ce) = ($ce, $cs); }
 	    if (my $extent = $pdmp->read_extent($read)) {
 
 		my ($contig, $ecs, $ece, $ers, $ere) = @{$extent};
@@ -770,7 +720,7 @@ sub parse_contig_tags {
 		if ($re < $ere) { $re = $ere; }
 	    }
 
-            $pdmp->read_extent($read, [$name, $cs, $ce, $rs, $re, $dirn]);
+            $pdmp->read_extent($read, [$name, $cs, $ce, $rs, $re, $reverse]);
 	}
         elsif ($key eq "Tag") {
             my ($tag, $from, $to) = @values;
@@ -881,6 +831,9 @@ sub vector_ends {
 
 	        my $rcontig_end;
 
+                warn "Looking at: $dirn\tvec_end[$start,$end]\tread[$rs,$re]\n";
+
+                # rmd wrote this, and I don't understand it. -- jgrg
 	        if ($dirn) {
 		    # Reverse read
 		    if    ($end   < $rs) { $rcontig_end = "right"; }
@@ -899,7 +852,8 @@ sub vector_ends {
 	        }
 	    }
             
-            $pdmp->{'_vector_ends'}{$contig}{$vec_end} = $contig_end;
+            $pdmp->{'_vector_ends'}{$contig}{$vec_end} = $contig_end
+                if $contig_end; # $contig_end is sometimes not set
         }
     }
 
@@ -927,11 +881,11 @@ sub order_contigs {
 	my $template    = $pdmp->read_template($read);
 	my $insert_size = $pdmp->insert_size($template);
 
-	my ($contig, $cs, $ce, $rs, $re, $dirn) = @$extent;
+	my ($contig, $cs, $ce, $rs, $re, $reverse) = @$extent;
 	next unless (exists($contig_lengths{$contig}));
 	my $clen = $contig_lengths{$contig};
 
-	if ($dirn) {
+	if ($reverse) {
 	    if ($ce < $insert_size) {
 		$overhanging_templates{$template}->{$contig} =
 		    [$read, 'L', $ce, $insert_size - $ce];

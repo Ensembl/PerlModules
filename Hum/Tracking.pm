@@ -189,6 +189,7 @@ block, to ensure a graceful exit.
         
         my $sth = track_db()->prepare($query);
         push( @active_statements, $sth );
+        return $sth;
     }
 
     END {
