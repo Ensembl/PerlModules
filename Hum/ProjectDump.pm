@@ -11,8 +11,6 @@ use Hum::Tracking qw(
     is_shotgun_complete
     current_project_status_number
     );
-use Hum::ProjectDump::EMBL;
-use Hum::ProjectDump::EMBL::HGMP;
 use Hum::EBI_FTP;
 use Hum::Conf qw( FTP_ROOT FTP_GHOST FTP_STRUCTURE );
 use Symbol 'gensym';
