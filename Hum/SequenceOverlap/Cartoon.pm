@@ -57,7 +57,7 @@ sub gif {
     my $len_b = $inf_b->sequence_length;
     
     # Set up origin
-    my $x = 12 * $self->font->width;
+    my $x = 14 * $self->font->width;
     my $y = $pad + $self->font->height;
     
     my @rect_a = ($x, $y, $x + ($len_a / $rpp), $y + $self->clone_thickness);
@@ -201,7 +201,7 @@ sub image_width {
     my $width = $wid_1 + $wid_2 - $over;
     $width = $wid_1 if $width < $wid_1;
     $width = $wid_2 if $width < $wid_2;
-    return + (2 * $pad) + (24 * $self->font->width) + ($width / $scale);
+    return + (2 * $pad) + (28 * $self->font->width) + ($width / $scale);
 }
 
 

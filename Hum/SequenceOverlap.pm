@@ -390,6 +390,7 @@ sub store_status {
         });
     $unset_status->execute($db_id);
     
+    #### Should populate SESSIONID column?
     my $store_status = track_db->prepare_cached(q{
         INSERT INTO overlap_status(
             id_overlap
@@ -402,14 +403,15 @@ sub store_status {
         VALUES(?,?,?,?,?,sysdate,1)
         });
 
-    ### Should populate SESSIONID column?
-    $store_status->execute(
-        $db_id,
-        $self->status_id,
-        $self->remark,
-        $self->program  || $self->default_program,
-        $self->operator || $self->default_operator,
-        );
+    my $program = $self->program  || $self->default_program;
+    my $who     = $self->operator || $self->default_operator;
+
+    $store_status->bind_param(1, $db_id,            DBI::SQL_INTEGER);
+    $store_status->bind_param(2, $self->status_id,  DBI::SQL_INTEGER);
+    $store_status->bind_param(3, $self->remark,     DBI::SQL_VARCHAR);
+    $store_status->bind_param(4, $program,          DBI::SQL_VARCHAR);
+    $store_status->bind_param(5, $who,              DBI::SQL_VARCHAR);
+    $store_status->execute;
 }
 
 sub get_next_id {
