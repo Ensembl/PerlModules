@@ -1985,7 +1985,7 @@ sub _set_not_current {
         my $exists = prepare_statement(qq{
             SELECT count(*)
             FROM project_acc
-            WHERE sanger_id = $sid
+            WHERE sanger_id = '$sid'
             });
         $exists->execute;
         my ($count) = $exists->fetchrow;
