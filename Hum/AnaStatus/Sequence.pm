@@ -310,20 +310,18 @@ sub sequence_name {
     return $self->{'_seq_name'};
 }
 
-sub get_all_AceFiles {
-    my ($self) = @_;
-
-    $self->fetch_AceFile_data unless $self->{'_acefile'};
-
-    return values %{$self->{'_acefile'}};
-}
-
-sub get_AceFile_by_name {
-    my ($self, $acefile_name) = @_;
-
-    $self->fetch_AceFile_data unless $self->{'_acefile'};
+sub add_AceFile {
+    my( $self, $acefile ) = @_;
     
-    return $self->{'_acefile'}{$acefile_name};
+    my $acefile_name = $acefile->acefile_name
+        or confess "acefile_name not defined";
+    
+    # Check that we don't already have the acefile in the database
+    if ($self->get_AceFile_by_name($acefile_name)) {
+        confess "AceFile '$acefile_name' is already stored in the database";
+    }
+    
+    $self->AceFile_hash->{$acefile_name} = $acefile;
 }
 
 sub get_AceFile_by_filename {
@@ -331,42 +329,56 @@ sub get_AceFile_by_filename {
 
     my $acefile_name = $self->parse_filename($file_name);
 
-    $self->fetch_AceFile_data unless $self->{'_acefile'};
+    return $self->get_AceFile_by_name($acefile_name);
+}
+
+sub get_AceFile_by_name {
+    my ($self, $acefile_name) = @_;
     
-    return $self->{'_acefile'}{$acefile_name};
+    return $self->AceFile_hash->{$acefile_name};
+}
+
+sub get_all_AceFiles {
+    my ($self) = @_;
+
+    return values %{$self->AceFile_hash};
 }
 
 {
     my( $fetch_acefile_data );
 
-    sub fetch_AceFile_data {
+    sub AceFile_hash {
         my ($self) = @_;
 
-        my $ana_seq_id = $self->ana_seq_id
-            or confess "No ana_seq_id in object";
+        unless ($self->{'_acefile'}) {
+            $self->{'_acefile'} = {};
+            
+            my $ana_seq_id = $self->ana_seq_id
+                or confess "No ana_seq_id in object";
 
-        $fetch_acefile_data ||= prepare_statement(q{
-            SELECT acefile_name
-              , acefile_status_id
-              , UNIX_TIMESTAMP(creation_time)
-            FROM ana_acefile
-            WHERE ana_seq_id = ?
-            });
-        $fetch_acefile_data->execute($ana_seq_id);
-        
-        $self->{'_acefile'} = {};
-        while ( my($acefile_name,
-            $acefile_status_id,
-            $creation_time ) = $fetch_acefile_data->fetchrow) {
+            $fetch_acefile_data ||= prepare_statement(q{
+                SELECT acefile_name
+                  , acefile_status_id
+                  , UNIX_TIMESTAMP(creation_time)
+                FROM ana_acefile
+                WHERE ana_seq_id = ?
+                });
+            $fetch_acefile_data->execute($ana_seq_id);
 
-            my $acefile = Hum::AnaStatus::AceFile->new;
-            $acefile->ana_seq_id($ana_seq_id);
-            $acefile->acefile_name($acefile_name);
-            $acefile->acefile_status_id($acefile_status_id);
-            $acefile->creation_time($creation_time);
+            while ( my($acefile_name,
+                $acefile_status_id,
+                $creation_time ) = $fetch_acefile_data->fetchrow) {
 
-            $self->{'_acefile'}{$acefile_name} = $acefile;
+                my $acefile = Hum::AnaStatus::AceFile->new;
+                $acefile->ana_seq_id($ana_seq_id);
+                $acefile->acefile_name($acefile_name);
+                $acefile->acefile_status_id($acefile_status_id);
+                $acefile->creation_time($creation_time);
+
+                $self->add_AceFile($acefile);
+            }
         }
+        return $self->{'_acefile'};
     }
 }
 
@@ -386,11 +398,6 @@ sub new_AceFile_from_filename_and_time {
     
     my $acefile_name = $self->parse_filename($file_name);
     my $seq_name = $self->sequence_name;
-    
-    # Check that we don't already have the acefile in the database
-    if ($self->get_AceFile_by_name($acefile_name)) {
-        confess "AceFile '$acefile_name' is already stored in the database";
-    }
 
     # Make a new acefile object, and populate it
     my $acefile = Hum::AnaStatus::AceFile->new;
@@ -398,6 +405,8 @@ sub new_AceFile_from_filename_and_time {
     $acefile->creation_time($time);
     $acefile->acefile_status_id(1);
     $acefile->ana_seq_id($ana_seq_id);
+    
+    $self->add_AceFile($acefile);###return as well?
     
     $acefile->store;
     
@@ -409,27 +418,29 @@ sub parse_filename {
     
     my $seq_name = $self->sequence_name
         or confess "sequence_name not defined";
+    my $acefile_name = $file_name;
+    return 'ace' if $file_name eq "$seq_name.ace";
     
-    # Remove the .ace suffix from $file_name
-    my $ace = substr($file_name, -4, 4);
+    # Remove the .ace suffix from $acefile_name
+    my $ace = substr($acefile_name, -4, 4);
     if ($ace eq '.ace') {
         # Remove the suffix
-        substr($file_name, -4, 4) = '';
+        substr($acefile_name, -4, 4) = '';
     } else {
         confess "acefile name '$file_name' doesn't end '.ace'";
     }
     
-    # Remove the seqname. prefix from $file_name
+    # Remove the seqname. prefix from $acefile_name
     my $seq_name_prefix = "$seq_name.";
     my $prefix_len = length($seq_name_prefix);
-    my $prefix = substr($file_name, 0, $prefix_len);
+    my $prefix = substr($acefile_name, 0, $prefix_len);
     if ($prefix eq $seq_name_prefix) {
-        substr($file_name, 0, $prefix_len) = '';
+        substr($acefile_name, 0, $prefix_len) = '';
     } else {
         confess "acefile name '$file_name' doesn't begin '$seq_name_prefix'";
     }
     
-    return $file_name;
+    return $acefile_name;
 }
 
 

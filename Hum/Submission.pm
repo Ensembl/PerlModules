@@ -16,6 +16,7 @@ use vars qw( @ISA @EXPORT_OK );
                  destroy_lock
                  die_if_dumped_recently
                  prepare_statement
+                 acetime
                  timeace
                  ghost_path
                  dateMySQL
@@ -187,7 +188,7 @@ sub destroy_lock {
 
 {
 
-    my @two_figure = ('00'..'60');
+    my @two_figure = ('00'..'59');
     
     # Convert acedb style timestring (2000-03-19_16:20:45) to unix time int
     sub timeace {
@@ -199,6 +200,34 @@ sub destroy_lock {
         $year -= 1900;
         $mon--;
         return timelocal( $sec, $min, $hour, $mday, $mon, $year );
+    }
+
+=head2 acetime
+
+    # Generate a acedb time string for now
+    $time = acetime();
+
+Generates an acedb time string (such as
+"1998-06-04_17:31:51") for inclusion in an ace file, taking
+a time string as input, or defaulting to current time.
+
+=cut
+   
+    sub acetime {
+        my( $time ) = @_;
+        
+        $time ||= time;
+        
+        # Get time info
+        my ($sec, $min, $hour, $mday, $mon, $year) = (localtime($time))[0..5];
+        
+        # Change numbers to double-digit format
+        ($mon, $mday, $hour, $min, $sec) = @two_figure[($mon + 1), $mday, $hour, $min, $sec];
+        
+        # Make year
+        $year += 1900;
+
+        return "$year-$mon-${mday}_$hour:$min:$sec";
     }
     
     # Convert MySQL date to unix time int

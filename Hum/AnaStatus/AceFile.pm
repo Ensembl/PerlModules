@@ -55,12 +55,75 @@ sub acefile_status_id {
         confess "Can't modify acefile_status_id"
             if $self->{'_acefile_status_id'};
         confess "Unknown acefile_status_id '$acefile_status_id'"
-            unless $self->_is_valid_ace_status_id($acefile_status_id);
+            unless $self->is_valid_acefile_status_id($acefile_status_id);
                                     
         $self->{'_acefile_status_id'} = $acefile_status_id;
     }
     return $self->{'_acefile_status_id'};
 }
+
+
+{
+    my ( $new_acefile_status );
+
+    sub set_acefile_status {
+        my( $self, $acefile_status) = @_;
+
+        confess "Acefile status not defined" unless $acefile_status;
+        confess "Acefile already has status '$acefile_status'"
+            if $acefile_status == $self->acefile_status_id;
+        confess "Unknown acefile status '$acefile_status'"
+            unless $self->is_valid_acefile_status_id($acefile_status);
+
+        my $acefile_name = $self->acefile_name
+            or confess "No acefile_name in object";
+        my $ana_seq_id = $self->ana_seq_id
+            or confess "No ana_seq_id in object";
+    
+        $new_acefile_status ||= prepare_statement(q{
+            UPDATE ana_acefile
+            SET acefile_status_id = ?
+            WHERE acefile_name = ?
+              AND ana_seq_id = ?
+            });
+        $new_acefile_status->execute(
+            $acefile_status,
+            $acefile_name,
+            $ana_seq_id,
+            );
+
+        my $rows = $new_acefile_status->rows;
+        if ($rows == 1) {
+            $self->{'_acefile_status_id'} = $acefile_status;
+            return 1;
+        } else {
+            confess "acefile_status UPDATE failed";
+        }
+    }
+}
+
+{
+    my %valid_acefile_status_id;
+    
+    sub is_valid_acefile_status_id {
+        my ( $self, $acefile_status_id) = @_;
+        
+        unless (%valid_acefile_status_id){
+            my $sth = prepare_statement (q{
+                SELECT acefile_status_id
+                FROM ana_acefile_status_dict
+                });
+                
+            $sth->execute;
+            
+            while (my ($valid_acefile_status_id) = $sth->fetchrow) {
+                $valid_acefile_status_id{$valid_acefile_status_id} = 1;
+            }
+        }
+        return $valid_acefile_status_id{$acefile_status_id};
+    }    
+}
+
 
 sub task_name {
     my ( $self ) = @_;
@@ -182,29 +245,6 @@ sub task_name {
 }
 
 
-{
-    my %valid_ace_status_id;
-    
-    sub _is_valid_ace_status_id {
-        my ($self, $ace_status_id) = @_;
-        
-        my @valid_ace_status_id;
-                
-        unless (%valid_ace_status_id){
-            my $sth = prepare_statement (q{
-            SELECT acefile_status_id
-            FROM ana_acefile_status_dict });
-            
-            $sth->execute;
-            
-            while (my $valid_ace_status_id = $sth->fetchrow) {
-                push (@valid_ace_status_id, $valid_ace_status_id);
-            }                        
-            %valid_ace_status_id = map {$_, 1} @valid_ace_status_id;
-        }
-        return $valid_ace_status_id{$ace_status_id};
-    }
-}
 
 
 
