@@ -58,7 +58,9 @@ use Hum::Submission 'prepare_statement';
     my( $sth );
 
     sub add_new_sequence_entry {
-        my( $seq_name, $cksum, $length, $dir ) = @_;
+        my( $seq_name, $cksum, $length, $dir, $chr_id ) = @_;
+        
+        $chr_id ||= 0;
         
         $sth ||= prepare_statement(q{
             INSERT sequence( seq_id
@@ -66,16 +68,17 @@ use Hum::Submission 'prepare_statement';
                   , embl_checksum
                   , unpadded_length
                   , contig_count
-                  , file_path )
-            VALUES (NULL,?,?,?,?,?)
+                  , file_path
+                  , chromosome_id )
+            VALUES (NULL,?,?,?,?,?,?)
             });
         $sth->execute(
             $seq_name,
             $cksum,
             $length,
             1,
-            $dir
-            );
+            $dir,
+            $chr_id );
         return $sth->{'insertid'};
     }
 }

@@ -7,8 +7,13 @@ use strict;
 use Carp;
 use Hum::Submission qw( prepare_statement timeace );
 use Hum::AnaStatus::AceFile;
-use Bio::SeqIO;
+use Hum::AnaStatus::AceDatabase;
 
+sub new {
+    my( $pkg ) = @_;
+    
+    return bless {}, $pkg;
+}
 
 sub new_from_sequence_name {
     my ($pkg, $seq_name) = @_;
@@ -61,7 +66,7 @@ sub new_from_sequence_name {
             $species_name
            ) = @{$ans->[0]};
         
-        my $self = bless {}, $pkg;
+        my $self = $pkg->new;
         
         $self->sequence_name($seq_name);
         $self->analysis_directory($analysis_directory);
@@ -88,6 +93,43 @@ sub new_from_sequence_name {
     else {
         confess "No entries found for '$seq_name'";
     }
+}
+
+{
+    my( $sth );
+
+    sub new_from_accession {
+        my( $pkg, $acc ) = @_;
+
+        $sth ||= prepare_statement(q{
+            SELECT s.sequence_name
+            FROM project_acc a
+              , project_dump d
+              , sequence s
+            WHERE a.sanger_id = d.sanger_id
+              AND d.seq_id = s.seq_id
+              AND d.is_current = 'Y'
+              AND a.accession = ?
+            });
+        $sth->execute($acc);
+        my ($seq_name) = $sth->fetchrow;
+        $seq_name ||= $acc;
+        
+        return $pkg->new_from_sequence_name($seq_name);
+    }
+}
+
+sub ace_database {
+    my( $self ) = @_;
+
+    unless ($self->{'_ace_database'}) {
+        my $species = $self->species_name
+            or confess "species_name not set";
+        my $ace = Hum::AnaStatus::AceDatabase
+            ->new_from_species_name($species);
+        $self->{'_ace_database'} = $ace;
+    }
+    return $self->{'_ace_database'};
 }
 
 {
@@ -197,27 +239,6 @@ sub status_id {
             %valid_status_id = map {$_, 1} @valid_status_id;
         }
         return $valid_status_id{$status_id};
-    }
-}
-
-
-sub get_dna_seq {
-    my  ( $self ) = @_;
-
-    my $ana_dir = $self->analysis_directory;
-    my $seq_name = $self->sequence_name;
-    my $seq_file = "$ana_dir/$seq_name.seq";
-    my $dna_seq_in = Bio::SeqIO->new(
-        -FORMAT => 'fasta',
-        -FILE   => $seq_file,
-        );
-    my $dna_seq = $dna_seq_in->next_seq;
-
-    if ($dna_seq){
-        return $dna_seq;
-    } else {
-        print STDERR "Failed to read Bio::Seq from fasta file '$seq_file'\n";
-        return;
     }
 }
 
@@ -553,6 +574,31 @@ sub parse_filename {
             confess "Error setting ana_seq_id=$ana_seq_id not current";
         }
     }
+}
+
+sub bio_seq {
+    my( $self ) = @_;
+    
+    require Bio::SeqIO;
+    
+    my $ana_dir = $self->analysis_directory;
+    my $s_name  = $self->sequence_name;
+    my $seq_file = "$ana_dir/$s_name.seq";
+    my $seq_in = Bio::SeqIO->new(
+        -FORMAT     => 'fasta',
+        -FILE       => $seq_file,
+        );
+    my $seq = $seq_in->next_seq
+        or confess "No sequence from '$seq_file'";
+    return $seq;
+}
+
+
+sub get_dna_seq {
+    my $self = shift;
+
+    warn "'get_dna_seq' is deprecated; use 'bio_seq' instead";
+    return $self->bio_seq(@_);
 }
 
 1;
