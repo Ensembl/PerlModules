@@ -88,63 +88,10 @@ sub test_count {
     return $self->{'_test_count'};
 }
 
-sub make_stats_from_VirtualContig {
-    my( $self, $vc ) = @_;
-    
-    my $type = $self->gene_type or confess "gene_type not set";
-        
-    my $length = $vc->length;
-    
-    my( @gene_id );
-    foreach my $vg ($vc->get_all_VirtualGenes_startend) {
-        my $id        = $vg->gene->stable_id;
-        my $this_type = $vg->gene->type;
-        unless ($this_type) {
-            print STDERR "type not set for gene '$id'\n";
-            next;
-        }
-        elsif ($this_type ne $type) {
-            #warn "'$this_type' ne '$type'\n";
-            next;
-        }
-        if ($vg->end < 1 or $vg->start > $length) {
-            printf STDERR "Skipping gene '%s' outside (%d-%d) VC of length %d\n",
-                $id, $vg->start, $vg->end, $length;
-        } else {
-            #warn "adding gene '$id'\n";
-            push(@gene_id, $id);
-        }
-    }
-    
-    if (@gene_id) {
-        return $self->make_stats($vc->dbobj, @gene_id);
-    } else {
-        warn "no '$type' genes in vc\n";
-        return;
-    }
-}
-
 sub make_stats {
-    my( $self, $dba, @gene_id ) = @_;
+    my( $self, $slice ) = @_;
     
-    confess "missing dba argument" unless $dba;
     my $type = $self->gene_type or confess "gene_type not set";
-    my $stadp = $dba->get_StaticGoldenPathAdaptor;
-    
-    unless (@gene_id) {
-        my $sth = $dba->prepare(q{
-            SELECT gsid.stable_id
-            FROM gene g
-              , gene_stable_id gsid
-            WHERE g.gene_id = gsid.gene_id
-              AND g.type = ?
-            });
-        $sth->execute($type);
-
-        while (my ($id) = $sth->fetchrow) {
-            push(@gene_id, $id);
-        }
-    }
     
     my $gene_lengths        = $self->gene_lengths;
     my $exon_lengths        = $self->exon_lengths;
@@ -156,58 +103,30 @@ sub make_stats {
     my $test_count = $self->test_count;
     my $gene_i = 0;
     my $gene_count = 0;
-    foreach my $id (@gene_id) {
-        #warn "Fetching gene '$id'\n";
-        $gene_i++;
-        if ($test_count) {
-            last if $gene_i > $test_count;
-        }
-        my( $gene, $vc );
-        eval{
-            $vc = $stadp->fetch_VirtualContig_of_gene($id, 100);
-            foreach my $g ($vc->get_all_Genes_exononly) {
-                my $gsid = $g->stable_id or next;
-                if ($gsid eq $id) {
-                    $gene = $g;
-                    last;
-                }
-            }
-        };
-        if ($@ or ! $gene) {
-            my $msg = "Can't get gene '$id'";
-            $msg .= ":\n$@" if $@;
-            $msg .= "\n";
-            warn $msg;
-            next;
-        }
+    foreach my $gene (@{$slice->get_all_Genes_by_type($type)}) {
         
         unless ($gene->type eq $type) {
             confess sprintf "Gene '%s' does not have type '%s' but '%s'",
                 $gene->stable_id, $type, $gene->type;
         }
-        
-        my $vg = Bio::EnsEMBL::VirtualGene->new(
-            -gene   => $gene,
-            -contig => $vc,
-            );
+
         $gene_count++;
-        #warn "vg is ", $vg->length, " long\n";
-        
+            
         # Stats from the gene
-        push @$gene_lengths, $vg->length;
-        $self->save_longest_gene($vg);
-        $self->save_shortest_gene($vg);
+        push @$gene_lengths, $gene->length;
+        $self->save_longest_gene($gene);
+        $self->save_shortest_gene($gene);
         $self->save_most_transcripts($gene);
         $self->save_most_exons($gene);
-        push @$transcript_counts, scalar $gene->each_Transcript;
-        foreach my $transcript ($gene->each_Transcript) {
-            my @exons = $transcript->get_all_Exons;
-            for (my $i = 0; $i < @exons; $i++) {
-                my $ex = $exons[$i];
+        push @$transcript_counts, scalar @{$gene->get_all_Transcripts};
+        foreach my $transcript (@{$gene->get_all_Transcripts}) {
+            my $exons = $transcript->get_all_Exons;
+            for (my $i = 0; $i < @$exons; $i++) {
+                my $ex = $exons->[$i];
                 $self->save_longest_exon($ex);
 
                 # Don't use the first or last exon to find the shortest
-                if (@exons == 1 or ! ($i == 0 or $i == $#exons)) {
+                if (@$exons == 1 or ! ($i == 0 or $i == $#$exons)) {
                     $self->save_shortest_exon($ex);
                 }
             }
@@ -215,25 +134,22 @@ sub make_stats {
         
         # Stats from the longest transcript
         my $trans = $self->get_longest_transcript($gene);
-        foreach my $exon ($trans->get_all_Exons) {
+        foreach my $exon (@{$trans->get_all_Exons}) {
             push(@$exon_lengths, $exon->length);
         }
-        foreach my $int ($trans->each_Intron) {
+        foreach my $int (@{$trans->get_all_Introns}) {
             $self->save_longest_intron($int);
             push @$intron_lengths, $int->length;
         }
-        push @$exon_counts, scalar $trans->get_all_Exons;
+        push @$exon_counts, scalar @{$trans->get_all_Exons};
         
         # Count single exon genes or splice phases
-        my @exons = $trans->get_all_Exons;
-        if (@exons == 1) {
+        my $exons = $trans->get_all_Exons;
+        if (@$exons == 1) {
             $self->increment_single_exon_gene_count;
         } else {
-            ### FIXME
-            ### Abutting exons from ace_genes2ensembl that should really
-            ### be sticky will get their artificial splice counted here.
-            for (my $i = 0; $i < @exons - 1; $i++) {
-                my $ex = $exons[$i];
+            for (my $i = 0; $i < @$exons - 1; $i++) {
+                my $ex = $exons->[$i];
                 my $end_phase = $ex->end_phase;
                 #warn "end_phase = $end_phase\n";
                 if ($end_phase != -1) {
@@ -259,13 +175,13 @@ sub save_longest_gene {
     
     if (my $long = $self->longest_gene) {
         if ($gene->length > $long->value) {
-            $long->name($gene->id);
+            $long->name($gene->gene_info->name->name);
             $long->value($gene->length);
         }
     } else {
         $long = Hum::Chromosome::VitalStatistics::NameValue->new;
         $long->label('Longest genomic gene');
-        $long->name($gene->id);
+        $long->name($gene->gene_info->name->name);
         $long->value($gene->length);
         $self->longest_gene($long);
     }
@@ -276,13 +192,13 @@ sub save_shortest_gene {
     
     if (my $short = $self->shortest_gene) {
         if ($gene->length < $short->value) {
-            $short->name($gene->id);
+            $short->name($gene->gene_info->name->name);
             $short->value($gene->length);
         }
     } else {
         $short = Hum::Chromosome::VitalStatistics::NameValue->new;
         $short->label('Shortest genomic gene');
-        $short->name($gene->id);
+        $short->name($gene->gene_info->name->name);
         $short->value($gene->length);
         $self->shortest_gene($short);
     }
@@ -343,7 +259,7 @@ sub save_longest_intron {
 sub save_most_transcripts {
     my( $self, $gene ) = @_;
     
-    my $count = scalar $gene->each_Transcript;
+    my $count = scalar @{$gene->get_all_Transcripts};
     if (my $most = $self->most_transcripts) {
         if ($count > $most->value) {
             $most->name($gene->stable_id);
@@ -363,8 +279,8 @@ sub save_most_exons {
     
     my $max_exons = 0;
     my( $trans );
-    foreach my $tr ($gene->each_Transcript) {
-        my $count = scalar $tr->get_all_Exons;
+    foreach my $tr (@{$gene->get_all_Transcripts}) {
+        my $count = scalar @{$tr->get_all_Exons};
         if ($count > $max_exons) {
             $max_exons = $count;
             $trans = $tr;
@@ -389,9 +305,9 @@ sub get_longest_transcript {
     my( $self, $gene ) = @_;
     
     my( @length_transcript );
-    foreach my $tr ($gene->each_Transcript) {
+    foreach my $tr (@{$gene->get_all_Transcripts}) {
         my $exon_length_sum = 0;
-        foreach my $exon ($tr->get_all_Exons) {
+        foreach my $exon (@{$tr->get_all_Exons}) {
             $exon_length_sum += $exon->length;
         }
         push @length_transcript, [$exon_length_sum, $tr];

@@ -61,7 +61,7 @@ sub new_Clone {
     my( $self ) = @_;
     
     my $clone = Hum::AGP::Row::Clone->new;
-    push(@{$self->{'_rows'}}, $clone);
+    $self->add_Row($clone);
     return $clone;
 }
 
@@ -85,7 +85,7 @@ sub new_Gap {
     my( $self ) = @_;
     
     my $gap = Hum::AGP::Row::Gap->new;
-    push(@{$self->{'_rows'}}, $gap);
+    $self->add_Row($gap);
     return $gap;
 }
 
@@ -103,6 +103,12 @@ sub fetch_all_Rows {
     my( $self ) = @_;
 
     return @{$self->{'_rows'}};
+}
+
+sub add_Row {
+    my( $self, $row ) = @_;
+    
+    push(@{$self->{'_rows'}}, $row);
 }
 
 sub process_TPF {

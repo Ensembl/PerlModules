@@ -97,13 +97,17 @@ sub elements {
             $self->accession_sv;
     }
     
-    return (
+    my @ele = (
         $self->phase_letter,
         $self->accession_sv,
         $self->seq_start,
         $self->seq_end,
         $self->strand == 1 ? '+' : '-',
         );
+    if (my $rem = $self->remark) {
+        push(@ele, "# $rem");
+    }
+    return @ele;
 }
 
 1;
