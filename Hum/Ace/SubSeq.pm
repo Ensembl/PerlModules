@@ -4,6 +4,7 @@
 package Hum::Ace::SubSeq;
 
 use strict;
+use Hum::Sequence::DNA;
 use Carp;
 
 sub new {
@@ -180,6 +181,68 @@ sub clone_Sequence {
         $self->{'_clone_Sequence'} = $seq;
     }
     return $self->{'_clone_Sequence'};
+}
+
+sub exon_Sequence {
+    my( $self ) = @_;
+    
+    my $clone_seq = $self->clone_Sequence
+        or confess "No clone_Sequence";
+    my $seq = Hum::Sequence::DNA->new;
+    $seq->name($self->name);
+    
+    my $seq_str = '';
+    foreach my $exon ($self->get_all_Exons) {
+        my $start = $exon->start;
+        my $end   = $exon->end;
+        $seq_str .= $clone_seq
+            ->sub_sequence($start, $end)
+            ->sequence_string;
+    }
+    $seq->sequence_string($seq_str);
+    
+    if ($seq->strand == -1) {
+        $seq = $seq->reverse_complement;
+    }
+    
+    return $seq;
+}
+
+sub translateable_Sequence {
+    my( $self ) = @_;
+    
+    my $clone_seq = $self->clone_Sequence
+        or confess "No clone_Sequence";
+    my ($t_start, $t_end) = $self->translation_region;
+    
+    my $seq = Hum::Sequence::DNA->new;
+    $seq->name($self->name);
+    
+    my $seq_str = '';
+    foreach my $exon ($self->get_all_Exons) {
+        my $start = $exon->start;
+        my $end   = $exon->end;
+        next if $end   < $t_start;
+        last if $start > $t_end;
+        
+        if ($start < $t_start) {
+            $start = $t_start + $exon->phase - 1;
+        }
+        if ($end > $t_end) {
+            $end = $t_end;
+        }
+        
+        $seq_str .= $clone_seq
+            ->sub_sequence($start, $end)
+            ->sequence_string;
+    }
+    $seq->sequence_string($seq_str);
+    
+    if ($seq->strand == -1) {
+        $seq = $seq->reverse_complement;
+    }
+    
+    return $seq;
 }
 
 sub GeneMethod {
@@ -554,72 +617,6 @@ sub ace_string {
     return $out;
 }
 
-
-sub OLD_ace_string {
-    my( $self ) = @_;
-        
-    my $name        = $self->name
-        or confess "name not set";
-    my $clone_seq   = $self->clone_Sequence
-        or confess "no clone_Sequence";
-    my @exons       = $self->get_all_Exons;
-    my $method      = $self->GeneMethod;
-    
-    my $clone = $clone_seq->name
-        or confess "No sequence name in clone_Sequence";
-    
-    # Position in parent sequence
-    my $out = qq{\nSequence "$clone"\n}
-        . qq{-D SubSequence "$name"\n};
-    
-    my( $start, $end, $strand );
-    if (@exons) {
-        $start  = $self->start;
-        $end    = $self->end;
-        $strand = $self->strand;
-        if ($strand == 1) {
-            $out .= qq{SubSequence "$name"  $start $end\n};
-        } else {
-            $out .= qq{SubSequence "$name"  $end $start\n};
-        }
-    }
-    
-    $out .= qq{\n-D Sequence "$name"\n};
-    
-    # We just delete the object if it doesn't have any exons
-    unless (@exons) {
-        return $out;
-    }
-    
-    $out .= qq{\nSequence "$name"\n}
-        . qq{Source "$clone"\n};
-    
-    
-    if ($method) {
-        my $mn = $method->name;
-        $out .= qq{Method "$mn"\n};
-        if ($method->is_coding) {
-            my( $cds_start, $cds_end ) = $self->cds_coords;
-            $out .= qq{CDS  $cds_start $cds_end\n};
-        }
-    }
-    
-    if ($strand == 1) {
-        foreach my $ex (@exons) {
-            my $x = $ex->start - $start + 1;
-            my $y = $ex->end   - $start + 1;
-            $out .= qq{Source_Exons  $x $y\n};
-        }
-    } else {
-        foreach my $ex (reverse @exons) {
-            my $x = $end - $ex->end   + 1;
-            my $y = $end - $ex->start + 1;
-            $out .= qq{Source_Exons  $x $y\n};
-        }
-    }
-    
-    return $out;
-}
 
 
 1;

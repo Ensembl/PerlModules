@@ -31,6 +31,9 @@ sub translate {
     while ($seq_str =~ /(...)/g) {
         $pep_str .= $condon_table->{$1} || $unknown_amino_acid;
     }
+    if (length($seq_str) % 3) {
+        $pep_str .= $unknown_amino_acid;
+    }
     return $pep_str;
 }
 
