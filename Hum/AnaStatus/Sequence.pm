@@ -5,7 +5,7 @@ package Hum::AnaStatus::Sequence;
 
 use strict;
 use Carp;
-use Hum::Submission qw( prepare_statement );
+use Hum::Submission qw( prepare_statement timeace );
 use Hum::AnaStatus::AceFile;
 
 sub new_from_sequence_name {
