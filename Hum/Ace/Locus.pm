@@ -397,10 +397,8 @@ sub make_transcript_sets {
     if ($isoform_count > 1 and @clone_sets > 1) {
         print STDERR "Processing multi-clone multi-isoform locus\n";
     
-        @sets = $self->make_transcript_sets_for_complex_locus(@clone_sets);
-        foreach my $s (@sets) {
-            
-        }
+        @sets = $self->make_transcript_sets_for_complex_locus(@clone_sets)
+            or die "Got zero sets from complex locus";
     } else {
         for (my $i = 0; $i < $isoform_count; $i++) {
             my @s = map {defined($_) ? $_->[$i] : undef} @clone_sets;
