@@ -305,12 +305,12 @@ a time string as input, or defaulting to current time.
         
         my $sth = prepare_statement(q{
             SELECT chromosome_id
-              , chr_name
               , species_name
+              , chr_name
             FROM species_chromosome
             });
         $sth->execute;
-        while (my( $chr_id, $chr, $species ) = $sth->fetchrow) {
+        while (my( $chr_id, $species, $chr ) = $sth->fetchrow) {
             $species_chr{$species}{$chr} = $chr_id;
         }
     }
@@ -338,18 +338,18 @@ a time string as input, or defaulting to current time.
         
         my $chr_id = $species_chr{$species}{$chr};
         if (defined $chr_id) {
-            confess "id ('$chr_id') already exists for species='$species' and chr='$chr'";
+            warn "id ('$chr_id') already exists for species='$species' and chr='$chr'";
         } else {
             my $sth = prepare_statement(q{
                 INSERT species_chromosome(chromosome_id
-                  , chr_name
-                  , species_name)
+                  , species_name
+                  , chr_name)
                 VALUES (NULL,?,?)
                 });
             $sth->execute($species, $chr);
             $species_chr{$species}{$chr} = $sth->{'insertid'};
-            return $species_chr{$species}{$chr};
         }
+        return $species_chr{$species}{$chr};
     }
 }
 
