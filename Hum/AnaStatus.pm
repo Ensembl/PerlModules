@@ -13,7 +13,7 @@ use Hum::Submission 'prepare_statement';
 @EXPORT_OK = qw{
     add_seq_id_dir 
     add_new_sequence_entry
-    make_entered_status
+    set_ana_sequence_not_current
     };
 
 {

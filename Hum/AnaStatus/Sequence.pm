@@ -385,9 +385,18 @@ sub get_all_AceFiles {
 sub new_AceFile_from_filename_and_time {
     my ($self, $file_name, $time) = @_;
     
+    confess "File name not defined" unless $file_name;
+    my $acefile_name = $self->parse_filename($file_name);
+
+    return $self->new_AceFile_from_acefile_name_and_time($acefile_name, $time);
+}
+
+sub new_AceFile_from_acefile_name_and_time {
+    my( $self, $acefile_name, $time ) = @_;
+    
     my $ana_seq_id = $self->ana_seq_id
         or confess "No ana_seq_id";
-    confess "File name not defined" unless $file_name;
+    
     $time ||= time;
 
     unless ($time =~ /^\d+$/) {
@@ -395,9 +404,6 @@ sub new_AceFile_from_filename_and_time {
             or confess "Bad time '$time'";
         $time = $unix_time;
     }
-    
-    my $acefile_name = $self->parse_filename($file_name);
-    my $seq_name = $self->sequence_name;
 
     # Make a new acefile object, and populate it
     my $acefile = Hum::AnaStatus::AceFile->new;
@@ -406,7 +412,7 @@ sub new_AceFile_from_filename_and_time {
     $acefile->acefile_status_id(1);
     $acefile->ana_seq_id($ana_seq_id);
     
-    $self->add_AceFile($acefile);###return as well?
+    $self->add_AceFile($acefile);
     
     $acefile->store;
     
