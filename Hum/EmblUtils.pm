@@ -9,12 +9,12 @@ use vars qw( @EXPORT_OK @ISA );
 @ISA       = qw( Exporter );
 @EXPORT_OK = qw( extCloneName projectAndSuffix
                  add_source_FT add_Organism
-                 library_and_vector
+                 library_and_vector species_binomial
                  );
 
 
 sub add_source_FT {
-    my( $embl, $length, $species, $external_clone,
+    my( $embl, $length, $binomial, $external_clone,
         $chr, $map, $libraryname ) = @_;
 
     my $ft = $embl->newFT;
@@ -24,7 +24,7 @@ sub add_source_FT {
     $loc->exons([1, $length]);
     $loc->strand('W');
     
-    $ft->addQualifierStrings('organism',   $species);
+    $ft->addQualifierStrings('organism',   $binomial);
     $ft->addQualifierStrings('chromosome', $chr);
     $ft->addQualifierStrings('map',        $map)             if $map;
     $ft->addQualifierStrings('clone',      $external_clone);
@@ -125,6 +125,16 @@ BEGIN {
         $og->classification(@classification);
         
         return $og;
+    }
+    
+    sub species_binomial {
+        my( $species ) = @_;
+        
+        if (my $latin = $class{$species}) {
+            return join('', $latin->[0], $latin->[1] );
+        } else {
+            return;
+        }
     }
 }
 
