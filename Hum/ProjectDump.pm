@@ -3,7 +3,7 @@ package Hum::ProjectDump;
 
 use strict;
 use Carp;
-use Hum::Submission qw( sub_db acc_data prepare_statement );
+use Hum::Submission qw( acc_data prepare_statement );
 use Hum::Tracking qw(
     track_db
     is_full_shotgun_complete
@@ -35,46 +35,54 @@ sub get_all_dumps_for_project {
     }
 }
 
-sub get_all_existing_dumps_for_project {
-    my( $pkg, $project ) = @_;
+{
+    my( $get_sids );
     
-    my $sub_db = sub_db();
-    my $get_sids = $sub_db->prepare(q{
-        SELECT a.sanger_id
-        FROM project_acc a
-          , project_dump d
-        WHERE a.sanger_id = d.sanger_id
-          AND d.is_current = 'Y'
-          AND a.project_name = ?
-        });
-    $get_sids->execute($project);
-    
-    my(@dumps);
-    while (my($sid) = $get_sids->fetchrow) {
-        my $pdmp = $pkg->new_from_sanger_id($sid);
-        push(@dumps, $pdmp);
+    sub get_all_existing_dumps_for_project {
+        my( $pkg, $project ) = @_;
+
+        $get_sids ||= prepare_statement(q{
+            SELECT a.sanger_id
+            FROM project_acc a
+              , project_dump d
+            WHERE a.sanger_id = d.sanger_id
+              AND d.is_current = 'Y'
+              AND a.project_name = ?
+            });
+        $get_sids->execute($project);
+
+        my(@dumps);
+        while (my($sid) = $get_sids->fetchrow) {
+            my $pdmp = $pkg->new_from_sanger_id($sid);
+            push(@dumps, $pdmp);
+        }
+
+        return @dumps;
     }
-    
-    return @dumps;
 }
 
-sub create_new_dump_object {
-    my( $pkg, $project ) = @_;
+{
+    my( $active_count );
     
-    my $sub_db = sub_db();
-    my $is_active = $sub_db->selectall_arrayref(q{
-        SELECT count(*)
-        FROM project_check
-        WHERE is_active = 'Y'
-          AND project_name = ?
-        })->[0];
-    if ($is_active) {
-        my $pdmp = $pkg->new;
-        $pdmp->project_name($project);
-        $pdmp->sanger_id("_\U$project");
-        return $pdmp;
-    } else {
-        confess "Project '$project' is not active";
+    sub create_new_dump_object {
+        my( $pkg, $project ) = @_;
+
+        $active_count ||= prepare_statement(q{
+            SELECT count(*)
+            FROM project_check
+            WHERE is_active = 'Y'
+              AND project_name = ?
+            });
+        $active_count->execute($project);
+        my ($is_active) = $active_count->fetchrow;
+        if ($is_active) {
+            my $pdmp = $pkg->new;
+            $pdmp->project_name($project);
+            $pdmp->sanger_id("_\U$project");
+            return $pdmp;
+        } else {
+            confess "Project '$project' is not active";
+        }
     }
 }
 
@@ -214,6 +222,15 @@ sub chromosome {
         $pdmp->{'_chromosome'} = Hum::Tracking::chromosome_from_project($pdmp->project_name);
     }
     return $pdmp->{'_chromosome'};
+}
+
+sub chromosome_id {
+    my( $pdmp ) = @_;
+    
+    my $chr     = $pdmp->chromosome;
+    my $species = $pdmp->species;
+    return Hum::Submission::chromosome_id_from_species_and_chr_name($species, $chr)
+        || Hum::Submission::add_new_species_chr                    ($species, $chr);    
 }
 
 sub sequence_name {
@@ -388,8 +405,7 @@ sub read_submission_data {
     my( $pdmp ) = @_;
     
     my $sid = $pdmp->sanger_id or confess "No sanger_id";
-    my $sub_db = sub_db();
-    my $get_dump = $sub_db->prepare(q{
+    my $get_dump = prepare_statement(q{
         SELECT a.project_name
           , a.project_suffix
           , UNIX_TIMESTAMP(d.dump_time) dump_time
@@ -1617,15 +1633,12 @@ sub read_accession_data {
     sub ebi_submit {
         my( $pdmp ) = @_;
 
-        unless ($record_submission) {
-            my $sub_db = sub_db();
-            $record_submission = $sub_db->prepare(q{
-                INSERT submission( seq_id
-                                 , submission_time
-                                 , submission_type )
-                VALUES (?,FROM_UNIXTIME(?),?)
+        $record_submission ||= prepare_statement(q{
+            INSERT submission( seq_id
+                             , submission_time
+                             , submission_type )
+            VALUES (?,FROM_UNIXTIME(?),?)
             });
-        }
 
         my $sub_type = $pdmp->submission_type;
         unless ($sub_type) {
@@ -1769,7 +1782,6 @@ BEGIN {
 sub store_dump {
     my( $pdmp ) = @_;
     
-    my $sub_db = sub_db();
     $pdmp->_store_project_acc;
     my $seq_id = $pdmp->_store_sequence
         or confess "Got no seq_id from _store_sequence()";
@@ -1831,12 +1843,13 @@ sub is_htgs_activefin {
  | unpadded_length  | int(10) unsigned          |      | MUL | 0          |                |
  | contig_count     | int(11)                   |      |     | 0          |                |
  | file_path        | varchar(200)              |      |     |            |                |
+ | chromosome_id    | int(10) unsigned          |      | MUL | 1          |                |
  +------------------+---------------------------+------+-----+------------+----------------+
 
 =cut
 
-BEGIN {
-
+{
+    my( $insert );
     my @fields = qw(
         sequence_name
         sequence_version
@@ -1844,13 +1857,13 @@ BEGIN {
         unpadded_length
         contig_count
         file_path
+        chromosome_id
     );
     
     sub _store_sequence {
         my( $pdmp ) = @_;
 
-        my $sub_db = sub_db();
-        my $insert = $sub_db->prepare(q{
+        $insert ||= prepare_statement(q{
             INSERT INTO sequence(seq_id,}
             . join(',', @fields)
             . q{) VALUES (NULL,?,?,?,?,?,?)}
@@ -1874,8 +1887,8 @@ BEGIN {
 
 =cut
 
-BEGIN {
-
+{
+    my( $update, $insert );
     my @fields = qw(
         sanger_id 
         dump_time 
@@ -1885,11 +1898,9 @@ BEGIN {
     
     sub _store_project_dump {
         my( $pdmp ) = @_;
-
-        my $sub_db = sub_db();
         
         # Unset is_current for previous rows
-        my $update = $sub_db->prepare(q{
+        $update ||= prepare_statement(q{
             UPDATE project_dump
             SET is_current = 'N'
             WHERE sanger_id = ?
@@ -1897,7 +1908,7 @@ BEGIN {
             });
         $update->execute($pdmp->sanger_id, $pdmp->seq_id);
 
-        my $insert = $sub_db->prepare(q{
+        $insert ||= prepare_statement(q{
             INSERT INTO project_dump(is_current,}
             . join(',', @fields)
             . q{) VALUES ('Y',?,FROM_UNIXTIME(?),?,?)}
@@ -1906,21 +1917,24 @@ BEGIN {
     }
 }
 
-sub _set_not_current {
-    my( $pdmp ) = @_;
-    
-    my $seq_id = $pdmp->seq_id
-        or confess "No seq_id for dump";
+{
+    my( $update );
 
-    # Now unset is_current for previous rows
-    my $update = sub_db()->prepare(q{
-        UPDATE project_dump
-        SET is_current = 'N'
-        WHERE seq_id = ?
-        });
-    $update->execute($seq_id);
+    sub _set_not_current {
+        my( $pdmp ) = @_;
+
+        my $seq_id = $pdmp->seq_id
+            or confess "No seq_id for dump";
+
+        # Now unset is_current for previous rows
+        $update ||= prepare_statement(q{
+            UPDATE project_dump
+            SET is_current = 'N'
+            WHERE seq_id = ?
+            });
+        $update->execute($seq_id);
+    }
 }
-
 
 {
 
@@ -1947,8 +1961,7 @@ sub _set_not_current {
         my ($count) = $exists->fetchrow;
         
         unless ($count) {
-            my $sub_db = sub_db();
-            $insert ||= $sub_db->prepare(q{
+            $insert ||= prepare_statement(q{
                 INSERT INTO project_acc(}
                 . join(',', @fields)
                 . q{) VALUES (?,?,?)}

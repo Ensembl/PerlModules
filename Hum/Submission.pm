@@ -295,6 +295,63 @@ a time string as input, or defaulting to current time.
     }
 }
 
+{
+    my( %species_chr );
+    
+    sub _init_species_chr_hash {
+        
+        # Zero the hash
+        %species_chr = ();
+        
+        my $sth = prepare_statement(q{
+            SELECT chromosome_id
+              , chr_name
+              , species_name
+            FROM species_chromosome
+            });
+        $sth->execute;
+        while (my( $chr_id, $chr, $species ) = $sth->fetchrow) {
+            $species_chr{$species}{$chr} = $chr_id;
+        }
+    }
+
+    sub chromosome_id_from_species_and_chr_name {
+        my( $chr, $species ) = @_;
+
+        $chr     ||= 'UNKNOWN';
+        $species ||= 'UNKNOWN';
+        
+        # Initialize the static hash the first time we are called
+        _init_species_chr_hash() unless %species_chr;
+        
+        return $species_chr{$species}{$chr};
+    }
+    
+    sub add_new_species_chr {
+        my( $species, $chr ) = @_;
+        
+        $chr     ||= 'UNKNOWN';
+        $species ||= 'UNKNOWN';
+        
+        # Make sure we are in sync with the database
+        _init_species_chr_hash();
+        
+        if (my $chr_id = $species_chr{$species}{$chr}) {
+            confess "id ('$chr_id') already exists for species='$species' and chr='$chr'";
+        } else {
+            my $sth = prepare_statement(q{
+                INSERT species_chromosome(chromosome_id
+                  , chr_name
+                  , species_name)
+                VALUES (NULL,?,?)
+                });
+            $sth->execute($species, $chr);
+            $species_chr{$species}{$chr} = $sth->{'insertid'};
+            return $species_chr{$species}{$chr};
+        }
+    }
+}
+
 1;
 
 __END__
