@@ -55,7 +55,6 @@ sub alignment_string {
     return $self->{'_alignment_string'};
 }
 
-
 1;
 
 __END__

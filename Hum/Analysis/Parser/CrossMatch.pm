@@ -16,30 +16,44 @@ sub new {
 
 sub next_Feature {
     my( $self ) = @_;
-    
-    my $fh = $self->results_filehandle
-        or confess "No filehandle to parse";
-    my $feature  = $self->_current_feature;
+        
+    my $feature = $self->_current_feature;
+    my $aln_str = '';
+    my $fh = $self->results_filehandle;
+    return $feature unless $fh;
     while (<$fh>) {
         if (/\(\d+\)/) {
-            print $_;
-            my $new_feature = $self->parse_coordinate_line($_);
+            my $new_feature = $self->parse_coordinate_line($_)
+                or confess "No new feature returned";
             $self->_current_feature($new_feature);
             if ($feature) {
                 return $feature;
+            } else {
+                $feature = $new_feature;
             }
         }
+        elsif (/^Transitions/) {
+            # This line appears at the end of alignment blocks
+            $feature->alignment_string($aln_str);
+        }
+        elsif ($feature) {
+            $aln_str .= $_;
+        }
     }
+    $self->unset_results_filehandle;
     return $feature;
 }
 
 sub _current_feature {
-    my( $self, $current_feature ) = @_;
+    my( $self, $feature ) = @_;
     
-    if ($current_feature) {
-        $self->{'_current_feature'} = $current_feature;
+    if ($feature) {
+        $self->{'_current_feature'} = $feature;
     }
-    return $self->{'_current_feature'};
+    elsif ($feature = $self->{'_current_feature'}) {
+        $self->{'_current_feature'} = undef;
+        return $feature;
+    }
 }
 
 sub parse_coordinate_line {
@@ -48,7 +62,7 @@ sub parse_coordinate_line {
     my $feature = Hum::Ace::SeqFeature::Pair::CrossMatch->new();
     $feature->seq_strand(1);
     
-    # Strip internal parentheses, asterisks and leading space
+    # Strip parentheses, asterisks and leading space from the line
     $line =~ s/[\(\)\*]//g;
     $line =~ s/^\s+//;
     
@@ -84,6 +98,8 @@ sub parse_coordinate_line {
     else {
         confess "Unexpected match line format '$_' (", scalar(@data), " elements)";
     }
+    
+    return $feature;
 }
 
 
@@ -95,6 +111,12 @@ sub results_filehandle {
         $self->{'_results_filehandle'} = $results_filehandle;
     }
     return $self->{'_results_filehandle'};
+}
+
+sub unset_results_filehandle {
+    my( $self ) = @_;
+    
+    $self->{'_results_filehandle'} = undef;
 }
 
 sub temporary_directory {
@@ -115,7 +137,7 @@ sub DESTROY {
     }
     
     if (my $fh = $self->results_filehandle) {
-        close($fh) or confess "Error running cross_match exit($?)";
+        close($fh) or confess "Error from cross_match filehandle exit($?)";
     }
 }
 
