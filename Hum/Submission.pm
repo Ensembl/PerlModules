@@ -34,6 +34,7 @@ use Hum::SubmissionConf;
 		 submission_user
 		 user_has_access
 		 get_user
+                 header_supplement_code
                  );
 
 =pod
@@ -129,8 +130,6 @@ sub ref_from_query {
 sub acc_data {
     my( $sid ) = @_;
 
-    my $dbh = sub_db();
-
     my $get_acc_data = prepare_statement(qq{
         SELECT a.accession
           , a.embl_name
@@ -151,6 +150,31 @@ sub acc_data {
         $acc = undef;
     }
     return ( $acc, $name, @sec );
+}
+
+sub header_supplement_code {
+    my( $key, $sanger_id ) = @_;
+    
+    my $sth = prepare_statement(q{
+        SELECT h.header_code
+        FROM project_header_supplement phs
+          , header_supplement h
+        WHERE phs.header_id = h.header_id
+          AND h.header_key = ?
+          AND phs.sanger_id = ?
+        });
+    $sth->execute($key, $sanger_id);
+    
+    my( @subs );
+    while (my ($str) = $sth->fetchrow) {
+        my $code = eval $str;
+        if ($@) {
+            confess "Code '$str' did not compile : $@";
+        } else {
+            push(@subs, $code);
+        }
+    }
+    return @subs;
 }
 
 sub create_lock {

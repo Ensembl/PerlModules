@@ -138,6 +138,7 @@ sub add_Headers {
     $pdmp->add_library_CC($embl);
     $pdmp->add_external_draft_CC($embl);
     $pdmp->add_overlap_CC($embl);
+    $pdmp->add_extra_headers($embl, 'comment');
 }
 
 sub add_FT_entries {

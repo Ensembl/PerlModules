@@ -9,6 +9,9 @@ use vars qw( @ISA );
 
 @ISA = 'Hum::ProjectDump';
 
+use Hum::Submission qw(
+    header_supplement_code
+    );
 use Hum::Tracking qw( ref_from_query
                       library_and_vector
                       is_shotgun_complete
@@ -138,25 +141,27 @@ sub species_binomial {
 sub add_Reference {
     my( $pdmp, $embl, $seqlength ) = @_;
     
-    return(1) if $pdmp->add_HGMP_Reference($embl, $seqlength);
-    
-    my $author = $pdmp->author;
-    my $date = EMBLdate();
-    
-    my $query_email = 'humquery';
-    if ($pdmp->species eq 'Zebrafish') {
-        $query_email = 'zfish-help';
-    }
+    unless ($pdmp->add_HGMP_Reference($embl, $seqlength)) {
+        my $author = $pdmp->author;
+        my $date = EMBLdate();
 
-    my $ref = $embl->newReference;
-    $ref->number(1);
-    $ref->positions("1-$seqlength");
-    $ref->authors($author);
-    $ref->locations("Submitted ($date) to the EMBL/Genbank/DDBJ databases.",
-                    'Wellcome Trust Sanger Institute, Hinxton, Cambridgeshire, CB10 1SA, UK.',
-                    "E-mail enquiries: $query_email\@sanger.ac.uk",
-                    'Clone requests: clonerequest@sanger.ac.uk');
-    $embl->newXX;
+        my $query_email = 'humquery';
+        if ($pdmp->species eq 'Zebrafish') {
+            $query_email = 'zfish-help';
+        }
+
+        my $ref = $embl->newReference;
+        $ref->number(1);
+        $ref->positions("1-$seqlength");
+        $ref->authors($author);
+        $ref->locations("Submitted ($date) to the EMBL/Genbank/DDBJ databases.",
+                        'Wellcome Trust Sanger Institute, Hinxton, Cambridgeshire, CB10 1SA, UK.',
+                        "E-mail enquiries: $query_email\@sanger.ac.uk",
+                        'Clone requests: clonerequest@sanger.ac.uk');
+        $embl->newXX;
+    }
+    
+    $pdmp->add_extra_headers($embl, 'reference', $seqlength);
 }
 
 
@@ -464,6 +469,8 @@ sub add_Headers {
         @comment_lines,
         $pdmp->make_fragment_summary($embl, $contig_map),
     );   
+
+    $pdmp->add_extra_headers($embl, 'comment');
 }
 
 
@@ -680,6 +687,15 @@ sub make_q20_depth_report {
     return @report;
 }
 
+sub add_extra_headers {
+    my( $pdmp, $embl, $key ) = @_;
+    
+    confess "No key given" unless $key;
+    
+    foreach my $code (header_supplement_code($key, $pdmp->sanger_id)) {
+        $code->($pdmp, $embl);
+    }
+}
 
 1;
 
