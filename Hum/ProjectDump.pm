@@ -21,7 +21,12 @@ use File::Path;
 sub new {
     my( $pkg ) = @_;
 
-    return bless {}, $pkg;
+    my $self = {
+	_vector_count => {},
+	_chem_count   => {},
+    };
+
+    return bless $self, $pkg;
 }
 
 # Generate simple data access functions using closures
@@ -30,6 +35,8 @@ BEGIN {
     # List of fields we want scalar access fuctions to
     my @scalar_fields = qw(
         accession
+        agarose_error
+	agarose_length
         author
         dump_time
         chromosome
@@ -336,11 +343,126 @@ sub read_gap_contigs {
 		$pdmp->BaseQuality($name, [split(/\s+/, $value)]);
 	    }
 	    
+	} elsif (my ($name) = $object =~ /Sequence\s+\:\s+(\S+)/) {
+	    if ($value =~ /Is_read/) {
+		my ($seq_vec) = $value =~ /Sequencing_vector\s+\"(\S+)\"/;
+		$pdmp->count_vector($seq_vec);
+		$pdmp->count_chemistry($name);
+	    }
 	}
     }
     close(GAP2CAF) || confess $! ? "ERROR RUNNING GAP2CAF : exit status $?\n"
                                  : "ERROR RUNNING GAP2CAF : $!\n";
     $pdmp->dump_time(time); # Record the time of the dump
+}
+
+sub count_vector {
+    my ($pdmp, $vector) = @_;
+
+    unless (defined($vector)) { return; }
+
+    my $ncbi_vec = {
+	m13mp18 => 'M13; M77815;',
+	puc18   => 'plasmid; L08752;',
+    }->{lc($vector)};
+
+    unless (defined($ncbi_vec)) { return; }
+
+    $pdmp->{_vector_count}->{$ncbi_vec}++;
+}
+
+sub count_chemistry {
+    my ($pdmp, $name) = @_;
+
+    if (my ($suffix) = $name =~ /\.(...)/) {
+	if (exists($pdmp->{suffix_chemistry}->{$suffix})) {
+	    $pdmp->{_chem_count}->{$pdmp->{suffix_chemistry}->{$suffix}}++;
+	}
+    }
+}
+
+sub make_read_comments {
+    my ($pdmp) = @_;
+    
+    my @comments;
+
+    my $vec_total = 0;
+    while (my ($seq_vec, $count) = each %{$pdmp->{_vector_count}}) {
+	$vec_total += $count;
+    }
+    unless ($vec_total) { $vec_total++; }
+
+    while (my ($seq_vec, $count) = each %{$pdmp->{_vector_count}}) {
+	my $percent = $count * 100 / $vec_total;
+	push(@comments,
+	     sprintf("Sequencing vector: %s %d%% of reads",
+		     $seq_vec, $percent));
+	
+    }
+    my $chem_total = 0;
+    while (my ($chem, $count) = each %{$pdmp->{_chem_count}}) {
+	$chem_total += $count;
+    }
+    unless ($chem_total) { $chem_total++; }
+
+    while (my ($chem, $count) = each %{$pdmp->{_chem_count}}) {
+	my $percent = $count * 100 / $chem_total;
+	push(@comments,
+	     sprintf("Chemistry: %s; %d%% of reads", $chem, $percent));
+    }
+
+    return @comments;
+}
+
+sub make_consensus_q_summary {
+    my ($pdmp) = @_;
+
+    my @qual_hist;
+
+    foreach my $contig ($pdmp->contig_list) {
+	my $qual = $pdmp->BaseQuality($contig);
+
+	foreach my $q (@$qual) {
+	    $qual_hist[$q]++;
+	}
+    }
+
+    my $total = 0;
+    for (my $q = $#qual_hist; $q >= 0; $q--) {
+	$total += $qual_hist[$q] || 0;
+	$qual_hist[$q] = $total;
+    }
+
+    return ("Consensus quality: $qual_hist[40] bases at least Q40",
+	    "Consensus quality: $qual_hist[30] bases at least Q30",
+	    "Consensus quality: $qual_hist[20] bases at least Q20");
+}
+
+sub make_consensus_length_report {
+    my ($pdmp) = @_;
+
+    my @report;
+    my $len = 0;
+
+    foreach my $contig ($pdmp->contig_list) {
+	$len += $pdmp->contig_length($contig);
+    }
+
+    push(@report, "Insert size: $len; sum-of-contigs");
+
+    if (my $ag_len = $pdmp->agarose_length()) {
+	if (my $ag_err = $pdmp->agarose_error()) {
+	    push(@report,
+		 sprintf("Insert size: %d; %.1f%% error; agarose-fp",
+			 $ag_len,
+			 $ag_err * 100 / $ag_len));
+	} else {
+	    push(@report,
+		 sprintf("Insert size: %d; agarose-fp", $ag_len));
+	}
+    }
+
+    return @report;
 }
 
 sub read_fasta_file {
@@ -528,9 +650,71 @@ sub read_tracking_details {
         };
         $author ||= project_team_leader($project);
         $pdmp->author($author);
+	$pdmp->get_agarose_est_length();
+	$pdmp->get_suffix_chemistries();
     } else {
         die "Couldn't get project details with query:\n$query"
     }
+}
+
+sub get_agarose_est_length {
+    my ($pdmp) = @_;
+
+    my $dbh = track_db();
+
+    my $query = qq[select COUNT(image.insert_size_bp),
+		          AVG(image.insert_size_bp),
+		          STDDEV(image.insert_size_bp)
+		   from   rdrequest        request,
+		          rdgel_lane       lane,
+		          rdgel_lane_image image,
+		          rdrequest_enzyme enzyme
+		   where  request.id_rdrequest  = lane.id_rdrequest
+		   and    lane.id_rdgel         = image.id_rdgel
+		   and    lane.lane             = image.lane
+		   and    request.id_rdrequest  = enzyme.id_rdrequest
+		   and    image.isgood = 1
+		   and    request.clonename     = ?];
+
+    my $get_lengths = $dbh->prepare($query);
+    $get_lengths->execute($pdmp->sequence_name());
+    my ($count, $avg, $stddev) = $get_lengths->fetchrow_array();
+    $get_lengths->finish();
+
+    if ($count > 0) { $pdmp->agarose_length($avg);   }
+    if ($count > 2) { $pdmp->agarose_error($stddev); }
+}
+
+sub get_suffix_chemistries {
+    my ($pdmp) = @_;
+
+    my $dbh = track_db();
+
+    my $query = qq[select seqchem.suffix, seqchem.is_primer, dyeset.name
+		   from   seqchemistry seqchem,
+		          dyeset
+		   where  dyeset.id_dyeset = seqchem.id_dyeset];
+    my $get_chem = $dbh->prepare($query);
+    $get_chem->execute();
+    
+    while (my ($suffix, $is_primer, $dyeset) = $get_chem->fetchrow_array()) {
+	$suffix =~ s/^\.//;
+
+	unless (exists($pdmp->{suffix_chemistry}->{$suffix})) {
+	    my $chem = ($is_primer ? "Dye-primer" : "Dye-terminator");
+	    my $chem2 = {
+		'ABI'         => ' ABI',
+		'DYEnamic_ET' => ' ET',
+		'BigDye'      => ' Big Dye',
+		'MegaBace_ET' => ' ET'
+	    }->{$dyeset} || "";
+	    if ($chem2 eq 'ET') {
+		$chem2 = ($is_primer ? "-amersham" : " ET-amersham");
+	    }
+	    $pdmp->{suffix_chemistry}->{$suffix} = "$chem$chem2";
+	}
+    }
+    $get_chem->finish();
 }
 
 BEGIN {

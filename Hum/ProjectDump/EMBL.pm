@@ -125,6 +125,13 @@ BEGIN {
         $embl->newXX;
         
         # Comments
+	my $reads_cc = $embl->newCC;
+	$reads_cc->list($pdmp->make_read_comments());
+	$embl->newCC->list("Assembly program: XGAP4; version 4.5");
+	$embl->newCC->list($pdmp->make_consensus_q_summary(),
+			   $pdmp->make_consensus_length_report());
+	$embl->newXX;
+
         my $unfin_cc = $embl->newCC;
         $unfin_cc->list(
 "IMPORTANT: This sequence is unfinished and does not necessarily
