@@ -18,7 +18,8 @@ use vars qw{@ISA @EXPORT_OK};
 sub get_server {
     foreach my $host_port (@$PFETCH_SERVER_LIST) {
         my($host, $port) = @$host_port;
-        my $server = IO::Socket::INET->new(
+        my( $server );
+        $server = IO::Socket::INET->new(
             PeerAddr => $host,
             PeerPort => $port,
             Proto    => 'tcp',
