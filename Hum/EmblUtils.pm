@@ -77,7 +77,13 @@ BEGIN {
             Eutheria Carnivora Fissipedia Canidae Canis
             )],
         
-        sminthopsis =>
+        pig =>
+        [qw(Sus scrofa), 'pig', qw(
+            Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia
+            Eutheria Cetartiodactyla Suina Suidae Sus
+            )],
+        
+       sminthopsis =>
         [qw(Sminthopsis macroura), 'Australian stripe-faced dunnart', qw(
             Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia
             Metatheria Dasyuromorphia Dasyuridae Sminthopsis
