@@ -140,7 +140,17 @@ sub embl_checksum {
         # KW line
         my $kw = $embl->newKW;
         my @kw_list = ('HTG', 'HTGS_PHASE1');
-        push( @kw_list, 'HTGS_DRAFT' ) if is_shotgun_complete($project);
+        
+        if (is_shotgun_complete($project)) {
+            my ($contig_depth) = $pdmp->contig_and_agarose_depth_estimate;
+            
+            # Check that the project really is draft quality
+            if ($contig_depth >= 3) {
+                push( @kw_list, 'HTGS_DRAFT' );
+            } else {
+                send_warning_email('BELOW DRAFT QUALITY', $project, "contig_depth=$contig_depth");
+            }
+        }
         $kw->list(@kw_list);
         $embl->newXX;
     
@@ -337,6 +347,16 @@ sub embl_checksum {
     }
 }
 
+sub send_warning_email {
+    my($subject, $project, @report) = @_;
+    
+    local *WARN_MAIL;
+    open WARN_MAIL, "| mailx -s '$subject Project=$project' jgrg"
+        or confess "Can't open pipe to mailx : $!";
+    print WARN_MAIL map "$_\n", @report;
+    close WARN_MAIL or confess "Error sending warning email : $!";
+}
+
 sub make_fragment_summary {
     my( $pdmp, $embl, $spacer_length, @contig_pos ) = @_;
     
@@ -455,27 +475,21 @@ sub make_consensus_length_report {
 }
 
 sub make_q20_depth_report {
-    my ($pdmp) = @_;
+    my( $pdmp ) = @_;
 
-    my $est_len   = 0;
-    my $q20_bases = 0;
+    my @contig_agarose = $pdmp->contig_and_agarose_depth_estimate
+        or confess "No depth estimate";
 
-    foreach my $contig ($pdmp->contig_list) {
-	$est_len += $pdmp->contig_length($contig);
-	$q20_bases += $pdmp->count_q20_for_contig($contig);
-    }
-    unless ($est_len) { $est_len = 1; }
     my @report;
     push(@report,
-	 sprintf("Quality coverage: %.2fx in Q20 bases; sum-of-contigs",
-		 $q20_bases / $est_len));
-    
-    if (my $ag_len = $pdmp->agarose_length()) {
-    push(@report,
-	 sprintf("Quality coverage: %.2fx in Q20 bases; agarose-fp",
-		 $q20_bases / $ag_len));
-    }
+        sprintf("Quality coverage: %.2fx in Q20 bases; sum-of-contigs",
+        $contig_agarose[0]));
 
+    if ($contig_agarose[1]) {
+        push(@report,
+            sprintf("Quality coverage: %.2fx in Q20 bases; agarose-fp",
+            $contig_agarose[1]));
+    }
     return @report;
 }
 

@@ -738,6 +738,7 @@ sub parse_contig_tags {
 		if ($re < $ere) { $re = $ere; }
 	    }
 
+            # Store read extent
             $pdmp->read_extent($read, [$name, $cs, $ce, $rs, $re, $reverse]);
 	}
         elsif ($key eq "Tag") {
@@ -771,6 +772,31 @@ sub parse_contig_tags {
     }
 }
 
+sub contig_and_agarose_depth_estimate {
+    my( $pdmp ) = @_;
+    
+    my( $contig_agarose );
+    if ($contig_agarose = $pdmp->{'_contig_and_agarose_depth_estimate'}) {
+        warn "Returning pre-calculated Q20 depth report\n";
+    } else {
+        my $contig_len = 0;
+        my $q20_bases  = 0;
+
+        foreach my $contig ($pdmp->contig_list) {
+	    $contig_len += $pdmp->contig_length       ($contig);
+	    $q20_bases  += $pdmp->count_q20_for_contig($contig);
+        }
+        confess "No contig length!" unless $contig_len;
+        
+        $contig_agarose = [ ($q20_bases / $contig_len) ];
+        if (my $ag_len = $pdmp->agarose_length) {
+            push(@$contig_agarose, ($q20_bases / $ag_len));
+        }
+        $pdmp->{'_contig_and_agarose_depth_estimate'} = $contig_agarose;
+    }
+    return @$contig_agarose;
+}
+
 sub count_q20_for_contig {
     my ($pdmp, $contig) = @_;
 
@@ -781,7 +807,9 @@ sub count_q20_for_contig {
     my $q20_count = 0;
     
     foreach my $af (@$afs) {
-	if ($read ne $af->[0]) {
+	
+        # Get the quality string for the current read
+        if ($read ne $af->[0]) {
 	    $read = $af->[0];
 	    $quals = $pdmp->read_quality($read);
 	}
