@@ -178,7 +178,7 @@ sub min_end_distance {
 sub warn_match {
     my( $self, $query, $subject, $seq_end, $hit_end ) = @_;
     
-    printf "%s (%d) vs %s (%d)\n",
+    printf STDERR "%s (%d) vs %s (%d)\n",
           $query->name,   $query->sequence_length,
         $subject->name, $subject->sequence_length;
     
@@ -186,7 +186,7 @@ sub warn_match {
     push(@feat, $hit_end) unless $seq_end == $hit_end;
     
     foreach my $feat (@feat) {
-        printf("  %7.3f%% %16s %6d %6d %16s %6d %6d     %3s\n",
+        printf(STDERR "  %7.3f%% %16s %6d %6d %16s %6d %6d     %3s\n",
             $feat->percent_identity,
             $feat->seq_name,
             $feat->seq_start,

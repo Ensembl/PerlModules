@@ -858,51 +858,6 @@ sub cds_coords {
     return @cds_coords;
 }
 
-#sub OLD_cds_coords {
-#    my( $self ) = @_;
-#    
-#    my @t_region    = $self->translation_region;
-#    my @exons       = $self->get_all_Exons;
-#    my( @cds_coords );
-#    my $cds_length = 0;
-#    if ($self->strand == 1) {
-#        foreach my $exon (@exons) {
-#            my $start = $exon->start;
-#            my $end   = $exon->end;
-#            for (my $i = 0; $i < @t_region; $i++) {
-#                my $pos = $t_region[$i];
-#                if ($pos >= $start and $pos <= $end) {
-#                    $cds_coords[$i] = $pos - $start + 1 + $cds_length;
-#                }
-#            }
-#            $cds_length += $exon->length;
-#        }
-#    } else {
-#        @t_region = reverse @t_region;
-#        foreach my $exon (reverse @exons) {
-#            my $start = $exon->start;
-#            my $end   = $exon->end;
-#            for (my $i = 0; $i < @t_region; $i++) {
-#                my $pos = $t_region[$i];
-#                if ($pos >= $start and $pos <= $end) {
-#                    $cds_coords[$i] = $end - $pos + 1 + $cds_length;
-#                }
-#            }
-#            $cds_length += $exon->length;
-#        }
-#    }
-#    
-#    my $err = "";
-#    for (my $i = 0; $i < @t_region; $i++) {
-#        unless ($cds_coords[$i]) {
-#            $err .= qq{Translation coord '$t_region[$i]' does not lie within any Exon\n};
-#        }
-#    }
-#    confess $err if $err;
-#    
-#    return @cds_coords;
-#}
-
 sub subseq_length {
     my( $self ) = @_;
     
