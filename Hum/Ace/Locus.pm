@@ -738,7 +738,6 @@ sub make_transcript {
     my $trans = Bio::Otter::AnnotatedTranscript->new;
     
     my $ti = Bio::Otter::TranscriptInfo->new(
-        -stable_id            => $trans->stable_id,
         -name                 => $t_name,
         -cds_start_not_found  => 0,
         -cds_end_not_found    => 0,
@@ -747,12 +746,10 @@ sub make_transcript {
         );
 
     $trans->transcript_info($ti);
-    $trans->stable_id($t_name);
     $trans->version(1);    
     
     # Make the translation
     my $translation = Bio::EnsEMBL::Translation->new;
-    $translation->stable_id($t_name);  # Same name as transcript
     $translation->version(1);
     
     # The orientation of the transcript on the golden path (chromosome)
@@ -988,13 +985,9 @@ sub make_transcript {
             my $ex_id     = $ex->stable_id;
             my $ace_phase  = $exon_t_start{"ace_phase-$ex_id"};
 
-            # Set phase 0 if this is the first coding exon
+            # Set phase from acedb or phase 0 if this is the first coding exon
             if ($ex_id eq $start_exon_id) {
-                $prev_phase = 0;
-            }
-            # If we are in a coding region, use the phase from acedb, if set
-            elsif ($prev_phase != -1) {
-                $prev_phase = $ace_phase if defined($ace_phase);
+                $prev_phase = defined($ace_phase) ? $ace_phase : 0;
             }
 
             # Now calculate the phase for the next exon:
@@ -1018,12 +1011,12 @@ sub make_transcript {
                     # correct phase for the next exon.
                     if ($strand == 1) {
                         unless ($start == $t_start) {
-                            print STDERR "moving exon start $start > $t_start\n";
+                            #print STDERR "moving exon start $start > $t_start\n";
                             $start = $t_start;
                         }
                     } else {
                         unless ($end == $t_end) {
-                            print STDERR "moving exon end $t_start < $end\n";
+                            #print STDERR "moving exon end $t_start < $end\n";
                             $end = $t_start;
                         }
                     }
@@ -1155,20 +1148,11 @@ sub record_t_start_point {
     
     my $ens_phase = $cds_exon->ensembl_phase;
     my $ex_id     = $ens_exon->stable_id;
-    
-    my( $phase );
-    if (defined $ens_phase) {
-        print STDERR "Exon '$ex_id' has phase $ens_phase from acedb CDS object\n";
-        $phase = $ens_phase;
-    } else {
-        $phase = 0;
-    }
 
-    my $offset = (3 - $phase) % 3;
     if ($strand == 1) {
-        $exon_pos->{$ex_id} = $cds_exon->start + $offset;
+        $exon_pos->{$ex_id} = $cds_exon->start;
     } else {
-        $exon_pos->{$ex_id} = $cds_exon->end   - $offset;
+        $exon_pos->{$ex_id} = $cds_exon->end;
     }
 
     # Only record the ace_phase if both the EnsEMBL and
