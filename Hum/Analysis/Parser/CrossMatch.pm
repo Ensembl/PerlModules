@@ -23,7 +23,7 @@ sub next_Feature {
     return $feature unless $fh;
     while (<$fh>) {
         if (/\(\d+\)/) {
-            my $new_feature = $self->parse_coordinate_line($_)
+            my $new_feature = $self->new_Feature_from_coordinate_line($_)
                 or confess "No new feature returned";
             $self->_current_feature($new_feature);
             if ($feature) {
@@ -40,7 +40,7 @@ sub next_Feature {
             $aln_str .= $_;
         }
     }
-    $self->unset_results_filehandle;
+    $self->close_results_filehandle;
     return $feature;
 }
 
@@ -56,7 +56,7 @@ sub _current_feature {
     }
 }
 
-sub parse_coordinate_line {
+sub new_Feature_from_coordinate_line {
     my( $self, $line ) = @_;
     
     my $feature = Hum::Ace::SeqFeature::Pair::CrossMatch->new();
@@ -113,9 +113,12 @@ sub results_filehandle {
     return $self->{'_results_filehandle'};
 }
 
-sub unset_results_filehandle {
+sub close_results_filehandle {
     my( $self ) = @_;
     
+    if (my $fh = $self->{'_results_filehandle'}) {
+        close($fh) or confess "Error from cross_match filehandle exit($?)";
+    }
     $self->{'_results_filehandle'} = undef;
 }
 
@@ -134,10 +137,6 @@ sub DESTROY {
     if (my $dir = $self->temporary_directory) {
         #warn "Removing '$dir'";
         rmtree($dir);
-    }
-    
-    if (my $fh = $self->results_filehandle) {
-        close($fh) or confess "Error from cross_match filehandle exit($?)";
     }
 }
 
