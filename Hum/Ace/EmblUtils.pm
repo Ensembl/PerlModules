@@ -21,7 +21,7 @@ use vars qw( @EXPORT_OK @ISA );
             if (ref($_)) {
                 die "Not an acedb object"
                         unless $_->isa('Ace::Object');
-                ($_) = projectAndSuffix($_);
+                ($_) = projectAndSuffix($_) || $_;
             }
         }
         
@@ -47,7 +47,6 @@ sub projectAndSuffix {
     my( $project, $suffix );
     eval{ $project = $ace->at('Project.Project_name[1]')->name   };
     eval{ $suffix  = $ace->at('Project.Project_suffix[1]')->name };
-    
     
     return($project, $suffix);
 }
