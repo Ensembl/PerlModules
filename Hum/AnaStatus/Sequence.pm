@@ -115,14 +115,14 @@ sub get_all_for_sequence_name_root {
 
     sub new_from_sequence_name {
         my ($pkg, $seq_name) = @_;
-
-        my $sth = prepare_statement($_std_query 
-            . qq{\n AND s.sequence_name = '$seq_name'\n});
-        $sth->execute;
-        
-        return $pkg->_new_from_statement_handle($sth, "sequence_name '$seq_name'");
+	if ( $seq_name ){
+	  my $sth = prepare_statement($_std_query 
+				      . qq{\n AND s.sequence_name = '$seq_name'\n});
+	  $sth->execute;
+	  return $pkg->_new_from_statement_handle($sth, "sequence_name '$seq_name'");
+	}
     }
-    
+
     sub _new_from_statement_handle {
         my( $pkg, $sth, $parameter ) = @_;
 
@@ -186,7 +186,9 @@ sub get_all_for_sequence_name_root {
 sub new_from_accession {
     my( $pkg, $acc ) = @_;
 
-    my $sth = prepare_statement(qq{
+    my $sth;
+    if ( $acc ){
+      $sth = prepare_statement(qq{
         SELECT s.sequence_name
         FROM project_acc a
           , project_dump d
@@ -196,6 +198,7 @@ sub new_from_accession {
           AND d.is_current = 'Y'
           AND a.accession = '$acc'
         });
+    }
     $sth->execute;
     my ($seq_name) = $sth->fetchrow;
     $seq_name ||= $acc;
