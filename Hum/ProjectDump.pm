@@ -703,8 +703,7 @@ sub read_gap_contigs {
 	    }
 	}
     }
-    close(GAP2CAF) || confess $! ? "ERROR RUNNING GAP2CAF : exit status $?\n"
-                                 : "ERROR RUNNING GAP2CAF : $!\n";
+    close(GAP2CAF) || confess "ERROR RUNNING GAP2CAF : exit status '$?' : '$!'\n";
 }
 
 sub parse_read_sequence {
