@@ -72,7 +72,7 @@ sub ref_from_query {
                 # submissions_test@ecs2b
                 # submissions_test@ecs2b:3306
             
-                if ($test =~ /^([\w_\$]+)(?:\@([\w-\.]+))?(?::(\d+))?$/) {
+                if ($test =~ /^([\w_\$]+)(?:\@([\w\-\.]+))?(?::(\d+))?$/) {
                     $dbname = $1;
                     $host   = $2 if $2;
                     $port   = $3 if $3;
