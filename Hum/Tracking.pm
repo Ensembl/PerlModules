@@ -44,6 +44,7 @@ use vars qw( @ISA @EXPORT_OK );
                 library_and_vector
                 localisation_data
                 online_path_from_project
+                prepare_track_statement
                 project_from_clone
                 project_finisher
                 project_team_leader
@@ -53,8 +54,6 @@ use vars qw( @ISA @EXPORT_OK );
                 track_db
                 unfinished_accession
                 );
-
-my( @active_statements );   # A list of open statements
 
 =pod
 
@@ -163,16 +162,33 @@ sub ref_from_query {
 
 Returns a B<DBI> handle to the Tracking database.
 
+=head2 prepare_track_statement
+
+    my $sth = prepare_track_statement($sql);
+
+Returns a prepared statement handle for the
+tracking database.  Each prepared statement is
+added to a list of statements, and finish is
+called on each of these statements during an END
+block, to ensure a graceful exit.
+
 =cut
 
 
 {
-    my( $dbh );
+    my( $dbh, @active_statements );
 
     sub track_db {
         $dbh = WrapDBI->connect('reports', {RaiseError => 1}) unless $dbh;
         
         return $dbh;
+    }
+
+    sub prepare_track_statement {
+        my( $query ) = @_;
+        
+        my $sth = track_db()->prepare($query);
+        push( @active_statements, $sth );
     }
 
     END {
@@ -229,14 +245,11 @@ given project name if there is only one, or undef.
     sub clone_from_project {
         my( $project ) = @_;
 
-        unless ($get_clone) {
-            $get_clone = track_db()->prepare(q{
-                SELECT clonename
-                FROM clone_project
-                WHERE projectname = ?
-                });
-            push(@active_statements, $get_clone);
-        }   
+        $get_clone ||= prepare_track_statement(q{
+            SELECT clonename
+            FROM clone_project
+            WHERE projectname = ?
+            });
         $get_clone->execute($project);
         
         if (my($clone) = $get_clone->fetchrow) {
@@ -519,19 +532,15 @@ sub localisation_data {
     sub chromosome_from_project {
         my( $project ) = @_;
 
-        unless ($get_chr) {
-            my $track_db = track_db();
-            $get_chr = $track_db->prepare(q{
-                SELECT cd.chromosome
-                FROM chromosomedict cd
-                  , clone c
-                  , clone_project cp
-                WHERE cd.id_dict = c.chromosome
-                  AND c.clonename = cp.clonename
-                  AND cp.projectname = ?
-                });
-            push(@active_statements, $get_chr);
-        }
+        $get_chr ||= prepare_track_statement(q{
+            SELECT cd.chromosome
+            FROM chromosomedict cd
+              , clone c
+              , clone_project cp
+            WHERE cd.id_dict = c.chromosome
+              AND c.clonename = cp.clonename
+              AND cp.projectname = ?
+            });
         $get_chr->execute($project);
 
         if (my($chr) = $get_chr->fetchrow) {
@@ -549,17 +558,13 @@ sub localisation_data {
     sub fishData {
         my( $project ) = @_;
 
-        unless ($get_fish) {
-            my $track_db = track_db();
-            $get_fish = $track_db->prepare(q{
-                SELECT remark
-                FROM project_status
-                WHERE status = 9
-                  AND projectname = ?
-                ORDER BY statusdate DESC
-                });
-            push(@active_statements, $get_fish);
-        }
+        $get_fish ||= prepare_track_statement(q{
+            SELECT remark
+            FROM project_status
+            WHERE status = 9
+              AND projectname = ?
+            ORDER BY statusdate DESC
+            });
         $get_fish->execute($project);
         
         my( $map );
@@ -600,17 +605,13 @@ sub fishParse {
     sub species_from_project {
         my( $project ) = @_;
         
-        unless ($get_species) {
-            my $track_db = track_db();
-            $get_species = $track_db->prepare(q{
-                SELECT c.speciesname
-                FROM clone c
-                  , clone_project cp
-                 WHERE c.clonename = cp.clonename
-                  AND cp.projectname = ?
-                });
-            push(@active_statements, $get_species);
-        }
+        $get_species ||= prepare_track_statement(q{
+            SELECT c.speciesname
+            FROM clone c
+              , clone_project cp
+            WHERE c.clonename = cp.clonename
+              AND cp.projectname = ?
+            });
         $get_species->execute($project);
         
         if (my($species) = $get_species->fetchrow) {
@@ -627,8 +628,7 @@ sub fishParse {
     sub online_path_from_project {
         my( $project ) = @_;
         
-        unless ($get_online_path) {
-            $get_online_path = track_db()->prepare(q{
+        $get_online_path ||= prepare_track_statement(q{
             SELECT o.online_path
             FROM project p
               , online_data o
@@ -636,8 +636,6 @@ sub fishParse {
               AND o.is_available = 1
               AND p.projectname = ?
             });
-            push(@active_statements, $get_online_path);
-        }
         $get_online_path->execute($project);
         
         if (my($path) = $get_online_path->fetchrow) {
@@ -664,22 +662,18 @@ format (eg: "J. Smith").
     sub project_finisher {
         my( $project ) = @_;
 
-        unless ($get_finisher) {
-            my $track_db = track_db();
-            $get_finisher = $track_db->prepare(q{
-                SELECT p.forename
-                  , p.surname
-                FROM project_role pr
-                  , team_person_role tpr
-                  , person p
-                WHERE pr.id_role = tpr.id_role
-                  AND tpr.id_person = p.id_person
-                  AND pr.projectname = ?
-                  AND tpr.roletype = 'Finishing'
-                ORDER BY pr.assigned_from DESC        
-                });
-            push(@active_statements, $get_finisher);
-        }
+        $get_finisher ||= prepare_track_statement(q{
+            SELECT p.forename
+              , p.surname
+            FROM project_role pr
+              , team_person_role tpr
+              , person p
+            WHERE pr.id_role = tpr.id_role
+              AND tpr.id_person = p.id_person
+              AND pr.projectname = ?
+              AND tpr.roletype = 'Finishing'
+            ORDER BY pr.assigned_from DESC        
+            });
         $get_finisher->execute($project);
 
         if (my( $forename, $surname ) = $get_finisher->fetchrow) {
@@ -709,21 +703,17 @@ format (eg: "J. Smith").
     sub project_team_leader {
         my( $project ) = @_;
 
-        unless ($get_team_leader) {
-            my $track_db = track_db();
-            $get_team_leader = $track_db->prepare(q{
-                SELECT p.forename
-                  , p.surname
-                FROM project_owner o
-                  , team t
-                  , person p
-                WHERE o.teamname = t.teamname
-                  AND t.teamleader = p.id_person
-                  AND o.projectname = ?
-                ORDER BY o.owned_from DESC
-                });
-            push(@active_statements, $get_team_leader);
-        }
+        $get_team_leader ||= prepare_track_statement(q{
+            SELECT p.forename
+              , p.surname
+            FROM project_owner o
+              , team t
+              , person p
+            WHERE o.teamname = t.teamname
+              AND t.teamleader = p.id_person
+              AND o.projectname = ?
+            ORDER BY o.owned_from DESC
+            });
         $get_team_leader->execute($project);
 
         if (my( $forename, $surname ) = $get_team_leader->fetchrow) {
@@ -757,14 +747,11 @@ more than one match in the project table.
 
         my( $PROJ, $suffix ) = $sid =~ /^_(.+?)(?:__([A-Z]))?$/;
 
-        unless ($get_project_name) {
-            $get_project_name = track_db()->prepare(q{
-                SELECT projectname
-                FROM project
-                WHERE UPPER(projectname) = ?
-                });
-            push(@active_statements, $get_project_name);
-        }
+        $get_project_name ||= prepare_track_statement(q{
+            SELECT projectname
+            FROM project
+            WHERE UPPER(projectname) = ?
+            });
         $get_project_name->execute($PROJ);
         
         my $ans = $get_project_name->fetchall_arrayref;
