@@ -20,16 +20,19 @@ use Hum::Submission 'prepare_statement';
     my( $sth );
 
     sub add_seq_id_dir {
-        my( $seq_id, $ana_dir ) = @_;
+        my( $seq_id, $ana_dir, $db_prefix ) = @_;
+        
+        $db_prefix ||= '';
         
         $sth ||= prepare_statement(q{
             INSERT ana_sequence( ana_seq_id
               , is_current
               , seq_id
-              , analysis_directory)
-            VALUES (NULL,'Y',?,?)
+              , analysis_directory
+              , db_prefix)
+            VALUES (NULL,'Y',?,?,?)
             });
-        $sth->execute($seq_id, $ana_dir);
+        $sth->execute($seq_id, $ana_dir, $db_prefix);
         my $ana_seq_id = $sth->{'insertid'};
         
         make_status_entered($ana_seq_id);

@@ -296,7 +296,7 @@ sub hum_sequence {
     
     my $seq = Hum::Sequence::DNA->new;
     $seq->sequence_string( $embl->Sequence->seq );
-    $seq->name           ( $embl->ID->accession );
+    $seq->name           ( $embl->AC->primary );
     
     return $seq;
 }
