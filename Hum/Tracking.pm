@@ -316,10 +316,11 @@ block, to ensure a graceful exit.
     my( $dbh, $user, @active_statements );
 
     sub track_db {
-        $dbh ||= WrapDBI->connect(track_db_user(),{
-                RaiseError  => 1,
-                AutoCommit  => 0,
-                });
+        $dbh ||= WrapDBI->connect(track_db_user(),
+            {
+              RaiseError  => 1,
+              AutoCommit  => 0,
+            });
         
         return $dbh;
     }
@@ -348,6 +349,7 @@ block, to ensure a graceful exit.
         
         my $sth = track_db()->prepare($query);
         push( @active_statements, $sth );
+        #warn "Now ", scalar(@active_statements), " active statements\n";
         return $sth;
     }
     
@@ -1013,8 +1015,19 @@ more than one match in the project table.
     }
 }
 
+=head2 time2iso and iso2time
+
+Convert to ISO format time, eg:
+
+  2002-11-08 10:39:41
+
+from a UNIX time int and back.  If no argument is
+given to time2iso it uses the current time.
+
+=cut
+
 sub time2iso {
-    my $time = shift || time;
+    my( $time ) = @_;
     
     my ($sec,$min,$hour,$mday,$mon,$year) = localtime($time);
     return sprintf("%04d-%02d-%02d %02d:%02d:%02d",
@@ -1031,6 +1044,15 @@ sub iso2time {
     $mon--;
     return timelocal($sec,$min,$hour,$mday,$mon,$year);
 }
+
+=head2 record_finished_length
+
+    record_finished_length(PROJECT_NAME, LENGTH)
+
+Updates the INTERNAL_LENGTH_BP column of the
+PROJECT table with the given length.
+
+=cut
 
 {
     my( $lock, $record );
@@ -1073,6 +1095,21 @@ sub iso2time {
         return 1;
     }
 }
+
+
+=head2 record_accession_data
+
+    record_accession_data( PROJECT_NAME, SUFFIX,
+        HTGS_PHASE, ACCESSION, EMBL_ID, LENGTH );
+
+Populates the EMBL_SUBMISSION and either the
+UNFINISHED_SUBMISSION or FINISHED_SUBMISSION
+table, depending on whether HTGS_PHASE is B<1> or
+B<3> respectively.  B<track_db_commit> is called
+if no errors are encountered.
+
+=cut
+
 
 sub record_accession_data {
     my( $project, $suffix, $phase, $acc, $embl_name, $length ) = @_;
@@ -1117,7 +1154,8 @@ sub record_accession_data {
         my( $db_name, $db_length ) = $sub_get->fetchrow;
         if ($db_name and $db_length) {
             # Update the entry if the embl id or length are different
-            if ($embl_name ne $db_name or $length ne $db_length) {
+            if ($length ne $db_length or $embl_name ne $db_name) {
+                warn "Updating entry for accession $acc\n";
                 $sub_upd ||= prepare_track_statement(q{
                     UPDATE embl_submission
                     SET name = ?
@@ -1127,9 +1165,10 @@ sub record_accession_data {
                 $sub_upd->execute($embl_name, $length, $acc);
             }
         } else {
+            warn "New accession $acc\n";
             # Insert a new entry
             $sub_ins ||= prepare_track_statement(q{
-                INSERT embl_submission( accession
+                INSERT INTO embl_submission( accession
                       , name
                       , length_bp )
                 VALUES (?,?,?)
@@ -1142,7 +1181,7 @@ sub record_accession_data {
 {
     my( $unf_count, $unf_ins );
     
-    sub _store_unfinished_submisson {
+    sub _store_unfinished_submission {
         my( $project, $acc ) = @_;
 
         # Update unfinished_submission
@@ -1155,6 +1194,7 @@ sub record_accession_data {
         $unf_count->execute($project, $acc);
         my ($count) = $unf_count->fetchrow;
         unless ($count) {
+            warn "inserting new unfinished $acc for $project\n";
             $unf_ins ||= prepare_track_statement(q{
                 INSERT INTO unfinished_submission( projectname
                       , accession )
@@ -1168,18 +1208,19 @@ sub record_accession_data {
 {
     my( $fin_get, $fin_ins, $fin_upd );
     
-    sub _store_finished_submisson {
+    sub _store_finished_submission {
         my( $project, $acc, $suffix ) = @_;
 
         $fin_get ||= prepare_track_statement(q{
-            SELECT count(*), suffix
+            SELECT 1, suffix
             FROM finished_submission
             WHERE projectname = ?
             AND accession = ?
             });
-        $fin_get->execute($project, $acc, $suffix);
-        my ($count, $db_suffix) = $fin_get->fetchrow;
-        unless ($count) {
+        $fin_get->execute($project, $acc);
+        my ($exists, $db_suffix) = $fin_get->fetchrow;
+        unless ($exists) {
+            warn "inserting new finished $acc for $project\n";
             $fin_ins ||= prepare_track_statement(q{
                 INSERT INTO finished_submission( projectname
                       , accession
@@ -1188,7 +1229,8 @@ sub record_accession_data {
                 });
             $fin_ins->execute($project, $acc, $suffix);
         }
-        elsif ($suffix ne $db_suffix) {
+        elsif (($suffix || 'NULL') ne ($db_suffix || 'NULL')) {
+            warn "updating suffix for finished $acc for $project\n";
             $fin_upd ||= prepare_track_statement(q{
                 UPDATE finished_submission
                 SET suffix = ?

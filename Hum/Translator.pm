@@ -137,7 +137,7 @@ sub unknown_amino_acid {
 
         };
     
-    # This is in a method so that we can choose
+    # This is in a method so that we can add
     # other translation tables in the future
     sub codon_table {
         return $std;
