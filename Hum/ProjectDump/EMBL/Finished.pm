@@ -295,7 +295,7 @@ http://www.sanger.ac.uk/Projects/C_elegans/wormpep');
 'Repeat names beginning "Dr" were identified by the Recon repeat discovery
 system (Zhirong Bao and Sean Eddy, submitted), and those beginning "drr"
 were identified by Rick Waterman.  For further information see
-http://www/Projects/D_rerio/';
+http://www/Projects/D_rerio/fishmask.shtml';
 
     sub add_standard_CC {
         my( $pdmp, $embl ) = @_;
