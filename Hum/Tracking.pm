@@ -132,20 +132,35 @@ sub external_clone_name {
     
     my %proj = map { $_->[0], [@{$_}[1,2,3]] } @$ans;
     
+    # Fill in any clone names missing from %proj
+    my @missing = grep ! $proj{$_}, @projects;
+    if (@missing) {
+        my $miss_list = join(',', map "'$_'", @missing);
+        my $ans = ref_from_query(qq(
+                                     select projectname, clonename
+                                     from clone_project
+                                     where projectname in($miss_list)  ));
+        if (@$ans) {
+            foreach (@$ans) {
+                $proj{$_->[0]} = [$_->[1]];
+            }
+        }
+    }
+    
     foreach my $p (keys %proj) {
         my( $clone, $int, $ext ) = @{$proj{$p}};
         
-        $clone =~ s/^$int// or confess "Can't remove '$int' from '$clone'";
-        $proj{$p} = "$ext-$clone";
+        if ($int) {
+            $clone =~ s/^$int// or confess "Can't remove '$int' from '$clone'";
+        } else {
+            $clone = uc $clone;
+        }
+        
+        # Clones with unknown external extensions get "XX"
+        $proj{$p} = $ext ? "$ext-$clone" : "XX-$clone";
     }
     
-    # Just give back the clone name if
-    # we were only asked for one project
-    if (@projects == 1) {
-        return $proj{$projects[0]};
-    } else {
-        return \%proj;
-    }
+    return \%proj;
 }
 
 =pod

@@ -41,7 +41,7 @@ sub mergeFeatures {
     for (my $i = 0; $i < @$set;) {
         my $ft = $set->[$i];
         my $k = $ft->key;
-        my $l = $ft->location;
+        my $l = $ft->location->hash_key;
         
         # Is there already a feature with this key and location?
         if (my $pt = $tree{$k}{$l}) {
@@ -50,7 +50,7 @@ sub mergeFeatures {
                 $pt->addQualifier($qual);
             }
             # Remove the feature from the set
-            splice(@$set, $i, 0);
+            splice(@$set, $i, 1);
         } else {
             $tree{$k}{$l} = $ft;
             $i++;

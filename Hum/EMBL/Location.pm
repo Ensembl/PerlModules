@@ -10,8 +10,8 @@ sub new {
     return bless {
         strand => undef,
         exons => [],
-        missing_5_prime => undef,
-        missing_3_prime => undef,
+        missing_5_prime => 0,
+        missing_3_prime => 0,
     }, $pkg;
 }
 
@@ -28,7 +28,7 @@ sub strand {
 sub missing_5_prime {
     my( $loc, $value ) = @_;
     
-    if ($value) {
+    if (defined $value) {
         $loc->{'missing_5_prime'} = $value;
     } else {
         return $loc->{'missing_5_prime'};
@@ -37,7 +37,7 @@ sub missing_5_prime {
 sub missing_3_prime {
     my( $loc, $value ) = @_;
     
-    if ($value) {
+    if (defined $value) {
         $loc->{'missing_3_prime'} = $value;
     } else {
         return $loc->{'missing_3_prime'};
@@ -130,6 +130,22 @@ sub parse {
     } else {
         confess "Can't parse location string '$$s'";
     }
+}
+
+# Generates a unique string for a location
+sub hash_key {
+    my( $loc ) = @_;
+    
+    my( @key );
+    if (ref($loc->{'exons'}[0])) {
+        @key = map @$_, @{$loc->{'exons'}};
+    } else {
+        @key = @{$loc->{'exons'}};
+    }
+    
+    return join '_', ($loc->{'strand'}, @key,
+        $loc->{'missing_5_prime'},
+        $loc->{'missing_3_prime'});
 }
 
 BEGIN {
