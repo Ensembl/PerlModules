@@ -56,7 +56,7 @@ sub numeric_descend {
 }
 
 sub locationFromHomolBlock {
-    my( $block, $score ) = @_;
+    my( $block, $score, $merge ) = @_;
     $score ||= 200;
         
     # Divide the data up into forward and reverse strand sets
@@ -135,6 +135,31 @@ sub locationFromHomolBlock {
         push( @result, [$start, $end, $str] );
     }
     return @result;
+}
+
+sub merge_ranges {
+    my( $merge, @ranges ) = @_;
+    
+    $merge ||= 0;
+    
+    my($start, $end, @fused);
+    
+    foreach my $ra (sort {$a->[0] <=> $b->[0]} @ranges) {
+        my( $s, $e ) = @$ra;
+        $start = $s unless defined $start;
+        $end   = $e unless defined $end;
+        
+        # Make a new range, unless this one
+        # almost overlaps the previous
+        unless (($s - $merge) <= $end) {
+            push(@fused, [$start, $end]);
+            $start = $s;
+        }
+        
+        $end = $e;
+    }
+    
+    return(@fused, [$start, $end]);
 }
 
 sub simple_location {
