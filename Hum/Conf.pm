@@ -39,7 +39,7 @@ my $humpub_disk3  = "${humpub}3" ;
 my $humpub_disk3a = "${humpub}3a";
 my $humpub_disk4a = "${humpub}4a";
 my $humpub_disk5a = "${humpub}5a";
-
+my $ftp_ghost     = "$humpub_disk3/data/ftp_ghost";
 
 # TimDB legacy system
 my $sanger_path="/nfs/disk100/humpub1a/unfinished_ana";
@@ -56,7 +56,8 @@ $cgp_path{'EF'}="$ext_path/EF";
 
     # FTP site variables
     HUMAN_SEQ_FTP_DIR   => "$ftp/pub/human/sequences",
-    FTP_GHOST => "$humpub_disk3/data/ftp_ghost",
+    FTP_GHOST => $ftp_ghost,
+    FTP_ATTIC => "$ftp_ghost/attic",
     FTP_ROOT  => "$ftp/pub",
     FTP_STRUCTURE => {
         'Human'         => [ 'human/sequences', 'Chr_' ],

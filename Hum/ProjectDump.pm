@@ -3,7 +3,7 @@ package Hum::ProjectDump;
 
 use strict;
 use Carp;
-use Hum::Submission qw( sub_db acc_data );
+use Hum::Submission qw( sub_db acc_data prepare_statement );
 use Hum::Tracking 'track_db';
 use Hum::ProjectDump::EMBL;
 use Hum::EMBL;
@@ -89,7 +89,6 @@ BEGIN {
         sanger_id
         seq_id
         sequence_version
-        submission_type
     );
     
     # Make scalar field access functions
@@ -108,6 +107,72 @@ BEGIN {
             }
             return $pdmp->{$field};
         }
+    }
+}
+
+sub submission_time {
+    my( $pdmp ) = @_;
+    
+    return $pdmp->_submission_data('submission_time');
+}
+
+sub submission_type {
+    my( $pdmp ) = @_;
+    
+    return $pdmp->_submission_data('submission_type');
+}
+
+{
+    my( $sth );
+    
+    sub _submission_data {
+        my( $pdmp, $field ) = @_;
+
+        my( $data );
+        unless ($data = $pdmp->{'_submission_data'}) {
+            $data = {};
+            my $seq_id = $pdmp->seq_id
+                or confess "No seq_id";
+            $sth ||= prepare_statement(q{
+                SELECT UNIX_TIMESTAMP(submission_time)
+                  , submission_type
+                FROM submission
+                WHERE seq_id = ?
+                ORDER BY submission_time DESC
+                LIMIT 1
+                });
+            $sth->execute($seq_id);
+            if (my($time, $type) = $sth->fetchrow) {
+                $data->{'submission_time'} = $time;
+                $data->{'submission_type'} = $type;
+            }
+            $pdmp->{'_submission_data'} = $data;
+        }
+        return $data->{$field};
+    }
+}
+
+{
+    my( $sth );
+
+    sub accept_date {
+        my( $pdmp ) = @_;
+
+        unless ($pdmp->{'_accept_date'}) {
+            my $seq_id = $pdmp->seq_id
+                or confess "No seq_id";
+            $sth ||= prepare_statement(q{
+                SELECT UNIX_TIMESTAMP(accept_date)
+                FROM acception
+                WHERE seq_id = ?
+                ORDER BY accept_date DESC
+                LIMIT 1
+                });
+            $sth->execute($seq_id);
+            my ($date) = $sth->fetchrow;
+            $pdmp->{'_accept_date'} = $date;
+        }
+        return $pdmp->{'_accept_date'};
     }
 }
 
