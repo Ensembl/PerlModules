@@ -34,6 +34,8 @@ use vars qw( @ISA @EXPORT_OK );
 @EXPORT_OK = qw(
                 clone_from_project
                 current_project_status_number
+		set_project_status
+		session_id
                 chromosome_from_project
                 entry_name
                 expand_project_name
@@ -95,6 +97,82 @@ project.
     }
 }
 
+=head2 set_project_status ( PROJECT )
+
+Updates project_status table with the status value specified
+
+=cut
+
+
+{
+    sub set_project_status {
+        my( $project_name, $status, $remark ) = @_;
+
+        $remark ||= '';
+	my $operator = getpwuid(($<)[0]);
+	my ($program) = $0 =~ m{([^/]+)$};
+
+        my $set_not_current ||= prepare_track_statement(q{
+            UPDATE project_status
+            SET iscurrent = 0
+            WHERE projectname = ?
+            });
+
+        my $set_status ||= prepare_track_statement(qq{
+            INSERT INTO project_status( projectname
+                  , status
+                  , statusdate
+                  , iscurrent
+                  , program
+                  , operator
+                  , sessionid
+                  , remark )
+            VALUES ( ?, ?, SYSDATE, 1, ?,?,?,?)
+            });
+
+        eval {
+            $set_not_current->execute($project_name);
+            $set_status->execute(
+                $project_name,
+                $status,
+                $program,
+                $operator,
+                session_id(),
+                $remark,
+                );
+        };
+
+        if ($@) {
+            track_db_rollback();
+            die $@;
+        } else {
+            track_db_commit();
+        }
+    }
+}
+
+=head2 session_id ( PROJECT )
+
+Returns the next session_id
+
+=cut
+
+
+{
+    my( $sid );
+
+    sub session_id {
+        unless ($sid) {
+            my $sth = prepare_track_statement(q{
+                SELECT seq_session.nextval
+                FROM dual
+                });
+            $sth->execute;
+            ($sid) = $sth->fetchrow;
+        }
+        return $sid;
+    }
+}
 
 =head2 is_finished( PROJECT )
 
