@@ -79,8 +79,7 @@ my $humace_queue = "$humpub/humace/queue";
     SPECIES_LIST =>  [keys %$ftp_structure],
 
     PFETCH_SERVER_LIST => [
-        [qw{ plato.sanger.ac.uk    22100 }],
-        [qw{ infosrv1.sanger.ac.uk 22100 }],
+        [qw{ pubseq.sanger.ac.uk    22100 }],
         ],
 
     HUMACE_DIR    => "/nfs/humace/humpub/humace",
