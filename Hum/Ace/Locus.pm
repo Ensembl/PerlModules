@@ -535,7 +535,8 @@ sub make_transcript_sets {
             }
             
             # Don't add CDS if it isn't transcribed
-            if ($gene_type eq 'Pseudogene' or $gene_type eq 'Putative') {
+            if ($gene_type eq 'Pseudogene' or $gene_type eq 'Putative' or 
+                $gene_type eq 'Processed_pseudogene' or $gene_type eq 'Unprocessed_pseudogene') {
                 push(@$pairs, [$pair_name, $mrna]);
             } else {
                 push(@$pairs, [$pair_name, $mrna, $cds]);
