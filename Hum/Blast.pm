@@ -128,6 +128,30 @@ sub next_Subject {
     return;
 }
 
+sub default_name_parser {
+    my( $line ) = @_;
+    
+    my ($id_string, $acc) = $line =~ /^>\s*(\S+)\s+(\S+)?/
+        or confess("Can't parse ID line ('$_')");
+    if (! $acc or $acc eq 'bases') {
+        $acc = $id_string;
+    }
+    if ($id_string =~ /\|([^\|]+)$/) {
+        $acc = $1;
+    }
+    return $acc;
+}
+
+sub name_parser {
+    my( $self, $parser ) = @_;
+    
+    if ($parser) {
+        confess "Not a subroutine ref '$parser'"
+            unless ref($parser) eq 'CODE';
+        $self->{'_name_parser'} = $parser;
+    }
+    return $self->{'_name_parser'} || \&default_name_parser;
+}
 
 sub parse_Subject {
     my( $self ) = @_;
@@ -139,16 +163,11 @@ sub parse_Subject {
     
     my $subject = Hum::Blast::Subject->new;
     
-    # Get the accession number of the Subject
-    my ($id_string, $acc) = /^>\s*(\S+)\s+(\S+)?/
-        or confess("Can't parse ID line ('$_')");
-    if (! $acc or $acc eq 'bases') {
-        $acc = $id_string;
-    }
-    if ($id_string =~ /\|([^\|]+)$/) {
-        $acc = $1;
-    }
-    $subject->subject_name($acc);
+    # Get the accession number (or something else) of the Subject
+    my $name_parser = $self->name_parser;
+    my ($name) = &$name_parser($_);
+    confess("No subject_name from: '$_'") unless $name;
+    $subject->subject_name($name);
     
     # Get everything up to the next blank line...
     while (defined(my $tmp = <$fh>)) {

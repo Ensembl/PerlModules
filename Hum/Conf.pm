@@ -73,6 +73,11 @@ my $ftp_structure = {
     FTP_STRUCTURE => $ftp_structure,
     SPECIES_LIST => [keys %$ftp_structure],
 
+    PFETCH_SERVER_LIST => [
+        [qw{ plato.sanger.ac.uk    22100 }],
+        [qw{ infosrv1.sanger.ac.uk 22100 }],
+        ],
+
     HUMACE_DIR    => "/nfs/humace/humpub/humace",
     HUMACE_RO_DIR => '/nfs/humace/humpub/humace-live-ro',
 
