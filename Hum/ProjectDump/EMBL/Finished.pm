@@ -231,11 +231,15 @@ except for a short overlap.");
                 # Project may not be finished yet
                 $project ||= project_from_clone("$cl");
                 
-                my $ext_name = extCloneName( $project );
-                if ($ext_name) {
-                    push(@lines, "The true $end end of clone $ext_name is at $c_pos in this sequence.");
+                if ($project) {
+                    my $ext_name = extCloneName( $project );
+                    if ($ext_name) {
+                        push(@lines, "The true $end end of clone $ext_name is at $c_pos in this sequence.");
+                    } else {
+                        warn "Can't make external name for '$cl'\n";
+                    }
                 } else {
-                    warn "Can't make external name for '$cl'\n";
+                    warn "No project for clone '$cl'\n";
                 }
             }
         }
