@@ -155,8 +155,7 @@ sub process_TPF {
 
 sub _process_contig {
     my( $self, $contig ) = @_;
-    
-    my $cl = $self->new_Clone_from_tpf_Clone($contig->[0]);;
+    my $cl = $self->new_Clone_from_tpf_Clone($contig->[0]);
     
     my( $was_3prime, $strand );
     for (my $i = 1; $i < @$contig; $i++) {

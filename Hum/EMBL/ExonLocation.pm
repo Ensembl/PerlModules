@@ -227,6 +227,9 @@ BEGIN {
         for (my $i = 0; $i <= $#exons; $i++) {
         
             my $exon = $exons[$i];
+            unless ($exon->strand) {
+                confess "strand not set in exon (%d to %d)", $exon->start, $exon->end;
+            }
             
             my $exon_text;
             if ($exon->accession_version) {

@@ -78,6 +78,12 @@ BEGIN {
             Eutheria Rodentia Sciurognathi Muridae Murinae Mus
             )],
         
+        rat =>
+        [qw(Rattus norvegicus), 'Norway rat', qw(
+            Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia
+            Eutheria Rodentia Sciurognathi Muridae Murinae Rattus
+            )],
+        
         dog =>
         [qw(Canis familiaris), 'dog', qw(
             Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia

@@ -64,6 +64,7 @@ my $ftp_structure = {
     'Mouse'         => [ 'mouse',            'Chr_' ],
     'Pig'           => [ 'pig'                      ],
     'Platypus'      => [ 'platypus'                 ],
+    'Rat'           => [ 'rat'                      ],
     'Rhesus'        => [ 'rhesus'                   ],
     'Sminthopsis'   => [ 'sminthopsis'              ],
     'Tetraodon'     => [ 'tetraodon'                ],

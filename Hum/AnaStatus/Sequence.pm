@@ -928,7 +928,6 @@ sub get_accession_and_sv {
               , project_acc a
             WHERE s.seq_id = d.seq_id
               AND d.sanger_id = a.sanger_id
-              AND d.is_current = 'Y'
               AND s.seq_id = $seq_id
             });
         $sth->execute;
