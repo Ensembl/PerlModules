@@ -36,7 +36,7 @@ sub mirror_copy_dir {
             # File is a directory
             mirror_copy_dir($from_file, $to_file);
         } else {
-            mirror_copy_file($from_file, $to_file, 1);
+            mirror_copy_file($from_file, $to_file);
         }
     }
     
