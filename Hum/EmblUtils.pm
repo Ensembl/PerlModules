@@ -148,6 +148,12 @@ BEGIN {
             Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia
             Monotremata Ornithorhynchidae Ornithorhynchus
             )],
+
+        'carp' =>
+        [qw(Cyprinus carpio), 'carp', qw(
+            Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Actinopterygii
+            Neopterygii Teleostei Ostariophysi Cypriniformes Cyprinidae Cyprinus
+            )],
     );
 
     sub add_Organism {
