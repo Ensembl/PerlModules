@@ -40,7 +40,6 @@ use vars qw( @ISA @EXPORT_OK );
                 unfinised_accession
                 localisation_data
                 external_clone_name
-                library_and_vector
                 project_finisher
                 project_team_leader
                 );
@@ -384,18 +383,17 @@ sub localisation_data {
     return( $chr, $map );
 }
 
-
 sub fishParse {
     my ($fishLine) = @_;
     $fishLine =~ s/\s+$//; # Remove trailing space
     $fishLine =~ s/\//-/g; # Replace slashes with dashes
     my (@catch);
     if (@catch = $fishLine =~
-	/^[0-9XY]{0,2}([pq])(\d+\.*\d*-)[0-9XY]{0,2}[pq](\d+\.*\d*)$/) {
+	/^[0-9XY]{0,2}([pq])(\d*\.?\d+)\s*(-)\s*[0-9XY]{0,2}[pq](\d*\.?\d+)$/) {
     } elsif (@catch = $fishLine =~
-	     /^[0-9XY]{0,2}([pq])(\d+\.*\d*-)[pq]{0,1}(\d+\.*\d*)$/) {
+	     /^[0-9XY]{0,2}([pq])(\d*\.?\d+)\s*(-)\s*[pq]{0,1}(\d*\.?\d+)$/) {
     } elsif (@catch = $fishLine =~
-	     /^[0-9XY]{0,2}([pq])(\d+\.*\d*)$/) {
+	     /^[0-9XY]{0,2}([pq])(\d*\.?\d+)$/) {
     } else {
 	return;
     }
