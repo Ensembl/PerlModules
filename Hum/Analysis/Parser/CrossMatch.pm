@@ -5,6 +5,7 @@ package Hum::Analysis::Parser::CrossMatch;
 
 use strict;
 use Carp;
+use Hum::Ace::SeqFeature::Pair::CrossMatch;
 use File::Path 'rmtree';
 
 sub new {
@@ -18,19 +19,69 @@ sub next_Feature {
     
     my $fh = $self->results_filehandle
         or confess "No filehandle to parse";
+    my $feature  = $self->_current_feature;
     while (<$fh>) {
-        print;
+        if (/\(\d+\)/) {
+            print $_;
+            my $new_feature = $self->parse_coordinate_line($_);
+            $self->_current_feature($new_feature);
+            if ($feature) {
+                return $feature;
+            }
+        }
     }
+    return $feature;
 }
 
 sub _current_feature {
-    my( $self, $_current_feature ) = @_;
+    my( $self, $current_feature ) = @_;
     
-    if ($_current_feature) {
-        $self->{'__current_feature'} = $_current_feature;
+    if ($current_feature) {
+        $self->{'_current_feature'} = $current_feature;
     }
-    return $self->{'__current_feature'};
+    return $self->{'_current_feature'};
 }
+
+sub parse_coordinate_line {
+    my( $self, $line ) = @_;
+    
+    my $feature = Hum::Ace::SeqFeature::Pair::CrossMatch->new();
+    $feature->seq_strand(1);
+    
+    $line =~ s/[\(\)\*]//g;
+    my @data = split /\s+/, $line;
+    $feature->score(                $data[0]  );
+    $feature->percent_substitution( $data[1]  );
+    $feature->percent_insertion(    $data[2]  );
+    $feature->percent_deletion(     $data[3]  );
+    $feature->seq_name(             $data[4]  );
+    $feature->seq_start(            $data[5]  );
+    $feature->seq_end(              $data[6]  );
+
+    if (@data == 12) {
+        $feature->hit_strand(1);
+        
+        #    0     1    2    3         4        5     6        7           8        9    10  11
+        # 1964  0.05 0.00 0.20  AL603831        1  2004 (177751)    AL589988    72574 74573 (0)  
+        $feature->hit_name(         $data[8]  );
+        $feature->hit_start(        $data[9]  );
+        $feature->hit_end(          $data[10] );
+    }
+    elsif (@data == 13) {
+        $feature->hit_strand(-1);
+        
+        #    0     1    2    3         4        5     6        7  8        9        10    11    12
+        #  130 13.67 0.67 2.67  AL603831     4244  4543 (175212)  C AL589988   (72333)  2240  1947  
+        $feature->hit_name(         $data[9]  );
+        $feature->hit_start(        $data[12] );
+        $feature->hit_end(          $data[11] );
+    }
+    else {
+        confess "Unexpected match line format '$_'";
+    }
+}
+
+
 
 sub results_filehandle {
     my( $self, $results_filehandle ) = @_;
@@ -54,7 +105,12 @@ sub DESTROY {
     my( $self ) = @_;
     
     if (my $dir = $self->temporary_directory) {
+        #warn "Removing '$dir'";
         rmtree($dir);
+    }
+    
+    if (my $fh = $self->results_filehandle) {
+        close($fh) or confess "Error running cross_match exit($?)";
     }
 }
 

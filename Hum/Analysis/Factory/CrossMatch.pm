@@ -7,10 +7,11 @@ use strict;
 use Hum::Analysis::Parser::CrossMatch;
 use Hum::FastaFileIO;
 use Carp;
+use Cwd;
 use Symbol 'gensym';
 
 sub new {
-    my( $pkg ) = @_
+    my( $pkg ) = @_;
 
     return bless {}, $pkg;
 }
@@ -50,27 +51,30 @@ sub run {
     my   $query_file = $self->_get_file_path($tmp, $query);
     
     
-    my $cmd_pipe = $self->make_command_pipe;
+    my $cmd_pipe = $self->make_command_pipe($tmp, $query_file, $subject_file);
     my $fh = gensym();
-    open $fh, $cmp_pipe or confess "Can't open pipe '$cmd_pipe' : $!";
+    open $fh, $cmd_pipe or confess "Can't open pipe '$cmd_pipe' : $!";
     
     my $parser = Hum::Analysis::Parser::CrossMatch->new;
     $parser->results_filehandle($fh);
     $parser->temporary_directory($tmp);
+    return $parser;
 }
 
 sub make_command_pipe {
     my( $self, $dir, $query_file, $subject_file ) = @_;
     
     my $min_match = $self->min_match_length;
-    my $cmd_pipe = "cd $dir; cross_match -minmatch $min_match_length";
+    my $cmd_pipe = "cd $dir; cross_match -minmatch $min_match";
     if ($self->show_alignments) {
         $cmd_pipe .= ' -alignments';
     }
     if ($self->show_all_matches) {
         $cmd_pipe .= ' -masklevel 101';
     }
-    $cmp_pipe .= " $query_file $subject_file 2>/dev/null |";
+    $cmd_pipe .= " $query_file $subject_file 2>/dev/null |";
+    #$cmd_pipe .= " $query_file $subject_file |";
+    #warn "PIPE = $cmd_pipe";
     return $cmd_pipe;
 }
 
@@ -79,11 +83,18 @@ sub _get_file_path {
     
     my $type = ref($thing);
     
+    my( $file );
+    
     unless ($type) {
-        if (-f $thing) {
-            return $thing;
+        $file = $thing;
+        if (-f $file) {
+            # Make path absolute if not
+            if ($file !~ m{^/}) {
+                $file = cwd() . '/' . $file;
+            }
+            return $file;
         } else {
-            confess "No such file '$thing'";
+            confess "No such file '$file'";
         }
     }
     
@@ -98,7 +109,7 @@ sub _get_file_path {
         confess "Non Hum::Sequence in '@$seq_list'";
     }
     
-    my $file = "$dir/" . $thing->name . '.seq';
+    $file = "$dir/" . $thing->name . '.seq';
     my $seq_out = Hum::FastaFileIO->new_DNA_IO("> $file");
     $seq_out->write_sequences(@$seq_list);
     return $file;
@@ -112,7 +123,8 @@ sub _get_file_path {
 
         $counter++;
         my $tmp_dir_name = "/tmp/cm_tmp.$$.$counter";
-        mkdir($tmp_dir_name) or die "Can't mkdir '$tmp_dir_name' : $!";
+        mkdir($tmp_dir_name) or confess "Can't mkdir '$tmp_dir_name' : $!";
+        #warn "Made '$tmp_dir_name'";
         return $tmp_dir_name;
     }
 }

@@ -39,6 +39,21 @@ sub seq_end {
     return $self->{'_seq_end'};
 }
 
+{
+    my %allowed_strand = map {$_, 1} qw{ -1 0 1 +1 };
+
+    sub seq_strand {
+        my( $self, $strand ) = @_;
+
+        if (defined $strand) {
+            confess "Illegal strand '$strand'"
+                unless $allowed_strand{$strand};
+            $self->{'_seq_strand'} = $strand;
+        }
+        return $self->{'_seq_strand'};
+    }
+}
+
 sub seq_length {
     my( $self ) = @_;
     
@@ -59,21 +74,6 @@ sub seq_Sequence {
     return $self->{'_seq_Sequence'};
 }
 
-{
-    my %allowed_strand = map {$_, 1} qw{ -1 0 1 +1 };
-
-    sub strand {
-        my( $self, $strand ) = @_;
-
-        if (defined $strand) {
-            confess "Illegal strand '$strand'"
-                unless $allowed_strand{$strand};
-            $self->{'_strand'} = $strand;
-        }
-        return $self->{'_strand'};
-    }
-}
-
 sub score {
     my( $self, $score ) = @_;
     
@@ -83,12 +83,53 @@ sub score {
     return $self->{'_score'} || 0;
 }
 
+sub method_name {
+    my( $self, $method_name ) = @_;
+    
+    if ($method_name) {
+        $self->{'_method_name'} = $method_name;
+    }
+    return $self->{'_method_name'};
+}
+ 
 
 1;
 
 __END__
 
 =head1 NAME - Hum::Ace::SeqFeature
+
+=head1 METHODS
+
+=over 4
+
+=item new
+
+Returns a new B<Hum::Ace::SeqFeature> object.
+
+=item seq_name
+
+The name of the sequence this feature is on.
+
+=item seq_start
+
+The start of this feature in the sequence
+
+=item seq_end
+
+The end of this feature in the sequence
+
+=item seq_length
+
+=item seq_Sequence
+
+=item score
+
+=item method_name
+
+
+=back
+
 
 =head1 AUTHOR
 

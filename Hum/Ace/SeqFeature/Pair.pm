@@ -4,6 +4,8 @@
 package Hum::Ace::SeqFeature::Pair;
 
 use strict;
+use Carp;
+use Hum::Ace::SeqFeature;
 use vars '@ISA';
 
 @ISA = ('Hum::Ace::SeqFeature');
@@ -36,6 +38,21 @@ sub hit_end {
     return $self->{'_hit_end'};
 }
 
+{
+    my %allowed_strand = map {$_, 1} qw{ -1 0 1 +1 };
+
+    sub hit_strand {
+        my( $self, $strand ) = @_;
+
+        if (defined $strand) {
+            confess "Illegal strand '$strand'"
+                unless $allowed_strand{$strand};
+            $self->{'_hit_strand'} = $strand;
+        }
+        return $self->{'_hit_strand'};
+    }
+}
+
 sub hit_length {
     my( $self ) = @_;
     
@@ -63,6 +80,15 @@ sub percent_identity {
         $self->{'_percent_identity'} = $percent_identity;
     }
     return $self->{'_percent_identity'} || 0;
+}
+
+sub homol_tag {
+    my( $self, $homol_tag ) = @_;
+    
+    if ($homol_tag) {
+        $self->{'_homol_tag'} = $homol_tag;
+    }
+    return $self->{'_homol_tag'};
 }
 
 
