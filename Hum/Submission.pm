@@ -316,7 +316,7 @@ a time string as input, or defaulting to current time.
     }
 
     sub chromosome_id_from_species_and_chr_name {
-        my( $chr, $species ) = @_;
+        my( $species, $chr ) = @_;
 
         $chr     ||= 'UNKNOWN';
         $species ||= 'UNKNOWN';
