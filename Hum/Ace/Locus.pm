@@ -235,13 +235,13 @@ sub make_EnsEMBL_Gene {
     foreach my $set ($self->make_transcript_sets) {
         $i++;
         my $t_name = sprintf("%s-%03d", $gene_name, $i);
-        eval {
-            $self->make_transcript($gene, $set, $t_name);
-        };
-        warn $@ if $@;
+        $self->make_transcript($gene, $set, $t_name);
     }
-    
-    return $gene;
+    if ($gene->each_Transcript) {
+        return $gene;
+    } else {
+        return;
+    }
 }
 
 sub make_transcript_sets {
@@ -266,10 +266,10 @@ sub make_transcript_sets {
             # Only get SubSeqs from this locus
             next unless $is_locus_seq{$t_name};
             
-            unless ($t->get_all_Exons) {
-                warn "Transcript '$t_name' has zero exons in golden path - skipping\n";
-                next;
-            }
+            #unless ($t->get_all_Exons) {
+            #    warn "Transcript '$t_name' has zero exons in golden path - skipping\n";
+            #    next;
+            #}
             
             my( $pair_name, $is_mRNA ) = $t_name =~ /^(.+?)(\.mRNA)?$/;
             unless ($is_mRNA) {
@@ -288,7 +288,6 @@ sub make_transcript_sets {
         foreach my $pair_name (keys %t_pair) {
             my $cds  = $t_pair{$pair_name}{'CDS'};
             my $mrna = $t_pair{$pair_name}{'mRNA'};
-            my $mrna_contains_all_cds_exons = 0;
             
             # Try to get a CDS from the other clone_sets if
             # we have an mRNA object, but not a CDS.
@@ -320,9 +319,10 @@ sub make_transcript_sets {
             #warn "DEBUG - CDS only";
             #$mrna = $cds if $cds;
             
-            # Check that all the CDS exons are in the mRNA exons
+            # Check that all the CDS exons (if there are any)
+            # are in the mRNA exons.
             # (Unless it is the same object.)
-            if ($cds and $cds != $mrna) {
+            if ($cds and $cds != $mrna and $cds->get_all_Exons) {
                 my $cds_name  = $cds->name;
                 my $mrna_name = $mrna->name;
                 
@@ -547,9 +547,12 @@ sub make_transcript {
         my $clone = $locus_clones[$i];
         #my $clone_id = $clone->accession;
         my $clone_strand = $clone->golden_strand;
-        my $pair  = $set->[$i] or next; # May be no exons in this clone
-        my( $pair_name, $mrna, $cds ) = @$pair;
+        
+        # May be no exons in this clone
+        my $pair  = $set->[$i] or next;
 
+        my( $pair_name, $mrna, $cds ) = @$pair;
+        next unless $mrna->get_all_Exons;
         $is_coding = 1 if $cds;
 
         # Check that mRNA and CDS are on the same strand

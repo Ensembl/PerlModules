@@ -25,6 +25,17 @@ sub moniker {
 # Hum::Fox compatability: Alias db_id method to ana_seq_id
 *db_id = \&ana_seq_id;
 
+# Position in a sequence set
+sub rank {
+    my( $self, $rank ) = @_;
+    
+    if ($rank) {
+        $self->{'_rank'} = $rank;
+    }
+    return $self->{'_rank'};
+}
+
+
 sub new {
     my( $pkg ) = @_;
     

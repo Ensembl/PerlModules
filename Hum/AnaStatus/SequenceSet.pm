@@ -210,12 +210,14 @@ sub store {
         VALUES(?,?,?)
         });
 
+    my $last_rank = 0;
     for (my $i = 0; $i < @seq_list; $i++) {
-        my $rank = $i + 1;
         my $seq = $seq_list[$i];
+        my $rank = $seq->rank || $last_rank + 1;
         my $ana_seq_id = $seq->ana_seq_id
             or confess "No ana_seq_id";
         $insert_seq->execute($ana_seq_id, $set_id, $rank);
+        $last_rank = $rank;
     }
 
     return 1;
