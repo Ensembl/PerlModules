@@ -6,26 +6,29 @@ use DBI;
 use Carp;
 use Time::Local qw( timelocal );
 
+
+sub new {
+    my( $pkg, $sanger_id ) = @_;
+
+    my $accn = bless {}, $pkg;
+    return $accn;
+}
+
+# db returns the database handle
 {
     my( $db );
-    my $host = 'humsrv1';
 
-    sub new {
-        my( $pkg, $sanger_id ) = @_;
-
+    sub db () {
         unless ($db) {
             my $user = (getpwuid($<))[0];
             
             # Make the database connection
-            $db = DBI->connect("DBI:mysql:submissions:$host", $user, undef, {RaiseError => 1})
-                or die "Can't connect to submissions database on host '$host' as '$user' ",
+            $db = DBI->connect("DBI:mysql:host=humsrv1;port=3399;database=submissions;user=$user",
+                               undef, undef, {RaiseError => 1})
+                or die "Can't connect to submissions database as '$user' ",
                 DBI::errstr();
         }
-
-        my $sub = bless {}, $pkg;
-        $sub->db($db);
-        $sub->sanger_id($sanger_id) if $sanger_id;
-        return $sub;
+        return $db;
     }
 
     END {
@@ -63,7 +66,7 @@ BEGIN {
     }
     
     sub accept_date {
-        my( $sub ) = shift;
+        my( $accn ) = shift;
 
         if (@_) {
             $_ = shift;
@@ -85,23 +88,41 @@ BEGIN {
             else {
                 confess "Unknown date format '$_'";
             }
-            $sub->{'accept_date'} = $unix;
+            $accn->{'accept_date'} = $unix;
         }
 
-        return $sub->{'accept_date'};
+        return $accn->{'accept_date'};
     }
 }
 
-sub secondary {
-    my $sub = shift;
+sub embl_checksum {
+    my( $accn, $check ) = @_;
     
-    if (@_) {
-        $sub->{'secondary'} = [@_];
+    # Allow adding 0 to embl_checksum field
+    if (defined $check) {
+        $accn->{'_embl_checksum'} = $check;
     }
-
-    return $sub->{'secondary'} ? @{$sub->{'secondary'}} : ();
+    return $accn->{'_embl_checksum'};
 }
 
+BEGIN {
+    my $field = '_secondary';
+
+    sub secondary {
+        my $accn = shift;
+
+        if (@_) {
+            $accn->{$field} = [@_];
+        }
+        return $accn->{$field} ? @{$accn->{$field}} : ();
+    }
+
+    sub add_secondary {
+        my( $accn, $sec ) = @_;
+
+        push( @{$accn->{$field}}, $sec ) if $sec;
+    }
+}
 
 # Generate the other data access functions using closures
 
@@ -109,7 +130,6 @@ BEGIN {
         
     # List of fields we want scalar access fuctions to
     my @scalar_fields = qw(
-        db
         id
         sanger_id
         sequence_version
@@ -122,21 +142,108 @@ BEGIN {
     );
     
     # Make scalar field access functions
-    foreach my $field (@scalar_fields) {
+    foreach my $func (@scalar_fields) {
         no strict 'refs';
         
         # Don't overwrite existing functions
-        die "'$field()' already defined" if defined (&$field);
+        die "'$func()' already defined" if defined (&$func);
         
-        *$field = sub {
-            my $sub = shift;
+        my $field = "_$func";
+        *$func = sub {
+            my( $accn, $arg ) = @_;
             
-            if (@_) {
-                $sub->{$field} = shift;
+            if ($arg) {
+                $accn->{$field} = $arg;
             }
-            
-            return $sub->{$field};
+            return $accn->{$field};
         }
+    }
+}
+
+BEGIN {
+    my $select = qq{
+            SELECT p.project_name
+              , p.sanger_id
+              , p.accession
+              , p.embl_name
+              , p.project_suffix
+              , UNIX_TIMESTAMP(a.accept_date) accept_date
+              , a.sequence_version
+              , a.sequence_length
+              , a.htgs_phase
+              , s.secondary add_secondary
+            FROM project_acc p
+              , acception a
+            LEFT JOIN secondary_acc s
+              ON p.accession = s.accession
+            WHERE p.sanger_id = a.sanger_id
+              AND p.project_name = ?
+              AND a.is_current = 'Y'
+            };
+
+    sub by_project {
+        my( $pkg, $project ) = @_;
+
+        my $db = db();
+        my $sth = $db->prepare($select);
+        $sth->execute($project);
+        
+        my( %proj );
+        while (my $h = $sth->fetchrow_hashref) {
+            my( $accn );
+            if ($accn = $proj{$h->{'sanger_id'}}) {
+                # We've already had a row of data for this sanger_id
+                $accn->add_secondary($h->{'secondary'});
+            } else { 
+                # Make a new Acception, and store in hash
+                $accn = $pkg->new;
+                map $accn->$_($h->{$_}), keys %$h;
+                $proj{$h->{'sanger_id'}} = $accn;
+            }
+        }
+        # Return the new objects
+        return values %proj;
+    }
+}
+
+BEGIN {
+    my $select = qq{
+            SELECT p.project_name
+              , p.sanger_id
+              , p.accession
+              , p.embl_name
+              , p.project_suffix
+              , UNIX_TIMESTAMP(a.accept_date) accept_date
+              , a.sequence_version
+              , a.sequence_length
+              , a.htgs_phase
+              , s.secondary add_secondary
+            FROM project_acc p
+              , acception a
+            LEFT JOIN secondary_acc s
+              ON p.accession = s.accession
+            WHERE p.sanger_id = a.sanger_id
+              AND p.sanger_id = ?
+              AND a.is_current = 'Y'
+            };
+
+    sub by_sanger_id {
+        my( $pkg, $id ) = @_;
+
+        my $db = db();
+        my $sth = $db->prepare($select);
+        $sth->execute($id);
+        
+        my( $accn );
+        while (my $h = $sth->fetchrow_hashref) {
+            if ($accn) {
+                $accn->add_secondary($h->{'secondary'});
+            } else { 
+                $accn = $pkg->new;
+                map $accn->$_($h->{$_}), keys %$h;
+            }
+        }
+        return $accn;
     }
 }
 
@@ -145,71 +252,38 @@ BEGIN {
 # Object methods
 
 sub store {
-    my( $sub ) = @_;
+    my( $accn ) = @_;
     
-    $sub->_update_project_acc;
-    $sub->_update_acception;
-    $sub->_update_secondary_acc;
+    # Store data in the three tables associated with
+    # this project
+    $accn->_update_project_acc;
+    $accn->_update_acception;
+    $accn->_update_secondary_acc;
 }
 
-sub retrieve {
-    my( $sub ) = @_;
+sub show_fields {
+    my( $accn, @fields ) = @_;
     
-    my $sid = $sub->sanger_id
-        or confess "Can't retrieve data without sanger_id";
-    $sub->_retrieve_project_acc or confess "";
-    $sub->_retrieve_acception;
-    $sub->_retrieve_secondary_acc;
+    return map $accn->$_(), @fields;
 }
 
-BEGIN {
+sub _matches_hash {
+    my( $accn, $hash ) = @_;
+    
+    my $intersects = 1;
+    foreach my $field (keys %$hash) {
+        local $^W = 0;
+        my $value = $hash->{$field};
 
-    my @fields = qw(
-        sanger_id       
-        accept_date     
-        sequence_version
-        sequence_length 
-        htgs_phase      
-    );
-
-    my $insert = 'INSERT INTO acception('
-                 . join(', ', ('id', 'is_current', @fields))
-                 . q{) VALUES('NULL','Y',?,FROM_UNIXTIME(?),?,?,?)};
-
-
-    sub _store_acception {
-        my( $sub ) = @_;
-
-        my $sth = $sub->db->prepare($insert);
-        $sth->execute($sub->show_fields(@fields));
-    }
-
-    sub _retrieve_acception {
-        
-    }
-
-    sub _update_acception {
-        my( $sub ) = @_;
-
-        # First see if it's in the database
-        my( $sid, $date, $sv, $length, $phase ) = $sub->show_fields(@fields);
-        my $sth = $sub->db->prepare(qq{SELECT * FROM project_acc
-                                       WHERE sanger_id = '$sid'
-                                         AND accept_date = FROM_UNIXTIME('$date')
-                                         AND sequence_version = '$sv'
-                                         AND sequence_length = '$length'
-                                         AND htgs_phase = '$phase'});
-        my $ans = $sth->fetchall_arrayref;
-        unless (@$ans) {
-            my $uns = $sub->db->prepare(q{UPDATE acception
-                                          SET is_current = 'N'
-                                          WHERE sanger_id = ?});
-            $uns->execute($sid);
-            $sub->_store_acception;
+        unless ($value eq $accn->$field()) {
+            $intersects = 0;
+            last;
         }
     }
+    return $intersects;
 }
 
+# Storage methods for the project_acc table
 BEGIN {
 
     my @fields = qw(
@@ -222,43 +296,16 @@ BEGIN {
 
     my $field_list = join(', ', @fields);
 
-    my $insert = "INSERT INTO project_acc($field_list) VALUES(?,?,?,?,?)";
-
-    my $select = qq{SELECT $field_list
-                    FROM project_acc
-                    WHERE sanger_id = ?};
-
-    sub _store_project_acc {
-        my( $sub ) = @_;
-
-        my $sth = $sub->db->prepare($insert);
-        $sth->execute($sub->show_fields(@fields));
-    }
-
-    sub _retrieve_project_acc {
-        my( $sub ) = @_;
-        
-        my $sth = $sub->db->prepare($select);
-        $sth->execute($sub->sanger_id);
-        if (my $ans = $sth->fetchrow_arrayref) {
-            foreach my $f (@fields) {
-                my $d = shift @$ans;
-                next if $f eq 'sanger_id';
-                $sub->$f($d);
-            }
-            return 1;
-        } else {
-            return;
-        }
-    }
+    my $insert = qq{INSERT INTO project_acc($field_list)
+                    VALUES(?,?,?,?,?)};
 
     sub _update_project_acc {
-        my( $sub ) = @_;
+        my( $accn ) = @_;
 
-        my $sid = $sub->sanger_id || confess "No sanger_id";
+        my $sid = $accn->sanger_id || confess "No sanger_id";
 
         # First see if it's in the database
-        my $sth = $sub->db->prepare(qq{ select * from project_acc
+        my $sth = $accn->db->prepare(qq{ select * from project_acc
                                         where sanger_id = '$sid' });
         $sth->execute;
         my $ans = $sth->fetchrow_hashref;
@@ -266,72 +313,103 @@ BEGIN {
         if ($ans) {
             # It is in the database, so check that we
             # have the same information
-            unless ($sub->_matches( $ans )) {
-                confess "New data: ", format_hashes($sub),
+            unless ($accn->_matches_hash( $ans )) {
+                confess "New data: ", format_hashes($accn),
                     "Doesn't match db data: ", format_hashes($ans);
             }
         } else {
-            $sub->_store_project_acc;
+            my $sth = $accn->db->prepare($insert);
+            $sth->execute($accn->show_fields(@fields));
         }
     }
 }
 
+# Storage methods for the acception table
 BEGIN {
 
     my @fields = qw(
-        accession
-        secondary
+        embl_checksum
+        sanger_id       
+        sequence_version
+        sequence_length 
+        htgs_phase      
+        accept_date     
     );
 
-    my $insert = 'INSERT INTO secondary_acc('
-                 . join(', ', @fields)
-                 . ') VALUES(?,?)';
+    my $where = q{WHERE sanger_id = ?
+                  AND sequence_version = ?
+                  AND sequence_length = ?
+                  AND htgs_phase = ?
+                  AND accept_date = FROM_UNIXTIME(?)};
+
+    my $sum_select = q{SELECT embl_checksum
+                       FROM acception
+                       } . $where;
+
+    my $sum_update = q{UPDATE acception
+                       SET embl_checksum = ?
+                       } . $where;
+
+    my $insert = 'INSERT INTO acception('
+                 . join(', ', ('id', 'is_current', @fields))
+                 . q{) VALUES('NULL','Y',?,?,?,?,?,FROM_UNIXTIME(?))};
+
+    sub _update_acception {
+        my( $accn ) = @_;
+
+        my $db = $accn->db;
+
+        # First see if it's in the database
+        my( $sum, $sid, @values ) = $accn->show_fields(@fields);
+        my $sth = $db->prepare($sum_select);
+        $sth->execute($sid, @values);
+        my $ans = $sth->fetchall_arrayref;
+
+        if (@$ans) {
+            my $db_sum = $ans->[0][0];
+            
+            if ( $sum != 0) {
+                if ($db_sum == 0) {
+                    # Then the checksum was previously
+                    # unknown, but we can now update it
+                    my $upd = $db->prepare($sum_update);
+                    $upd->exectue($sum, $sid, @values);
+                }
+                elsif ($sum != $db_sum) {
+                    confess("Checksum in db '$db_sum' doesn't match object's value '$sum'");
+                }
+            }
+        } else {
+            my $uns = $db->prepare(q{UPDATE acception
+                                     SET is_current = 'N'
+                                     WHERE sanger_id = ?});
+            $uns->execute($sid);
+            
+            my $ins = $db->prepare($insert);
+            $ins->execute($sum, $sid, @values);
+        }
+    }
+}
+
+# Storage methods for the secondary_acc table
+BEGIN {
+
+    my $insert = q{INSERT INTO secondary_acc(accession, secondary)
+                   VALUES(?,?)};
 
     sub _update_secondary_acc {
-        my( $sub ) = @_;
+        my( $accn ) = @_;
         
-        my $acc = $sub->accession;
-        my $sth = $sub->db->prepare($insert);
-        foreach my $sec ($sub->secondary) {
-            my $ans = $sub->db->selectall_arrayref(qq{
+        my $acc = $accn->accession;
+        my $sth = $accn->db->prepare($insert);
+        foreach my $sec ($accn->secondary) {
+            my $ans = $accn->db->selectall_arrayref(qq{
                     SELECT * FROM secondary_acc
                     WHERE secondary = '$sec'
                 });
             $sth->execute($acc, $sec) unless @$ans;
         }
     }
-}
-
-sub show_fields {
-    my( $sub, @fields ) = @_;
-    
-    return map $sub->$_(), @fields;
-}
-
-sub _matches {
-    my( $sub, $hash ) = @_;
-    
-    my $intersects = 1;
-    foreach my $field (keys %$hash) {
-        local $^W = 0;
-        my $value = $hash->{$field};
-
-        unless ($value eq $sub->$field()) {
-            $intersects = 0;
-            last;
-        }
-    }
-    return $intersects;
-}
-
-sub _get_matching_row {
-    my( $sub, $table, @columns ) = @_;
-    
-    my $select = "select * from $table where"
-                 . join(' and ', map "$_ = '$sub->{$_}'", @columns);
-    my $ans = $sub->db->fetchall_arraryref($select);
-    
-    return @$ans ? @{$ans->[0]} : undef;
 }
 
 # Non-object methods
