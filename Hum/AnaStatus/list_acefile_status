@@ -14,31 +14,32 @@ use Getopt::Long 'GetOptions';
         'list'   => \$list
     );
 
-    if ( $chr_set && $ARGV[0] ) { die "can't have Sequence with Set" }
+if ( $chr_set && $ARGV[0] ) { die "can't have Sequence with Set" }
+  if ( @ARGV || $chr_set|| $list ) {
 
-    my %task_status_dict;
-    my $sth = prepare_statement( q{
+	 my %task_status_dict;
+        my $sth = prepare_statement( q{
                 SELECT task_name
                 FROM ana_task
 				WHERE is_active = 'Y'
                 }
-    );
+        );
 
-    $sth->execute;
+        $sth->execute;
 
-    while ( my ($task_status_dict) = $sth->fetchrow ) {
-        $task_status_dict{$task_status_dict} = $task_status_dict;
-    }
-
-    if ($list) {
-
-        foreach my $key ( keys %task_status_dict ) {
-            print $key, "\n";
+        while ( my ($task_status_dict) = $sth->fetchrow ) {
+            $task_status_dict{$task_status_dict} = $task_status_dict;
         }
-    }
 
-    if ( @ARGV || $chr_set ) {
+		 if ($list) {
 
+            foreach my $key ( keys %task_status_dict ) {
+                print $key, "\n";
+            }
+        }
+
+
+      
         my %wanted_task;
 
         if (@tasks_raw) {
@@ -61,10 +62,11 @@ use Getopt::Long 'GetOptions';
 
         }
 
+
+        
         if ($chr_set) {
             my $set =
-              Hum::AnaStatus::SequenceSet->new_from_set_name($chr_set)
-              ;    #Sequence Object
+              Hum::AnaStatus::SequenceSet->new_from_set_name($chr_set);    #Sequence Object
 
             foreach my $hum_sequence ( $set->sequence_list ) {
 
@@ -78,16 +80,18 @@ use Getopt::Long 'GetOptions';
             foreach my $sequence (@ARGV) {
 
                 my $hum_sequence =
-                  Hum::AnaStatus::Sequence->new_from_sequence_name($sequence)
-                  ;    #SequenceSet Object
+                  Hum::AnaStatus::Sequence->new_from_sequence_name($sequence);    #SequenceSet Object
                 list_acefile_attribs( \%wanted_task, $hum_sequence );
 
             }
         }
     }
 
-}
 
+
+else{
+die "Please supply a Sequence name or Set name\n"}
+}
 sub list_acefile_attribs {
     my ( $wanted_task, $hum_sequence ) = @_;
     print "\n", $hum_sequence->sequence_name, "\n";
@@ -97,7 +101,7 @@ sub list_acefile_attribs {
         my $time_str = acetime( $acefile->creation_time );
         my $name     = $acefile->task_name;
         if ( $wanted_task->{$name} ) {
-            printf "%-22s%-15s%-10s%s\n", $acefile->acefile_name,
+            printf "%-22s%-15s%-15s%s\n", $acefile->acefile_name,
               $acefile->task_name, $acefile->acefile_status_id_name, $time_str;
         }
 
