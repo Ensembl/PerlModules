@@ -194,7 +194,7 @@ sub make_EnsEMBL_Gene {
     
     my $gene_type = $self->gene_type_prefix . $self->gene_type;
     $gene->type($gene_type);
-    
+
     my $i = 0;
     foreach my $set ($self->make_transcript_sets) {
         $i++;
@@ -518,6 +518,34 @@ sub make_transcript {
         } else {
             $golden_orientation = $ori;
         }
+
+	# get annotator supporting evidence by SubSeq and build hash of accessions
+	my $evidence={};
+	my $mrna_name=$mrna->name;
+	foreach my $evidence2 ($mrna->get_all_SupportingEvidence_accessions){
+	    my($type,$acc)=@$evidence2;
+	    $evidence->{$acc}=[$type,$mrna_name,0];
+	}
+	if($cds){
+	    my $cds_name=$cds->name;
+	    foreach my $evidence2 ($cds->get_all_SupportingEvidence_accessions){
+		my($type,$acc)=@$evidence2;
+		# don't expect mrna and cds to be supported by same data
+		if($evidence->{$acc}){
+		    my($type2,$mrna_name)=@{$evidence->{$acc}};
+		    if($type2 eq 'Protein'){
+			# assume this was a CDS, which got copied to mRNA, but
+			# support was for CDS, in which case overwrite
+			$evidence->{$acc}=[$type,$cds_name,0];
+		    }else{
+			# some sort of error
+			warn("Duplicate evidence found: $acc mRNA ($mrna_name, $type2) and CDS ($cds_name, $type)");
+		    }
+		}else{
+		    $evidence->{$acc}=[$type,$cds_name,0];
+		}
+	    }
+	}
         
         # Make the EnsEMBL exons
         my @cds_exons = $cds->get_all_Exons if $cds;
@@ -545,7 +573,7 @@ sub make_transcript {
             }
                         
             # Make an exon for this mRNA exon
-            my $ens_exon = $self->get_unique_EnsEMBL_Exon($clone, $pair_strand, $m_ex, $c_ex);
+            my $ens_exon = $self->get_unique_EnsEMBL_Exon($clone, $pair_strand, $m_ex, $c_ex, $evidence);
             my $ex_id = $ens_exon->stable_id;
             push(@clone_exons, $ens_exon);
 
@@ -582,6 +610,14 @@ sub make_transcript {
             }
         }
         confess "Failed to match all CDS exons to mRNA" if @cds_exons;
+
+	# check to see how much evidence was not found
+	print STDERR scalar(keys %$evidence)." accessions of supporting evidence annotated\n";
+	foreach my $acc (keys %$evidence){
+	    my($type,$name,$hit)=@{$evidence->{$acc}};
+	    print STDERR " $acc: $type [\'$name\'] $hit features matched\n";
+	}
+	
         
         # Add these exons to the list of all exons
         if ($pair_strand != $golden_orientation) {
@@ -805,6 +841,11 @@ sub get_unique_EnsEMBL_Exon_with_phase {
         {
             $ens_exon->$field($exon->$field());
         }
+
+	# copy supporting evidence
+	foreach my $feature ($exon->each_Supporting_Feature){
+	    $ens_exon->add_Supporting_Feature($feature);
+	}
         
         # Cache in the hash
         $self->{'_phased_exon_hash'}{$key} = $ens_exon;
@@ -814,11 +855,12 @@ sub get_unique_EnsEMBL_Exon_with_phase {
 }
 
 sub get_unique_EnsEMBL_Exon {
-    my( $self, $clone, $strand, $exon ) = @_;
+    my( $self, $clone, $strand, $exon, $cds_exon, $evidence ) = @_;
     
     my $clone_name = $clone->accession;
     my $ens_contig = $clone->EnsEMBL_Contig;
     my $ens_contig_id = $ens_contig->id;
+    my $ens_contig_dbid = $ens_contig->internal_id;
     
     my $start = $exon->start;
     my $end   = $exon->end;
@@ -845,6 +887,46 @@ sub get_unique_EnsEMBL_Exon {
         # Cache in the hash
         $self->{'_exon_hash'}{$key} = $ens_exon;
     }
+
+    # add evidence to exon
+    # HACK HACK HACK th@6/8/02
+    # since evidence is annotated by subseq, but supporting evidence is tied to an exon
+    # add with fake hid: hid:type:subseq_name where type is 'Protein', 'EST', 'cDNA'
+    # (i.e. has '_match' removed from original AceDB tag)
+    foreach my $feature ($clone->get_all_support){
+	my $hid=$feature->hseqname;
+	$hid=~s/\.\d+$//;
+	if($evidence->{$hid}){
+	    my($type,$subseq_name)=@{$evidence->{$hid}};
+	    # right feature - does it overlap with this exon?
+	    my $fstart=$feature->start;
+	    my $fend=$feature->end;
+	    if($fend<$start || $fstart>$end){
+		next;
+	    }
+	    # count number of matches;
+	    $evidence->{$hid}->[2]++;
+	    # modify hid
+	    $hid.=":$type:$subseq_name";
+	    #print STDERR " $key: $start-$end $fstart-$fend $hid\n";
+	    $feature->hseqname($hid);
+	    # need to set seqname to contig_id
+	    # (not already set as read off a VC)
+	    $feature->seqname($ens_contig_dbid);
+
+	    # FIXME
+	    # if want analysis entry to be written, need to 
+	    # kill analysis adaptor since it points to feature db and 
+	    # want it to be written to new db
+	    # however, not sure if this is what is wanted - perhaps just copy entry from db to db?
+	    my $analysis=$feature->analysis;
+	    #$analysis->adaptor(0);
+	    #$analysis->dbID(0);
+
+	    $ens_exon->add_Supporting_Feature($feature);
+	}
+    }
+
     return $ens_exon;
 }
 

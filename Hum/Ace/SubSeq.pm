@@ -335,12 +335,20 @@ sub make_PolyA_ace_string {
 
 sub add_SupportingEvidence_accession {
     my($self,$type,$acc)=@_;
+    # convert Em:ACxxxx.1 -> ACxxxx
+    $acc=~s/^(Em|Tr|Sw)://;
+    $acc=~s/\.\d+$//;
+    $type=~s/_match$//;
     push(@{$self->{'_Evidence'}},[$type,$acc]);
 }
 
 sub get_all_SupportingEvidence_accessions {
     my($self)=@_;
-    return $self->{'_Evidence'};
+    if($self->{'_Evidence'}){
+	return @{$self->{'_Evidence'}};
+    }else{
+	return;
+    }
 }
 
 sub clone_Sequence {

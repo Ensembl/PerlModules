@@ -275,6 +275,48 @@ sub new_Sequence_from_ace_handle {
     }
 }
 
+sub add_support_to_Clone {
+    my ($self ,$ens_ana)=@_;
+
+    # Connect to appropriate enspipe database to get supporting evidence
+    my $ens_ana_db = $ens_ana->get_EnsAnalysisDB;
+
+    my $host=$ens_ana_db->host;
+    my $db_name=$ens_ana_db->db_name;
+
+    # get vc, contigs and features (but doesn't work)
+    #my $ens_db_f = $ens_ana_db->db_adaptor;
+    #my $ens_clone_f = $ens_db_f->get_Clone($self->accession);
+    # (expect finished sequence - one contig)
+    #my ($ens_contig_f) = $ens_clone_f->get_all_Contigs();
+    #my $ens_contig_f_id=$ens_contig_f->id;
+    #my $len=$ens_contig_f[0]->length;
+
+    # fetching features off $ens_contig_f doesn't seem to work...
+    my $ens_contig_f2=$ens_ana->get_EnsEMBL_VirtualContig_of_contig;
+    #my $len2=$ens_contig_f2->length;
+    #print "$seq_name: length: $len, $len2\n";
+
+    my $n=0;
+    # filter features
+    foreach my $feature ($ens_contig_f2->get_all_SimilarityFeatures()){
+	#print join ' ', $feature->analysis->dbID, $feature->primary_tag, $feature->source_tag, $feature->hseqname, 
+	#$feature->start, $feature->end, $feature->hstart, $feature->hend, "\n";
+	my $analysis = $feature->analysis;
+	next if($analysis->logic_name=~/\./);
+	$n++;
+	push(@{$self->{'_supporting_evidence_object'}},$feature);
+    }
+    print "Fetched $n features from $host, $db_name for ".$self->sequence_name."\n";
+    
+}
+
+sub get_all_support {
+    my( $self ) = @_;
+    
+    return @{$self->{'_supporting_evidence_object'}};
+}
+
 1;
 
 __END__
