@@ -145,8 +145,9 @@ sub make_ana_dir_from_species_chr_seqname_time {
     my $date_dir = date_dir($time);
     
     my $ana_dir = "$ana_root/$chr/$seq_name/$date_dir";
-    mkpath($ana_dir);
-    confess "Failed to make '$ana_dir'" unless -d $ana_dir;
+    my $rawdata = "$ana_dir/rawdata";
+    mkpath($rawdata);
+    confess "Failed to make '$rawdata'" unless -d $rawdata;
     return $ana_dir;
 }
 
