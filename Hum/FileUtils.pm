@@ -12,6 +12,7 @@ use vars qw( @ISA @EXPORT_OK );
 
 @ISA = ('Exporter');
 @EXPORT_OK = qw(
+    ace_date
     paranoid_print
     delete_blast_db
     mirror_copy_dir
