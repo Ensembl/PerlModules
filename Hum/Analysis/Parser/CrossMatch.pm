@@ -19,14 +19,13 @@ sub next_Feature {
         
     my $feature = $self->_current_feature;
     my $aln_str = '';
-    my $fh = $self->results_filehandle;
-    return $feature unless $fh;
+    my $fh = $self->results_filehandle or return($feature);
     while (<$fh>) {
         if (/\(\d+\)/) {
             my $new_feature = $self->new_Feature_from_coordinate_line($_)
                 or confess "No new feature returned";
-            $self->_current_feature($new_feature);
             if ($feature) {
+                $self->_current_feature($new_feature);
                 return $feature;
             } else {
                 $feature = $new_feature;
