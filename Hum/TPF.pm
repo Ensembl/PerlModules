@@ -232,7 +232,7 @@ sub _express_fetch_TPF_Clones_hash {
     my $sth = prepare_cached_track_statement($sql);
     $sth->execute($self->db_id);
     my( $clone_id, $clone_rank, $clonename, $contigname,
-        $remark, $int_pre, $ext_pre, $remark );
+        $remark, $int_pre, $ext_pre, $clone_remark );
     $sth->bind_columns(\$clone_id, \$clone_rank, \$clonename, \$contigname,
         \$remark, \$int_pre, \$ext_pre, \$clone_remark );
     

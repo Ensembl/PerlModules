@@ -70,6 +70,7 @@ sub parse {
             $row->accession($acc);
             if ($intl =~ /MULTIPLE/i) {
                 $row->is_multi_clone(1);
+                $row->sanger_clone_name($acc);
             } else {
                 $row->intl_clone_name($intl);
             }

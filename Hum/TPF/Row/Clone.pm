@@ -75,7 +75,12 @@ sub sanger_clone_name {
         $self->{'_sanger_clone_name'} = $clone;
     } else {
         unless ($clone = $self->{'_sanger_clone_name'}) {
-            if (my $intl = $self->intl_clone_name) {
+            my $intl = $self->intl_clone_name;
+            if (! $intl or $intl =~ /Multiple/) {
+                # We use the accession as the clone name where
+                # intl = '?' or where it is "Multiple"
+                return $self->accession;
+            } else {
                 my ($intl_prefix, $body) = $intl =~ /^([^-]+)-(.+)$/;
                 $intl_prefix ||= '';
                 $body        ||= $intl;
@@ -84,9 +89,6 @@ sub sanger_clone_name {
                 } else {
                     $self->{'_sanger_clone_name'} = $clone = $body;
                 }
-            } else {
-                # We use the accession as the clone name where intl = '?'
-                return $self->accession;
             }
         }
         return $clone;
