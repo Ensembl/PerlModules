@@ -1,4 +1,26 @@
 
+=pod
+
+=head1 NAME - Hum::EMBL::Line
+
+=head1 DESCRIPTION
+
+The file containing this package contains the
+line handling package for most of the standard
+EMBL line types, and their baseclass
+B<Hum::EMBL::Line>.  The baseclass contains
+subroutines called at compile time to generate
+standard data access functions for the line
+objects.
+
+See L<Hum::EMBL> for more complete information.
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
+=cut
+
 package Hum::EMBL::Line;
 
 use strict;
@@ -499,7 +521,6 @@ BEGIN {
                                                        locations
                                                        comments
                                                        positions
-                                                       crossrefs
                                                        xrefs
                                                        ));
 }
@@ -532,7 +553,7 @@ sub parse {
     # of writing).  Stored as a list of mini-objects.
     my( @xrefs );
     while ($$s =~ /^RX   (\S+);\s+(.+)\.$/mg) {
-        my $xr = Hum::EMBL::Line::XRef->new();
+        my $xr = 'Hum::EMBL::Line::XRef'->new();
         $xr->db( $1 );
         $xr->id( $2 );
         push( @xrefs, $xr );
@@ -600,12 +621,34 @@ sub compose {
 
 ###############################################################################
 
-# I was going to use this package for both DR lines and for
-# db_xrefs in Features
-# package Hum::EMBL::Line::XRef;
+# Database cross references occur in three
+# places in EMBL files:
 # 
-# use strict;
-# use Carp;
+#   Reference 'RX' lines (Medline only at the time of writing).
+#   'DR' lines.
+#   In the '/db_xref' feature qualifier.
+# 
+# This package was supposed to be used by all three, but at
+# the moment it's only used by Reference objects.
+
+package Hum::EMBL::Line::XRef;
+
+use strict;
+use Carp;
+
+BEGIN {
+    @ISA = qw( Hum::EMBL::Line );
+    Hum::EMBL::Line::XRef->makeFieldAccessFuncs(qw(
+                                                   db
+                                                   id
+                                                   ));
+}
+
+
+
+###############################################################################
+
+
 
 package Hum::EMBL::Line::DR;
 
@@ -639,7 +682,7 @@ sub parse {
         
     my( $db, $id, $sec ) = $$s =~ /DR   (\S+); (\S+); (\S+)\.$/
         or confess "Can't parse DR line: $$s";
-    my $xref = Hum::EMBL::Line::XRef->new();
+    my $xref = 'Hum::EMBL::Line::XRef'->new();
     $line->db       ( $db  );
     $line->id       ( $id  );
     $line->secondary( $sec );
