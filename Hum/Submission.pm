@@ -178,20 +178,31 @@ sub header_supplement_code {
 }
 
 sub create_lock {
-    my( $name ) = @_;
+    my( $name, $expiry_interval ) = @_;
+    
+    # Default to cleaning up old locks older than 2 days
+    $expiry_interval ||= 2 * 24 * 60 * 60;
+    my $expired_time = time - $expiry_interval;
     
     confess "Can't create lock without a name" unless $name;
     
+    my $cleanup_lock = prepare_statement(qq{
+        DELETE FROM general_lock
+        WHERE lock_name = ?
+          AND lock_time < FROM_UNIXTIME(?)
+        });
+    
     my $create_lock = prepare_statement(qq{
         INSERT INTO general_lock(lock_name, lock_time)
-        VALUES ('$name', NOW())
+        VALUES (?, NOW())
         });
     
     # This is a bit "belt and braces".  It will work
-    # wether {RaiseError => 1} is set or not
+    # whether {RaiseError => 1} is set or not
     my( $success );
     eval{
-        $create_lock->execute;
+        $cleanup_lock->execute($name, $expired_time);
+        $create_lock->execute($name);
         $success = $create_lock->rows;
     };
     
