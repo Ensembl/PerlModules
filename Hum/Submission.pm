@@ -74,7 +74,7 @@ sub ref_from_query {
             
                 if ($test =~ /^([\w_\$]+)(?:\@([\w-\.]+))?(?::(\d+))?$/) {
                     $dbname = $1;
-                    $host   = $2 if $1;
+                    $host   = $2 if $2;
                     $port   = $3 if $3;
                 } else {
                     confess "Can't parse SUBMISSION_TEST_DB environment variable '$test'";
