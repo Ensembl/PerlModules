@@ -55,6 +55,15 @@ sub name {
     return $self->{'_name'} || confess "name not set";
 }
 
+sub description {
+    my( $self, $description ) = @_;
+    
+    if ($description) {
+        $self->{'_description'} = $description;
+    }
+    return $self->{'_description'};
+}
+
 sub otter_id {
     my( $self, $otter_id ) = @_;
     
@@ -140,21 +149,19 @@ sub is_truncated {
         }
         $self->set_aliases(@aliases);
 
-        my( @full_names );
-        foreach my $fname ($ace_locus->at('Full_name[1]')) {
-            my $fname_str = $fname->asString;
-            chomp($fname_str);
-            $fname_str =~ s/\n//gm;
-            push(@full_names, "Full_name- " . $fname_str);
+        if (my $full = $ace_locus->at('Full_name[1]')) {
+            my $txt = $full->name;
+            $txt =~ s/\s+$//;
+            $txt =~ s/\n/ /g;
+            $self->description($txt);
         }
-        $self->set_full_names(@full_names);
 
         my( @remarks );
         foreach my $rem ($ace_locus->at('Remark[1]')) {
-            my $rem_str = $rem->asString;
-            chomp($rem_str);
-            $rem_str =~ s/\n//gm;
-            push(@remarks, $rem_str);
+            my $txt = $rem->name;
+            $txt =~ s/\s+$//;
+            $txt =~ s/\n/ /g;
+            push(@remarks, $txt);
         }
         $self->set_remarks(@remarks);
 
@@ -187,18 +194,6 @@ sub list_aliases {
     my( $self ) = @_;
     
     return @{$self->{'_Alias_name_list'}};
-}
-
-sub set_full_names {
-    my( $self, @full_names ) = @_;
-    
-    $self->{'_Full_name_list'} = [@full_names];
-}
-
-sub list_full_names {
-    my( $self ) = @_;
-    
-    return @{$self->{'_Full_name_list'}};
 }
 
 sub set_remarks {
@@ -361,24 +356,15 @@ sub make_Otter_Gene {
         );
 
     my @gene_remarks;
-    foreach my $remark ($self->list_full_names) {
-      push @gene_remarks,new Bio::Otter::GeneRemark(-remark => $remark);
-    }
     foreach my $remark ($self->list_remarks) {
-      push @gene_remarks,new Bio::Otter::GeneRemark(-remark => $remark);
+      push @gene_remarks, Bio::Otter::GeneRemark->new(-remark => $remark);
     }
 
     my $geneinfo = new Bio::Otter::GeneInfo(-author    => $author,
                                             -name      => new Bio::Otter::GeneName( -name => $gene_name),
                                             -remark    => \@gene_remarks);
+    $gene->description($self->description);
     $gene->gene_info($geneinfo);
-
-    if (scalar(@gene_remarks)) {
-      my $desc_str = $gene_remarks[0]->remark;
-      $desc_str =~ s/^Full_name- //;
-      $gene->description($desc_str);
-    }
-
     $gene->version(1);
     $gene->created($edit_time);
     $gene->modified($edit_time);
@@ -758,7 +744,6 @@ sub make_transcript {
     my $is_coding  = 0;
     
     my $transcript_remarks            = {};
-    my $transcript_annotation_remarks = {};
     my $transcript_type               = {};
     my $evidence_type                 = {};
     my( $author_name, $edit_time );

@@ -141,6 +141,15 @@ __END__
 
 =head1 NAME - Hum::EnsCmdLineDB
 
+=head1 SYNOPSIS
+
+  use Hum::EnsCmdLineDB;
+  Hum::EnsCmdLineDB::do_getopt(
+        # Add script specific Getopt::Long::GetOptions
+        # arguments here
+        );
+  my $dba = Hum::EnsCmdLineDB::connect();
+
 =head1 AUTHOR
 
 James Gilbert B<email> jgrg@sanger.ac.uk
