@@ -106,7 +106,7 @@ sub hit_overlaps {
 sub pretty_string {
     my( $self ) = @_;
     
-    return sprintf("  %6.2f%% %16s %6d %6d %16s %6d %6d     %3s\n",
+    return sprintf("  %6.2f%% %16s %6d %6d %16s %6d %6d  %s\n",
         $self->percent_identity,
         $self->seq_name,
         $self->seq_start,
@@ -114,7 +114,7 @@ sub pretty_string {
         $self->hit_name,
         $self->hit_start,
         $self->hit_end,
-        ($self->hit_strand == 1 ? 'Fwd' : 'Rev'),
+        ($self->hit_strand == 1 ? '+' : '-'),
         );
 }
 

@@ -257,6 +257,18 @@ sub store {
         $self->percent_insertion,
         $self->percent_deletion,
         );
+    
+    # Give it a status of 1 (Identified)
+    my $store_status = track_db->prepare_cached(q{
+        INSERT INTO overlap_status(
+            id_overlap
+          , id_status
+          , statusdate
+          , iscurrent )
+        VALUES(?,1,sysdate,1)
+        });
+    $store_status->execute($db_id);
+    
     $self->a_Position->store($db_id);
     $self->b_Position->store($db_id);
 }

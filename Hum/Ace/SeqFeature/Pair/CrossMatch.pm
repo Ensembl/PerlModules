@@ -13,7 +13,7 @@ use vars '@ISA';
 sub percent_substitution {
     my( $self, $percent_substitution ) = @_;
     
-    if ($percent_substitution) {
+    if (defined $percent_substitution) {
         $self->{'_percent_substitution'} = $percent_substitution;
     }
     return $self->{'_percent_substitution'};
@@ -22,7 +22,7 @@ sub percent_substitution {
 sub percent_insertion {
     my( $self, $percent_insertion ) = @_;
     
-    if ($percent_insertion) {
+    if (defined $percent_insertion) {
         $self->{'_percent_insertion'} = $percent_insertion;
     }
     return $self->{'_percent_insertion'};
@@ -31,7 +31,7 @@ sub percent_insertion {
 sub percent_deletion {
     my( $self, $percent_deletion ) = @_;
     
-    if ($percent_deletion) {
+    if (defined $percent_deletion) {
         $self->{'_percent_deletion'} = $percent_deletion;
     }
     return $self->{'_percent_deletion'};
@@ -54,6 +54,38 @@ sub alignment_string {
     }
     return $self->{'_alignment_string'};
 }
+
+
+sub pretty_alignment_string {
+    my( $self ) = @_;
+    
+    my $str = $self->alignment_string
+        or return;
+    
+    my $new = '';
+    my( @block );
+    while ($str =~ /(.*\n)/mg) {
+        $_ = $1;
+        if ($1 =~ /^[C ] \S+\s+\d+ \S+ \d+/) {
+            push(@block, $_);
+            if (@block == 3) {
+                # Change the order of the lines in
+                # the alignment block.
+                $new .= join('', @block[0,2,1]);
+                @block = ();
+            }
+        }
+        elsif (@block) {
+            push(@block, $_);
+        }
+        else {
+            $new .= $_;
+        }
+    }
+    
+    return $new;
+}
+
 
 1;
 

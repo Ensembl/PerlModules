@@ -76,15 +76,27 @@ sub find_SequenceOverlap {
     return unless $feat;
     
     if (my $over_fh = $self->overlap_alignment_file) {
+        print $over_fh $self->sequence_length_header($seq_a, $seq_b);
         print $over_fh
             $feat->pretty_header,
-            $feat->pretty_string,
-            $feat->alignment_string;
+            $feat->pretty_string, "\n",
+            $feat->pretty_alignment_string;
     }
     
     # Convert into a SequenceOverlap object that
     # can be written into the tracking database.
     return $self->make_SequenceOverlap($sinf_a, $sinf_b, $feat);
+}
+
+sub sequence_length_header {
+    my( $self, @seqs ) = @_;
+    
+    my $str = "\n";
+    foreach my $seq (@seqs) {
+        $str .= sprintf "%22s  %10d bp\n", $seq->name, $seq->sequence_length;
+    }
+    $str .= "\n";
+    return $str;
 }
 
 sub make_SequenceOverlap {
@@ -163,12 +175,9 @@ sub find_end_overlap {
     }
     
     if ($matches_fh) {
-        print $matches_fh "\n";
-        foreach my $seq ($query, $subject) {
-            printf $matches_fh "%22s  %10d bp\n", $seq->name, $seq->sequence_length;
-        }
-        print $matches_fh "\n", $matches[0]->pretty_header, "\n";
-        print $matches_fh map $_->pretty_string, @matches;
+        print $matches_fh $self->sequence_length_header($query, $subject);
+        print $matches_fh $matches[0]->pretty_header, "\n";
+        print $matches_fh map($_->pretty_string, @matches), "\n";
     }
     
     # I don't think we need to sort
@@ -235,16 +244,7 @@ sub warn_match {
     push(@feat, $hit_end) unless $seq_end == $hit_end;
     
     foreach my $feat (@feat) {
-        printf(STDERR "  %7.3f%% %16s %6d %6d %16s %6d %6d     %3s\n",
-            $feat->percent_identity,
-            $feat->seq_name,
-            $feat->seq_start,
-            $feat->seq_end,
-            $feat->hit_name,
-            $feat->hit_start,
-            $feat->hit_end,
-            ($feat->hit_strand == 1 ? 'Fwd' : 'Rev'),
-            );
+        print STDERR $feat->pretty_string;
     }
     
 }
@@ -278,7 +278,7 @@ sub merge_features {
     # Add the length of the gap between the two features
     # into the percent_insertion figure.
     my ($gap_type, $gap_length) = $self->gap_between_features($seq, $hit);
-    warn "GAP: $gap_type, $gap_length\n";
+    print STDERR "GAP in $gap_type of length $gap_length bp\n";
     my $ins_count = $new_feat->seq_length * ($seq->percent_insertion / 100);
     $ins_count += $gap_length;
     my $percent = 100 * ($ins_count / $new_feat->seq_length);
