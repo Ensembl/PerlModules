@@ -690,7 +690,8 @@ sub localisation_data {
             });
         $get_chr->execute($project);
 
-        if (my ($chr) = $get_chr->fetchrow) {
+        my ($chr) = $get_chr->fetchrow;
+        if ($chr and $chr !~ /^u/i) {
 	    return $chr;
         } else {
             return;
