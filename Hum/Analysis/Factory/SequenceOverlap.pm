@@ -211,8 +211,13 @@ sub is_three_prime_hit {
         if ($seq_end == $hit_end) {
             return $seq_end;
         } else {
-            print STDERR "Creating merged feature\n";
-            return $self->merge_features($seq_end, $hit_end);
+            #print STDERR "Creating merged feature\n";
+            #return $self->merge_features($seq_end, $hit_end);
+            
+            # New strategy: we no longer merge features
+            my $best = $self->choose_best_feature($query, $subject, $seq_end, $hit_end);
+            print STDERR "Chose best feature:\n", $best->pretty_string;
+            return $best;
         }
     }
 }
@@ -275,6 +280,54 @@ sub warn_match {
         print STDERR $feat->pretty_string;
     }
     
+}
+
+sub choose_best_feature {
+    my ($self, $seq, $hit, $seq_end, $hit_end) = @_;
+
+    # Return the feature with the highest percent identity
+    if ($seq_end->percent_identity > $hit_end->percent_identity) {
+        return $seq_end;
+    }
+    elsif ($hit_end->percent_identity > $seq_end->percent_identity) {
+        return $hit_end;
+    }
+    
+    # They have the same percent identity.
+    # Return the match nearest an end.
+    my $seq_dist = $self->distance_to_closest_end($seq, $seq_end, 'seq');
+    my $hit_dist = $self->distance_to_closest_end($hit, $hit_end, 'hit');
+    
+    if ($seq_dist < $hit_dist) {
+        return $seq_end;
+    }
+    elsif ($hit_dist < $seq_dist) {
+        return $hit_end;
+    }
+    
+    # They are equidistant from the closest end
+    # Choose the longest
+    my $seq_length = $seq_end->seq_length;
+    my $hit_length = $hit_end->hit_length;
+    
+    if ($seq_length > $hit_length) {
+        return $seq_end;
+    }
+    elsif ($hit_length > $seq_length) {
+        return $hit_end;
+    }
+    
+    # They are the same length!
+    # Return the hit nearest the end of the query sequence
+    return $seq_end;
+}
+
+sub distance_to_closest_end {
+    my( $self, $seq, $feat, $type ) = @_;
+    
+    my $length = $seq->sequence_length;
+    my ($start_dist, $end_dist) = $end_distances{$type}->($feat, $length);
+    return $start_dist < $end_dist ? $start_dist : $end_dist;
 }
 
 sub merge_features {
