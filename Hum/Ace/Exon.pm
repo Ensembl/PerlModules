@@ -20,6 +20,7 @@ sub clone {
         start
         end
         phase
+        otter_id
         })
     {
         $new->$meth($old->$meth());
