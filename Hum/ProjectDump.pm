@@ -441,11 +441,16 @@ BEGIN {
     sub unpadded_length {
         my( $pdmp, $length ) = @_;
         
-        if ($pdmp->{'_DNA'}) {            
+        if ($pdmp->{'_DNA'}) {
+            my $l = 0;      
             foreach my $contig ($pdmp->contig_list) {
-                $length += $pdmp->contig_length($contig);
+                $l += $pdmp->contig_length($contig);
             }
-            return $length;
+            if ($l) {
+                return $l;
+            } else {
+                confess("Can't get length -- no contigs");
+            }
         } else {
             if (defined $length) {
                 $pdmp->{'_unpadded_length'} = $length;
@@ -1209,18 +1214,28 @@ sub write_fasta_file {
     my $accno    = $pdmp->accession || '';
     my $dir = $pdmp->file_path;
     my $file = "$dir/$seq_name";
+    my $phase = $pdmp->htgs_phase;
+    
+    warn "Phase = $phase\n";
     
     local *FASTA;
     open FASTA, "> $file" or confess "Can't write to '$file' : $!";
+    
     foreach my $contig ($pdmp->contig_list) {
         my $dna = $pdmp->DNA($contig);
-        my $len = length($$dna);
-        my $c_name = "$seq_name.$contig";
-        my $header = join('  ', $c_name,
-                               "Unfinished sequence: $seq_name",
-                               "Contig_ID: $contig",
-                               "acc=$accno",
-                               "Length: $len bp");
+        my( $header );
+        if ($phase == 3) {
+            $header = $seq_name;
+        } else {
+            my $len = length($$dna);
+            my $c_name = "$seq_name.$contig";
+            $header = join('  ', $c_name
+                , "Unfinished sequence: $seq_name"
+                , "Contig_ID: $contig"
+                , "acc=$accno"
+                , "Length: $len bp"
+                );
+        }
 	print FASTA ">$header\n" or confess "Can't print to '$file' : $!";
 	while ($$dna =~ m/(.{1,60})/g) {
 	    print FASTA $1, "\n" or confess "Can't print to '$file' : $!";
