@@ -55,23 +55,29 @@ sub gif {
     
     my $len_a = $inf_a->sequence_length;
     my $len_b = $inf_b->sequence_length;
+    my $end_a = $self->a_Position->distance_to_end;
+    my $end_b = $self->b_Position->distance_to_end;
     
     # Set up origin
     my $x = 14 * $self->font->width;
     my $y = $pad + $self->font->height;
     
+    # Draw overlap region - this does not work
+    #my @rect_o = (
+    #    $x + (($len_a - $end_a - $over) / $rpp),
+    #    $y + $self->clone_thickness ,
+    #    $x + (($len_a - $end_a        ) / $rpp),
+    #    $y + $self->clone_thickness + $pad,
+    #    );
+    #$img->filledRectangle(@rect_o, $self->color_index('LightGrey'));
+    
+    # Draw first sequence
     my @rect_a = ($x, $y, $x + ($len_a / $rpp), $y + $self->clone_thickness);
     $img->filledRectangle(@rect_a, $grey);
     $self->draw_top_label($self->a_Position, @rect_a);
     
-    # Draw overlap region
-
-    # Calculate right hand dovetail of first, and left hand
-    # of second - can then draw overlap region and real
-    # relative positions
-    
     # Move origin to draw second sequence
-    $x += ($len_a - $over) / $rpp;
+    $x += ($len_a - $end_a - $end_b) / $rpp;
     $y += $pad;
     
     my @rect_b = ($x, $y, $x + ($len_b / $rpp), $y + $self->clone_thickness);
@@ -99,8 +105,10 @@ sub setup_colors {
     $self->{'_colors'}{'white'}         = $img->colorAllocate(255,255,255);
     $self->{'_colors'}{'SlateBlue'}     = $img->colorAllocate(106,90,205);
     $self->{'_colors'}{'black'}         = $img->colorAllocate(0,0,0);
+    #$self->{'_colors'}{'OrangeRed'}     = $img->colorAllocate(255,69,0);
     #$self->{'_colors'}{'DarkSlateGrey'} = $img->colorAllocate(47,79,79);
     #$self->{'_colors'}{'LightSeaGreen'} = $img->colorAllocate(32,178,170);
+    $self->{'_colors'}{'LightGrey'}     = $img->colorAllocate(211,211,211);
 }
 
 sub color_index {
