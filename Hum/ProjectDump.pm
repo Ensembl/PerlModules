@@ -1222,7 +1222,7 @@ sub write_embl_file {
         # Return the checksum from the embl entry if we have it
         if ($pdmp->{'_embl_file'}) {
             confess("Can't set checksum when embl_file is set!") if $sum;
-            return $pdmp->{'_embl_file'}->embl_checksum;
+            return $pdmp->{'_embl_file'}->Sequence->embl_checksum;
         }
         # Or set or return the stored value
         else {
