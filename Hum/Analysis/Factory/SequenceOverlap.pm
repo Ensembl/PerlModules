@@ -145,6 +145,19 @@ sub make_SequenceOverlap {
         }
     }
     
+    # Record the length of any unmatched sequence at
+    # the end of either sequence beyond the match.
+    if ($pos_a->is_3prime) {
+        $pos_a->dovetail_length($sa->sequence_length - $feat->seq_end);
+    } else {
+        $pos_a->dovetail_length($feat->seq_start - 1);
+    }
+    if ($pos_b->is_3prime) {
+        $pos_b->dovetail_length($sb->sequence_length - $feat->hit_end);
+    } else {
+        $pos_b->dovetail_length($feat->hit_start - 1);
+    }
+    
     # Check that the positions calculated aren't
     # off the end of the sequences.
     $overlap->validate_Positions;

@@ -24,16 +24,18 @@ sub fetch_both_for_overlap_id {
         SELECT id_seqeunce
           , position
           , is_3prime
+          , dovetail_length
         FROM sequence_overlap
         WHERE id_overlap = ?
         });
     $sth->execute($id);
     my( @pos );
-    while (my ($seq_id, $pos, $is_3prime) = $sth->fetchrow) {
+    while (my ($seq_id, $pos, $is_3prime, $dove) = $sth->fetchrow) {
         my $seq_info = Hum::SequenceInfo->fetch_by_db_id($seq_id);
         my $self = $pkg->new;
         $self->position($pos);
         $self->is_3prime($is_3prime);
+        $self->dovetail_length($dove);
         $self->SequenceInfo($seq_info);
     }
     if (@pos) {
@@ -68,6 +70,15 @@ sub is_3prime {
         $self->{'_is_3prime'} = $is_3prime ? 1 : 0;
     }
     return $self->{'_is_3prime'};
+}
+
+sub dovetail_length {
+    my( $self, $dovetail_length ) = @_;
+    
+    if (defined $dovetail_length) {
+        $self->{'_dovetail_length'} = $dovetail_length;
+    }
+    return $self->{'_dovetail_length'};
 }
 
 sub validate {
@@ -127,14 +138,16 @@ sub store {
             id_sequence
           , id_overlap
           , position
-          , is_3prime )
-        VALUES(?,?,?,?)
+          , is_3prime
+          , dovetail_length )
+        VALUES(?,?,?,?,?)
         });
     $sth->execute(
         $info->db_id,
         $overlap_id,
         $self->position,
         $self->is_3prime,
+        $self->dovetail_length,
         );    
 }
 
