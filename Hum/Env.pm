@@ -18,12 +18,6 @@ correctly.
 
     use Hum::Env;
 
-B<Hum::Env> empties the current B<%ENV> hash,
-thus simulating the cron or CGI environment on
-the command line, with the exception that
-B<PERL5LIB> in your current environment will have
-already added entries to B<@INC>.
-
 Remember that you need to "use lib <path>", where
 B<path> contains Hum::Env.
 
@@ -46,9 +40,6 @@ BEGIN {
 	       );
 }
 use lib @libs;
-
-# Empty the environment
-%ENV = ();
 
 # Make @INC get propagated to system calls
 $ENV{'PERL5LIB'} = join ':', @libs;
