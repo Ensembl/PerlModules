@@ -27,6 +27,7 @@ sub new_from_sequence_name {
           , status.status_id
           , UNIX_TIMESTAMP(status.status_date)
           , s.embl_checksum
+          , s.sequence_version
           , person.annotator_uname
           , sc.chr_name
           , sc.species_name
@@ -61,6 +62,7 @@ sub new_from_sequence_name {
             $status_id,
             $status_date,
             $embl_checksum,
+            $sequence_version,
             $annotator_uname,
             $chr_name,
             $species_name
@@ -77,6 +79,7 @@ sub new_from_sequence_name {
         $self->status_id($status_id || 0);
         $self->status_date($status_date || 0);
         $self->embl_checksum($embl_checksum);
+        $self->sequence_version($sequence_version);
         $self->annotator_uname($annotator_uname);
         $self->chr_name($chr_name);
         $self->species_name($species_name);
@@ -264,6 +267,17 @@ sub analysis_priority {
         $self->{'_analysis_priority'} = $analysis_priority;
     }
     return $self->{'_analysis_priority'};
+}
+
+sub sequence_version {
+    my ( $self, $sequence_version ) = @_;
+    
+    if (defined $sequence_version) {
+        confess "Can't modify sequence_version"
+            if $self->{'_sequence_version'};
+        $self->{'_sequence_version'} = $sequence_version;
+    }
+    return $self->{'_sequence_version'};
 }
 
 
