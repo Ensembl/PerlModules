@@ -4,6 +4,7 @@
 package Hum::Translator;
 
 use strict;
+use Hum::Sequence::Peptide;
 use Carp;
 
 sub new {
@@ -18,7 +19,7 @@ sub translate {
     my $is_seq = 0;
     eval{
         $is_seq = $seq->isa('Hum::Sequence');
-    }
+    };
     unless ($is_seq) {
         confess "Expecting a 'Hum::Sequence' object, but got '$seq'";
     }
@@ -29,12 +30,17 @@ sub translate {
     my $unknown_amino_acid = $self->unknown_amino_acid;
     my $pep_str = '';
     while ($seq_str =~ /(...)/g) {
-        $pep_str .= $condon_table->{$1} || $unknown_amino_acid;
+        $pep_str .= $codon_table->{$1} || $unknown_amino_acid;
     }
     if (length($seq_str) % 3) {
         $pep_str .= $unknown_amino_acid;
     }
-    return $pep_str;
+    
+    my $pep = Hum::Sequence::Peptide->new;
+    $pep->name($seq->name);
+    $pep->sequence_string($pep_str);
+    
+    return $pep;
 }
 
 sub unknown_amino_acid {

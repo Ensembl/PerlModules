@@ -108,6 +108,7 @@ sub process_ace_start_end_transcript_seq {
         eval{ ($s_n_f, $codon_start) = map "$_", $t_seq->at('Properties.Start_not_found')->row() };
         if ($s_n_f) {
             $codon_start ||= 1;
+            $self->start_not_found($codon_start);
         }
         if ($codon_start and $t_seq->at('Properties.Coding.CDS')) {
             unless ($codon_start =~ /^[123]$/) {
@@ -152,6 +153,8 @@ sub clone {
         GeneMethod
         strand
         translation_region
+        start_not_found
+          end_not_found
         })
     {
         $new->$meth($old->$meth());
@@ -172,6 +175,35 @@ sub name {
         $self->{'_name'} = $name;
     }
     return $self->{'_name'} || confess "name not set";
+}
+
+sub start_phase {
+    my( $self, $phase ) = @_;
+    
+    if (defined $phase) {
+        confess "start_phase is read_only method - use start_not_found";
+    }
+    return $self->{'_start_phase'} || 1;
+}
+
+sub start_not_found {
+    my( $self, $phase ) = @_;
+    
+    if (defined $phase) {
+        confess "Bad phase '$phase'"
+            unless $phase =~ /^[0123]$/;
+        $self->{'_start_phase'} = $phase;
+    }
+    return $self->{'_start_phase'} || 0;
+}
+
+sub end_not_found {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_end_not_found'} = $flag ? 1 : 0;
+    }
+    return $self->{'_end_not_found'} || 0;
 }
 
 sub clone_Sequence {
@@ -208,12 +240,15 @@ sub exon_Sequence {
     return $seq;
 }
 
-sub translateable_Sequence {
+sub translatable_Sequence {
     my( $self ) = @_;
     
-    my $clone_seq = $self->clone_Sequence
-        or confess "No clone_Sequence";
-    my ($t_start, $t_end) = $self->translation_region;
+    my ($t_start, $t_end)   = $self->translation_region;
+    my $strand              = $self->strand;
+    my $phase               = $self->start_phase;
+    my $clone_seq           = $self->clone_Sequence or confess "No clone_Sequence";
+    
+    warn "strand = $strand, phase = $phase\n";
     
     my $seq = Hum::Sequence::DNA->new;
     $seq->name($self->name);
@@ -222,15 +257,28 @@ sub translateable_Sequence {
     foreach my $exon ($self->get_all_Exons) {
         my $start = $exon->start;
         my $end   = $exon->end;
+        
+        # Skip non-coding exons
         next if $end   < $t_start;
         last if $start > $t_end;
         
+        # Trim coordinates to translation start and end
         if ($start < $t_start) {
-            $start = $t_start + $exon->phase - 1;
+            $start = $t_start;
         }
         if ($end > $t_end) {
             $end = $t_end;
         }
+
+        # Is this the first coding exon?        
+        if ($strand == 1 and $start == $t_start) {
+            $start += $phase - 1;
+        }
+        elsif ($strand == -1 and $end == $t_end) {
+            $end += 1 - $phase;
+        }
+        
+        printf STDERR "Translateable exon  %5d - %-5d\n", $start, $end;
         
         $seq_str .= $clone_seq
             ->sub_sequence($start, $end)
@@ -238,7 +286,7 @@ sub translateable_Sequence {
     }
     $seq->sequence_string($seq_str);
     
-    if ($seq->strand == -1) {
+    if ($strand == -1) {
         $seq = $seq->reverse_complement;
     }
     
@@ -585,6 +633,8 @@ sub ace_string {
         . qq{-D Method\n}
         . qq{-D CDS\n}
         . qq{-D Source_Exons\n}
+        . qq{-D Start_not_found\n}
+        . qq{-D End_not_found\n}
         
         . qq{\nSequence "$name"\n}
         . qq{Source "$clone"\n}
@@ -598,6 +648,13 @@ sub ace_string {
             my( $cds_start, $cds_end ) = $self->cds_coords;
             $out .= qq{CDS  $cds_start $cds_end\n};
         }
+    }
+    
+    if (my $phase = $self->start_not_found) {
+        $out .= qq{Start_not_found $phase\n};
+    }
+    if ($self->end_not_found) {
+        $out .= qq{End_not_found\n};
     }
     
     if ($strand == 1) {
