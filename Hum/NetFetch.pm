@@ -29,12 +29,13 @@ sub netfetch {
     return \%Request unless @$list;
 
     %Request = map { $_, 0 } ('EMAIL_LOG_FILE', @$list);
-    $TIMEOUT ||= 1200;   # Kill ourselves after timeout
 
+    $TIMEOUT ||= 1200;   # Kill ourselves after timeout
     $SIG{'ALRM'} = sub {
                         die "Timeout.  Couldn't retrieve the following:\n",
                             map "  $_\n", grep { $Request{$_} == 0 } keys %Request;
                         };
+    
     # Set lock
     my $Lock;
     eval { $Lock = Hum::Lock->new("$EMBL_emails_dir/netfetch.lock"); };
@@ -54,6 +55,8 @@ sub netfetch {
         my( @msg_files ) = get_messages( $EMBL_emails_dir, $Submit_Time );
 
         foreach my $msg ( @msg_files ) {
+        
+        
             open MSG_FILE, $msg or die "Can't open ('$msg') : $!";
             my $first_line = <MSG_FILE>;
 
@@ -61,38 +64,51 @@ sub netfetch {
             if ($first_line =~ /^ID   /) {
                 # Check for correct end characters
                 seek( MSG_FILE, -4, 2 );
-                if (<MSG_FILE> =~ m|^//$|) {
+                my $end = join '', <MSG_FILE>;
+                if ($end =~ m|^//\s*$|) {
                     # Parse the entry and add it to the Requests hash
                     my( @ident );
                     seek( MSG_FILE, 0, 0 );
                     my $embl = Embl->entryFromStream(\*MSG_FILE);
+                    # Get the entry name and all accession numbers
                     $ident[0] = $embl->getLine('EMBL::ID')
                                      ->entryname() or die "Can't get ID from ('$msg')";
-                    $ident[1] = $embl->AC()        or die "Can't get AC from ('$msg')";
-                    foreach (@ident) {
-                        $Request{ $_ } = $embl if exists $Request{ $_ };
+                    push( @ident, @{$embl->getLine('EMBL::AC')->accessionList()});
+                    
+                    {
+                        my( $placed_flag );
+                        foreach my $name (@ident) {
+                            if (exists $Request{ $name }) {
+                                $Request{ $name } = $embl;
+                                $placed_flag = 1;
+                            }
+                        }
+                        unless ($placed_flag) {
+                            warn "Couldn't place entry: ",
+                                join(', ', map "'$_'", @ident), "\n";
+                        }
                     }
                 } else {
                     # File may still be being written to
+                    warn "End didn't match: $end";
                     $msg = 0;
                 }
-            } elsif ($first_line =~ /^$/) {
+            } else {
                 while (<MSG_FILE>) {
-                    chomp;
                     if (/^\* File NUC:(\S+) (sent|not found)\.$/) {
                         $Request{ 'EMAIL_LOG_FILE' } = 1;
                         if ($2 eq 'not found') {
                             $Request{ $1 } = 'FAILED' if exists $Request{ $_ };
+                        } else {
+                            warn "$2 $1\n";
                         }
-                    } else {
-                        warn "Didn't match: ('$_')\n";
                     }
                 }
                 # File must be email log, or an EMBL file
-                die "Invalid file ('$msg')" unless $Request{ 'EMAIL_LOG_FILE' };
+                #die "Invalid file ('$msg')" unless $Request{ 'EMAIL_LOG_FILE' };
             }
             if ($msg) {
-                #unlink( $msg ) or die "Can't unlink ('$msg')";
+                unlink( $msg ) or die "Can't unlink ('$msg')";
             }
         }
         last unless missing(\%Request);
@@ -134,8 +150,8 @@ sub get_messages {
 sub missing {
     my( $list ) = @_;
     
-    foreach (values %$list) {
-        return 1 unless $_;
+    foreach my $v (values %$list) {
+        return 1 unless $v;
     }
     return;
 }

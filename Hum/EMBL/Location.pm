@@ -86,7 +86,7 @@ sub _five_prime_arrow {
 
 sub _three_prime_arrow {
     my( $loc ) = @_;
-    $loc->[$#$loc] = "$loc->[$#$loc]>";
+    $loc->[$#$loc] =~ s/(\d+)\.\.(\d+)/$1\.\.>$2/;
 }
 
 sub format {
