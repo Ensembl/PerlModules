@@ -1099,7 +1099,7 @@ sub make_transcript {
                     ));
             }
         }
-        $ti->evidence(@all_evidence);
+        $ti->add_Evidence(@all_evidence);
     }
     
     # Add transcript remarks - in the order in which they were made
