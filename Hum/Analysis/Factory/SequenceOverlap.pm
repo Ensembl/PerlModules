@@ -7,7 +7,7 @@ use strict;
 use Carp;
 use Hum::Analysis::Factory::CrossMatch;
 use Hum::SequenceOverlap;
-
+use Symbol 'gensym';
 
 my( %end_distances );
 
@@ -30,6 +30,37 @@ sub new {
     return bless {}, $pkg;
 }
 
+sub matches_file {
+    my( $self, $file ) = @_;
+    
+    if ($file) {
+        $self->{'_matches_file'} = $self->_open_file($file);
+    }
+    return $self->{'_matches_file'};
+}
+
+sub overlap_alignment_file {
+    my( $self, $file ) = @_;
+    
+    if ($file) {
+        $self->{'_overlap_alignment_file'} = $self->_open_file($file);
+    }
+    return $self->{'_overlap_alignment_file'};
+}
+
+sub _open_file {
+    my( $self, $file ) = @_;
+    
+    my $type = ref($file);
+    unless ($type and $type eq 'GLOB') {
+        my $fh = gensym();
+        open $fh, "> $file"
+            or die "Can't write to '$file' : $!";
+        $file = $fh;
+    }
+    return $file;
+}
+
 sub find_SequenceOverlap {
     my( $self, $sinf_a, $sinf_b ) = @_;
     
@@ -43,6 +74,13 @@ sub find_SequenceOverlap {
     my $feat = $self->find_end_overlap($seq_a, $seq_b);
     
     return unless $feat;
+    
+    if (my $over_fh = $self->overlap_alignment_file) {
+        print $over_fh
+            $feat->pretty_header,
+            $feat->pretty_string,
+            $feat->alignment_string;
+    }
     
     # Convert into a SequenceOverlap object that
     # can be written into the tracking database.
@@ -112,14 +150,25 @@ sub is_three_prime_hit {
 sub find_end_overlap {
     my( $self, $query, $subject ) = @_;
     
+    my $matches_fh = $self->matches_file;
+    
     my $factory = Hum::Analysis::Factory::CrossMatch->new;
-    $factory->show_alignments(0);
+    $factory->show_alignments($matches_fh or $self->overlap_alignment_file ? 1 : 0);
     $factory->show_all_matches(1);
     my $parser = $factory->run($query, $subject);
     
     my( @matches );
     while (my $m = $parser->next_Feature) {
         push(@matches, $m);
+    }
+    
+    if ($matches_fh) {
+        print $matches_fh "\n";
+        foreach my $seq ($query, $subject) {
+            printf $matches_fh "%22s  %10d bp\n", $seq->name, $seq->sequence_length;
+        }
+        print $matches_fh "\n", $matches[0]->pretty_header, "\n";
+        print $matches_fh map $_->pretty_string, @matches;
     }
     
     # I don't think we need to sort
@@ -226,15 +275,24 @@ sub merge_features {
         $new_feat->$perc($percent);
     }
     
-    # If there is a gap between features, add the length
-    # of the gap into the percent_insertion figure.
+    # Add the length of the gap between the two features
+    # into the percent_insertion figure.
     my ($gap_type, $gap_length) = $self->gap_between_features($seq, $hit);
-    if ($gap_length) {
-        warn "GAP: $gap_type, $gap_length\n";
-        my $ins_count = $new_feat->seq_length * ($seq->percent_insertion / 100);
-        $ins_count += $gap_length;
-        my $percent = 100 * ($ins_count / $new_feat->seq_length);
-        $new_feat->percent_insertion($percent);
+    warn "GAP: $gap_type, $gap_length\n";
+    my $ins_count = $new_feat->seq_length * ($seq->percent_insertion / 100);
+    $ins_count += $gap_length;
+    my $percent = 100 * ($ins_count / $new_feat->seq_length);
+    $new_feat->percent_insertion($percent);
+    
+    if ($seq->alignment_string) {
+        my @sort = sort {$a->seq_start <=> $b->seq_start} ($seq, $hit);
+        $new_feat->alignment_string(
+            $sort[0]->alignment_string
+            . "\n"
+            . " " x 12 . ">" x 20 . "  GAP OF LENGTH $gap_length  " . "<" x 20
+            . "\n\n"
+            . $sort[1]->alignment_string
+            );
     }
     
     return $new_feat;

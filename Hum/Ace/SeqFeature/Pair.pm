@@ -103,6 +103,34 @@ sub hit_overlaps {
     }
 }
 
+sub pretty_string {
+    my( $self ) = @_;
+    
+    return sprintf("  %6.2f%% %16s %6d %6d %16s %6d %6d     %3s\n",
+        $self->percent_identity,
+        $self->seq_name,
+        $self->seq_start,
+        $self->seq_end,
+        $self->hit_name,
+        $self->hit_start,
+        $self->hit_end,
+        ($self->hit_strand == 1 ? 'Fwd' : 'Rev'),
+        );
+}
+
+{
+    my $header = qq{\n}
+    # 80:  ################################################################################
+      . qq{ identity  query      name  start    end  subject    name  start    end  strand\n}
+      . qq{ --------  -----------------------------  -------------------------------------\n};
+    #         100.0%         dJ630J13      1  92514         dJ630J13      1  92514     REV
+    
+
+    sub pretty_header {
+        return $header;
+    }
+}
+
 
 1;
 
