@@ -10,12 +10,16 @@ use vars qw( @ISA @EXPORT_OK );
 sub simple_location {
     my( $start, $end ) = @_;
     
+    foreach ($start, $end) {
+        confess "Non-integer argument" unless /^\d+$/;
+    }
+    
     if ($start < $end) {
         return "$start..$end";
     } elsif ($start > $end) {
         return "complement($end..$start)";
-    } else {
-        confess("Can't get order from $start - $end");
+    } elsif ($start == $end) {
+        return $start;
     }
 }
 
