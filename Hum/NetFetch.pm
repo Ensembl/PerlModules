@@ -32,7 +32,7 @@ sub netfetch {
 
     $TIMEOUT ||= 1200;   # Kill ourselves after timeout
     $SIG{'ALRM'} = sub {
-                        die "Timeout.  Couldn't retrieve the following:\n",
+                        die "Timeout.\nCouldn't retrieve:\n",
                             map "  $_\n", grep { $Request{$_} == 0 } keys %Request;
                         };
     
@@ -104,11 +104,12 @@ sub netfetch {
                         }
                     }
                 }
+                $msg = 0 unless $Request{ 'EMAIL_LOG_FILE' };
                 # File must be email log, or an EMBL file
                 #die "Invalid file ('$msg')" unless $Request{ 'EMAIL_LOG_FILE' };
             }
             if ($msg) {
-                unlink( $msg ) or die "Can't unlink ('$msg')";
+                #unlink( $msg ) or die "Can't unlink ('$msg')";
             }
         }
         last unless missing(\%Request);
