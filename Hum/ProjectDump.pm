@@ -523,10 +523,24 @@ sub revcomp_contig {
     }
 }
 
-sub cleanup_contigs {
+sub contig_length_cutoff {
     my( $pdmp, $cutoff ) = @_;
+    
+    if (defined $cutoff) {
+        $cutoff =~ /^\d+$/ or confess "Not a positive int '$cutoff'";
+        $pdmp->{'_contig_length_cutoff'} = $cutoff;
+    } else {
+        $cutoff = $pdmp->{'_contig_length_cutoff'};
+        $cutoff = 2000 unless defined($cutoff);
+        
+    }
+    return $cutoff;
+}
 
-    $cutoff = 2000 unless defined $cutoff;
+sub decontaminate_contigs {
+    my( $pdmp ) = @_;
+    
+    my $cutoff = $pdmp->contig_length_cutoff;
 
     # Remove any detected contamination
     foreach my $contig ($pdmp->contig_list) {
@@ -561,6 +575,14 @@ sub cleanup_contigs {
             }
         }
     }
+    
+    $pdmp->cleanup_contigs;
+}
+
+sub cleanup_contigs {
+    my( $pdmp ) = @_;
+
+    my $cutoff = $pdmp->contig_length_cutoff;
 
     foreach my $contig ($pdmp->contig_list) {
         my $dna  = $pdmp->DNA        ($contig);
