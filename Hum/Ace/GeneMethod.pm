@@ -16,14 +16,28 @@ sub new_from_ace_tag {
     my( $pkg, $tag ) = @_;
     
     my $self = $pkg->new;
-    $self->name($tag->name);
-    my $color = $tag->at('Display.Colour[1]')
+    $self->process_ace_method($tag->fetch);
+    return $self;
+}
+
+sub new_from_ace {
+    my( $pkg, $ace ) = @_;
+    
+    my $self = $pkg->new;
+    $self->process_ace_method($ace);
+    return $self;
+}
+
+sub process_ace_method {
+    my( $self, $ace ) = @_;
+    
+    $self->name($ace->name);
+    my $color = $ace->at('Display.Colour[1]')
         or confess "No color";
     $self->color($color->name);
-    if (my $cds_color = $tag->at('Display.CDS_Colour[1]')) {
+    if (my $cds_color = $ace->at('Display.CDS_Colour[1]')) {
         $self->cds_color($cds_color->name);
     }
-    return $self;
 }
 
 sub name {

@@ -18,6 +18,7 @@ use Hum::EmblUtils qw( add_source_FT
                        );
 use Hum::EMBL;
 use Hum::EMBL::Utils qw( EMBLdate );
+use Hum::Ace::SubSeq;
 
 Hum::EMBL->import(
     'AC *' => 'Hum::EMBL::Line::AC_star',

@@ -16,12 +16,12 @@ use Hum::AnaStatus::Job;
 use Hum::AnaStatus::AceDatabase;
 use Hum::AnaStatus::EnsAnalysis;
 
-# These two methods are for compatability with the Hum::Fox system
+# Hum::Fox compatability
 sub moniker {
     return 'ana_seq';
 }
 
-# Alias db_id method to ana_seq_id
+# Hum::Fox compatability: Alias db_id method to ana_seq_id
 *db_id = \&ana_seq_id;
 
 sub new {

@@ -245,42 +245,22 @@ sub downstream_subseq_name {
 # Can't call this method before clone_Sequence is attached
 sub add_all_PolyA_from_ace {
     my( $self, $ace ) = @_;
-    
-    # Is the PolyA signal marked?
-    my( %name_signal );
-    foreach my $sig ($ace->at('Feature.polyA_signal[1]')) {
-        my($x, $y, $score, $name) =  map $_->name, $sig->row;
-        unless (($x and $y) and ($x < $y)) {
-            confess "Bad polyA_signal ('$x' -> '$y', score = '$score')";
-        }
-        $name_signal{$name} = $x;
-    }
-    
-    return unless %name_signal;
-    
+
     my $mRNA = $self->exon_Sequence;
 
-    # The two numbers for the polyA_site are the last
-    # two bases of the mRNA in the genomic sequence
-    # (Laurens' counterintuitive idea.)
-    foreach my $site ($ace->at('Feature.polyA_site[1]')) {
-        my($x, $y, $score, $name) = map $_->name, $site->row;
-        unless (($x and $y) and ($x + 1 == $y)) {
-            confess "Bad polyA_site coordinates ('$x','$y')";
-        }
-        my $sig_pos = $name_signal{$name}
-            or confess "Can't find site for polyA_signal [$x, $y, $score, $name]";
+    foreach my $site ($ace->at('Feature.polyA[1]')) {
+        my($sig_pos, $site_pos, $score, $name) = map $_->name, $site->row;
         my $signal = $mRNA
             ->sub_sequence($sig_pos, $sig_pos + 5)
             ->sequence_string;
         my $cons = Hum::Ace::PolyA::Consensus->fetch_by_signal($signal);
 
-        my ($sig_start) = $self->remap_coords_mRNA_to_genomic($sig_pos);
-        my ($site_end)  = $self->remap_coords_mRNA_to_genomic($y);
+        ( $sig_pos) = $self->remap_coords_mRNA_to_genomic($sig_pos);
+        ($site_pos) = $self->remap_coords_mRNA_to_genomic($site_pos);
 
         my $p = Hum::Ace::PolyA->new;
-        $p->signal_position($sig_start);
-        $p->site_position($site_end);
+        $p->signal_position($sig_pos);
+        $p->site_position($site_pos);
         $p->consensus($cons);
         
         $self->add_PolyA($p);
@@ -341,12 +321,8 @@ sub make_PolyA_ace_string {
         $err .= "failed to remap PolyA site position '$gen_site_end'\n"    unless $site_end;
         confess $err if $err;
         
-        my $sig_end = $sig_start + 5;
-        my $site_start = $site_end - 1;
-        
-        my $name = "polyA $signal ($site_start-$sig_end)";
-        $ace .= qq{Feature  "polyA_signal"  $sig_start  $sig_end  $score  "$name"\n};
-        $ace .= qq{Feature  "polyA_site"  $site_start  $site_end  $score  "$name"\n};
+        my $name = "polyA $signal";
+        $ace .= qq{Feature  "polyA"  $sig_start  $site_end  $score  "$name"\n};
     }
     
     return $ace;
@@ -899,8 +875,7 @@ sub ace_string {
         
         . qq{-D Continued_from\n}
         . qq{-D Continues_as\n}
-        . qq{-D Feature "polyA_signal"\n}
-        . qq{-D Feature "polyA_site"\n}
+        . qq{-D Feature "polyA"\n}
         
         . qq{\nSequence "$name"\n}
         . qq{Source "$clone"\n}

@@ -19,6 +19,22 @@ sub new {
         }, $pkg;
 }
 
+sub new_from_ace {
+    my( $pkg, $ace ) = @_;
+    
+    my $self = $pkg->new;
+    $self->save_locus_info($ace);
+    return $self;
+}
+
+sub new_from_ace_tag {
+    my( $pkg, $ace ) = @_;
+    
+    my $self = $pkg->new;
+    $self->save_locus_info($ace->fetch);
+    return $self;
+}
+
 sub name {
     my( $self, $name ) = @_;
     
@@ -46,7 +62,7 @@ sub gene_type_prefix {
     return $self->{'_gene_type_prefix'} || '';
 }
 
-BEGIN {
+{
     my @type_map = (
         [qw{ Known              Type.Gene.Known            }],
         [qw{ Novel_CDS          Type.Gene.Novel_CDS        }],
@@ -58,7 +74,8 @@ BEGIN {
     sub save_locus_info {
         my( $self, $ace_locus ) = @_;
 
-        #print $ace_locus->asString;
+        #print STDERR $ace_locus->asString;
+        $self->name($ace_locus->name);
 
         my( @pos_name );
         foreach my $pos ($ace_locus->at('Positive.Positive_sequence[1]')) {
@@ -66,7 +83,6 @@ BEGIN {
         }
         $self->set_positive_SubSeq_names(@pos_name);
 
-        $self->name($ace_locus->name);
 
         my( $gene_type );
         foreach my $t (@type_map) {

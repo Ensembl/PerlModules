@@ -22,6 +22,7 @@ use Hum::EmblUtils qw{
     extCloneName
     projectAndSuffix
     };
+use Hum::Ace::CloneSeq;
 
 use vars qw{ @ISA };
 @ISA = qw{ Hum::ProjectDump::EMBL };
@@ -500,11 +501,20 @@ sub add_genes_FT {
     my( $pdmp, $embl ) = @_;
     
     my $ace = $pdmp->ace_Sequence_object;
+    my $set = 'Hum::EMBL::FeatureSet'->new;
     
+    ### Should replace all current code with
+    ### code that uses Hum::Ace objects.
+    my $clone = Hum::Ace::CloneSeq
+        ->new_from_name_and_db_handle($ace->name, $ace->db);
+    foreach my $sub ($clone->get_all_SubSeqs) {
+        $pdmp->add_SubSeq_PolyA_to_Set($set, $sub);
+    }
+        
     # Load up the genes hash
     my( %genes );
     
-    # We use SI prefix for Zebrafish
+    # We use SI prefix for Zebrafish genes
     my $prefix = $pdmp->species eq 'Zebrafish' ? 'SI:' : '';
     
     my $clone_name = $ace->name;
@@ -529,7 +539,6 @@ sub add_genes_FT {
     # are isoforms.
     # If there are no CDS objects, then the remark for the
     # /product qualfier comes from each mRNA itself.
-    my $set = 'Hum::EMBL::FeatureSet'->new;
     foreach my $n (sort {$a <=> $b} keys %genes) {
         my( $locusname );
         my $trans = $genes{$n};
@@ -559,6 +568,7 @@ sub add_genes_FT {
                         $cds_loc = $locs[1];
                     }
                 }
+                
             }
             
             foreach my $v ('CDS', 'mRNA') {
@@ -730,6 +740,32 @@ BEGIN {
                 }
             }
         }
+    }
+}
+
+# New way to get PolyA
+sub add_SubSeq_PolyA_to_Set {
+    my( $pdmp, $set, $sub ) = @_;
+    
+    my $strand = $sub->strand;
+    foreach my $poly ($sub->get_all_PolyA) {
+        my $site = $set->newFeature;
+        $site->key('polyA_site');
+        my $site_loc = Hum::EMBL::Location->new;
+        $site_loc->exons($poly->site_position);
+        if ($strand == 1) {
+            $site_loc->strand('W');
+        } else {
+            $site_loc->strand('C');
+        }
+        $site->location($site_loc);
+        
+        my $sig = $set->newFeature;
+        $sig->key('polyA_signal');
+        my $sig_loc = Hum::EMBL::Location->new;
+        my $sig_start = $poly->signal_position;
+        my $sig_end = $sig_start + ($strand * 5);
+        $sig->location(simple_location($sig_start, $sig_end));
     }
 }
 
