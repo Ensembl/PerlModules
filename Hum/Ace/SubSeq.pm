@@ -632,6 +632,46 @@ sub translatable_Sequence {
     return $seq;
 }
 
+# Returns an anonymous array containing the genomic start
+# coordinates of each of the codons in the translation.
+sub codon_start_map {
+    my( $self ) = @_;
+    
+    my $map = [];
+    my @exons = $self->get_all_CDS_Exons;
+    
+    # Phase is in 0,1,2 convention instead of acedb 1,2,3
+    # to make calculation of next exons's phase easiser
+    my $phase = $self->start_phase - 1;
+    #warn "start phase = '$phase'\n";
+    
+    if ($self->strand == 1) {
+        foreach my $ex (@exons) {
+            my $start = $ex->start + $phase;
+            my $end   = $ex->end;
+            for (my $i = $start; $i <= $end; $i += 3) {
+                push(@$map, $i);
+            }
+            my $length = $end - $start + 1;
+            $phase = (3 - ($length % 3)) % 3;
+            #warn "Exon $start -> $end  length is ", $ex->length, " ($length)\nnext exon phase = '$phase'\n";
+        }
+    } else {
+        foreach my $ex (reverse @exons) {
+            my $start = $ex->end - $phase;
+            my $end   = $ex->start;
+            for (my $i = $start; $i >= $end; $i -= 3) {
+                push(@$map, $i);
+            }
+            my $length = $start - $end + 1;
+            $phase = (3 - ($length % 3)) % 3;
+            #warn "Exon $start -> $end  length is ", $ex->length, " ($length)\nnext exon phase = '$phase'\n";
+        }
+    }
+    
+    return $map;
+}
+
 sub get_all_CDS_Exons {
     my( $self ) = @_;
 
