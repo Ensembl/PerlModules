@@ -53,7 +53,7 @@ sub mirror_copy_dir {
 }
 
 sub mirror_copy_file {
-    my( $from_file, $to_file ) = @_;
+    my( $from_file, $to_file, $u_time ) = @_;
     
     my(@utime);
     # Check that the from file exists
@@ -66,19 +66,16 @@ sub mirror_copy_file {
         confess "No such source file '$from_file'\n";
     }
     
-    if (-e $to_file) {
-        my $to_size = (stat(_))[7];
-        if ($to_size == $from_size) {
-            # They both exist, and have the same size, so we can
-            # return true if they have the same checksums
-            return 1 if identical_file_checksums($from_file, $to_file);
-        }
+    my $to_size = (stat($to_file))[7] || 0;
+    
+    unless ($to_size == $from_size
+        and identical_file_checksums($from_file, $to_file)) {
+        # Copy file accross, and check copy
+        copy_and_check_file($from_file, $to_file);
     }
     
-    # Copy file accross, and check copy
-    copy_and_check_file($from_file, $to_file);
-    
     # Preserve timestamp on file
+    @utime = ($u_time, $u_time) if $u_time;
     utime(@utime, $to_file);
 }
 
@@ -178,6 +175,7 @@ success, but is FATAL on failure.
 =head2 mirror_copy_dir
 
     mirror_copy_dir($from_dir, $to_dir);
+    mirror_copy_dir($from_dir, $to_dir);
 
 Recursively copies all directories and files from
 directory C<$from_dir> to C<$to_dir> using
@@ -188,6 +186,7 @@ are preserved.  All errors are FATAL.
 =head2 mirror_copy_file
 
     mirror_copy_file($from_file, $to_file);
+    mirror_copy_file($from_file, $to_file, $utime);
 
 Performs the same function as
 B<copy_and_check_file>, but if both C<$from_file>
@@ -196,6 +195,10 @@ checksums of the two files, and only performs a
 copy if they differ.  It also preserves the
 access and modification times of the files which
 it copies.
+
+Optionally a unix time int C<$utime> can be
+provided.  Both C<$from_file> and C<$to_file>
+will be stamped with this time.
 
 =head2 identical_file_checksums
 
