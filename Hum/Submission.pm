@@ -22,6 +22,7 @@ use Hum::SubmissionConf;
                  accession_from_sanger_name
                  sanger_id_from_accession
                  project_name_and_suffix_from_sequence_name
+                 project_name_from_accession
                  submission_disconnect
                  acetime
                  timeace
@@ -415,6 +416,19 @@ a time string as input, or defaulting to current time.
     }
 }
 
+sub project_name_from_accession {
+    my( $acc ) = @_;
+
+    my $sth = prepare_statement(qq{
+        SELECT project_name
+        FROM project_acc
+        WHERE accession = '$acc'
+        });
+    $sth->execute;
+    my ($name) = $sth->fetchrow;
+    $name ||= undef;
+    return $name;
+}
 
 sub sanger_name {
     my( $acc ) = @_;
