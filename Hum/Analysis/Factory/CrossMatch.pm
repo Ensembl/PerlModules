@@ -25,6 +25,24 @@ sub min_match_length {
     return $self->{'_min_match_length'} || 30;
 }
 
+sub bandwidth {
+    my( $self, $bandwidth ) = @_;
+    
+    if ($bandwidth) {
+        $self->{'_bandwidth'} = $bandwidth;
+    }
+    return $self->{'_bandwidth'} || 14;
+}
+
+sub gap_extension_penalty {
+    my( $self, $gap_extension_penalty ) = @_;
+    
+    if (defined $gap_extension_penalty) {
+        $self->{'_gap_extension_penalty'} = $gap_extension_penalty;
+    }
+    return $self->{'_gap_extension_penalty'} || -3;
+}
+
 sub show_all_matches {
     my( $self, $show_all_matches ) = @_;
     
@@ -66,7 +84,9 @@ sub make_command_pipe {
     my( $self, $dir, $query_file, $subject_file ) = @_;
     
     my $min_match = $self->min_match_length;
-    my $cmd_pipe = "cd $dir; cross_match -minmatch $min_match";
+    my $bandwidth = $self->bandwidth;
+    my $gap_ext   = $self->gap_extension_penalty;
+    my $cmd_pipe = "cd $dir; cross_match -gap_ext $gap_ext -minmatch $min_match -bandwidth $bandwidth";
     if ($self->show_alignments) {
         $cmd_pipe .= ' -alignments';
     }

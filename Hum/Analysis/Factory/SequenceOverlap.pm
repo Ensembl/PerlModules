@@ -159,22 +159,69 @@ sub is_three_prime_hit {
     return $start_dist < $end_dist ? 0 : 1;
 }
 
-sub find_end_overlap {
+{
+    my @param_sets = (
+            # These are the defaults for cross_match, which we try first.
+            {
+                'bandwidth'             => 14,
+                'gap_extension_penalty' => -3,
+            },
+
+            # This is better at finding short overlaps containing
+            # an insertion in one sequence.
+            {
+                'bandwidth'             => 14,
+                'gap_extension_penalty' => -2,
+            },
+
+            # This is better at finding very long overlaps in one piece.
+            {
+                'bandwidth'             => 120,
+                'gap_extension_penalty' => -3,
+            },
+        );
+
+    sub find_end_overlap {
+        my( $self, $query, $subject ) = @_;
+
+        my $factory = $self->crossmatch_factory;
+        my( $seq_end, $hit_end );
+
+        foreach my $param (@param_sets) {
+            print "Running cross_match with:\n";
+            foreach my $setting (sort keys %$param) {
+                my $value = $param->{$setting};
+                print STDERR "  $setting = $value\n";
+                $factory->$setting($param->{$setting});
+            }
+            ($seq_end, $hit_end) = $self->get_end_features($query, $subject);
+            if ($seq_end == $hit_end) {
+                # We have found the overlap in one piece
+                print STDERR "Found single feature\n";
+                last;
+            }
+        }
+
+        if ($seq_end == $hit_end) {
+            return $seq_end;
+        } else {
+            print STDERR "Creating merged feature\n";
+            return $self->merge_features($seq_end, $hit_end);
+        }
+    }
+}
+
+sub get_end_features {
     my( $self, $query, $subject ) = @_;
-    
-    my $matches_fh = $self->matches_file;
-    
-    my $factory = Hum::Analysis::Factory::CrossMatch->new;
-    $factory->show_alignments($matches_fh or $self->overlap_alignment_file ? 1 : 0);
-    $factory->show_all_matches(1);
-    my $parser = $factory->run($query, $subject);
+
+    my $parser = $self->crossmatch_factory->run($query, $subject);
     
     my( @matches );
     while (my $m = $parser->next_Feature) {
         push(@matches, $m);
     }
     
-    if ($matches_fh) {
+    if (my $matches_fh = $self->matches_file) {
         print $matches_fh $self->sequence_length_header($query, $subject);
         print $matches_fh $matches[0]->pretty_header, "\n";
         print $matches_fh map($_->pretty_string, @matches), "\n";
@@ -188,11 +235,22 @@ sub find_end_overlap {
     unless ($seq_end and $hit_end) {
         confess "No end overlap found\n";
     }
-    elsif ($seq_end == $hit_end) {
-        return $seq_end;
-    } else {
-        return $self->merge_features($seq_end, $hit_end);
+    return($seq_end, $hit_end);
+}
+
+sub crossmatch_factory {
+    my( $self ) = @_;
+    
+    my( $factory );
+    unless ($factory = $self->{'_crossmatch_factory'}) {
+        $factory = $self->{'_crossmatch_factory'}
+            = Hum::Analysis::Factory::CrossMatch->new;
+        $factory->show_alignments(
+            $self->matches_file or
+            $self->overlap_alignment_file ? 1 : 0);
+        $factory->show_all_matches(1);
     }
+    return $factory;
 }
 
 sub warn_match {
