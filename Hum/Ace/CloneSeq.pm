@@ -9,6 +9,7 @@ use Carp;
 use Hum::Sequence::DNA;
 use Hum::Ace::Locus;
 use Hum::Ace::GeneMethod;
+use Hum::Ace::SubSeq;
 
 sub new {
     my( $pkg ) = shift;
