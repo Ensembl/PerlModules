@@ -18,6 +18,7 @@ use Term::ReadKey qw{ ReadMode ReadLine };
     my $sgp_type = '';
     my $prompt   = 1;
     my $pipeline = 0;
+    my $port     = 3306;
 
     my( $dna_host, $dna_dbname, $dna_user, $dna_password );
 
@@ -32,6 +33,8 @@ use Term::ReadKey qw{ ReadMode ReadLine };
             'user=s'        => \$user,
             'password=s'    => \$password,
             'nopassword'    => sub{ $password = undef; $prompt = 0 },
+            'port=i'        => \$port,
+            #'port=i'        => sub{ $port = $_[1]; warn "GOT PORT=$port\n" },
 
             'dnahost=s'     => \$dna_host,
             'dnadbname=s'   => \$dna_dbname,
@@ -57,7 +60,10 @@ use Term::ReadKey qw{ ReadMode ReadLine };
             -DBNAME => $dbname,
             -USER   => $user,
             -PASS   => $passwd,
+            -PORT   => $port,
             );
+
+        #warn "Adaptor args = [@adaptor_args]\n";
 
         my $adaptor_class = 'Bio::EnsEMBL::DBSQL::DBAdaptor';
         if ($pipeline) {

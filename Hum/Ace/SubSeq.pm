@@ -489,7 +489,7 @@ sub translatable_Sequence {
             $start += $phase - 1;
         }
         elsif ($strand == -1 and $end == $t_end) {
-            $end += 1 - $phase;
+            $end   += 1 - $phase;
         }
         
         $seq_str .= $clone_seq
@@ -510,7 +510,6 @@ sub get_all_CDS_Exons {
 
     my ($t_start, $t_end)   = $self->translation_region;
     my $strand              = $self->strand;
-    my $phase               = $self->start_phase;
 
     my( @cds_exons );
     foreach my $exon ($self->get_all_Exons) {
@@ -535,16 +534,12 @@ sub get_all_CDS_Exons {
         push(@cds_exons, $cds);
     }
     
-    # Add the phase to the first exon.
+    # Add the phase to the first exon if start is not found.
     # (Needed by the ace -> ensembl transfer system.)
     my $start_exon = $strand == 1 ? $cds_exons[0] : $cds_exons[$#cds_exons];
-    $start_exon->phase($phase);
-    #warn "Setting exon phase=$phase ", join(' ',
-    #    $self->name,
-    #    $start_exon->start,
-    #    $start_exon->end,
-    #    $strand,
-    #    ), "\n";
+    if ($self->start_not_found) {
+        $start_exon->phase($self->start_phase);
+    }
     
     return @cds_exons;
 }

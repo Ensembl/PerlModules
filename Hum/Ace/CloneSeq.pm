@@ -148,25 +148,38 @@ sub trim_SubSeq_to_golden_path {
     # Deal with exons not entirely contained in the golden path
     my $golden_start = $self->golden_start;
     my $golden_end   = $self->golden_end;
+    my $strand = $sub->strand;
     #warn "gs=$golden_start  ge=$golden_end\n";
-    foreach my $exon ($sub->get_all_Exons) {
+    my @ex_list = $sub->get_all_Exons;
+    if ($strand == -1) {
+        @ex_list = reverse(@ex_list);
+    }
+
+    my $trim = 0;
+    foreach (my $i = 0; $i < @ex_list; $i++) {
+        my $exon = $ex_list[$i];
         my $start = $exon->start;
         my $end   = $exon->end;
         
         if ($end < $golden_start or $start > $golden_end) {
             # Delete exons which are outside the golden path
             $sub->delete_Exon($exon);
+            if (($strand == 1 and $i == 0) or ($strand == -1 and $i == $#ex_list)) {
+                $sub->start_not_found(0);
+            }
         } else {
             # Trim exons to golden path
             if ($start < $golden_start) {
                 $exon->start($golden_start);
-                if ($sub->strand == 1) {
+                if ($strand == 1) {
+                    $sub->start_not_found(0);
                     $exon->unset_phase;
                 }
             }
             if ($end > $golden_end) {
                 $exon->end($golden_end);
-                if ($sub->strand == -1) {
+                if ($strand == -1) {
+                    $sub->start_not_found(0);
                     $exon->unset_phase;
                 }
             }
