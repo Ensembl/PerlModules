@@ -587,7 +587,7 @@ sub get_user{
     if($@){
 	$user=(getpwuid($<))[0]
 	    or confess "Can't get user name for uid '$<'";
-	print "WARN: user ($user) was obtained via getpwuid\n";
+	#warn "WARN: user ($user) was obtained via getpwuid\n";
     }
     return $user;
 }
