@@ -581,9 +581,7 @@ sub bio_seq {
     
     require Bio::SeqIO;
     
-    my $ana_dir = $self->analysis_directory;
-    my $s_name  = $self->sequence_name;
-    my $seq_file = "$ana_dir/$s_name.seq";
+    my $seq_file = $self->ana_dir_seq_file;
     my $seq_in = Bio::SeqIO->new(
         -FORMAT     => 'fasta',
         -FILE       => $seq_file,
@@ -593,6 +591,13 @@ sub bio_seq {
     return $seq;
 }
 
+sub ana_dir_seq_file {
+    my( $self ) = @_;
+    
+    my $ana_dir = $self->analysis_directory;
+    my $s_name  = $self->sequence_name;
+    return "$ana_dir/$s_name.seq";
+}
 
 sub get_dna_seq {
     my $self = shift;
