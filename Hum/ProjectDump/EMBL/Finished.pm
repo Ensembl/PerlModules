@@ -214,6 +214,8 @@ For further details see http://www.chori.org/bacpac/home.htm"
         my $project = $pdmp->project_name;
         my ($lib, $vector) = library_and_vector($project);
         
+        return unless $lib;
+        
         my $comment = $lib_comments{$lib};
         unless ($comment) {
             $sth ||= prepare_track_statement(q{
