@@ -235,7 +235,7 @@ __END__
     # Parse the entries supplied to the script.
     # Equivalent to the "while (<>)" construct.
     my $parser = 'Hum::EMBL'->new;
-    while (my $embl = $parser->parse(*ARGV)) {
+    while (my $embl = $parser->parse(\*ARGV)) {
         # Get the accession number
         my $acc = $embl->AC->primary;
         
