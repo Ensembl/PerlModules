@@ -1,6 +1,4 @@
 
-###############################################################################
-
 package Hum::EMBL::Line;
 
 use strict;
@@ -108,7 +106,7 @@ sub string {
 }
 
 # Called by compose() in EMBL::Entry on each line
-sub toString {
+sub getString {
     my( $line ) = @_;
     
     if (my $string = $line->string()) {
@@ -138,35 +136,34 @@ sub list {
     }
 }
 
-sub field {
-    my( $line, $field, $data ) = @_;
+BEGIN {
+    my $max   = 75;         # Maximum length for a line
+    my $limit = $max - 1;
     
-    if ($data) {
-        $line->data->{$field} = $data;
-    } else {
-        return $line->data->{$field};
-    }
-}
+    sub wrap {
+        my( $line, $prefix, $text ) = @_;
 
-sub wrap {
-    my( $line, $prefix, $text ) = @_;
-    
-    my( @lines );
-    while ($text =~ /(.{0,73}\S)(\s+|$)/g) {
-        push( @lines, $prefix . $1 . "\n" );
-    }
-    
-    return @lines;
-}
+        # Test for a string longer than $max
+        confess "String '$1' too long to wrap"
+            if $text =~ /(\S\S{$max,})/o;
 
-sub commaWrap {
-    my( $line, $prefix, $text ) = @_;
-    
-    my( @lines );
-    while ($text =~ /(.{1,73}(,|$))/g) {
-        push( @lines, $prefix . $1 . "\n" );
+        my( @lines );
+        while ($text =~ /(.{0,$limit}\S)(\s+|$)/og) {
+            push( @lines, "$prefix$1\n" );
+        }
+
+        return @lines;
     }
-    return @lines;
+
+    sub commaWrap {
+        my( $line, $prefix, $text ) = @_;
+
+        my( @lines );
+        while ($text =~ /(.{1,$limit}(,|$))/og) {
+            push( @lines, $prefix . $1 . "\n" );
+        }
+        return @lines;
+    }
 }
 
 ###############################################################################
@@ -838,7 +835,9 @@ sub parse {
             push(@qual, $q);
             $q = $end;
         } else {
-            $q .= " $end";
+            # Join lines with a space only if the
+            # previous lines contain one
+            $q .= ($q =~ /\s/) ? " $end" : $end;
         }
     }
     push( @qual, $q );
@@ -903,8 +902,67 @@ package Hum::EMBL::Sequence;
 use strict;
 use Carp;
 use vars qw( @ISA );
-@ISA = qw( Hum::EMBL::Line );
 
+BEGIN {
+    @ISA = qw( Hum::EMBL::Line );
+    Hum::EMBL::Sequence->makeFieldAccessFuncs(qw( seq ));
+}
+
+sub parse {
+    my( $line, $s ) = @_;
+    
+    $$s =~ s/^SQ.+$//m;
+    $$s =~ s/[\s\d]+//g;
+    
+    $line->seq($$s);
+}
+
+BEGIN {
+    my $nuc = 60;                           # Number of nucleotides per line
+    my $whole_pat = 'a10' x int($nuc / 10); # Pattern for unpacking a whole line
+
+    sub compose {
+        my( $line ) = @_;
+
+        local $" = ' '; # Make sure no-one's messed with this
+
+        my $seq = $line->seq();
+        my $length = length($seq);
+        confess "Sequence length '$length' too long for EMBL format" if length($length) > 9;
+
+        # Count the number of each nucleotide in the sequence
+        my $a_count = $seq =~ tr/a/a/;
+        my $c_count = $seq =~ tr/c/c/;
+        my $g_count = $seq =~ tr/g/g/;
+        my $t_count = $seq =~ tr/t/t/;
+        my $o_count = $length - ($a_count + $c_count + $g_count + $t_count);
+
+        # Make the first line
+        my $embl = "SQ   $length BP; $a_count A; $c_count C; $g_count G; $t_count T; $o_count other;\n";
+        
+        # Calculate the number of nucleotides which fit on whole lines
+        my $whole = int($length / $nuc) * $nuc;
+        
+        # Format the whole lines
+        my( $i );
+        for ($i = 0; $i < $whole; $i += $nuc) {
+            my @blocks = unpack $whole_pat, substr($seq, $i, $nuc);
+            $embl .= sprintf "     @blocks %9d\n", $i + $nuc;
+        }
+        
+        # Format the last line
+        my $last = substr($seq, $i);
+        my $last_len = length($last);
+        my $last_pat = 'a10' x int($last_len / 10) .'a'. $last_len % 10;
+        my @blocks = unpack($last_pat, $last);
+        $last = "     @blocks";                 # Add the last sequence blocks
+        $last .= ' ' x (70 - length($last));    # Pad the line with whitespace
+        $last .=  sprintf( " %9d\n", $length ); # Add the length to the end
+        
+        # Return as a single string
+        return $line->string($embl, $last);
+    }
+}
 
 ###############################################################################
 

@@ -154,7 +154,7 @@ sub compose {
     
     my( @compose );
     foreach my $line ($entry->lines()) {
-        push( @compose, $line->toString() );
+        push( @compose, $line->getString() );
     }
     return @compose;
 }
@@ -177,6 +177,16 @@ sub lines {
         $entry->{'_lines'} = $lines;
     } else {
         return @{$entry->{'_lines'}};
+    }
+}
+
+sub addLine {
+    my( $entry, $line ) = @_;
+    
+    if ($line) {
+        push @{$entry->{'_lines'}}, $line;
+    } else {
+        confess "No line provided to addLine()";
     }
 }
 
@@ -224,8 +234,12 @@ sub lines {
                     } else {
                         no strict 'refs';
                         *$newFunc = sub {
-                            my $pkg = shift;
-                            return $class->new(@_);
+                            my $entry = shift;
+                            
+                            my $line = $class->new(@_);
+                            $line->entry( $entry );
+                            $entry->addLine( $line );
+                            return $line;
                         }
                     }
                 }

@@ -47,7 +47,6 @@ sub parse {
 
 BEGIN {
 
-    my $prefix = 'FT'. ' ' x 19;
 
     # List of qualifiers which always have unquoted values
     my %no_quote = map {$_, 1} qw(
@@ -59,6 +58,9 @@ BEGIN {
                                   transl_except
                                   usedin
                                   );
+
+    my $prefix = 'FT'. ' ' x 19;    # All lines start with this
+    my $max = 59;                   # Max length for rest of line
 
     sub compose {
         my( $qual ) = @_;
@@ -72,8 +74,18 @@ BEGIN {
             my $text = "/$name=$value";
 
             my( @lines );
-            while ($text =~ /(.{0,58}\S)(\s+|$)/g) {
-                push( @lines, "$prefix$1\n" );
+            if (substr($text, 0, $max) =~ /\s/) {
+                # First line has spaces, so wrap on words
+                my $limit = $max - 1;
+                while ($text =~ /(.{0,$limit}\S)(\s+|$)/og) {
+                    push( @lines, "$prefix$1\n" );
+                }
+            } else {
+                # Need to do hard wrapping
+                my $total = length($text);
+                for (my $i = 0; $i < $total; $i += $max) {
+                    push( @lines, $prefix . (substr $text, $i, $max) ."\n" );
+                }
             }
             
             return @lines;
