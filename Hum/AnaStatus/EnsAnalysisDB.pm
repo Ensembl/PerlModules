@@ -103,12 +103,13 @@ sub _fetch_where {
           , host
           , user
           , golden_path_type
+          , port
         FROM ana_ensembl_db
         WHERE $where
         });
     $sth->execute;
     
-    my ($ensembl_db_id, $db_name, $host, $user, $type) = $sth->fetchrow;
+    my ($ensembl_db_id, $db_name, $host, $user, $type, $port) = $sth->fetchrow;
     confess "No EnsAnalysisDB found with '$where'"
         unless $ensembl_db_id;
     
@@ -118,6 +119,7 @@ sub _fetch_where {
     $self->host($host);
     $self->user($user);
     $self->golden_path_type($type);
+    $self->port($port);
     
     return $self;
 }
@@ -138,6 +140,15 @@ sub host {
         $self->{'_host'} = $host;
     }
     return $self->{'_host'};
+}
+
+sub port {
+    my( $self, $port ) = @_;
+    
+    if ($port) {
+        $self->{'_port'} = $port;
+    }
+    return $self->{'_port'} || 3306;
 }
 
 sub user {
@@ -224,6 +235,7 @@ sub ace_data_factory {
             my $type    = $self->golden_path_type
                                 or confess "golden_path_type not set";
             my $pass    = $self->password || '';
+            my $port    = $self->port;
 
             $db_adaptor
                 = $self->{'_db_adaptor'}
@@ -232,6 +244,7 @@ sub ace_data_factory {
                     -DBNAME => $db_name,
                     -USER   => $user,
                     -PASS   => $pass,
+                    -PORT   => $port,
                     );
             $db_adaptor->static_golden_path_type($type);
         }
@@ -251,11 +264,12 @@ sub store {
     my $user    = $self->user    or confess    "user not set";
     my $type    = $self->golden_path_type
                         or confess "golden_path_type not set";
+    my $port    = $self->port;
     
     
     my $sth = prepare_statement(qq{
-        INSERT ana_ensembl_db( db_name, host, user, golden_path_type )
-        VALUES ( '$db_name', '$host', '$user', '$type' )
+        INSERT ana_ensembl_db( db_name, host, user, golden_path_type, port )
+        VALUES ( '$db_name', '$host', '$user', '$type', $port )
         });
     $sth->execute;
     
