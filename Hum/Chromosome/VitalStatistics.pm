@@ -52,7 +52,7 @@ sub merge {
         shortest_exon
         })
     {
-        my $donr_nv = $donor->$method() or confess "No '$method' attached";
+        my $donr_nv = $donor->$method() or next;
         my $self_nv =  $self->$method();
         if (! $self_nv or $donr_nv->value < $self_nv->value) {
             $self->$method($donr_nv);
@@ -68,7 +68,7 @@ sub merge {
         })
     {
         my $self_nv =  $self->$method();
-        my $donr_nv = $donor->$method() or confess "No '$method' attached";
+        my $donr_nv = $donor->$method() or next;
         if (! $self_nv or $donr_nv->value > $self_nv->value) {
             $self->$method($donr_nv);
         }
@@ -86,6 +86,50 @@ sub test_count {
         $self->{'_test_count'} = $test_count;
     }
     return $self->{'_test_count'};
+}
+
+sub make_stats_from_VirtualContig {
+    my( $self, $vc ) = @_;
+    
+    my $type = $self->gene_type or confess "gene_type not set";
+    my $dba = $vc->dbobj;
+    my $static_type = $dba->static_golden_path_type;
+    
+    my $contig_ids =
+        join ', ',
+        map $_->internal_id,
+        $vc->_vmap->get_all_RawContigs;
+    
+    my $sth = $dba->prepare(qq{
+        SELECT distinct(gsid.stable_id)
+        FROM gene_stable_id gsid
+          , gene g
+          , transcript t
+          , exon_transcript et
+          , exon e
+          , static_golden_path sgp
+        WHERE gsid.gene_id = g.gene_id
+          AND g.gene_id = t.gene_id
+          AND t.transcript_id = et.transcript_id
+          AND et.exon_id = e.exon_id
+          AND e.contig_id = sgp.raw_id
+          AND sgp.raw_id IN ($contig_ids)
+          AND sgp.type = '$static_type'
+          AND g.type = '$type'
+        });
+    $sth->execute;
+    
+    my( @gene_id );
+    while (my ($id) = $sth->fetchrow) {
+        push(@gene_id, $id);
+    }
+    
+    if (@gene_id) {
+        return $self->make_stats($dba, @gene_id);
+    } else {
+        warn "no '$type' genes in vc\n";
+        return;
+    }
 }
 
 sub make_stats {
@@ -119,6 +163,7 @@ sub make_stats {
 
     my $test_count = $self->test_count;
     my $gene_i = 0;
+    my $gene_count = 0;
     foreach my $id (@gene_id) {
         #warn "Fetching gene '$id'\n";
         $gene_i++;
@@ -148,6 +193,7 @@ sub make_stats {
             -gene   => $gene,
             -contig => $vc,
             );
+        $gene_count++;
         #warn "vg is ", $vg->length, " long\n";
         
         # Stats from the gene
@@ -164,7 +210,7 @@ sub make_stats {
                 $self->save_longest_exon($ex);
 
                 # Don't use the first or last exon to find the shortest
-                unless ($i == 0 or $i == $#exons) {
+                if (@exons == 1 or ! ($i == 0 or $i == $#exons)) {
                     $self->save_shortest_exon($ex);
                 }
             }
@@ -198,9 +244,17 @@ sub make_stats {
                 }
             }
         }
-        
-        
     }
+    $self->gene_count($gene_count);
+}
+
+sub gene_count {
+    my( $self, $gene_count ) = @_;
+    
+    if (defined $gene_count) {
+        $self->{'_gene_count'} = $gene_count;
+    }
+    return $self->{'_gene_count'} || 0;
 }
 
 sub save_longest_gene {

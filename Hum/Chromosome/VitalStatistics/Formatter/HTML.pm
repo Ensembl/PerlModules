@@ -129,17 +129,18 @@ sub html_table_gene_exon_intron_counts {
 
     # Introns
     my $intron_lengths = $stats->intron_lengths;
-    my $intron_count   = scalar @$intron_lengths;
-    my $total_intron_length = 0;
-    for (my $i = 0; $i < @$intron_lengths; $i++) {
-        $total_intron_length += $intron_lengths->[$i];
+    if (my $intron_count = scalar @$intron_lengths) {
+        my $total_intron_length = 0;
+        for (my $i = 0; $i < @$intron_lengths; $i++) {
+            $total_intron_length += $intron_lengths->[$i];
+        }
+        $html .= sprintf $row_pattern,
+            'Introns',
+            $intron_count,
+            $total_intron_length,
+            $total_intron_length / $intron_count,
+            $stats->median($intron_lengths);
     }
-    $html .= sprintf $row_pattern,
-        'Introns',
-        $intron_count,
-        $total_intron_length,
-        $total_intron_length / $intron_count,
-        $stats->median($intron_lengths);
 
     $html .= '
 </table>
@@ -249,7 +250,7 @@ sub html_table_biggest_and_smallest_gene_and_exon {
         longest_intron
         })
     {
-        my $nv = $stats->$method;
+        my $nv = $stats->$method or next;
         $html .= sprintf $row,
             $nv->label, $nv->value, $nv->name;
     }
@@ -281,7 +282,7 @@ sub html_table_largest_transcript_and_exon_count {
         most_exons
         })
     {
-        my $nv = $stats->$method;
+        my $nv = $stats->$method or next;
         $html .= sprintf $row,
             $nv->label, $nv->value, $nv->name;
     }

@@ -139,17 +139,19 @@ sub write_gene_exon_intron_counts {
     $sheet->write_number($row, $col+4, $stats->median($exon_lengths), $thousands);
 
     # Introns
+    $row++;
     my $intron_lengths = $stats->intron_lengths;
-    my $intron_count   = scalar @$intron_lengths;
-    my $total_intron_length = 0;
-    for (my $i = 0; $i < @$intron_lengths; $i++) {
-        $total_intron_length += $intron_lengths->[$i];
+    if (my $intron_count   = scalar @$intron_lengths) {
+        my $total_intron_length = 0;
+        for (my $i = 0; $i < @$intron_lengths; $i++) {
+            $total_intron_length += $intron_lengths->[$i];
+        }
+        $sheet->write_string(++$row, $col, 'Introns', $right);
+        $sheet->write_number($row, $col+1, $intron_count, $thousands);
+        $sheet->write_number($row, $col+2, $total_intron_length, $thousands);
+        $sheet->write_number($row, $col+3, $total_intron_length / $intron_count, $thousands);
+        $sheet->write_number($row, $col+4, $stats->median($intron_lengths), $thousands);
     }
-    $sheet->write_string(++$row, $col, 'Introns', $right);
-    $sheet->write_number($row, $col+1, $intron_count, $thousands);
-    $sheet->write_number($row, $col+2, $total_intron_length, $thousands);
-    $sheet->write_number($row, $col+3, $total_intron_length / $intron_count, $thousands);
-    $sheet->write_number($row, $col+4, $stats->median($intron_lengths), $thousands);
     
     $self->current_row_col($row, $col+4);
 }
@@ -221,10 +223,11 @@ sub write_biggest_and_smallest_gene_and_exon {
         longest_intron
         })
     {
-        my $nv = $stats->$method;
-        $sheet->write_string(++$row, $col,   $nv->label, $right);
-        $sheet->write_number(  $row, $col+1, $nv->value);
-        $sheet->write_string(  $row, $col+2, $nv->name);
+        $row++;
+        my $nv = $stats->$method or next;
+        $sheet->write_string($row, $col,   $nv->label, $right);
+        $sheet->write_number($row, $col+1, $nv->value);
+        $sheet->write_string($row, $col+2, $nv->name);
     }
     $self->current_row_col($row, $col+2);
 }
@@ -243,10 +246,11 @@ sub write_largest_transcript_and_exon_count {
         most_exons
         })
     {
-        my $nv = $stats->$method;
-        $sheet->write_string(++$row, $col,   $nv->label, $right);
-        $sheet->write_number(  $row, $col+1, $nv->value);
-        $sheet->write_string(  $row, $col+2, $nv->name);
+        $row++;
+        my $nv = $stats->$method or next;
+        $sheet->write_string($row, $col,   $nv->label, $right);
+        $sheet->write_number($row, $col+1, $nv->value);
+        $sheet->write_string($row, $col+2, $nv->name);
     }
     $self->current_row_col($row, $col+2);
 }
