@@ -17,6 +17,7 @@ use vars qw( @ISA @EXPORT_OK );
                  die_if_dumped_recently
                  prepare_statement
                  sanger_name
+                 project_name_and_suffix_from_sequence_name
                  submission_disconnect
                  acetime
                  timeace
@@ -398,6 +399,25 @@ sub sanger_name {
     my ($name) = $sth->fetchrow;
     $name ||= "Em:$acc";
     return $name;
+}
+
+sub project_name_and_suffix_from_sequence_name {
+    my( $name ) = @_;
+
+    my $sth = prepare_statement(qq{
+        SELECT a.project_name
+          , a.project_suffix
+        FROM project_acc a
+          , project_dump d
+          , sequence s
+        WHERE a.sanger_id = d.sanger_id
+          AND d.seq_id = s.seq_id
+          AND d.is_current = 'Y'
+          AND s.sequence_name = '$name'
+        });
+    $sth->execute;
+    my ($name, $suffix) = $sth->fetchrow;
+    return( $name, $suffix );
 }
 
 

@@ -4,6 +4,7 @@ package Hum::EmblUtils;
 use strict;
 use Carp;
 use Hum::Tracking qw( ref_from_query external_clone_name );
+use Hum::Submission 'project_name_and_suffix_from_sequence_name';
 use Exporter;
 use vars qw( @EXPORT_OK @ISA );
 @ISA       = qw( Exporter );
@@ -183,9 +184,13 @@ BEGIN {
 sub projectAndSuffix {
     my( $ace ) = @_;
     
-    my( $project, $suffix );
-    eval{ $project = $ace->at('Project.Project_name[1]')->name   };
-    eval{ $suffix  = $ace->at('Project.Project_suffix[1]')->name };
+    my ($project, $suffix) =
+        project_name_and_suffix_from_sequence_name($ace->name);
+    
+    unless ($project) {
+        eval{ $project = $ace->at('Project.Project_name[1]')->name   };
+        eval{ $suffix  = $ace->at('Project.Project_suffix[1]')->name };
+    }
     
     return($project, $suffix);
 }
