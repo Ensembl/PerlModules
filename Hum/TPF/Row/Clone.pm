@@ -237,6 +237,9 @@ sub store_SequenceInfo_and_link {
     my $seq = $self->SequenceInfo;
     unless ($seq) {
         return unless $accession;
+
+        return if ($accession =~ /CENTROMERE/);
+        
         $seq = Hum::SequenceInfo->fetch_latest_by_accession($accession)
             or confess "No SequenceInfo for accession '$accession'";
         $self->SequenceInfo($seq);
