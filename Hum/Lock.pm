@@ -5,11 +5,14 @@
 
 =head1 DESCRIPTION
 
-B<Hum::Lock> is used to create lockfiles, which
+B<Hum::Lock> is used to create lockdirs, which
 are used prevent multiple incantations of the
-same script running on the same data.  Lockfiles
-are automatically deleted when the lock object
-goes out of scope, or the script dies.
+same script running on the same data.  Directory
+information should be synced over NFS, so this
+should provide a reasonably robust locking
+mechanism.  Lockdirs are automatically deleted
+when the lock object goes out of scope, or the
+script dies.
 
 =cut
 
@@ -26,22 +29,24 @@ use vars qw( @EXPORT_OK @ISA );
 @ISA = qw( Exporter );
 @EXPORT_OK = qw( processExists );
 
-sub psCommand ($) {
-    # Select ps command for host type
+BEGIN {
     my %psCommands = (
                       dec_osf => 'ps -A',
 		      linux   => 'ps ax',
 		      solaris => 'ps -A'
 		      # Ignoring SGIs, since not under LSF
 		      );
-    my $ostype = shift;
-    return $psCommands{ $ostype };
+    # Select ps command for host type
+    sub psCommand ($) {
+        my $ostype = shift;
+        return $psCommands{ $ostype };
+    }
 }
 
 # Access methods
-sub file {
+sub dir {
     my $lock = shift;
-    return $lock->{'file'};
+    return $lock->{'dir'};
 }
 sub home {
     my $lock = shift;
@@ -51,72 +56,72 @@ sub home {
 # The new method does all the work
 sub new {
     my $pkg = shift;
-    my $lockFile = shift;
-
-    # Must have a name for the lockfile!
-    unless ($lockFile) {
-    	croak("No lockfile name supplied");
+    my $lockDir = shift;
+    my $timeout = shift || 0;
+    my $start = time();
+    my $hostname = hostname();
+    
+    # Must have a name for the lockdir!
+    unless ($lockDir) {
+    	croak("No name supplied for lock directory");
     }
     
-    # Give filename ".lock" extension if none supplied
-    unless ($lockFile =~ /.+\.[^\.]+$/) {
-    	$lockFile =~ s/\.+$//; # Remove trailing dots
-	$lockFile = $lockFile . ".lock";
+    # Give lockdir ".LOCK" extension if none supplied
+    unless ($lockDir =~ /.+\.[^\.]+$/) {
+    	$lockDir =~ s/\.+$//; # Remove trailing dots
+	$lockDir = $lockDir . ".LOCK";
     }
     
-    # Check for existing lockfile
-    if (-e $lockFile) {
-        my( $hostName, $processID ) = readLock( $lockFile );
+    # Create lock directory
+    # Directory info should be sync'd over NFS
+    while (1) {
+    
+        # Try to make a lock
+        last if writeLock( $lockDir );
+        
+        my( $hostName, $processID );
+        unless (($hostName, $processID) = readLock($lockDir)) {
+            sleep 5;
+            next;
+        }
 
 	# Is the process still running?
 	my $status = processExists( $hostName, $processID );
 
 	if ($status eq 'RUN') {
-	    croak("Process still running [ $hostName - $processID ]\n");
+            my $msg = "Process '$processID' still running on host '$hostName'\n";
+            if ($timeout) {
+                sleep 5;
+                if (time > $start + $timeout) {
+                    croak("${msg}Failed to set lock after $timeout seconds");
+                }
+            } else {
+	        croak $msg;
+            }
 	}
 	elsif ($status eq 'DEAD') {
-	    unlink( $lockFile ) == 1
-		or croak("Can't unlink old lock [ $lockFile ] : $!");
+            # Remove the lock
+	    trashLock( $lockDir );
 	}
 	else {
+            # Can't tell if process still running, so not
+            # safe to continue trying to set lock.
 	    croak("Error from processExists: $status");
 	}
     }
     
-    # Haven't returned, so create a lock file
-    open NEWLOCK, "> $lockFile"
-    	or croak("Can't open [ $lockFile ] for write: $!");
-    print NEWLOCK hostname(), ' ', $$;
-    close NEWLOCK;
-    
     # Create the lockfile object
     return bless {
-    	    	  'file' => $lockFile,
+    	    	  'dir' => $lockDir,
      		  'home' => cwd()
 		  }, $pkg;
-}
-
-sub readLock {
-    my $file = shift;
-    
-    # Read host and process ID from lockfile
-    open LOCK, "< $file" or croak("Can't open lockfile [ $file ] : $!");
-    my ($host, $pid) = split / /, <LOCK>, 2;
-    close LOCK;
-
-    # Check for hostname and valid process ID
-    if ($host and ($pid =~ /^\d+$/)) {
-        return( $host, $pid );
-    } else {
-	croak("Can't parse lockfile [ $file ]");
-    }
 }
 
 # Uses LSF command "lsrun" to see if a process is
 # running on a remote host
 sub processExists {
     my( $host, $pid ) = @_;
-    my( $ostype, $ps, $ps_pipe );
+    my( $ostype, $ps, $ps_pipe, $RUN );
     
     # Don't need lsrun if on same host
     if ($host eq hostname()) {
@@ -130,20 +135,77 @@ sub processExists {
         $ps_pipe = "lsrun -m $host $ps |";
     }
 
-    return "Don't know correct ps command for [ $ostype ]" unless $ps;
+    return "Don't know correct ps command for '$ostype'" unless $ps;
 
     open PS, $ps_pipe
-	or return "Can't run [ $ps_pipe ]";
+	or return "Can't open pipe '$ps_pipe' : $!";
     while (<PS>) {
-	/^\s*$pid\s/ and return 'RUN'
+        $RUN = 1 if /^\s*$pid\s/;
     }
-    close PS;
-
     # Check status of lsrun ps command 
-    if ($?) {
-	return "$ps_pipe : $? $!";
+    if (close PS) {
+        return $RUN ? 'RUN' : 'DEAD';
     } else {
-	return 'DEAD';
+        return $! ? "Error from ('$ps_pipe') : $!"
+                  : "Error: ('$ps_pipe') exited with status '$?'";
+    }
+}
+
+# These subroutines access the OWNER
+# file inside the lock directory
+BEGIN {
+
+    # Name of file containing process info
+    my $OWNER = 'OWNER';
+    my $END_MARKER = '_END_OF_FILE_';
+
+    sub writeLock {
+        my( $dir ) = @_;
+        my $hostname = hostname();
+        my $owner = "$dir/$OWNER";
+        local *NEWLOCK;
+        
+        # mkdir command actually makes lock
+        if (mkdir($dir, 0777)) {
+            # Record process info in owner file
+            open NEWLOCK, "> $owner"
+    	        or croak("Can't open '$owner' for write: $!");
+            print NEWLOCK "$hostname $$ $END_MARKER";
+            close NEWLOCK;
+            return 1;
+        } else {
+            return;
+        }
+    }
+
+    sub readLock {
+        my $dir = shift;
+        my $owner = "$dir/$OWNER";
+        local *OLDLOCK;
+
+        # Read host and process ID from lockfile
+        open OLDLOCK, $owner or croak("Can't open owner file '$owner' : $!");
+        my ($host, $pid, $end) = split / /, <OLDLOCK>, 3;
+        close OLDLOCK;
+
+        # Check that the other process has finished
+        # writing to the file
+        return unless $end eq $END_MARKER;
+
+        # Check for hostname and valid process ID
+        if ($host and ($pid =~ /^\d+$/)) {
+            return( $host, $pid );
+        } else {
+	    croak("Can't parse owner file '$owner'");
+        }
+    }
+
+    sub trashLock {
+        my( $dir ) = @_;
+        my $owner = "$dir/$OWNER";
+
+        unlink( $owner );
+        rmdir( $dir );
     }
 }
 
@@ -151,22 +213,24 @@ sub processExists {
 sub DESTROY {
     my $lock = shift;
     
-    my $file    = $lock->file();
+    my $dir     = $lock->dir();
     my $homeDir = $lock->home();
-    
+        
     # Save the current directory
     my $saveDir = cwd();
     
     # chdir to directory where lock file was created
-    chdir( $homeDir )    or warn "Can't find $homeDir" and return;
+    chdir( $homeDir ) or warn "Can't find direcory '$homeDir'" and return;
 
-    my( $host, $pid ) = readLock( $file );
+    my( $host, $pid ) = readLock( $dir );
     
     # It's rude to remove other people's locks
+    # (This prevent children removing parent's lock)
     return unless $pid == $$ and $host eq hostname();
 
-    unlink( $file ) == 1 or warn "Couldn't delete $file";
-    chdir( $saveDir )    or warn "Couldn't chdir back to $saveDir";
+    trashLock( $dir ) or warn "Error removing '$dir' : $!";
+
+    chdir( $saveDir ) or warn "Couldn't chdir back to $saveDir";
 }
 
 __END__
@@ -178,8 +242,7 @@ __END__
     # Catch SIGTERM so that lock file is removed if killed
     $SIG{'TERM'} = sub { die "Shot through the heart!" };
     
-    my $lock; # Lock will be removed when it goes
-              # out of scope.
+    my $lock; # Lock will be removed when it goes out of scope.
     eval {
         # The new() method is fatal on failure
         $lock = Hum::Lock->new('anaScript.lock');
@@ -187,8 +250,6 @@ __END__
     if ($@) {
         die "Can't set lock: $@\n";
     }
-    print "Host: ", $lock->host(),
-    	"\nProcessID: ", $lock->pid(), "\n";
 
 =head1 METHODS
 
@@ -196,13 +257,14 @@ __END__
 
 =item new
 
-    $lock = Hum::Lock->new( $filename );
+    $lock = Hum::Lock->new( $dirname );
 
 The only call you need to use.  Creates the lock
-file I<$filename>, and returns a lock object on
-success, or croaks on failure.  If I<filename>
-doesn't contain a file extension, then ".lock" is
-appended to it.  The B<lsrun> command must be
+file I<$dirname>, and returns a lock object on
+success, or croaks on failure.  If I<$dirname>
+doesn't contain an extension, then ".LOCK" is
+appended to it (to make it obvious what the
+directory is for).  The B<lsrun> command must be
 available on the machine.
 
 =item processExists
@@ -211,14 +273,19 @@ available on the machine.
 
 Checks wether the process with PID I<$pid> exists
 on host I<$host> using the LSF system.  Will fail
-if the host concerned isn't using LSF.  Optionally
-exportable from Hum::Lock.
+if the host concerned isn't using LSF, unless the
+lock was set by the current host, in which case
+LSF is bypassed.  Optionally exportable from
+Hum::Lock.
 
 =item DESTROY
 
 The I<DESTROY> method is used to automatically
 remove the lock file created when the lock object
-goes out of scope, or if the script dies.
+goes out of scope, or if the script dies.  Since
+the working directory of the script is recorded
+in the lock object, the I<DESTROY> method should
+be able to find its lock.
 
 =item Lock Variables
 
