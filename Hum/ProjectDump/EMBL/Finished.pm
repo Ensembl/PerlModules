@@ -195,16 +195,9 @@ sub add_extra_CC {
 {
     
     # Standard comment blocks
-    my @std = ( 
+    my @std = (
 
-'This sequence was finished as follows unless otherwise noted: all regions
-were either double-stranded or sequenced with an alternate chemistry or
-covered by high quality data (i.e., phred quality >= 30); an attempt was
-made to resolve all sequencing problems, such as compressions and repeats;
-all regions were covered by at least one plasmid subclone or more than one
-M13 subclone; and the assembly was confirmed by restriction digest, except
-on the rare occasion of the clone being a YAC.',
-
+'This sequence was finished as follows unless otherwise noted: all regions were either double-stranded or sequenced with an alternate chemistry or covered by high quality data (i.e., phred quality >= 30); an attempt was made to resolve all sequencing problems, such as compressions and repeats; all regions were covered by at least one subclone; and the assembly was confirmed by restriction digest, except on the rare occasion of the clone being a YAC.',
 
 'The following abbreviations are used to associate primary accession
 numbers given in the feature table with their source databases:
@@ -225,12 +218,7 @@ built up based on the repeat element to match the total size of repeat
 indicated by restriction digest, but repeat copies may not be in the
 correct order and the usual finishing criteria may not apply.');
 
-
-#'Repeat names beginning "Dr" were identified by the Recon repeat discovery
-#system (Zhirong Bao and Sean Eddy, submitted), and those beginning "drr"
-#were identified by Rick Waterman (Stephen Johnson lab, WashU).  For
-#further information see
-#http://www.sanger.ac.uk/Projects/D_rerio/fishmask.shtml');
+    my @mouse_specific = ('Sequence from the Mouse Genome Sequencing Consortium whole genome shotgun may have been used to confirm this sequence.  Sequence data from the whole genome shotgun alone has only been used where it has a phred quality of at least 30.');
 
     sub add_standard_CC {
         my( $pdmp, $embl ) = @_;
@@ -255,6 +243,13 @@ correct order and the usual finishing criteria may not apply.');
                 $embl->newXX;
             }
         }
+	if ($pdmp->species eq 'Mouse') {
+            foreach my $entry (@mouse_specific) {
+                my $cc = $embl->newCC;
+                $cc->list($entry);
+                $embl->newXX;
+            }
+        }
     }
 }
 
@@ -266,7 +261,7 @@ correct order and the usual finishing criteria may not apply.');
         
         my ($tlp) = $pdmp->sequence_name =~ /^(...)/;
         if ($mhc_prefix{$tlp}) {
-            my $t = 
+            my $t =
 "This sequence was generated from part of bacterial clone contigs
 constructed by the MHC Haplotype Consortium and collaborators.
 Further information can be found at
@@ -449,4 +444,5 @@ __END__
 =head1 AUTHOR
 
 James Gilbert B<email> jgrg@sanger.ac.uk
+
 
