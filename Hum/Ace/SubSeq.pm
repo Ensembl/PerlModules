@@ -162,13 +162,17 @@ sub process_ace_start_end_transcript_seq {
     }
     $self->strand($strand);
     
+    if (my $otter_id = $t_seq->at('Otter_id[1]')) {
+        $self->otter_id($otter_id->name);
+    }
+    
     # Make the exons
     foreach ($t_seq->at('Structure.From.Source_exons[1]')) {
         
         # Make an Exon object
         my $exon = Hum::Ace::Exon->new;
         
-        my ($x, $y) = map $_->name, $_->row;
+        my ($x, $y, $ott) = map $_->name, $_->row;
         die "Missing coordinate in '$t_seq' : start='$x' end='$y'\n"
             unless $x and $y;
         if ($strand == 1) {
@@ -183,6 +187,8 @@ sub process_ace_start_end_transcript_seq {
         }
         $exon->start($x);
         $exon->end($y);
+        $exon->otter_id($ott);
+        
         $self->add_Exon($exon);
     }
     
@@ -235,6 +241,28 @@ sub process_ace_start_end_transcript_seq {
     $self->validate;
 }
 
+sub take_otter_ids {
+    my( $self, $old ) = @_;
+    
+    $self->otter_id($old->otter_id);
+    my @new_exons = $self->get_all_Exons;
+    my @old_exons =  $old->get_all_Exons;
+    my $j = 0;
+    for (my $i = 0; $i < @new_exons; $i++) {
+        my $n_ex = $new_exons[$i];
+        for (my $j = 0; $j < @old_exons; ) {
+            my $o_ex = $old_exons[$j];
+            if ($n_ex->overlaps($o_ex)) {
+                warn "Remapped otter id for exon\n";
+                $n_ex->otter_id($o_ex->otter_id);
+                splice(@old_exons, $j, 1);
+            } else {
+                $j++;
+            }
+        }
+    }
+}
+
 sub clone {
     my( $old ) = @_;
     
@@ -242,6 +270,7 @@ sub clone {
     my $new = ref($old)->new;
     
     # Copy scalar fields (But not is_archival!)
+    ### How to deal with Otter_id?
     foreach my $meth (qw{
         name
         clone_Sequence
@@ -326,6 +355,15 @@ sub downstream_subseq_name {
         $self->{'_downstream_subseq_name'} = $name;
     }
     return $self->{'_downstream_subseq_name'};
+}
+
+sub otter_id {
+    my( $self, $otter_id ) = @_;
+    
+    if ($otter_id) {
+        $self->{'_otter_id'} = $otter_id;
+    }
+    return $self->{'_otter_id'};
 }
 
 # Can't call this method before clone_Sequence is attached
@@ -935,6 +973,7 @@ sub ace_string {
         or confess "name not set";
     my $clone_seq   = $self->clone_Sequence
         or confess "no clone_Sequence";
+    my $ott         = $self->otter_id;
     my @exons       = $self->get_all_Exons;
     my $method      = $self->GeneMethod;
     my $locus       = $self->Locus;
@@ -984,11 +1023,15 @@ sub ace_string {
         . qq{-D Continues_as\n}
         . qq{-D Feature "polyA"\n}
         
+        # New SubSequencce object starts here
         . qq{\nSequence "$name"\n}
         . qq{Source "$clone"\n}
         . qq{Predicted_gene\n}
         ;
     
+    if ($ott) {
+        $out .= qq{Otter_id "$ott"\n};
+    }
     if ($locus) {
         my $ln = $locus->name;
         $out .= qq{Locus "$ln"\n};
@@ -1024,17 +1067,26 @@ sub ace_string {
         $out .= qq{Continues_as "$as"\n};
     }
     
+    # The exons
     if ($strand == 1) {
         foreach my $ex (@exons) {
             my $x = $ex->start - $start + 1;
             my $y = $ex->end   - $start + 1;
-            $out .= qq{Source_Exons  $x $y\n};
+            if (my $ott = $ex->otter_id) {
+                $out .= qq{Source_Exons  $x $y "$ott"\n};
+            } else {
+                $out .= qq{Source_Exons  $x $y\n};
+            }
         }
     } else {
         foreach my $ex (reverse @exons) {
             my $x = $end - $ex->end   + 1;
             my $y = $end - $ex->start + 1;
-            $out .= qq{Source_Exons  $x $y\n};
+            if (my $ott = $ex->otter_id) {
+                $out .= qq{Source_Exons  $x $y "$ott"\n};
+            } else {
+                $out .= qq{Source_Exons  $x $y\n};
+            }
         }
     }
     

@@ -44,6 +44,15 @@ sub name {
     return $self->{'_name'} || confess "name not set";
 }
 
+sub otter_id {
+    my( $self, $otter_id ) = @_;
+    
+    if ($otter_id) {
+        $self->{'_otter_id'} = $otter_id;
+    }
+    return $self->{'_otter_id'};
+}
+
 sub gene_type {
     my( $self, $gene_type ) = @_;
     
@@ -78,12 +87,15 @@ sub gene_type_prefix {
         #print STDERR $ace_locus->asString;
         $self->name($ace_locus->name);
 
+        if (my $ott = $ace_locus->at('Otter_id[1]')) {
+            $self->otter_id($ott->name);
+        }
+
         my( @pos_name );
         foreach my $pos ($ace_locus->at('Positive.Positive_sequence[1]')) {
             push(@pos_name, $pos->name);
         }
         $self->set_positive_SubSeq_names(@pos_name);
-
 
         my( $gene_type );
         foreach my $t (@type_map) {
@@ -985,6 +997,40 @@ sub get_unique_EnsEMBL_Exon {
     return $ens_exon;
 }
 
+# Needed to preserve otter_id?
+# If locus is renamed twice, then otter
+sub ace_string {
+    my( $self ) = @_;
+    
+    my $name = $self->name;
+    my $out = qq{\nLocus "$name"\n}
+        . qq{-D Otter_id\n}
+        
+        . qq{\nLocus "$name"\n};
+    
+    ### Need to add locus type and positive sequences
+    ### Deal with Polymorphic loci
+    ### Are the ?Seqence tags pointing to Clone or SubSeqences?
+    
+    if (my $ott = $self->otter_id) {
+        $out .= qq{Otter_id "$ott"\n};
+    }
+    
+    return $out;
+}
+
+#   Locus: textfield
+#   Type:  chooser
+#   Positive sequences:
+#   
+#   
+#   
+#   
+#   
+#   
+#   
+#   
+#   
 
 #sub DESTROY {
 #    my( $self ) = @_;

@@ -27,6 +27,15 @@ sub clone {
     return $new;
 }
 
+sub otter_id {
+    my( $self, $otter_id ) = @_;
+    
+    if ($otter_id) {
+        $self->{'_otter_id'} = $otter_id;
+    }
+    return $self->{'_otter_id'};
+}
+
 sub start {
     my( $self, $start ) = @_;
     

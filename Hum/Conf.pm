@@ -5,10 +5,11 @@ use strict;
 use vars qw( %humConf );
 
 # Could change user in future
-my $humpub = ( getpwnam('humpub') )[7];
-my $badger = ( getpwnam('badger') )[7];
-my $ftp    = ( getpwnam('ftp')    )[7];
-my $humace = ( getpwnam('humace') )[7];
+# _home alternates are to avoid warnings outside the sanger
+my $humpub = ( getpwnam('humpub') )[7] || 'humpub_home';
+my $badger = ( getpwnam('badger') )[7] || 'badger_home';
+my $ftp    = ( getpwnam('ftp')    )[7] || 'ftp_home';
+my $humace = ( getpwnam('humace') )[7] || 'humace_home';
 
 # List of acedb servers and ports
 my %ace_server = (
