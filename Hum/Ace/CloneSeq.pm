@@ -168,6 +168,59 @@ sub new_SubSeq_from_ace_subseq_tag {
     return $sub;    # May have zero Exons
 }
 
+#sub new_from_ace_handle_name {
+#    my( $pkg, $ace, $ace_name ) = @_;
+#
+    #my $db = $ace->db;
+
+    #my $self = $pkg->new;
+    #$self->ace_name($ace_name);
+    ## Get the DNA
+    #my $seq = $self->store_Sequence_from_ace_handle($ace);
+
+#    # These raw_queries are much faster than
+#    # fetching the whole Genome_Sequence object!
+#    $ace->raw_query("find Sequence $self_name");
+#    my $sub_list = $ace->raw_query('show -a Subsequence');
+#    $sub_list =~ s/\0//g;   # Remove any nulls
+#    
+#    while ($sub_list =~ /^Subsequence\s+"([^"]+)"\s+(\d+)\s+(\d+)/mg) {
+#        my($name, $start, $end) = ($1, $2, $3);
+#        eval{
+#            my $t_seq = $ace->fetch(Sequence => $name)
+#                or die "No such Subsequence '$name'\n";
+#            my $sub = Hum::Ace::SubSeq
+#                ->new_from_name_start_end_transcript_seq(
+#                    $name, $start, $end, $t_seq,
+#                    );
+#            $sub->clone_Sequence($seq);
+#            
+#            # Flag that the sequence is in the db
+#            $sub->is_archival(1);
+#            
+#            if (my $mt = $t_seq->at('Method[1]')) {
+#                if (my $meth = $self->get_GeneMethod($mt->name)) {
+#                    $sub->GeneMethod($meth);
+#                }
+#            }
+#            
+#            # Is there a Locus attached?
+#            if (my $locus_tag = $t_seq->at('Visible.Locus[1]')) {
+#                my $locus = $self->get_Locus($locus_tag->name);
+#                $sub->Locus($locus);
+#            } else {
+#                #warn "No Locus attached to SubSeq '$name'\n";
+#            }
+#            
+#            $self->add_SubSeq($sub);
+#        };
+#        if ($@) {
+#            confess($@, "Error fetching '$name' ($start - $end):\n");
+#        }
+#    }
+#    return $self;
+#}
+
 sub Sequence {
     my( $self, $seq ) = @_;
     

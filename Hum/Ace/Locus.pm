@@ -147,15 +147,11 @@ sub is_complete {
 sub make_EnsEMBL_Gene {
     my( $self ) = @_;
     
-    my $now = time();
     my $gene_name = $self->name;
     
     # Make a new EnsEMBL Gene object
     my $gene = Bio::EnsEMBL::Gene->new;
-    $gene->id($self->name);
-    $gene->created($now);
-    $gene->modified($now);
-    $gene->version(1);
+    $gene->stable_id($self->name);
     
     my $gene_type = $self->gene_type_prefix . $self->gene_type;
     $gene->type($gene_type);
@@ -390,16 +386,11 @@ sub make_transcript {
     
     # Make the transcript
     my $trans = Bio::EnsEMBL::Transcript->new;
-    my $now = time();
-    $trans->id($t_name);
-    $trans->created($now);
-    $trans->modified($now);
-    $trans->version(1);
+    $trans->stable_id($t_name);
     
     # Make the translation
     my $translation = Bio::EnsEMBL::Translation->new;
-    $translation->id($t_name);  # Same name as transcript
-    $translation->version(1);
+    $translation->stable_id($t_name);  # Same name as transcript
     
     # The orientation of the clone on the golden path (chromosome)
     my( $golden_orientation );
@@ -408,7 +399,7 @@ sub make_transcript {
     my( @golden_exons, %exon_t_start, %exon_t_end );
     for (my $i = 0; $i < @locus_clones; $i++) {
         my $clone = $locus_clones[$i];
-        my $clone_id = $clone->accession;
+        #my $clone_id = $clone->accession;
         my $clone_strand = $clone->golden_strand;
         my $pair  = $set->[$i] or next; # May be no exons in this clone
         my( $pair_name, $mrna, $cds ) = @$pair;
@@ -464,7 +455,7 @@ sub make_transcript {
                         
             # Make an exon for this mRNA exon
             my $ens_exon = $self->get_unique_EnsEMBL_Exon($clone, $pair_strand, $m_ex, $c_ex);
-            my $ex_id = $ens_exon->id;
+            my $ex_id = $ens_exon->stable_id;
             push(@clone_exons, $ens_exon);
 
             printf STDERR "%6d %-6d  ", $m_ex->start, $m_ex->end;
@@ -522,8 +513,8 @@ sub make_transcript {
         # Find translation start
         my( $start_exon_id, $t_start );
         foreach my $ex (@golden_exons) {
-            if ($t_start = $exon_t_start{$ex->id}) {
-                $start_exon_id = $ex->id;
+            if ($t_start = $exon_t_start{$ex->stable_id}) {
+                $start_exon_id = $ex->stable_id;
                 last;
             }
         }
@@ -532,8 +523,8 @@ sub make_transcript {
         # Find translation end
         my( $end_exon_id, $t_end );
         foreach my $ex (reverse @golden_exons) {
-            if ($t_end = $exon_t_end{$ex->id}) {
-                $end_exon_id = $ex->id;
+            if ($t_end = $exon_t_end{$ex->stable_id}) {
+                $end_exon_id = $ex->stable_id;
                 last;
             }
         }
@@ -542,7 +533,7 @@ sub make_transcript {
         # Add exons to the transcript
         my $prev_phase = -1;
         foreach my $ex (@golden_exons) {
-            my $ex_id     = $ex->id;
+            my $ex_id     = $ex->stable_id;
             my $ace_phase  = $exon_t_start{"ace_phase-$ex_id"};
 
             # Set phase 0 if this is the first coding exon
@@ -616,7 +607,7 @@ sub record_t_start_point {
     my( $self, $exon_pos, $ens_exon, $cds_exon, $strand ) = @_;
     
     my $ens_phase = $cds_exon->ensembl_phase;
-    my $ex_id     = $ens_exon->id;
+    my $ex_id     = $ens_exon->stable_id;
     
     my( $phase );
     if (defined $ens_phase) {
@@ -648,7 +639,7 @@ sub record_t_start_point {
 sub record_t_end_point {
     my( $self, $exon_pos, $ens_exon, $cds_exon, $strand ) = @_;
     
-    my $ex_id = $ens_exon->id;
+    my $ex_id = $ens_exon->stable_id;
     if ($strand == 1) {
         $exon_pos->{$ex_id} = $cds_exon->end;
     } else {
@@ -661,7 +652,7 @@ sub translation_start_add {
         
     $start = $self->exon_coord($exon, $start);
     
-    $transl->start_exon_id($exon->id);
+    $transl->start_exon($exon);
     $transl->start($start);
 }
 
@@ -670,7 +661,7 @@ sub translation_end_add {
         
     $end = $self->exon_coord($exon, $end);
     
-    $transl->end_exon_id($exon->id);
+    $transl->end_exon($exon);
     $transl->end($end);
 }
 
@@ -699,7 +690,7 @@ sub get_unique_EnsEMBL_Exon_with_phase {
 
     my( $ens_exon );
     unless ($ens_exon = $self->{'_phased_exon_hash'}{$key}) {
-        my $exon_id = $exon->id;
+        my $exon_id = $exon->stable_id;
         if ($phase == -1) {
             $exon_id .= $phase;
         } else {
@@ -707,7 +698,9 @@ sub get_unique_EnsEMBL_Exon_with_phase {
         }
         
         $ens_exon = Bio::EnsEMBL::Exon->new;
-        $ens_exon->id($exon_id);
+        $ens_exon->stable_id($exon_id);
+        ### FIXME
+        $ens_exon->contig_id();
         $ens_exon->phase($phase);
         foreach my $field (qw{
             start
@@ -735,7 +728,6 @@ sub get_unique_EnsEMBL_Exon {
     my $clone_name = $clone->accession;
     my $ens_contig = $clone->EnsEMBL_Contig;
     my $ens_contig_id = $ens_contig->id;
-    my $now = time();
     
     my $start = $exon->start;
     my $end   = $exon->end;
@@ -753,14 +745,11 @@ sub get_unique_EnsEMBL_Exon {
         
         # Make a shiny new exon
         $ens_exon = Bio::EnsEMBL::Exon->new;
-        $ens_exon->id($self->name .'-'. $exon_number);
-        $ens_exon->created($now);
-        $ens_exon->modified($now);
-        $ens_exon->version(1);
+        $ens_exon->stable_id($self->name .'-'. $exon_number);
         $ens_exon->start($start);
         $ens_exon->end($end);
         $ens_exon->strand($strand);
-        $ens_exon->contig_id($ens_contig_id);
+        $ens_exon->contig_id($ens_contig->internal_id);
         
         # Cache in the hash
         $self->{'_exon_hash'}{$key} = $ens_exon;

@@ -25,7 +25,10 @@ use Hum::AnaStatus::EnsAnalysis;
     }
     
     sub disconnect_all_ensembl_dbs {
+        # Explicitly destroy data structure, to try
+        # and work around memory cycle in DBAdaptor
         foreach my $db (values %ens_db_cache) {
+            $db->_db_handle->disconnect;
             foreach my $key (keys %$db) {
                 $db->{$key} = undef;
             }
