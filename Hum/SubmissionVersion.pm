@@ -26,7 +26,7 @@ sub check_version{
 
 	# check schema (fatal if different)
 	my $rsv=$meta{'schema_version'};
-	my $lsv='0.11';
+	my $lsv='0.21';
 	if($rsv ne $lsv){
 	    print<<ENDOFTEXT;
 
@@ -45,7 +45,7 @@ ENDOFTEXT
 
 	# check editor (warning if different)
 	my $rev=$meta{'editor_version'};
-	my $lev='0.11';
+	my $lev='0.21';
 	if($rev ne $lev){
 	    print<<ENDOFTEXT;
 
