@@ -20,7 +20,10 @@ use vars qw( @ISA @EXPORT_OK );
     );
 
 sub mirror_copy_dir {
-    my( $from, $to ) = @_;
+    my( $from, $to, $flag_make_link ) = @_;
+
+    # if flag_make_link is set, and a file is a link
+    # makes a new link rather than a duplicate file
     
     my %from_dir = dir_hash($from);
     my @utime = (stat($from))[8,9];
@@ -34,9 +37,9 @@ sub mirror_copy_dir {
         my $to_file   = "$to/$f";
         if ($from_dir{$f} eq 'd') {
             # File is a directory
-            mirror_copy_dir($from_file, $to_file);
+            mirror_copy_dir($from_file, $to_file, $flag_make_link );
         } else {
-            mirror_copy_file($from_file, $to_file);
+            mirror_copy_file($from_file, $to_file, 0, $flag_make_link );
         }
     }
     
@@ -78,28 +81,59 @@ sub dir_hash {
 }
 
 sub mirror_copy_file {
-    my( $from_file, $to_file, $u_time ) = @_;
+    my( $from_file, $to_file, $u_time, $flag_make_link ) = @_;
     
     my(@utime);
     # Check that the from file exists
+    # (if file is a link then missing file generates a warning only)
     my $from_size = 0;
-    if (-e $from_file) {
-        ($from_size,@utime) = (stat(_))[7,8,9];
+
+    # set flag if file is a link and link creating mode
+    my $flag_link;
+    if ($flag_make_link && -l $from_file) {
+	$flag_link=1;
+    }
+
+    my $flag_link_missing;
+    if(!-e $from_file) {
+	if($flag_link){
+	    # warning only - perfectly valid to copy dead links
+	    carp "Source file of link '$from_file' missing - continue\n";
+	    $flag_link_missing=1;
+	}else{
+	    # fatal - disk error or disk change
+	    confess "No such source file '$from_file'\n";
+	}
+    }
+
+    if($flag_link){
+	# don't check file if this is a link, but make an identical link
+	# on remote file system
+	# NOTE THIS WILL NOT WORK WITH SOME RELATIVE LINKS
+	# but this is tested for and fails
+	my $link=readlink($from_file);
+	symlink($link,$to_file);
+	if(!$flag_link_missing && !-e $to_file){
+	    # fatal - link copy failed
+	    confess "Link no longer points to source file '$from_file'\n";
+	}
     } else {
-        confess "No such source file '$from_file'\n";
-    }
+	# compare previous file, if exists
+        ($from_size,@utime) = (stat(_))[7,8,9];
     
-    my $to_size = (stat($to_file))[7] || 0;
-    
-    if ($from_size == 0 and $from_size != $to_size) {
-        confess "Source file '$from_file' is empty\n",
+	my $to_size = (stat($to_file))[7] || 0;
+	
+	# don't think this should ever happen
+	if ($from_size == 0 and $from_size != $to_size) {
+	    confess "Source file '$from_file' is empty\n",
             "but '$to_file' is not ('$to_size')";
-    }
+	}
     
-    unless ($to_size == $from_size
-        and identical_file_checksums($from_file, $to_file)) {
-        # Copy file accross, and check copy
-        copy_and_check_file($from_file, $to_file);
+	unless ($to_size == $from_size
+		and identical_file_checksums($from_file, $to_file)) {
+	    # Copy file across, and check copy
+	    copy_and_check_file($from_file, $to_file);
+	}
     }
     
     # Preserve timestamp on file
