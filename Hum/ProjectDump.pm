@@ -898,7 +898,7 @@ sub vector_ends {
 		    next VECTOR_END;
 	        }
 	    }
-
+            
             $pdmp->{'_vector_ends'}{$contig}{$vec_end} = $contig_end;
         }
     }
@@ -1224,7 +1224,7 @@ sub record_contig_chains {
 sub fasta_file_path {
     my( $pdmp ) = @_;
     
-    my $dir = $pdmp->file_file or confess "file_file not set";
+    my $dir = $pdmp->file_path;
     my $seq_name = $pdmp->sequence_name;
     my $file = "$dir/$seq_name";
     
@@ -1270,7 +1270,7 @@ sub delete_embl_file {
 sub delete_quality_file {
     my( $pdmp ) = @_;
     
-    return unlink($pdmp->embl_file_path);
+    return unlink($pdmp->quality_file_path);
 }
 
 sub read_fasta_file {
