@@ -321,6 +321,7 @@ sub analysis_directory {
             WHERE ana_seq_id = ?
             });
         $sth->execute($new_ana_dir, $self->ana_seq_id);
+        $self->{'_analysis_directory'} = $new_ana_dir;
         return 1;
     }
 }
@@ -334,6 +335,27 @@ sub analysis_priority {
         $self->{'_analysis_priority'} = $analysis_priority;
     }
     return $self->{'_analysis_priority'};
+}
+
+{
+    my( $sth );
+    
+    sub set_analysis_priority {
+        my( $self, $new_priority ) = @_;
+        
+        confess "No new analysis_priority given" unless $new_priority;
+        if (my $old_priority = $self->analysis_priority) {
+            return if $old_priority == $new_priority;
+        }
+        $sth ||= prepare_statement(q{
+            UPDATE ana_sequence
+            SET analysis_priority = ?
+            WHERE ana_seq_id = ?
+            });
+        $sth->execute($new_priority, $self->ana_seq_id);
+        $self->{'_analysis_priority'} = $new_priority;
+        return 1;
+    }
 }
 
 sub sequence_version {
