@@ -71,6 +71,8 @@ BEGIN {
 	my $pos = 0;
 	my @contig_order; # [contig name, start pos, end pos]
 
+	# $pdmp->get_contig_order();
+
         foreach my $contig ($pdmp->contig_list) {
             my $con = $pdmp->DNA($contig);
 	    my $contig_length = length($$con);
