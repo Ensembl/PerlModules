@@ -5,7 +5,14 @@ package Hum::AnaStatus::AceFile;
 
 use strict;
 
-
+sub new {
+    my ( $pkg, $seq_name) = @_;
+    
+    my $self = bless {}, $pkg;
+    
+   # return $self;
+        
+}
 
 
 1;
