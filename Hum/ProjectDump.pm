@@ -1221,12 +1221,62 @@ sub record_contig_chains {
     }
 }
 
+sub fasta_file_path {
+    my( $pdmp ) = @_;
+    
+    my $dir = $pdmp->file_file or confess "file_file not set";
+    my $seq_name = $pdmp->sequence_name;
+    my $file = "$dir/$seq_name";
+    
+    return $file;
+}
+
+sub embl_file_path {
+    my( $pdmp ) = @_;
+    
+    return $pdmp->fasta_file_path .'.embl';
+}
+
+sub quality_file_path {
+    my( $pdmp ) = @_;
+    
+    return $pdmp->fasta_file_path .'.qual';
+}
+
+sub delete_all_sequence_files {
+    my( $pdmp ) = @_;
+    
+    $pdmp->_set_not_current;
+    
+    my $total = 0;
+    $total += $pdmp->delete_fasta_file;
+    $total += $pdmp->delete_quality_file;
+    $total += $pdmp->delete_embl_file;
+    return $total;
+}
+
+sub delete_fasta_file {
+    my( $pdmp ) = @_;
+    
+    return unlink($pdmp->fasta_file_path);
+}
+
+sub delete_embl_file {
+    my( $pdmp ) = @_;
+    
+    return unlink($pdmp->embl_file_path);
+}
+
+sub delete_quality_file {
+    my( $pdmp ) = @_;
+    
+    return unlink($pdmp->embl_file_path);
+}
+
 sub read_fasta_file {
     my( $pdmp ) = @_;
     
-    my $dir = $pdmp->file_path or confess "file_path not set";
-    my $seq_name = $pdmp->sequence_name;
-    my $file = "$dir/$seq_name";
+    my $file = $pdmp->fasta_file_path;
     
     local *FASTA;
     open FASTA, $file or confess "Can't read '$file' : $!";
@@ -1258,8 +1308,7 @@ sub write_fasta_file {
     
     my $seq_name = $pdmp->sequence_name;
     my $accno    = $pdmp->accession || '';
-    my $dir = $pdmp->file_path;
-    my $file = "$dir/$seq_name";
+    my $file = $pdmp->fasta_file_path;
     my $phase = $pdmp->htgs_phase;
     
     warn "Phase = $phase\n";
@@ -1295,8 +1344,7 @@ sub write_quality_file {
     
     my $seq_name = $pdmp->sequence_name;
     my $accno    = $pdmp->accession || '';
-    my $dir = $pdmp->file_path;
-    my $file = "$dir/$seq_name.qual";
+    my $file = $pdmp->quality_file_path;
     
     my $N = 30; # Number of quality values per line
     my $pat = 'A3' x $N;
@@ -1337,9 +1385,7 @@ sub write_quality_file {
 sub read_embl_file {
     my( $pdmp ) = @_;
     
-    my $seq_name = $pdmp->sequence_name;
-    my $dir = $pdmp->file_path or confess "file_path not set";
-    my $file = "$dir/$seq_name.embl";
+    my $file = $pdmp->embl_file_path;
     
     
     if (-e $file) {
@@ -1357,10 +1403,7 @@ sub read_embl_file {
 sub write_embl_file {
     my( $pdmp ) = @_;
 
-    my $seq_name = $pdmp->sequence_name;
-    my $dir = $pdmp->file_path or confess "file_path not set";
-    my $file = "$dir/$seq_name.embl";
-    
+    my $file = $pdmp->embl_file_path;    
     my $embl = $pdmp->embl_file;
     
     local *EMBL;
@@ -1469,7 +1512,7 @@ sub read_accession_data {
         my $time = time;
         
         my $seq_name = $pdmp->sequence_name or confess "sequence_name not set";
-        my $em_file = $pdmp->file_path .'/'. $seq_name .'.embl';
+        my $em_file = $pdmp->embl_file_path;
         confess "No such file '$em_file'" unless -e $em_file;
         
         my $ebi_ftp = 'Hum::EBI_FTP'->new();
@@ -1671,14 +1714,8 @@ BEGIN {
         my( $pdmp ) = @_;
 
         my $sub_db = sub_db();
-        my $insert = $sub_db->prepare(q{
-            INSERT INTO project_dump(is_current,}
-            . join(',', @fields)
-            . q{) VALUES ('Y',?,FROM_UNIXTIME(?),?,?)}
-            );
-        $insert->execute(map $pdmp->$_(), @fields);
         
-        # Now unset is_current for previous rows
+        # Unset is_current for previous rows
         my $update = $sub_db->prepare(q{
             UPDATE project_dump
             SET is_current = 'N'
@@ -1686,10 +1723,30 @@ BEGIN {
               AND seq_id != ?
             });
         $update->execute($pdmp->sanger_id, $pdmp->seq_id);
+
+        my $insert = $sub_db->prepare(q{
+            INSERT INTO project_dump(is_current,}
+            . join(',', @fields)
+            . q{) VALUES ('Y',?,FROM_UNIXTIME(?),?,?)}
+            );
+        $insert->execute(map $pdmp->$_(), @fields);
     }
 }
 
-
+sub _set_not_current {
+    my( $pdmp ) = @_;
+    
+    my $sub_db = sub_db();
+    
+    # Now unset is_current for previous rows
+    my $update = $sub_db->prepare(q{
+        UPDATE project_dump
+        SET is_current = 'N'
+        WHERE sanger_id = ?
+          AND seq_id = ?
+        });
+    $update->execute($pdmp->sanger_id, $pdmp->seq_id);
+}
 
 
 BEGIN {

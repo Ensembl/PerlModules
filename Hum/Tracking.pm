@@ -726,19 +726,6 @@ format (eg: "J. Smith").
         }
         $get_team_leader->execute($project);
 
-        my $query = qq(
-                        SELECT p.forename
-                          , p.surname
-                        FROM project_owner o
-                          , team t
-                          , person p
-                        WHERE o.teamname = t.teamname
-                          AND t.teamleader = p.id_person
-                          AND o.projectname = '$project'
-                        ORDER BY o.owned_from DESC
-                        );
-        my $ans = ref_from_query( $query );
-
         if (my( $forename, $surname ) = $get_team_leader->fetchrow) {
             # Abbreviate forename
             $forename =~ s/^(.).+/$1\./ or return;

@@ -175,7 +175,6 @@ success, but is FATAL on failure.
 =head2 mirror_copy_dir
 
     mirror_copy_dir($from_dir, $to_dir);
-    mirror_copy_dir($from_dir, $to_dir);
 
 Recursively copies all directories and files from
 directory C<$from_dir> to C<$to_dir> using
