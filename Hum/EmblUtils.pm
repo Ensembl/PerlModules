@@ -131,7 +131,7 @@ BEGIN {
         my $species = lc shift;
         
         if (my $latin = $class{$species}) {
-            return join('', $latin->[0], $latin->[1] );
+            return join(' ', $latin->[0], $latin->[1] );
         } else {
             confess "I don't know about '$species'";
         }
