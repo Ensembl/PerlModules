@@ -4,6 +4,7 @@ package Hum::ProjectDump::EMBL;
 use strict;
 use Carp;
 use vars qw( @ISA );
+use Hum::Tracking qw( is_shotgun_complete );
 
 @ISA = 'Hum::ProjectDump';
 
@@ -156,6 +157,7 @@ sub embl_checksum {
                         'E-mail enquiries: humquery@sanger.ac.uk',
                         'Clone requests: clonerequest@sanger.ac.uk');
         $embl->newXX;
+        
         # CC   -------------- Genome Center
         # CC   Center: Whitehead Institute/ MIT Center for Genome Research
         # CC   Center code: WIBR
@@ -188,6 +190,11 @@ sub embl_checksum {
         # CC   *     9546 9645: gap of      100 bp
         # CC   *     9646    20744: contig of 11099 bp in length
         # CC   *    20745 20844: gap of      100 bp
+        
+        my $draft_or_unfinished = is_shotgun_complete($project)
+            ? 'working draft'
+            : 'unfinished';
+        
         $embl->newCC->list(
             '-------------- Genome Center',
             'Center: Sanger Centre',
@@ -203,17 +210,54 @@ sub embl_checksum {
             $pdmp->make_consensus_length_report(),
             $pdmp->make_q20_depth_report(),
             '--------------',
-            '* NOTE: This is a \'working draft\' sequence. It currently',
-            "* consists of ". scalar(@contig_pos) ." contigs. The true order of the pieces",
-            '* is not known and their order in this sequence record is',
-            '* arbitrary. Gaps between the contigs are represented as',
-            '* runs of N, but the exact sizes of the gaps are unknown.',
-            '* This record will be updated with the finished sequence',
-            '* as soon as it is available and the accession number will',
-            '* be preserved.',
+            "* NOTE: This is a '$draft_or_unfinished' sequence. It currently",
+            "* consists of ". scalar(@contig_pos) ." contigs. The true order of the pieces is",
+            "* not known and their order in this sequence record is",
+            "* arbitrary.  Some order and orientation information can",
+            "* tentatively be deduced from paired sequencing reads which",
+            "* have been identified to span the gap between two",
+            "* contigs.  These are labelled as part of the same",
+            "* 'fragment_chain', and the order and relative orientation",
+            "* of the pieces within a fragment_chain is reflected in",
+            "* this file.  Gaps between the contigs are represented as",
+            "* runs of N, but the exact sizes of the gaps are unknown.",
+            "* This record will be updated with the finished sequence as",
+            "* soon as it is available and the accession number will be",
+            "* preserved.",
+
+
+            # Old comment was:
+            #'* is not known and their order in this sequence record is',
+            #'* arbitrary. Gaps between the contigs are represented as',
+            #'* runs of N, but the exact sizes of the gaps are unknown.',
+            #'* This record will be updated with the finished sequence',
+            #'* as soon as it is available and the accession number will',
+            #'* be preserved.',
+            
             $pdmp->make_fragment_summary($embl, $number_Ns, @contig_pos),
-        );
-        
+        );   
+             
+             
+=pod         
+
+  NOTE: This is a 'working draft' sequence. It currently
+  consists of 10 contigs.  The true order of the pieces is
+  not known and their order in this sequence record is
+  arbitrary.  Some order and orientation information can
+  tentatively be deduced from paired sequencing reads which
+  have been identified to span the gap between two
+  contigs.  These are labelled as part of the same
+  'fragment_chain', and the order and relative orientation
+  of the pieces within a fragment_chain is reflected in
+  this file.  Gaps between the contigs are represented as
+  runs of N, but the exact sizes of the gaps are unknown.
+  This record will be updated with the finished sequence as
+  soon as it is available and the accession number will be
+  preserved.
+
+=cut
+
+
 #        my $unfin_cc = $embl->newCC;
 #        $unfin_cc->list(
 #"IMPORTANT: This sequence is unfinished and does not necessarily

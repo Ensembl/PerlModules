@@ -39,7 +39,6 @@ use vars qw( @ISA @EXPORT_OK );
                 finished_accession
                 fishData
                 is_finished
-                is_htgs_draft
                 is_shotgun_complete
                 library_and_vector
                 localisation_data
