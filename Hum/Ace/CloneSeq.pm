@@ -10,6 +10,7 @@ use Hum::Sequence::DNA;
 use Hum::Ace::Locus;
 use Hum::Ace::GeneMethod;
 use Hum::Ace::SubSeq;
+use Hum::Ace::AceText;
 
 sub new {
     my( $pkg ) = shift;
@@ -175,6 +176,27 @@ sub trim_SubSeq_to_golden_path {
     return $sub;    # May have zero Exons
 }
 
+sub set_golden_start_end_from_NonGolden_Features {
+    my( $self, $ace ) = @_;
+    
+    my $seq = $self->Sequence or confess "Sequence not set";
+    my $length = $seq->sequence_length;
+    
+    my $clone_name = $self->ace_name;
+    $ace->raw_query("find Sequence $clone_name");
+    my $feat_list = $ace->raw_query('show -a Feature');
+    my $txt = Hum::Ace::AceText->new($feat_list);
+    foreach my $f ($txt->get_values('Feature."?NonGolden')) {
+        my ($start, $end) = @$f;
+        if ($start == 1) {
+            $self->golden_start($end + 1);
+        }
+        elsif ($end == $length) {
+            $self->golden_end($start - 1);
+        }
+    }
+}
+
 sub express_data_fetch {
     my( $self, $ace ) = @_;
 
@@ -182,17 +204,20 @@ sub express_data_fetch {
     
     # Get the DNA
     my $seq = $self->store_Sequence_from_ace_handle($ace);
+    
+    # Get start and end on golden path
+    $self->set_golden_start_end_from_NonGolden_Features($ace);
 
     # These raw_queries are much faster than
     # fetching the whole Genome_Sequence object!
     $ace->raw_query("find Sequence $clone_name");
     my $sub_list = $ace->raw_query('show -a Subsequence');
-    $sub_list =~ s/\0//g;   # Remove any nulls
+    my $txt = Hum::Ace::AceText->new($sub_list);
     
     my( $err, %name_method, %name_locus );
-    while ($sub_list =~ /^Subsequence\s+"([^"]+)"\s+(\d+)\s+(\d+)/mg) {
+    foreach my $sub_txt ($txt->get_values('Subsequence')) {
         eval{
-            my($name, $start, $end) = ($1, $2, $3);
+            my($name, $start, $end) = @$sub_txt;
             my $t_seq = $ace->fetch(Sequence => $name)
                 or die "No such Subsequence '$name'\n";
             my $sub = Hum::Ace::SubSeq

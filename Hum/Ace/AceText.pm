@@ -12,6 +12,7 @@ sub new {
     my( $pkg, $txt ) = @_;
 
     $txt =~ s/\s+$/\n/s;
+    $txt =~ s/\0//g;    # Remove pesky nulls
     return bless \$txt, $pkg;
 }
 
@@ -20,29 +21,6 @@ sub ace_string {
     
     return $$self;
 }
-
-
-#sub ace_class_and_name {
-#    my( $self ) = @_;
-#    
-#    my ($class, $name) = $self =~ /^(\w+)\s+:\s+"?([^"]+)/m
-#        or confess qq{Can\'t see 'Class : "name"' specifier};
-#    return $class, $name;
-#}
-#sub ace_class {
-#    my( $self ) = @_;
-#    
-#    my ($class) = $self->class_and_name;
-#    return $class;
-#}
-#
-#sub name {
-#    my( $self ) = @_;
-#    
-#    my ($name) = ($self->class_and_name)[1];
-#    return $name;
-#}
-
 
 sub get_values {
     my( $self, $tag_path ) = @_;
@@ -131,6 +109,8 @@ sub _quoted_ace_line {
         
         my( $pat );
         unless ($pat = $pattern_cache{$tag_path}) {
+            confess "tag path '$tag_path' ends with non-word character"
+                if $tag_path =~ /\W$/;
             $offset += $tag_path =~ s/\./\\s+/g;
             #warn "Tag path = '$tag_path'\n";
             $pat = $pattern_cache{$tag_path} = [qr/^($tag_path\b.*?)\s*$/im, $offset];
@@ -158,7 +138,7 @@ __END__
 
     # Get description, which is 2 tags deep in ace file
     foreach my $desc ($txt->get_values('EMBL_dump_info.DE_line')) {
-        print "desc = 'desc'\n";
+        print "desc = '$desc->[0]'\n";
     }
 
     # Count how many EST matches are recorded
