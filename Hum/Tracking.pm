@@ -546,11 +546,16 @@ sub fishData {
                                 ));
     my( $map );
     if (@$ans) {
-        $map = fishParse( $ans->[0][0] )
-	    or warn "Can't parse fish tag [ $ans->[0][0] ]\n";
+        if ($map = $ans->[0][0]) {
+            $map = fishParse( $map ) or warn "Can't parse fish tag ('$map')\n";
+        }
     }
-
-    return( $map );
+    
+    if ($map) {
+        return $map;
+    } else {
+        return;
+    }
 }
 
 sub fishParse {

@@ -307,7 +307,7 @@ BEGIN {
 sub read_gap_contigs {
     my( $pdmp ) = @_;
     my $db_name  = uc $pdmp->project_name;
-    my $db_dir   = $pdmp->online_path;
+    my $db_dir   = $pdmp->online_path || confess "No online path";
     
     local *GAP2CAF;
     local $/ = ""; # Paragraph mode for reading caf file
@@ -510,7 +510,7 @@ sub read_tracking_details {
         WHERE c_dict.id_dict = c.chromosome
           AND c.clonename = cp.clonename
           AND cp.projectname = p.projectname
-          AND p.id_online = o.id_online
+          AND p.id_online = o.id_online (+)
           AND p.projectname = '$project'
     };
     my $project_details = $dbh->prepare($query);
