@@ -93,6 +93,15 @@ sub is_complete {
     return $self->{'_is_complete'} || 0;
 }
 
+sub species_name {
+    my( $self, $species_name ) = @_;
+    
+    if (defined $species_name) {
+        $self->{'_species_name'} = $species_name
+    }
+    return $self->{'_species_name'} || 0;
+}
+
 sub get_EnsAnalysisDB {
     my( $self ) = @_;
     
@@ -102,6 +111,15 @@ sub get_EnsAnalysisDB {
         ->get_cached_by_ensembl_db_id($db_id);
 }
 
+sub get_SpeciesGeneBuildDB {
+    my( $self ) = @_;
+    
+    my $species_name = $self->species_name
+        or confess "species name not set";
+    return Hum::AnaStatus::EnsAnalysisDB
+        ->get_cached_by_species_name($species_name);
+}
+
 sub get_EnsEMBL_VirtualContig_of_contig {
     my( $self ) = @_;
     
@@ -109,6 +127,19 @@ sub get_EnsEMBL_VirtualContig_of_contig {
         or confess "ensembl_contig_id not set";
     return $self
         ->get_EnsAnalysisDB
+        ->db_adaptor
+        ->get_StaticGoldenPathAdaptor
+        ->fetch_VirtualContig_of_contig($contig_id, 0);
+}
+
+
+sub get_GeneBuild_VirtualContig_of_contig {
+    my( $self ) = @_;
+    
+    my $contig_id = $self->ensembl_contig_id
+        or confess "ensembl_contig_id not set";
+    return $self
+        ->get_SpeciesGeneBuildDB
         ->db_adaptor
         ->get_StaticGoldenPathAdaptor
         ->fetch_VirtualContig_of_contig($contig_id, 0);
