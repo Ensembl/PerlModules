@@ -133,7 +133,7 @@ BEGIN {
         if (my $latin = $class{$species}) {
             return join('', $latin->[0], $latin->[1] );
         } else {
-            return;
+            confess "I don't know about '$species'";
         }
     }
 }
