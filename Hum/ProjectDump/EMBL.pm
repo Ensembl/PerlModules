@@ -352,6 +352,16 @@ sub add_FT_entries {
                 confess "No remark for institute '$inst'";
             }
         }
+        
+        ## Waiting for official wording (if any):
+        #
+        #if ($pdmp->species eq 'Mouse') {
+        #    $embl->newCC->list(
+        #        'Sequence data from version 1 or 2 of the Mouse Genome Sequencing',
+        #        'Consortium whole genome shotgun may have been used to finish this sequence',
+        #    );
+        #    $embl->newXX;
+        #}
     }
 }
 
@@ -373,7 +383,7 @@ sub add_FT_entries {
         my( $pdmp ) = @_;
         
         my( $genome_center_lines );
-        foreach my $num ($pdmp->funded_by, $pdmp->sequenced_by, 5) {
+        foreach my $num (grep defined($_), $pdmp->funded_by, $pdmp->sequenced_by, 5) {
             last if $genome_center_lines = $sequencing_center{$num};
         }
         confess "No Genome Center text found" unless $genome_center_lines;

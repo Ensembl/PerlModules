@@ -81,7 +81,7 @@ Methods are fatal on failure.
 
 =item new
 
-Returns a new ftp connection to 'ftp.ebi.ac.uk',
+Returns a new ftp connection to 'ftp1.ebi.ac.uk',
 having logged in with the B<login> and
 B<password> specified in the I<~/.netrc> file. 
 (A differnt machine name may be provided as an

@@ -14,6 +14,29 @@ sub new {
     return bless \$txt, $pkg;
 }
 
+sub ace_class_and_name {
+    my( $self ) = @_;
+    
+    my ($class, $name) = $self =~ /^(\w+)\s+:\s+"?([^"]+)/m
+        or confess qq{Can\'t see 'Class : "name"' specifier};
+    return $class, $name;
+}
+
+sub ace_class {
+    my( $self ) = @_;
+    
+    my ($class) = $self->class_and_name;
+    return $class;
+}
+
+sub name {
+    my( $self ) = @_;
+    
+    my ($name) = ($self->class_and_name)[1];
+    return $name;
+}
+
+
 sub get_values {
     my( $self, $tag_path ) = @_;
     
@@ -37,6 +60,13 @@ sub count_tag {
         $count++;
     }
     return $count;
+}
+
+sub delete_tag {
+    my( $self, $tag_path ) = @_;
+    
+    my ($pat) = _make_pattern_and_offset($tag_path);
+    $$self =~ s/$pat\n//img;
 }
 
 {
@@ -116,6 +146,34 @@ separated by a dot.  (See the
 
 Counts the number of times the given tag occurs
 in the ace text.
+
+=item delete_tag
+
+Deletes all occurences of the tag from the text.
+
+=item ace_class_and_name
+
+    my ($class, $name) = $txt->ace_class_and_name;
+
+Returns the acedb class and the name of the
+object from the first specifier found in the
+text.  This relies on a specifier of the format:
+
+  Class : "name"
+
+existing in the text, and is fatal if this
+doesn't exist.
+
+=item ace_class
+
+Returns the acedb class from the object, as in
+the ace_class_and_name method.
+
+=item name
+
+Returns the acedb name from the object, as in the
+ace_class_and_name method.
+
 
 =back
 

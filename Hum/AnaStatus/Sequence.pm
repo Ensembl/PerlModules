@@ -192,6 +192,62 @@ sub new_from_accession {
     return $pkg->new_from_sequence_name($seq_name);
 }
 
+sub fetch_old_by_ana_seq_id {
+    my( $pkg, $asid ) = @_;
+    
+    my $sth = prepare_statement(qq{
+        SELECT a.analysis_directory
+          , a.analysis_priority
+          , a.seq_id
+          , a.ana_seq_id
+          , a.db_prefix
+          , s.sequence_name
+          , s.embl_checksum
+          , s.sequence_version
+          , person.annotator_uname
+          , sc.chr_name
+          , sc.species_name
+        FROM sequence s
+          , ana_sequence a
+          , species_chromosome sc
+        LEFT JOIN ana_sequence_person person
+          ON a.ana_seq_id = person.ana_seq_id
+        WHERE s.seq_id = a.seq_id
+          AND s.chromosome_id = sc.chromosome_id
+          AND a.ana_seq_id = $asid
+        });
+    $sth->execute;
+    
+    my ( $analysis_directory,
+         $analysis_priority,
+         $seq_id,
+         $ana_seq_id,
+         $db_prefix,
+         $sequence_name,
+         $embl_checksum,
+         $sequence_version,
+         $annotator_uname,
+         $chr_name,
+         $species_name ) = $sth->fetchrow;
+
+    my $self = $pkg->new;
+
+    $self->analysis_directory($analysis_directory);
+    $self->analysis_priority($analysis_priority);
+    $self->seq_id($seq_id);
+    $self->ana_seq_id($ana_seq_id);
+    $self->db_prefix($db_prefix);
+    $self->sequence_name($sequence_name);
+    $self->embl_checksum($embl_checksum);
+    $self->sequence_version($sequence_version);
+    $self->annotator_uname($annotator_uname);
+    $self->chr_name($chr_name);
+    $self->species_name($species_name);
+            
+    # Return a new Hum::AnaStatus::Sequence object
+    return $self;
+}
+
 sub ace_database {
     my( $self ) = @_;
 
