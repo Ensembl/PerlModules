@@ -134,11 +134,39 @@ sub find_end_overlap {
     elsif ($seq_end == $hit_end) {
         return $seq_end;
     } else {
-       # If there is a gap between the hits,
-       # we could look for the features
-       # that best cover the gap.
-       return $self->merge_features($seq_end, $hit_end);
+        # If the end features overlap on either sequence
+        # then choose the feature that is closest to the
+        # ends of both sequences.
+        if ($seq_end->seq_overlaps($hit_end) or $seq_end->hit_overlaps($hit_end)) {
+            return $self->choose_feature_lowest_end_distance(
+                $query->sequence_length, $seq_end,
+              $subject->sequence_length, $hit_end,
+              );
+        } else {
+            # There is a gap between feartures, so merge them
+            # to produce a single feature.
+            return $self->merge_features($seq_end, $hit_end);
+        }
     }
+}
+
+sub choose_feature_lowest_end_distance {
+    my( $self, $seq_length, $seq_end, $hit_length, $hit_end ) = @_;
+    
+    my $seq_distance = $self->min_end_distance($seq_end, $seq_length, $hit_length);
+    my $hit_distance = $self->min_end_distance($hit_end, $seq_length, $hit_length);
+    return $seq_distance < $hit_distance ? $seq_end : $hit_end;
+}
+
+sub min_end_distance {
+    my( $self, $feat, $seq_length, $hit_length ) = @_;
+    
+    my @seq_dist = $end_distances{'seq'}->($feat, $seq_length);
+    my @hit_dist = $end_distances{'hit'}->($feat, $hit_length);
+    
+    my $min_seq = $seq_dist[0] < $seq_dist[1] ? $seq_dist[0] : $seq_dist[1];
+    my $min_hit = $hit_dist[0] < $hit_dist[1] ? $hit_dist[0] : $hit_dist[1];
+    return $min_seq + $min_hit;
 }
 
 sub warn_match {
@@ -201,6 +229,16 @@ sub merge_features {
         $ins_count += $gap_length;
         my $percent = 100 * ($ins_count / $new_feat->seq_length);
         $new_feat->percent_insertion($percent);
+        
+        $new_feat->alignment_string(
+            $seq->alignment_string
+            . "   GAP OF $gap_length bp\n"
+            . $hit->alignment_string
+            );
+    } else {
+        $new_feat->alignment_string(
+            $seq->alignment_string . $hit->alignment_string
+            );
     }
 
     return $new_feat;

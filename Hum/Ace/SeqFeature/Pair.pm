@@ -91,6 +91,18 @@ sub homol_tag {
     return $self->{'_homol_tag'};
 }
 
+sub hit_overlaps {
+    my( $self, $other ) = @_;
+    
+    if ($self->hit_end >= $other->hit_start
+        and $self->hit_start <= $other->hit_end)
+    {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 
 1;
 

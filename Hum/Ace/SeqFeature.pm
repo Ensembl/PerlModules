@@ -92,6 +92,17 @@ sub method_name {
     return $self->{'_method_name'};
 }
  
+sub seq_overlaps {
+    my( $self, $other ) = @_;
+    
+    if ($self->seq_end >= $other->seq_start
+        and $self->seq_start <= $other->seq_end)
+    {
+        return 1;
+    } else {
+        return 0;
+    }
+}
 
 1;
 

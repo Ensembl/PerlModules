@@ -269,6 +269,7 @@ sub fetch_all_Rows {
 sub string {
     my( $self ) = @_;
     
+    # Make the header
     my $str = "##";
     foreach my $method (qw{ species chromosome subregion }) {
         if (my $data = $self->$method()) {
@@ -276,6 +277,8 @@ sub string {
         }
     }
     $str .= "\n";
+    
+    # Add the rows
     foreach my $row ($self->fetch_all_Rows) {
         $str .= $row->string;
     }

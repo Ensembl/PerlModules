@@ -124,7 +124,7 @@ sub _get_file_path {
 
         $counter++;
         my $tmp_dir_name = "/tmp/cm_tmp.$$.$counter";
-        mkdir($tmp_dir_name) or confess "Can't mkdir '$tmp_dir_name' : $!";
+        mkdir($tmp_dir_name, 0777) or confess "Can't mkdir '$tmp_dir_name' : $!";
         #warn "Made '$tmp_dir_name'";
         return $tmp_dir_name;
     }

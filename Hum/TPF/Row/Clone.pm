@@ -287,7 +287,7 @@ sub get_latest_Sequence_and_SequenceInfo {
 
         # If the ftp site get fails, then get it from our
         # online copy of EMBL in the pfetch server.
-        or $self->_embl_sequence_get 
+        or $self->_embl_sequence_get
         
         # else produce a fatal error
         or confess sprintf("Couldn't get any EMBL entries for '%s'", $self->accession);

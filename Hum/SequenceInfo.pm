@@ -29,9 +29,9 @@ sub fetch_by_accession_sv {
 }
 
 sub fetch_latest_by_accession {
-    my( $pkg, $acc, $sv ) = @_;
+    my( $pkg, $acc ) = @_;
     
-    return $pkg->_fetch_generic(q{ accession = ? ORDER BY sv DESC }, $acc, $sv);
+    return $pkg->_fetch_generic(q{ accession = ? ORDER BY sv DESC }, $acc);
 }
 
 sub _fetch_generic {
