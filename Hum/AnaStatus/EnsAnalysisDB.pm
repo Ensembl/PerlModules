@@ -36,9 +36,12 @@ use Hum::AnaStatus::EnsAnalysis;
             });
         $sth->execute;
 
-        my ($db_id) = $sth->fetchrow;
-        if ($db_id) {
-            return $pkg->get_cached_by_ensembl_db_id($db_id);
+        my( @ens_db );
+        while (my ($db_id) = $sth->fetchrow) {
+            push(@ens_db, $pkg->get_cached_by_ensembl_db_id($db_id));
+        }
+        if (@ens_db) {
+            return @ens_db;
         } else {
             confess "No Ensembl db for species '$species_name'";
         }
@@ -171,6 +174,15 @@ sub golden_path_type {
         $self->{'_golden_path_type'} = $golden_path_type;
     }
     return $self->{'_golden_path_type'};
+}
+
+sub gene_type {
+    my( $self, $gene_type ) = @_;
+    
+    if ($gene_type) {
+        $self->{'_gene_type'} = $gene_type;
+    }
+    return $self->{'_gene_type'};
 }
 
 sub ace_data_factory {
