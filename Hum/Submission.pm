@@ -183,7 +183,7 @@ sub create_lock {
     # Default to cleaning up old locks older than 2 days
     $expiry_interval ||= 2 * 24 * 60 * 60;
     my $expired_time = time - $expiry_interval;
-    
+    #warn "expire=$expired_time\n";
     confess "Can't create lock without a name" unless $name;
     
     my $cleanup_lock = prepare_statement(qq{

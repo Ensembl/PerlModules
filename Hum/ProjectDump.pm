@@ -713,12 +713,11 @@ sub read_embl_file {
     
     my $file = $pdmp->embl_file_path;
     
-    
     if (-e $file) {
         my $fh = gensym();
         my $parser = Hum::EMBL->new;
         open $fh, $file or die "Can't read '$file' : $!";
-        my $embl = $parser->parse(\*EMBL) or die "No embl file returned";
+        my $embl = $parser->parse($fh) or die "No embl file returned";
         close $fh;
         return $embl;
     } else {
