@@ -1,7 +1,7 @@
 
-### Hum::SeqenceInfo
+### Hum::SequenceInfo
 
-package Hum::SeqenceInfo;
+package Hum::SequenceInfo;
 
 use strict;
 
@@ -98,7 +98,7 @@ sub Sequence {
 
 __END__
 
-=head1 NAME - Hum::SeqenceInfo
+=head1 NAME - Hum::SequenceInfo
 
 =head1 AUTHOR
 

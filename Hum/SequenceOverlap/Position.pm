@@ -21,13 +21,13 @@ sub db_id {
     return $self->{'_db_id'};
 }
 
-sub Sequence {
-    my( $self, $Sequence ) = @_;
+sub SequenceInfo {
+    my( $self, $SequenceInfo ) = @_;
     
-    if ($Sequence) {
-        $self->{'_Sequence'} = $Sequence;
+    if ($SequenceInfo) {
+        $self->{'_SequenceInfo'} = $SequenceInfo;
     }
-    return $self->{'_Sequence'};
+    return $self->{'_SequenceInfo'};
 }
 
 sub position {
