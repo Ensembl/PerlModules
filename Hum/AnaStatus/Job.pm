@@ -164,12 +164,17 @@ sub get_AnaSequence {
 }
 
 sub submit {
-    my( $self, $wrapper_command ) = @_;
+    my( $self ) = @_;
     
     $self->store;
-    my $ana_job_id = $self->ana_job_id;
-    
-    $wrapper_command ||= $self->default_wrapper_command;
+    $self->submit_lsf_job;
+}
+
+sub submit_lsf_job {
+    my( $self ) = @_;
+
+    my $ana_job_id      = $self->ana_job_id;
+    my $wrapper_command = $self->wrapper_command;
     
     my $bsub_pipe = "bsub $wrapper_command -ana_job_id $ana_job_id 2>&1 |";
     local *BSUB_PIPE;
@@ -187,6 +192,15 @@ sub submit {
     }
     $self->lsf_job_id($lsf_job_id);
     $self->store_lsf_job_id;
+}
+
+sub wrapper_command {
+    my( $self, $command ) = @_;
+    
+    if ($command) {
+        $self->{'_wrapper_command'} = $command;
+    }
+    return $self->{'_wrapper_command'} || $self->default_wrapper_command;
 }
 
 {
