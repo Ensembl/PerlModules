@@ -37,12 +37,12 @@ sub fetch_all_Rows {
     return @{$self->{'_rows'}};
 }
 
-sub to_string {
+sub string {
     my( $self ) = @_;
     
     my $str = '';
     foreach my $row ($self->fetch_all_Rows) {
-        $str .= $row->to_string;
+        $str .= $row->string;
     }
     return $str;
 }

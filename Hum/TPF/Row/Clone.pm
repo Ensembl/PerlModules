@@ -4,7 +4,7 @@
 package Hum::TPF::Row::Clone;
 
 use strict;
-
+use base 'Hum::TPF::Row';
 
 sub accession {
     my( $self, $accession ) = @_;
@@ -41,7 +41,7 @@ sub contig_name {
     return $self->{'_contig_name'};
 }
 
-sub to_string {
+sub string {
     my( $self ) = @_;
     
     return join("\t",

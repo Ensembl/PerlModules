@@ -4,6 +4,8 @@
 package Hum::TPF::Row::Gap;
 
 use strict;
+use base 'Hum::TPF::Row';
+use Carp;
 
 
 sub type {
@@ -16,6 +18,17 @@ sub type {
     return $self->{'_type'};
 }
 
+sub type_string {
+    my( $self ) = @_;
+    
+    my $type = $self->type or confess "type not set";
+    if ($type == 5) {
+        return 'CENTROMERE';
+    } else {
+        return "type-$type";
+    }
+}
+
 sub gap_length {
     my( $self, $gap_length ) = @_;
     
@@ -25,13 +38,13 @@ sub gap_length {
     return $self->{'_gap_length'} || '?';
 }
 
-sub to_string {
+sub string {
     my( $self ) = @_;
     
     return join("\t",
         'GAP',
-        $self->type,
-        $self->gap_length)
+        $self->type_string,
+        $self->gap_length || '?')
         . "\n";
 }
 

@@ -32,12 +32,12 @@ sub file {
 sub parse {
     my( $self ) = @_;
     
-    local $/  = "\n";
+    local $/ = "\n";
     my $fh = $self->file or confess "file not set";
     my $tpf = Hum::TPF->new;
     while (<$fh>) {
         next if /^$/;
-        my @line = split /\s+/, $fh;
+        my @line = split /\s+/, $_;
         confess "Bad line in TPF: $_" unless @line == 3;
         if ('GAP' eq uc $line[0]) {
             my( $type_str, $length_str ) = @line[1,2];
@@ -45,7 +45,7 @@ sub parse {
             if ($type_str eq 'CENTROMERE') {
                 $gap->type(5);
             }
-            elsif ($type_str =~ /type-[1234]/i) {
+            elsif ($type_str =~ /type-([1234])/i) {
                 $gap->type($1);
             }
             else {
@@ -64,6 +64,7 @@ sub parse {
             $tpf->add_Row($row);
         }
     }
+    $self->{'_file'} = undef;
     return $tpf;
 }
 
