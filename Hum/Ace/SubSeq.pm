@@ -100,7 +100,7 @@ sub process_ace_start_end_transcript_seq {
 
     # Parse Supporting evidence tags
     foreach my $evidence ($t_seq->at('Annotation.Sequence_matches[1]')) {
-	$self->add_SupportingEvidence_accession($evidence->row);
+	$self->add_SupportingEvidence_accession(map $_->name, $evidence->row);
     }
     
     my @exons = $self->get_all_Exons
@@ -471,6 +471,12 @@ sub Locus {
         $self->{'_Locus'} = $Locus;
     }
     return $self->{'_Locus'};
+}
+
+sub unset_Locus {
+    my( $self ) = @_;
+    
+    $self->{'_Locus'} = undef;
 }
 
 sub strand {
@@ -973,6 +979,12 @@ sub ace_string {
     return $out;
 }
 
+
+sub DESTROY {
+    my( $self ) = @_;
+    
+    print STDERR "SubSeq ", $self->name, " is released\n";
+}
 
 
 1;

@@ -317,6 +317,12 @@ sub get_all_support {
     return @{$self->{'_supporting_evidence_object'}};
 }
 
+sub DESTROY {
+    my( $self ) = @_;
+    
+    print STDERR "Clone ", $self->ace_name, " is released\n";
+}
+
 1;
 
 __END__

@@ -85,8 +85,7 @@ sub is_coding {
     my( $self ) = @_;
     
     ### Bad to base on just method name
-    my $name = $self->name;
-    if ($name =~ /(pseudo|mrna)/i) {
+    if ($self->name =~ /(pseudo|mrna)/i) {
         return 0;
     } else {
         return 1;

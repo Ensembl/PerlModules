@@ -183,6 +183,41 @@ sub is_complete {
     return $self->list_missing_SubSeqs ? 0 : 1;
 }
 
+sub is_new_format {
+    my( $self ) = @_;
+    
+    my $old_format = 0;
+    my $new_format = 0;
+    
+    foreach my $sub ($self->get_all_SubSeqs) {
+        my $meth_name = $sub->GeneMethod->name;
+        if ($meth_name =~ /supported_CDS/i) {
+            $old_format = 1;
+        }
+        elsif ($meth_name =~ /supported/i) {
+            $new_format = 1;
+        }
+        
+        unless ($new_format) {
+            if ($sub->upstream_subseq_name
+                or $sub->downstream_subseq_name) {
+            
+            }
+        }
+    }
+    
+    if ($old_format == $new_format) {
+        if ($old_format and $new_format) {
+            confess "Locus '", $self->name,
+                "' has both old and new format SubSequences\n";
+        } else {
+            
+        }
+    } else {
+        return $new_format ? 1 : 0;
+    }
+}
+
 sub make_EnsEMBL_Gene {
     my( $self ) = @_;
     
@@ -539,7 +574,7 @@ sub make_transcript {
 			$evidence->{$acc}=[$type,$cds_name,0];
 		    }else{
 			# some sort of error
-			warn("Duplicate evidence found: $acc mRNA ($mrna_name, $type2) and CDS ($cds_name, $type)");
+			warn("Duplicate evidence found: $acc mRNA ($mrna_name, $type2) and CDS ($cds_name, $type)\n");
 		    }
 		}else{
 		    $evidence->{$acc}=[$type,$cds_name,0];
@@ -930,6 +965,14 @@ sub get_unique_EnsEMBL_Exon {
 
     return $ens_exon;
 }
+
+
+sub DESTROY {
+    my( $self ) = @_;
+    
+    print STDERR "Locus ", $self->name, " is released\n";
+}
+
 
 1;
 

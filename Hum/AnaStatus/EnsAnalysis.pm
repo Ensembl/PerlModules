@@ -17,13 +17,13 @@ sub new {
 sub fetch_all_for_ensembl_db_id {
     my ( $pkg, $id ) = @_;
 
-    return $pkg->_fetch_all_where(qq{ ensembl_db_id = $id });
+    return $pkg->_fetch_all_where(qq{ ase.ensembl_db_id = $id });
 }
 
 sub fetch_all_for_ana_seq_id {
     my ( $pkg, $id ) = @_;
 
-    return $pkg->_fetch_all_where(qq{ ana_seq_id = $id });
+    return $pkg->_fetch_all_where(qq{ aseq.ana_seq_id = $id });
 }
 
 sub fetch_all_complete_for_ana_seq_id {
@@ -36,29 +36,30 @@ sub fetch_all_complete_for_ana_seq_id {
 sub _fetch_all_where {
     my ( $pkg, $where_clause ) = @_;
 
-    my $sth = prepare_statement( qq{
-            SELECT ase.ana_seq_id
-              , ase.ensembl_db_id
-              , ase.ensembl_contig_id
-              , ase.is_complete
-              , sc.species_name
-              , s.sequence_version
-              , s.unpadded_length
-              , pa.accession
-            FROM ana_sequence_ensembl ase
-              , ana_sequence aseq
-              , sequence s
-              , species_chromosome sc
-              , project_dump pd
-              , project_acc pa
-            WHERE s.seq_id = pd.seq_id
-              AND pd.sanger_id = pa.sanger_id
-              AND sc.chromosome_id = s.chromosome_id
-              AND s.seq_id = aseq.seq_id
-              AND aseq.ana_seq_id = ase.ana_seq_id
-              AND $where_clause
-        }
-    );
+    my $sql = qq{
+        SELECT ase.ana_seq_id
+          , ase.ensembl_db_id
+          , ase.ensembl_contig_id
+          , ase.is_complete
+          , sc.species_name
+          , s.sequence_version
+          , s.unpadded_length
+          , pa.accession
+        FROM ana_sequence_ensembl ase
+          , ana_sequence aseq
+          , sequence s
+          , species_chromosome sc
+          , project_dump pd
+          , project_acc pa
+        WHERE s.seq_id = pd.seq_id
+          AND pd.sanger_id = pa.sanger_id
+          AND sc.chromosome_id = s.chromosome_id
+          AND s.seq_id = aseq.seq_id
+          AND aseq.ana_seq_id = ase.ana_seq_id
+          AND $where_clause
+        };
+    #warn $sql;
+    my $sth = prepare_statement($sql);
     $sth->execute;
 
     my (@ens_ana);
