@@ -40,6 +40,7 @@ BEGIN {
         /nfs/disk100/humpub/modules/ensembl/modules
         /nfs/disk100/humpub/modules/bioperl
         /nfs/disk100/humpub/modules/PerlModules
+        /nfs/disk100/humpub/scripts/tk
         /nfs/disk100/humpub/modules
         /usr/local/badger/bin
         /usr/local/badger/staden/alpha-bin
