@@ -73,6 +73,8 @@ sub new_from_sequence_name {
         $self->status_date($status_date || 0);
         $self->embl_checksum($embl_checksum);
         $self->annotator_uname($annotator_uname);
+        $self->chr_name($chr_name);
+        $self->species_name($species_name);
         return $self;
     }
     elsif (@$ans > 1) {
