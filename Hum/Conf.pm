@@ -95,7 +95,7 @@ my $ftp_structure = {
     HUMPUB_BLAST  => "$humpub_disk3/data/blast",
 
     PUBLIC_HUMAN_DISK => '/nfs/repository/p100',
-    HUMACE_DUMP   => '/nfs/disk100/humpub2/data',
+    HUMACE_DUMP   => '/nfs/humace/humpub/backup',
     HUMACE_QUEUE => "$humpub/humace/queue",
     HUMACESERVER_HOST     => $ace_host{'humace'},
     HUMACESERVER_PORT     => $ace_port{'humace'},
