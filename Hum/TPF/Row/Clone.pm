@@ -346,17 +346,16 @@ sub store_SequenceInfo_and_link {
     }
     
     my $check_link = prepare_cached_track_statement(q{
-        SELECT 1
+        SELECT is_current
         FROM clone_sequence
-        WHERE is_current = 1
-          AND clonename = ?
+        WHERE clonename = ?
           AND id_sequence = ?
         });
-    $check_link->execute($clone, $seq->db_id);
-    my ($link_ok) = $check_link->fetchrow;
+    $check_link->execute($clone, $seq_id);
+    my ($current) = $check_link->fetchrow;
     $check_link->finish;
     
-    unless ($link_ok) {
+    unless ($current) {
         my $set_not_current = prepare_cached_track_statement(q{
             UPDATE clone_sequence
             SET is_current = 0
@@ -364,14 +363,26 @@ sub store_SequenceInfo_and_link {
             });
         $set_not_current->execute($clone);
         
-        my $insert = prepare_cached_track_statement(q{
-            INSERT INTO clone_sequence( clonename
-                  , id_sequence
-                  , entrydate
-                  , is_current )
-            VALUES (?,?,sysdate,1)
-            });
-        $insert->execute($clone, $seq_id);
+        if ($current == 0) {
+            # There is already a row in the table, so just set it to current
+            my $set_current = prepare_cached_track_statement(q{
+                UPDATE clone_sequence
+                SET is_current = 1
+                WHERE clonename = ?
+                  AND id_sequence = ?
+                });
+            $set_current->execute($clone, $seq_id);
+        } else {
+            # Put a new row in the table
+            my $insert = prepare_cached_track_statement(q{
+                INSERT INTO clone_sequence( clonename
+                      , id_sequence
+                      , entrydate
+                      , is_current )
+                VALUES (?,?,sysdate,1)
+                });
+            $insert->execute($clone, $seq_id);
+        }
     }
 }
 
