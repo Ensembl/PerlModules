@@ -158,6 +158,7 @@ sub clone {
         name
         clone_Sequence
         GeneMethod
+        Locus
         strand
         translation_region
         start_not_found
@@ -327,6 +328,15 @@ sub GeneMethod {
         $self->{'_GeneMethod'} = $GeneMethod;
     }
     return $self->{'_GeneMethod'};
+}
+
+sub Locus {
+    my( $self, $Locus ) = @_;
+    
+    if ($Locus) {
+        $self->{'_Locus'} = $Locus;
+    }
+    return $self->{'_Locus'};
 }
 
 sub strand {
@@ -634,6 +644,7 @@ sub ace_string {
         or confess "no clone_Sequence";
     my @exons       = $self->get_all_Exons;
     my $method      = $self->GeneMethod;
+    my $locus       = $self->Locus;
     
     my $clone = $clone_seq->name
         or confess "No sequence name in clone_Sequence";
@@ -658,6 +669,7 @@ sub ace_string {
     $out .= qq{\nSequence "$name"\n}
         . qq{-D Source\n}
         . qq{-D Method\n}
+        . qq{-D Locus\n}
         . qq{-D CDS\n}
         . qq{-D Source_Exons\n}
         
@@ -675,6 +687,10 @@ sub ace_string {
         . qq{Predicted_gene\n}
         ;
     
+    if ($locus) {
+        my $ln = $locus->name;
+        $out .= qq{Locus "$ln"\n};
+    }
     
     if ($method) {
         my $mn = $method->name;
