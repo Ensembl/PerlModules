@@ -117,11 +117,19 @@ sub sanger_library_name {
         my( $libname, $sang, $intl, $first, $last );
         $sth->bind_columns(\$libname, \$sang, \$intl, \$first, \$last);
         while ($sth->fetch) {
-            ### Add stuff for XX clones
             next unless $sang and $intl;
-            next if $intl eq 'XX';
-            my $lib_info = $intl_sanger{$intl} ||= [];
-            push(@$lib_info, [$sang, $libname, $first, $last]);
+            if ($intl =~ /^XX/) {
+                my $uc_sang = uc $sang;
+                if ($sanger_info{$uc_sang}) {
+                    # If more than one XX* library shares a Sanger prefix, we can't use it.
+                    delete($sanger_info{$uc_sang});
+                } else {
+                    $sanger_info{$uc_sang} = [$sang, $libname];
+                }
+            } else {
+                my $lib_info = $intl_sanger{$intl} ||= [];
+                push(@$lib_info, [$sang, $libname, $first, $last]);
+            }
         }
         $init_flag = 1;
     }
@@ -135,27 +143,39 @@ sub sanger_library_name {
         ### to just knock off the XX- prefix, but make an
         ### attempt to identify the library from the start
         ### of the remaining name.
-        
-        my ($intl_prefix, $plate, $rest) = $intl =~ /^([^-]+)-(\d*)(.+)$/;
-        $intl_prefix ||= '';
-        $plate       ||= '';
-        $rest        ||= $intl;
-        if (my $lib_info = $intl_sanger{$intl_prefix}) {
-            if ($plate) {
-                foreach my $inf (@$lib_info) {
-                    my ($sang, $libname, $first, $last) = @$inf;
-                    if ($plate >= $first and $plate <= $last) {
-                        return($sang . $plate . $rest, $libname);
-                    }
+        if ($intl =~ /^XX.*-(.+)/) {
+            my $rest = $1;
+            if (my ($prefix) = $rest =~ /^([A-Za-z]+)/) {
+                if (my $info = $sanger_info{uc $prefix}) {
+                    my ($sanger, $libname) = @$info;
+                    substr($rest, 0, length($sanger)) = $sanger;
+                    return($rest, $libname);
                 }
-                warn "Couldn't place plate from '$intl' in any of:\n",
-                    map "  [@$_]\n", @$lib_info;
             }
-            # Just take the first
-            my ($sang, $libname) = @{$lib_info->[0]};
-            return($sang . $plate . $rest, $libname);
+            return $rest;
         } else {
-            return($plate . $rest);
+
+            my ($intl_prefix, $plate, $rest) = $intl =~ /^([^-]+)-(\d*)(.+)$/;
+            $intl_prefix ||= '';
+            $plate       ||= '';
+            $rest        ||= $intl;
+            if (my $lib_info = $intl_sanger{$intl_prefix}) {
+                if ($plate) {
+                    foreach my $inf (@$lib_info) {
+                        my ($sang, $libname, $first, $last) = @$inf;
+                        if ($plate >= $first and $plate <= $last) {
+                            return($sang . $plate . $rest, $libname);
+                        }
+                    }
+                    warn "Couldn't place plate from '$intl' in any of:\n",
+                        map "  [@$_]\n", @$lib_info;
+                }
+                # Just take the first
+                my ($sang, $libname) = @{$lib_info->[0]};
+                return($sang . $plate . $rest, $libname);
+            } else {
+                return($plate . $rest);
+            }
         }
     }
 }
