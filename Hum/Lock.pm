@@ -30,7 +30,7 @@ sub psCommand ($) {
     # Select ps command for host type
     my %psCommands = (
                       dec_osf => 'ps -A',
-		      linux   => 'ps -ax',
+		      linux   => 'ps ax',
 		      solaris => 'ps -A'
 		      # Ignoring SGIs, since not under LSF
 		      );
