@@ -274,6 +274,19 @@ sub save_command_output {
         unless $rows_affected == 1;
 }
 
+sub remove {
+    my( $self ) = @_;
+    
+    my $ana_job_id = $self->ana_job_id
+        or confess "No ana_job_id";
+    my $update = prepare_statement(q{
+        DELETE from ana_job
+        WHERE ana_job_id = ?
+        });
+    $update->execute($ana_job_id);
+    $self = undef;
+}
+
 1;
 
 __END__
