@@ -20,6 +20,7 @@ use Hum::EMBL::LocationUtils qw{
     };
 use Hum::EmblUtils qw{
     extCloneName
+    projectAndSuffix
     };
 
 use vars qw{ @ISA };
