@@ -87,6 +87,12 @@ sub end {
     return $loc->strand eq 'W' ? $loc->three_prime : $loc->five_prime;
 }
 
+sub length {
+    my( $loc ) = @_;
+    
+    return $loc->three_prime - $loc->five_prime + 1;
+}
+
 sub five_prime {
     my( $loc ) = @_;
     
@@ -205,6 +211,23 @@ BEGIN {
         }
 
         return join($joiner, @lines) ."\n";
+    }
+}
+
+sub add_location_qualifier {
+    my( $loc, $qualifier ) = @_;
+    
+    $loc->{'_location_qualifers'} ||= [];
+    push(@{$loc->{'_location_qualifers'}}, $qualifier);
+}
+
+sub location_qualifiers {
+    my( $loc ) = @_;
+    
+    if (my $q = $loc->{'_location_qualifers'}) {
+        return @$q;
+    } else {
+        return;
     }
 }
 

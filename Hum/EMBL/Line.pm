@@ -927,12 +927,14 @@ sub store {
 sub _compose {
     my( $feat ) = @_;
     
+    my $loc = $feat->location;
+    
     my $head = 'FT   '. $feat->key;
     $head .= ' ' x (21 - length($head));
-    $head .= $feat->location->compose;
+    $head .= $loc->compose;
     
     my( @qual );
-    foreach my $q ($feat->qualifiers) {
+    foreach my $q ($loc->location_qualifiers, $feat->qualifiers) {
         push( @qual, $q->compose );
     }
     return ($head, @qual);

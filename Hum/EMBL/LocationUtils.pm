@@ -9,7 +9,7 @@ use Hum::EMBL::Location;
 @ISA = qw( Exporter );
 @EXPORT_OK = qw( simple_location
                  location_from_homol_block
-                 location_from_subsequence );
+                 locations_from_subsequence );
 
 sub numeric_ascend {
     $a->[1] <=> $b->[1];
@@ -162,8 +162,8 @@ sub merge_ranges {
 
 # Frist argument is a feature object
 # Second argument is the subsequence tag in the parent Ace sequence
-sub location_from_subsequence {
-    my( $ft, $sub_tag ) = @_;
+sub locations_from_subsequence {
+    my( $sub_tag ) = @_;
     
     # Get the start and end coordinates
     my($start, $end) = map $_->name, $sub_tag->row(1);
@@ -174,13 +174,77 @@ sub location_from_subsequence {
     my $g = $sub_tag->fetch;
 
     # Create the location string
-    my(@exons);
+    my( @exons );
     foreach ($g->at('Structure.From.Source_exons[1]')) {
         my ($x, $y) = $_->row;
         push(@exons, [$x->name, $y->name]);
     }
     confess "No exons found for '$sub_tag'" unless @exons;
     
+    # Is it coding?
+    my $CDS = $g->at('Properties.Coding.CDS');
+    
+    # Get the CDS coordinates if it is a new-style combined CDS-mRNA
+    my @cds_coords = map $_->name, $CDS->row(1) if $CDS;
+    my( @cds_exons );
+    if (@cds_coords == 2) {
+        @cds_exons = CDS_exons_from_mRNA_exons(@cds_coords, @exons);
+    }
+    elsif (@cds_coords) {
+        confess("Expecting 2 CDS coordinates, got: (",
+            join(', ', map "'$_'", @cds_coords),
+            ")");
+    }
+    
+    my( $cds_loc, $mrna_loc );
+    if (@cds_exons) {
+        # New style combined object generates both CDS and mRNA
+        $cds_loc  = location_from_ace_coordinates($start, $end, @cds_exons);
+        $mrna_loc = location_from_ace_coordinates($start, $end, @exons);
+    }
+    elsif ($CDS) {
+        # CDS is set, so make CDS
+        $cds_loc  = location_from_ace_coordinates($start, $end, @exons);
+    }
+    else {
+        # Not coding so make mRNA
+        $mrna_loc = location_from_ace_coordinates($start, $end, @exons);
+    }
+
+    # Add start not found, and codon offset if specified
+    my $s_n_f = $g->at('Properties.Start_not_found');
+    my( $codon_start );
+    if ($s_n_f) {
+         $cds_loc->start_not_found if $cds_loc;
+        $mrna_loc->start_not_found if $mrna_loc;
+        ($codon_start) = map $_->name, $s_n_f->row(1);
+        $codon_start ||= 1;
+    }
+
+    # Will the FT object need a codon_start qualifier?
+    if ($codon_start and $cds_loc) {
+        unless ($codon_start =~ /^[123]$/) {
+            confess("Bad codon start ('$codon_start') in '$g'");
+        }
+            
+        my $q = 'Hum::EMBL::Qualifier'->new;
+        $q->name('codon_start');
+        $q->value($codon_start);
+        $cds_loc->add_location_qualifier($q);
+    }
+
+    # Add end not found
+    if ($g->at('Properties.End_not_found')) {
+         $cds_loc->end_not_found if $cds_loc;
+        $mrna_loc->end_not_found if $mrna_loc;
+    }
+    
+    return ($mrna_loc, $cds_loc);
+}
+
+sub location_from_ace_coordinates {
+    my( $start, $end, @exons ) = @_;
+
     my $loc = 'Hum::EMBL::Location'->new;
     
     if ($start < $end) {
@@ -208,30 +272,45 @@ sub location_from_subsequence {
     }
     
     $loc->exons(@exons);
+    return $loc;
+}
 
-    # Add start not found, and codon offset if specified
-    my( $s_n_f, $codon_start );
-    eval{ ($s_n_f, $codon_start) = map "$_", $g->at('Properties.Start_not_found')->row() };
-    if ($s_n_f) {
-        $loc->start_not_found;
-        $codon_start ||= 1;
-    }
-    if ($codon_start and $g->at('Properties.Coding.CDS')) {
-        unless ($codon_start =~ /^[123]$/) {
-            confess("Bad codon start ('$codon_start') in '$g'");
-        }
-        $ft->addQualifierStrings('codon_start', $codon_start);
-    }
-
-    # Add end not found
-    if ($g->at('Properties.End_not_found')) {
-        $loc->end_not_found;
-    }
-
-    # Store the new location
-    $ft->location( $loc );
+sub CDS_exons_from_mRNA_exons {
+    my $cds_start = shift;
+    my $cds_end   = shift;
     
-    return ($start, $end);
+    # Make a copy of all the given
+    my @mrna_exons = map [@$_], @_
+        or confess "No mrna_exons given";
+    
+    my $cds_pos = 0;    # Position in transcript (sum of previous exon lengths)
+    my $in_translation_zone = 0;
+    my( @cds_exons );
+    foreach my $ex (@mrna_exons) {
+        my $ex_length = $ex->[1] - $ex->[0] + 1;
+        my $new_cds_pos = $cds_pos + $ex_length;
+
+        if ( ! $in_translation_zone and $new_cds_pos >= $cds_start) {
+            # Translation starts in this exon
+            $in_translation_zone = 1;
+            $ex->[0] += $cds_start - $cds_pos - 1;
+        }
+        
+        # Add the exon to the list if it is translated
+        push(@cds_exons, $ex) if $in_translation_zone;
+        
+        if ($in_translation_zone and $new_cds_pos >= $cds_end) {
+            # Translation ends in this exon
+            $in_translation_zone = 0;
+            $ex->[1] -= $cds_pos + $ex_length - $cds_end;
+        }
+        
+        # Exit the loop if we're beyond the translated region
+        last if @cds_exons and ! $in_translation_zone;
+        $cds_pos = $new_cds_pos;
+    }
+    
+    return @cds_exons;
 }
 
 1;

@@ -101,6 +101,12 @@ BEGIN {
             Actinopterygii Neopterygii Teleostei Euteleostei Ostariophysi
             Cypriniformes Cyprinidae Rasborinae Danio
             )],
+        
+        'x.tropicalis' =>
+        [qw(Xenopus tropicalis), 'Western clawed frog', qw(
+            Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Amphibia 
+            Batrachia Anura Mesobatrachia Pipoidea Pipidae Xenopodinae Xenopus
+            )],
     );
 
     sub add_Organism {
