@@ -5,6 +5,7 @@ package Hum::EnsCmdLineDB;
 
 use strict;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
+
 use Getopt::Long 'GetOptions';
 use Term::ReadKey qw{ ReadMode ReadLine };
 
@@ -16,6 +17,7 @@ use Term::ReadKey qw{ ReadMode ReadLine };
     my $password = '';
     my $sgp_type = '';
     my $prompt   = 1;
+    my $pipeline = 0;
 
     my( $dna_host, $dna_dbname, $dna_user, $dna_password );
 
@@ -38,6 +40,7 @@ use Term::ReadKey qw{ ReadMode ReadLine };
 
             'sgp|gold=s'    => \$sgp_type,
             'prompt!'       => \$prompt,
+            'pipeline!'     => \$pipeline,
             @script_args,
             ) or die "Error processing command line\n";
         die "No database name (dbname) parameter given" unless $dbname;
@@ -56,6 +59,12 @@ use Term::ReadKey qw{ ReadMode ReadLine };
             -PASS   => $passwd,
             );
 
+        my $adaptor_class = 'Bio::EnsEMBL::DBSQL::DBAdaptor';
+        if ($pipeline) {
+            require Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor;
+            $adaptor_class = 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor';
+        }
+
         if ($dna_dbname) {
             my $dna_db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
                 -HOST   => $dna_host     || $host,
@@ -67,7 +76,7 @@ use Term::ReadKey qw{ ReadMode ReadLine };
         }
 
         # Connect to the EnsEMBL database
-        my $db_adaptor = Bio::EnsEMBL::DBSQL::DBAdaptor->new(@adaptor_args);
+        my $db_adaptor = $adaptor_class->new(@adaptor_args);
         $db_adaptor->static_golden_path_type($sgp_type) if $sgp_type;
         
         $passwd = '';

@@ -83,11 +83,10 @@ sub new_from_EnsEMBL_DBAdaptor {
     
     my $db_name = $dba->dbname   or confess   "dbname not set in DBAdaptor";
     my $host    = $dba->host     or confess     "host not set in DBAdaptor";
-    my $user    = $dba->username or confess "username not set in DBAdaptor";
     confess "'$host' isn't good enough for a hostname"
         if $host =~ /localhost/i;
     
-    return $pkg->_fetch_where(qq{ db_name = '$db_name' AND host = '$host' AND user = '$user' });
+    return $pkg->_fetch_where(qq{ db_name = '$db_name' AND host = '$host' });
 }
 
 sub new_from_ensembl_db_id {
