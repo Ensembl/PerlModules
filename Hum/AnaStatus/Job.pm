@@ -169,11 +169,6 @@ sub submit {
     my( $self ) = @_;
     
     $self->store;
-    $self->submit_lsf_job;
-}
-
-sub submit_lsf_job {
-    my( $self ) = @_;
 
     my $ana_job_id      = $self->ana_job_id;
     my $wrapper_command = $self->wrapper_command;
