@@ -143,7 +143,7 @@ BEGIN {
             Batrachia Anura Mesobatrachia Pipoidea Pipidae Xenopodinae Xenopus
             )],
         
-        'Platypus' =>
+        'platypus' =>
         [qw(Ornithorhynchus anatinus), 'platypus', qw(
             Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia
             Monotremata Ornithorhynchidae Ornithorhynchus
