@@ -25,7 +25,9 @@ sub add_source_FT {
     $loc->strand('W');
     
     $ft->addQualifierStrings('organism',   $binomial)           if $binomial;
-    $ft->addQualifierStrings('chromosome', $chr)                if $chr;
+    if ($chr and $binomial ne 'Danio rerio') {
+        $ft->addQualifierStrings('chromosome', $chr);
+    };
     $ft->addQualifierStrings('map',        $map)                if $map;
     $ft->addQualifierStrings('clone',      $external_clone)     if $external_clone;
     $ft->addQualifierStrings('clone_lib',  $libraryname)        if $libraryname;
@@ -104,7 +106,7 @@ BEGIN {
             )],
         
         'b.floridae' => 
-        [qw(Branchiostoma floridae), 'Florida lancelet', qw(
+        [qw(Branchiostoma floridae), 'forida lancelet', qw(
             Eukaryota Metazoa Chordata Cephalochordata Branchiostomida Branchiostoma 
             )],
         
@@ -116,7 +118,7 @@ BEGIN {
             )],
         
         'x.tropicalis' =>
-        [qw(Xenopus tropicalis), 'Western clawed frog', qw(
+        [qw(Xenopus tropicalis), 'western clawed frog', qw(
             Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Amphibia 
             Batrachia Anura Mesobatrachia Pipoidea Pipidae Xenopodinae Xenopus
             )],

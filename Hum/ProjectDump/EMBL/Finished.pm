@@ -21,7 +21,11 @@ sub add_Description {
     my $ext_clone = $pdmp->external_clone_name;
     my $desc = "$species DNA sequence from clone $ext_clone";
     if (my $chr = $pdmp->chromosome) {
-        $desc .= " on chromosome $chr";
+        if ($species eq 'Zebrafish') {
+            $desc .= " in linkage group $chr";
+        } else {
+            $desc .= " on chromosome $chr";
+        }
     }
     if (my $map = $pdmp->fish_map) {
         $desc .= $map;
