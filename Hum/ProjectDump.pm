@@ -9,6 +9,7 @@ use Hum::Tracking qw(
     is_full_shotgun_complete
     is_assigned_to_finisher
     is_shotgun_complete
+    current_project_status_number
     );
 use Hum::ProjectDump::EMBL;
 use Hum::ProjectDump::EMBL::HGMP;
@@ -1850,6 +1851,23 @@ sub is_htgs_activefin {
     
     my $project = $pdmp->project_name;
     return is_assigned_to_finisher($project);
+}
+
+sub is_cancelled {
+    my( $pdmp ) = @_;
+    
+    return ($pdmp->current_status_number == 24) ? 1 : 0;
+}
+
+sub current_status_number {
+    my( $pdmp ) = @_;
+    
+    unless (defined $pdmp->{'_current_status_number'}) {
+        my $project = $pdmp->project_name;
+        $pdmp->{'_current_status_number'}
+            = current_project_status_number($project) || 0;
+    }
+    return $pdmp->{'_current_status_number'};
 }
 
 {

@@ -154,7 +154,11 @@ sub add_Description {
     my $species   = $pdmp->species;
     my $ext_clone = $pdmp->external_clone_name;
     my $de = $embl->newDE;
-    $de->list("$species DNA sequence *** SEQUENCING IN PROGRESS *** from clone $ext_clone");
+    my $in_progress = 'SEQUENCING IN PROGRESS';
+    if ($pdmp->is_cancelled) {
+        $in_progress = 'SEQUENCING CANCELLED';
+    }
+    $de->list("$species DNA sequence *** $in_progress *** from clone $ext_clone");
     $embl->newXX;
 }
 
@@ -304,8 +308,7 @@ sub add_FT_assembly_fragments {
                $sequencing_center{$pdmp->funded_by}
             || $sequencing_center{$pdmp->sequenced_by}
             || $sequencing_center{5};
-
-        $embl->newCC->list(
+        my @comment_lines = (
             '-------------- Genome Center',
             @$genome_center_lines,
             '-------------- Project Information',
@@ -330,10 +333,26 @@ sub add_FT_assembly_fragments {
             "* of the pieces within a fragment_chain is reflected in",
             "* this file.  Gaps between the contigs are represented as",
             "* runs of N, but the exact sizes of the gaps are unknown.",
-            "* This record will be updated with the finished sequence as",
-            "* soon as it is available and the accession number will be",
-            "* preserved.",
-
+        );
+        
+        if ($pdmp->is_cancelled) {
+            push(@comment_lines,
+                "* ",
+                "* The sequencing of this clone has been cancelled. The most",
+                "* likely reason for this is that its sequence is redundant,",
+                "* and therefore not needed to complete the finished genome.",
+                "* ",
+                );
+        } else {
+            push(@comment_lines,
+                "* This record will be updated with the finished sequence as",
+                "* soon as it is available and the accession number will be",
+                "* preserved.",
+                );
+        }
+        
+        $embl->newCC->list(
+            @comment_lines,
             $pdmp->make_fragment_summary($embl, $contig_map),
         );   
     }
@@ -400,27 +419,32 @@ sub add_keywords {
     
     my $kw = $embl->newKW;
     my @kw_list = ('HTG');
-    if ($contig_count == 1) {
-        push(@kw_list, 'HTGS_PHASE2');
+
+    if ($pdmp->is_cancelled) {
+        push( @kw_list, 'HTGS_CANCELLED' );
     } else {
-        push(@kw_list, 'HTGS_PHASE1');
-    }
-
-    if ($pdmp->is_htgs_draft) {
-        my ($contig_depth) = $pdmp->contig_and_agarose_depth_estimate;
-
-        # Check that the project really is draft quality
-        if ($contig_depth >= 3) {
-            push( @kw_list, 'HTGS_DRAFT' );
+        if ($contig_count == 1) {
+            push(@kw_list, 'HTGS_PHASE2');
+        } else {
+            push(@kw_list, 'HTGS_PHASE1');
         }
-    }
+
+        if ($pdmp->is_htgs_draft) {
+            my ($contig_depth) = $pdmp->contig_and_agarose_depth_estimate;
+
+            # Check that the project really is draft quality
+            if ($contig_depth >= 3) {
+                push( @kw_list, 'HTGS_DRAFT' );
+            }
+        }
     
-    # New finishing keywords
-    if ($pdmp->is_htgs_fulltop) {
-        push( @kw_list, 'HTGS_FULLTOP' );
-    }
-    if ($pdmp->is_htgs_activefin) {
-        push( @kw_list, 'HTGS_ACTIVEFIN' );
+        # New finishing keywords
+        if ($pdmp->is_htgs_fulltop) {
+            push( @kw_list, 'HTGS_FULLTOP' );
+        }
+        if ($pdmp->is_htgs_activefin) {
+            push( @kw_list, 'HTGS_ACTIVEFIN' );
+        }
     }
 
     $kw->list(@kw_list);

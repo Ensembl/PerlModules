@@ -32,6 +32,7 @@ use vars qw( @ISA @EXPORT_OK );
 
 @EXPORT_OK = qw(
                 clone_from_project
+                current_project_status_number
                 chromosome_from_project
                 entry_name
                 expand_project_name
@@ -61,7 +62,31 @@ use vars qw( @ISA @EXPORT_OK );
                 unfinished_accession
                 );
 
-=pod
+=head2 current_project_status_number( PROJECT )
+
+Returns the current numerical status of the
+project.
+
+=cut
+
+{
+    my( $sth );
+
+    sub current_project_status_number {
+        my( $project ) = @_;
+
+        $sth ||= prepare_track_statement(q{
+            SELECT status
+            FROM project_status
+            WHERE projectname = ?
+              AND iscurrent = 1
+            });
+        $sth->execute($project);
+        my ($status) = $sth->fetchrow;
+        return $status || 0;
+    }
+}
+
 
 =head2 is_finished( PROJECT )
 
