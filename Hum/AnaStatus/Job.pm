@@ -58,7 +58,7 @@ sub new_from_ana_job_id {
         confess $error;
     }
     else {
-        confess "Didn't find any records fro ana_job_id '$ana_job_id'";
+        confess "Didn't find any records for ana_job_id '$ana_job_id'";
     }
 }
 
