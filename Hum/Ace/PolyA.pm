@@ -16,7 +16,38 @@ sub new {
 sub find_best {
     my( $pkg, $sub, $site, $limit ) = @_;
     
-    confess "Not implemented";
+    my @exons = $sub->get_all_Exons;
+    my( $trim );
+    if ($sub->strand == 1) {
+        my $end = $exons[$#exons]->end;
+        $site ||= $end;
+        $trim = $end - $site;
+    } else {
+        my $end = $exons[0]->start;
+        $site ||= $end;
+        $trim = $site - $end;
+    }
+    
+    my $seq = $sub->exon_Sequence;
+    if ($trim) {
+        my $end = $seq->sequence_length - $trim;
+        $seq = $seq->sub_sequence(1, $end);
+    }
+    
+    my @poly = $pkg->find_best_in_string($seq->sequence_string);
+    foreach my $p (@poly) {
+        my  $sig_pos = $sub->remap_coords_mRNA_to_genomic($p->signal_position);
+        $p->signal_position($sig_pos);
+        my $site_pos = $sub->remap_coords_mRNA_to_genomic($p->site_position);
+        $p->site_position($site_pos);
+    }
+    
+    # Were we asked for a maximum nuber of hits?
+    if ($limit) {
+        return @poly[0..$limit - 1];
+    } else {
+        return @poly;
+    }
 }
 
 sub find_best_in_string {
@@ -25,10 +56,9 @@ sub find_best_in_string {
     my $len = length($string);
     my( @found );
     foreach my $cons (Hum::Ace::PolyA::Consensus->fetch_all) {
-        my $range  = $cons->scan_range_length;
         my $signal = $cons->signal;
-        #warn "scanning for: $signal\n";
-        my $pos = $len - $range;
+        my $pos = $len - $cons->scan_range_length;
+        
         while (($pos = index($string, $signal, $pos)) > -1) {
             my $poly = $pkg->new;
             $poly->signal_position($pos + 1);
@@ -119,7 +149,7 @@ sub score {
         my $hex_pos = $self->hexamer_end_position;
         my $cons = $self->consensus
             or confess "No consensus";
-        $self->{'_score'} = $score = $cons->score_for_position($hex_pos);
+        $self->{'_score'} = $score = 100 * $cons->score_for_position($hex_pos);
     }
     return $score;
 }

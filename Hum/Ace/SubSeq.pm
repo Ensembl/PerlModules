@@ -251,7 +251,7 @@ sub add_PolyA {
 }
 
 sub get_all_PolyA {
-    my( $self );
+    my( $self ) = @_;
     
     if (my $pa = $self->{'_PolyA'}) {
         return @$pa;
@@ -260,10 +260,10 @@ sub get_all_PolyA {
     }
 }
 
-sub delete_all_PolyA {
-    my( $self );
+sub replace_all_PolyA {
+    my( $self, @poly ) = @_;
     
-    $self->{'_PolyA'} = undef;
+    $self->{'_PolyA'} = [@poly];
 }
 
 sub clone_Sequence {
@@ -294,59 +294,6 @@ sub exon_Sequence {
     $seq->sequence_string($seq_str);
     
     if ($seq->strand == -1) {
-        $seq = $seq->reverse_complement;
-    }
-    
-    return $seq;
-}
-
-sub OLD_translatable_Sequence {
-    my( $self ) = @_;
-    
-    my ($t_start, $t_end)   = $self->translation_region;
-    my $strand              = $self->strand;
-    my $phase               = $self->start_phase;
-    my $clone_seq           = $self->clone_Sequence or confess "No clone_Sequence";
-    
-    #warn "strand = $strand, phase = $phase\n";
-    
-    my $seq = Hum::Sequence::DNA->new;
-    $seq->name($self->name);
-    
-    my $seq_str = '';
-    foreach my $exon ($self->get_all_Exons) {
-        my $start = $exon->start;
-        my $end   = $exon->end;
-        
-        # Skip non-coding exons
-        next if $end   < $t_start;
-        last if $start > $t_end;
-        
-        # Trim coordinates to translation start and end
-        if ($start < $t_start) {
-            $start = $t_start;
-        }
-        if ($end > $t_end) {
-            $end = $t_end;
-        }
-
-        # Is this the first coding exon?        
-        if ($strand == 1 and $start == $t_start) {
-            $start += $phase - 1;
-        }
-        elsif ($strand == -1 and $end == $t_end) {
-            $end += 1 - $phase;
-        }
-        
-        #printf STDERR "Translateable exon  %5d - %-5d\n", $start, $end;
-        
-        $seq_str .= $clone_seq
-            ->sub_sequence($start, $end)
-            ->sequence_string;
-    }
-    $seq->sequence_string($seq_str);
-    
-    if ($strand == -1) {
         $seq = $seq->reverse_complement;
     }
     
@@ -544,31 +491,49 @@ sub end {
 sub set_translation_region_from_cds_coords {
     my( $self, @coords ) = @_;
     
+    # This is fatal on failure
+    my @t_region = $self->remap_coords_mRNA_to_genomic(@coords);
+    
+    $self->translation_region(@t_region);
+}
+
+sub remap_coords_mRNA_to_genomic {
+    my $self = shift;
+    
+    # Sort coords so that we can bail out of the search
+    # loop and go on to the next exon early.
+    my @coords = sort {$a <=> $b} @_;
+    
     my $strand = $self->strand;
     my @exons = $self->get_all_Exons;
     if ($strand == -1) {
         @exons = reverse @exons;
     }
     
-    my( @t_region );
     my $pos = 0;
+    my( @remapped );
     foreach my $ex (@exons) {    
+        
+        # Calculate start and end of this exon in mRNA coordinates
         my $start = $pos + 1;
         my $end   = $pos + $ex->length;
         
-        for (my $i = 0; $i < @coords;) {
-            my $c = $coords[$i];
-            if ($c <= $end) {
-                shift @coords;
+        while (@coords) {
+            # Does the first (smallest) coordinate lie in this exon?
+            if ($coords[0] <= $end) {
+                my $c = shift @coords;
                 
+                # Use of push or unshift with forward or reverse
+                # strand ensures that coordinates come out in
+                # @remapped sorted in genomic order
                 if ($strand == 1) {
-                    push   (@t_region, $ex->start +  $c - $start);
+                    push   (@remapped, $ex->start +  $c - $start);
                 }
                 else {
-                    unshift(@t_region, $ex->end   - ($c - $start));
+                    unshift(@remapped, $ex->end   - ($c - $start));
                 }
             } else {
-                $i++;
+                last;
             }
         }
         
@@ -576,15 +541,14 @@ sub set_translation_region_from_cds_coords {
         $pos = $end;
     }
     
-    if (@coords == 0 and @t_region == 2) {
-        #print STDERR "translation_region = [@t_region]\n";
-        $self->translation_region(@t_region);
-    } else {
-        confess "Failed to find coordinates (",
-            join(',', @coords),
+    if (@coords) {
+        confess "Failed to remap coordinates: (",
+            join(', ', map "'$_'", @coords),
             ") in transcript of length ",
             $pos + 1;
     }
+    
+    return @remapped;
 }
 
 sub translation_region {
@@ -613,10 +577,9 @@ sub cds_coords {
     
     my @t_region    = $self->translation_region;
     my @exons       = $self->get_all_Exons;
-    my $strand      = $self->strand;
     my( @cds_coords );
     my $cds_length = 0;
-    if ($strand == 1) {
+    if ($self->strand == 1) {
         foreach my $exon (@exons) {
             my $start = $exon->start;
             my $end   = $exon->end;
