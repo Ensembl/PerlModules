@@ -1885,7 +1885,7 @@ sub _set_not_current {
 }
 
 
-BEGIN {
+{
 
     my @fields = qw(
         sanger_id
@@ -1893,16 +1893,28 @@ BEGIN {
         project_suffix
     );
     
+    my( $insert, $exists );
+    
     sub _store_project_acc {
         my( $pdmp ) = @_;
 
-        my $sub_db = sub_db();
-        my $replace = $sub_db->prepare(q{
-            REPLACE INTO project_acc(}
-            . join(',', @fields)
-            . q{) VALUES (?,?,?)}
-            );
-        $replace->execute(map $pdmp->$_(), @fields);
+        $exists ||= prepare_statement(q{
+            SELECT count(*)
+            FROM project_acc
+            WHERE sanger_id = ?
+            });
+        $exists->execute($pdmp);
+        my ($count) = $exists->fetchrow;
+        
+        unless ($count) {
+            my $sub_db = sub_db();
+            $insert ||= $sub_db->prepare(q{
+                INSERT INTO project_acc(}
+                . join(',', @fields)
+                . q{) VALUES (?,?,?)}
+                );
+            $insert->execute(map $pdmp->$_(), @fields);
+        }
     }
 }
 
