@@ -60,6 +60,12 @@ BEGIN {
             Eutheria Primates Catarrhini Hominidae Homo
             )],
 
+        gorilla =>
+        [qw(Gorilla gorilla gorilla
+            Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia
+            Eutheria Primates Catarrhini Hominidae Gorilla
+            )],
+
         gibbon =>
         [qw(Hylobates syndactylus  siamang
             Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia
@@ -84,7 +90,7 @@ BEGIN {
             Eutheria Cetartiodactyla Suina Suidae Sus
             )],
         
-       sminthopsis =>
+        sminthopsis =>
         [qw(Sminthopsis macroura), 'Australian stripe-faced dunnart', qw(
             Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia
             Metatheria Dasyuromorphia Dasyuridae Sminthopsis

@@ -27,21 +27,30 @@ sub genomic_Sequence {
     return $self->{'_genomic'};
 }
 
-sub find_Exon_sets {
+sub find_BestFeature_set {
+    my( $self, $exon_seqs ) = @_;
+    
+    my $sets = $self->find_Feature_sets($exon_seqs);
+    return $sets->[0];
+}
+
+sub find_Feature_sets {
     my( $self, $exon_seqs ) = @_;
     
     my $features = $self->find_Features($exon_seqs);
     my $transcr = [];
     for (my $i = 0; $i < @$exon_seqs; $i++) {
-        my $exon = $exon_seqs->[$i];
+        #my $exon = $exon_seqs->[$i];
         my $feat = $features->[$i];
         @$feat = sort {$b->hit_length <=> $a->hit_length} @$feat;
         push(@$transcr, shift @$feat);
     }
     
     # Check that features are colinear
-    
-    return $transcr;
+
+    # May return several sets in future when, for example
+    # there are tandemly duplicated genes.
+    return [$transcr];
 }
 
 sub find_Features {
@@ -55,7 +64,7 @@ sub find_Features {
         my $factory = Hum::Analysis::Factory::CrossMatch->new;
         $factory->show_all_matches(1);
 
-        my $parser = $factory->run($genomic, $exon);
+        my $parser = $factory->run($exon, $genomic);
         push(@$features, $parser->get_all_Features);
     }
     return $features;
