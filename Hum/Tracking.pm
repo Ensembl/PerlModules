@@ -558,10 +558,10 @@ sub localisation_data {
             });
         $get_chr->execute($project);
 
-        if (my($chr) = $get_chr->fetchrow) {
+        if (my ($chr) = $get_chr->fetchrow) {
 	    return $chr;
         } else {
-            die "Chromosome unknown for project '$project'";
+            confess "Chromosome unknown for project '$project'";
         }
     }
 }

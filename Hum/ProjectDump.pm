@@ -271,17 +271,37 @@ sub set_ghost_path {
         
         $base_dir ||= '.';
         my $species = $pdmp->species;
-        my $chr     = $pdmp->chromosome;
         my $phase   = $pdmp->htgs_phase;
         my $p = $FTP_STRUCTURE->{$species}
             or confess "Don't know about '$species'";
 
         my $path = "$base_dir/$p->[0]";
-        $path .= "/$p->[1]$chr" if $p->[1];
+        
+        # Get the chromosome name if this species splits on chromosome
+        if ($p->[1]) {
+            my( $chr );
+            eval { $chr = $pdmp->chromosome; };
+            if ($@ and $@ =~ /Chromosome unknown/) {
+                $chr = 'UNKNOWN';
+            } else {
+                die "Error determining chromosome:\n$@";
+            }
+            $path .= "/$p->[1]$chr";
+        }
+        
         if ($phase == 0 or $phase == 1) {
             $path .= "/$unfinished";
         }
         return $pdmp->file_path($path);
+    }
+
+    sub make_file_path_dir {
+        my( $pdmp ) = @_;
+        
+        my $path = $pdmp->file_path;
+        unless (-d $path) {
+            mkpath($path) or confess "mkpath('$path') failed : $!";
+        }
     }
     
     sub list_ftp_dirs {
