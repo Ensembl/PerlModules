@@ -12,7 +12,6 @@ use vars qw( @EXPORT_OK @ISA );
                  library_and_vector species_binomial
                  );
 
-
 sub add_source_FT {
     my( $embl, $length, $binomial, $external_clone,
         $chr, $map, $libraryname ) = @_;
@@ -144,12 +143,11 @@ BEGIN {
 
     sub extCloneName {
         my( @list ) = @_;
-        
+                
         # Convert all the sequence names to projects
         foreach (@list) {
             if (ref($_)) {
-                die "Not an acedb object"
-                        unless $_->isa('Ace::Object');
+                die "Not an acedb object" unless $_->isa('Ace::Object');
                 ($_) = projectAndSuffix($_) || $_;
             }
         }

@@ -33,6 +33,8 @@ use vars qw( @ISA @EXPORT_OK );
 @EXPORT_OK = qw(
                 ref_from_query
                 expand_project_name
+                clone_from_project
+                project_from_clone
                 find_project_directories
                 finised_accession
                 unfinised_accession
@@ -88,22 +90,69 @@ sub expand_project_name {
     my( $name ) = @_;
     
     my $ans = ref_from_query(qq(
-                                 select c.clonename
-                                 from clone c, clone_project cp,
-                                     project p
-                                 where
-                                     c.clonename = cp.clonename and
-                                     cp.projectname = p.projectname and
-                                     p.projectname = '$name'
+                                 select clonename
+                                 from clone_project
+                                 where projectname = '$name'
                                 ));
-    my @clone = map $_->[0], @$ans;
     
-    if (@clone == 1) {
-        return $clone[0];
+    if (@$ans == 1) {
+        return $ans->[0][0];
     } else {
         return $name;
     }
 }
+
+=pod
+
+=head2 clone_from_project
+
+Returns the corresponding clone name for the
+given project name if there is only one, or undef.
+
+=cut
+
+sub clone_from_project {
+    my( $proj ) = @_;
+    
+    my $ans = ref_from_query(qq(
+                                 select clonename
+                                 from clone_project
+                                 where projectname = '$proj'
+                                ));
+    
+    if (@$ans == 1) {
+        return $ans->[0][0];
+    } else {
+        return;
+    }
+}
+
+
+=pod
+
+=head2 project_from_clone
+
+Returns the corresponding project name for a
+given clone name if there is only one, or undef.
+
+=cut
+
+sub project_from_clone {
+    my( $clone ) = @_;
+    
+    my $ans = ref_from_query(qq(
+                                 select projectname
+                                 from clone_project
+                                 where clonename = '$clone'
+                                ));
+    
+    if (@$ans == 1) {
+        return $ans->[0][0];
+    } else {
+        return;
+    }
+}
+
 
 =pod
 
