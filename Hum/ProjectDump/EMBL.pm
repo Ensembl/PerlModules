@@ -186,6 +186,14 @@ use Hum::EMBL::Utils qw( EMBLdate );
             $pdmp->make_consensus_length_report(),
             $pdmp->make_q20_depth_report(),
             '--------------',
+            '* NOTE: This is a \'working draft\' sequence. It currently',
+            "* consists of ". scalar(@contig_pos) ." contigs. The true order of the pieces",
+            '* is not known and their order in this sequence record is',
+            '* arbitrary. Gaps between the contigs are represented as',
+            '* runs of N, but the exact sizes of the gaps are unknown.',
+            '* This record will be updated with the finished sequence',
+            '* as soon as it is available and the accession number will',
+            '* be preserved.',
             $pdmp->make_fragment_summary($embl, $number_Ns, @contig_pos),
         );
         
@@ -275,12 +283,12 @@ sub make_fragment_summary {
             $frag .= "; group $group";
         }
         push(@list, $frag);
-        unless ($i == $#contig_pos) {
-            push(@list,
-                sprintf("* %8d %8d gap of unknown length",
-                    $end + 1, $end + $spacer_length, $spacer_length)
-            );
-        }
+        #unless ($i == $#contig_pos) {
+        #    push(@list,
+        #        sprintf("* %8d %8d gap of unknown length",
+        #            $end + 1, $end + $spacer_length, $spacer_length)
+        #    );
+        #}
     }
     return @list;
 }
