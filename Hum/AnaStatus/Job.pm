@@ -45,6 +45,8 @@ sub new_from_ana_job_id {
         $self->submit_time($submit_time);
         $self->lsf_job_id($lsf_job_id);
         $self->lsf_error($lsf_error);
+        
+        return $self;
     }
     elsif (@$ans > 1) {
         my $error = "Got multiple answers for ana_job_id '$ana_job_id' :\n";
