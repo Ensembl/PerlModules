@@ -48,6 +48,30 @@ sub show_sequence {
     $self->send_command('gif', "seqget $seq_name", 'seqdisplay');
 }
 
+sub save {
+    my( $self ) = @_;
+    
+    $self->send_command('save');
+}
+
+sub load_ace {
+    my $self        = shift;
+    my $ace = join("\n\n", @_);
+    
+    my $tmp_ace = "/tmp/xremote.$$.ace";
+    local *ACE_REMOTE;
+    open ACE_REMOTE, "> $tmp_ace"
+        or confess "Can't write to '$tmp_ace' : $!";
+    print ACE_REMOTE $ace;
+    close ACE_REMOTE;
+    
+    eval{
+        $self->send_command("parse $tmp_ace");
+    };
+    unlink($tmp_ace);
+    confess("Error parsing:\n$ace", $@) if $@;
+}
+
 1;
 
 __END__

@@ -142,6 +142,15 @@ sub name {
     return $self->{'_name'} || confess "name not set";
 }
 
+sub clone_seq_name {
+    my( $self, $clone_seq_name ) = @_;
+    
+    if ($clone_seq_name) {
+        $self->{'_clone_seq_name'} = $clone_seq_name;
+    }
+    return $self->{'_clone_seq_name'};
+}
+
 sub ace_method {
     my( $self, $ace_method ) = @_;
     
@@ -222,34 +231,24 @@ sub delete_Exon {
     confess "Didn't find exon '$gonner'";
 }
 
-#sub start {
-#    my( $self ) = @_;
-#    
-#    if ($self->strand == 1) {
-#        return $self->first_Exon_start;
-#    } else {
-#        return $self->last_Exon_end;
-#    }
-#}
-#
-#sub end {
-#    my( $self ) = @_;
-#    
-#    if ($self->strand == 1) {
-#        return $self->last_Exon_end;
-#    } else {
-#        return $self->first_Exon_start;
-#    }
-#}
+sub replace_all_Exons {
+    my( $self, @exons ) = @_;
+    
+    confess "No new exons given"
+        unless @exons;
+    $self->{'_Exon_list'} = [@exons];
+    $self->is_sorted(0);
+    return 1;
+}
 
-sub first_Exon_start {
+sub start {
     my( $self ) = @_;
     
     my @exons = $self->get_all_Exons or confess "No Exons";
     return $exons[0]->start;
 }
 
-sub last_Exon_end {
+sub end {
     my( $self ) = @_;
     
     my @exons = $self->get_all_Exons or confess "No Exons";
@@ -259,7 +258,7 @@ sub last_Exon_end {
 sub subseq_length {
     my( $self ) = @_;
     
-    return $self->last_Exon_end - $self->first_Exon_start + 1;
+    return $self->end - $self->start + 1;
 }
 
 sub validate {
@@ -331,17 +330,43 @@ sub contains_all_exons {
 
 sub as_ace_file_format_text {
     my( $self ) = @_;
-    
-    warn "This method isn't finished";
-    
-    my $name    = $self->name;
+        
+    my $name    = $self->name
+        or confess "name not set";
+    my $clone   = $self->clone_seq_name
+        or confess "clone name not set";
+    my $start   = $self->start;
+    my $end     = $self->end;
     my $strand  = $self->strand;
     my @exons   = $self->get_all_Exons;
-    my $out = qq{\nSequence "$name"\n};
+    my $method  = $self->ace_method;
     
-    foreach my $exon (@exons) {
-        $out .= sprintf(qq{Exon %d %d\n}, $exon->start, $exon->end);
-    }   
+    my $out = qq{\nSequence "$clone"\n}
+        . qq{-D SubSequence "$name"\n};
+    if ($strand == 1) {
+        $out .= qq{SubSequence "$name" $start $end\n};
+    } else {
+        $out .= qq{SubSequence "$name" $end $start\n};
+    }
+    
+    $out .= qq{\n-D Sequence "$name"\n};
+    
+    $out .= qq{\nSequence "$name"\n}
+        . qq{Method "$method"\n}
+        . qq{Source "$clone"\n};
+    if ($strand == 1) {
+        foreach my $ex (@exons) {
+            my $x = $ex->start - $start + 1;
+            my $y = $ex->end   - $start + 1;
+            $out .= qq{Source_Exons $x $y\n};
+        }
+    } else {
+        foreach my $ex (reverse @exons) {
+            my $x = $end - $ex->end   + 1;
+            my $y = $end - $ex->start + 1;
+            $out .= qq{Source_Exons $x $y\n};
+        }
+    }
     
     return $out;
 }
