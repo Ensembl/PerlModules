@@ -373,16 +373,19 @@ sub add_FT_entries {
                 confess "No remark for institute '$inst'";
             }
         }
+
+	# I moved this part to Finished.pm as there is a zebrafish_specific comments.
+	# This should be easier to maintain organism comments all in one script
         
-        if ($pdmp->species eq 'Mouse') {
-            $embl->newCC->list(
-                'Sequence from the Mouse Genome Sequencing Consortium whole genome shotgun',
-                'may have been used to confirm this sequence.  Sequence data from the whole',
-                'genome shotgun alone has only been used where it has a phred quality of at',
-                'least 30.',
-            );
-            $embl->newXX;
-        }
+        #if ($pdmp->species eq 'Mouse') {
+        #    $embl->newCC->list(
+        #        'Sequence from the Mouse Genome Sequencing Consortium whole genome shotgun',
+        #        'may have been used to confirm this sequence.  Sequence data from the whole',
+        #        'genome shotgun alone has only been used where it has a phred quality of at',
+        #        'least 30.',
+        #    );
+        #    $embl->newXX;
+        #}
     }
 }
 
