@@ -20,6 +20,7 @@ use Bio::Otter::GeneName;
 use Bio::Otter::TranscriptRemark;
 use Bio::Otter::TranscriptClass;
 use Bio::Otter::GeneSynonym;
+use Bio::Otter::Converter;
 use Data::Dumper;
 
 sub new {
@@ -384,7 +385,8 @@ sub make_Otter_Gene {
     require Hum::Fox::AceData::SubSequence;
 
     my $gene_name = $self->name;
-    
+    my $pre       = $self->gene_type_prefix;
+    my $otter_gene_name = $pre ? "$pre:$gene_name" : $gene_name;
     
     # Make a new Otter Gene object
     my $gene = Bio::Otter::AnnotatedGene->new;
@@ -407,7 +409,7 @@ sub make_Otter_Gene {
     }
 
     my $geneinfo = new Bio::Otter::GeneInfo(-author    => $author,
-                                            -name      => new Bio::Otter::GeneName( -name => $gene_name),
+                                            -name      => new Bio::Otter::GeneName( -name => $otter_gene_name),
                                             -remark    => \@gene_remarks);
     $gene->description($self->description);
     $gene->gene_info($geneinfo);
@@ -427,13 +429,14 @@ sub make_Otter_Gene {
     my $i = 0;
     foreach my $set ($self->make_transcript_sets) {
         $i++;
-        my $t_name = sprintf("%s-%03d", $gene_name, $i);
+        my $t_name = sprintf("%s-%03d", $otter_gene_name, $i);
         my $trans = $self->make_transcript($gene, $set, $t_name);
     }
     if (scalar(@{$gene->get_all_Transcripts})) {
         # Gene type is aggregate function of transcript types
         #$gene->set_gene_type_from_transcript_classes;
         my $type = Bio::Otter::Converter::gene_type_from_transcript_set($gene->get_all_Transcripts(), $geneinfo->known_flag());
+        $type = $pre ? "$pre:$type" : $type;
         print "Decided on genetype '$type'\n";
         $gene->type($type);
         return $gene;
@@ -443,6 +446,7 @@ sub make_Otter_Gene {
     }
 }
 
+### This doesn't know about gene_type_prefix.
 sub make_EnsEMBL_Gene {
     my( $self ) = @_;
     
