@@ -42,7 +42,7 @@ sub parse {
             next;
         }
         my @line = split /\s+/, $_;
-        confess "Bad line in TPF: $_" unless @line == 3;
+        confess "Bad line in TPF: $_" unless @line >= 3;
         if ($line[0] =~ /(GAP|CENTROMERE|TELOMERE|SHORT_ARM)/i) {
             my $identifier = uc $1;
             my( $type_str, $length_str ) = @line[1,2];
