@@ -63,11 +63,28 @@ sub locationFromHomolBlock {
     my( %strand );
     foreach my $r (@$block) {
         my( $score, $g_start, $g_end, $h_start, $h_end ) = @$r;
+        my( @coord );
         
+        my( $g_dir, $h_dir );
         if ($g_start < $g_end) {
-            push( @{$strand{'W'}}, [$score, $g_start, $g_end, $h_start, $h_end] );
+            $g_dir = 1;
+            push( @coord, $g_start, $g_end );
         } else {
-            push( @{$strand{'C'}}, [$score, $g_end, $g_start, $h_start, $h_end] );
+            $g_dir = 0;
+            push( @coord, $g_end, $g_start );
+        }
+        if ($h_start < $h_end) {
+            $h_dir = 1;
+            push( @coord, $h_start, $h_end );
+        } else {
+            $h_dir = 0;
+            push( @coord, $h_end, $h_start );
+        }
+        
+        if ($g_dir == $h_dir) {
+            push( @{$strand{'W'}}, [$score, @coord] );
+        } else {
+            push( @{$strand{'C'}}, [$score, @coord] );
         }
     }
     
