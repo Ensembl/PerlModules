@@ -15,11 +15,12 @@
  
 =head2 Description
 
-Created by the Bio::Otter::EMBL::Factory object, as part of the process of building
-up FT lines to annotate a finished genomic clone sequence, from an Otter database.
+Created by the Bio::Otter::EMBL::Factory object, as part of the process of
+building up FT lines to annotate a finished genomic clone sequence, from an
+Otter database.
 
-Hum::EMBL::ExonLocation objects are created to annotate the mRNA and CDS of each
-Transcript, for all the Genes on the clone sequence.
+Hum::EMBL::ExonLocation objects are created to annotate the mRNA and CDS of
+each Transcript, for all the Genes on the clone sequence.
 
   my $mRNA_exon_location = Hum::EMBL::ExonLocation->new;
 
@@ -39,6 +40,8 @@ use strict;
 Constructor:
 
  my $collection = Hum::EMBL::ExonLocation->new;
+ 
+ No parameters can be specifed, or default at object creation.
 
 =cut
 
@@ -50,22 +53,30 @@ sub new {
 
 =head2 exons
 
-Get/set method for the list of 
-Hum::EMBL::Exon objects.
+Get/set method for the list of  Hum::EMBL::Exon
+objects making up the ExonLocation.
+
+    $exon_location->exons(@exons);
+    
+    my @exons = $exon_location->exons;
 
 =cut
 
 sub exons {
-    my( $loc, @exons ) = @_;
+    my( $self, @exons ) = @_;
     
     if (@exons) {
-        $loc->{'_hum_embl_exonlocation_exons'} = [@exons];
+        $self->{'_hum_embl_exonlocation_exons'} = [@exons];
     } else {
-        return @{$loc->{'_hum_embl_exonlocation_exons'}};
+        return @{$self->{'_hum_embl_exonlocation_exons'}};
     }
 }
 
 =head2 start
+
+Get/set method for the start location of the ExonLocation
+(which is the start coordinate of the transcript/mRNA/CDS on
+the genomic DNA sequence). Should be >= 1.
 
 =cut
 
@@ -80,6 +91,10 @@ sub start {
 
 =head2 end
 
+Get/set method for the end location of the ExonLocation
+(which is the end coordinate of the transcript/mRNA/CDS on
+the genomic DNA sequence). Should be >= 1, and >start.
+
 =cut
 
 sub end {
@@ -92,6 +107,10 @@ sub end {
 }
 
 =head2 start_not_found
+
+Get/set method for the flag indicating the start of the
+transcript/mRNA/CDS is not found in the sequence. A true
+value indicates not found.
 
 =cut
 
@@ -106,6 +125,10 @@ sub start_not_found {
 
 =head2 end_not_found
 
+Get/set method for the flag indicating the end of the
+transcript/mRNA/CDS is not found in the sequence. A true
+value indicates not found.
+
 =cut
 
 sub end_not_found {
@@ -117,8 +140,14 @@ sub end_not_found {
     return $self->{_hum_embl_exonlocation_end_not_found};
 }
 
+=head2 parse
+
+I didnt write this and its currently broken.
+
+=cut
+
 sub parse {
-    my( $loc, $s ) = @_;
+    my( $self, $s ) = @_;
     
     confess "This needs to be completely written";
     
@@ -130,13 +159,13 @@ sub parse {
         $C_count++;
     }
     if ($C_count) {
-        $loc->strand('C');
+        $self->strand('C');
     } else {
-        $loc->strand('W');
+        $self->strand('W');
     }
     
-    $loc->missing_5_prime(1) if $$s =~ /</;
-    $loc->missing_3_prime(1) if $$s =~ />/;
+    $self->missing_5_prime(1) if $$s =~ /</;
+    $self->missing_3_prime(1) if $$s =~ />/;
     
     my( @exons );
     while ($$s =~ /(\d+)\.\.>?(\d+)/g) {
@@ -146,10 +175,10 @@ sub parse {
         if ($C_count > 1) {
             @exons = reverse @exons;
         }
-        $loc->exons(@exons);
+        $self->exons(@exons);
     } elsif (my ($i) = $$s =~ /(\d+)/) {
         # Single base pair
-        $loc->exons($i);
+        $self->exons($i);
     } else {
         confess "Can't parse location string '$$s'";
     }
@@ -157,7 +186,7 @@ sub parse {
 
 =head2 hash_key
 
-Generate a string based on: start, end and strand properties
+Generates a string based on: start, end and strand properties
 of the Hum:EMBL::Exon objects contained by the ExonLocation
 and start_not_found, and end_not_found
 
@@ -165,7 +194,8 @@ e.g. For a mRNA/CDS with t2 exons:
 
  153811_154573_1_155134_155215_1_0_0
 
-start1, end1, strand1, start2, end2, strand2, start_not_found, end_not_found
+start1, end1, strand1, start2, end2, strand2, start_not_found,
+end_not_found
 
 =cut
 
@@ -236,17 +266,29 @@ BEGIN {
     }
 }
 
+=head2 add_location_qualifier
+
+?
+
+=cut
+
 sub add_location_qualifier {
-    my( $loc, $qualifier ) = @_;
+    my( $self, $qualifier ) = @_;
     
-    $loc->{'_location_qualifers'} ||= [];
-    push(@{$loc->{'_location_qualifers'}}, $qualifier);
+    $self->{'_location_qualifers'} ||= [];
+    push(@{$self->{'_location_qualifers'}}, $qualifier);
 }
 
+=head2 location_qualifiers
+
+?
+
+=cut
+
 sub location_qualifiers {
-    my( $loc ) = @_;
+    my( $self ) = @_;
     
-    if (my $q = $loc->{'_location_qualifers'}) {
+    if (my $q = $self->{'_location_qualifers'}) {
         return @$q;
     } else {
         return;
