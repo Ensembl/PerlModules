@@ -283,7 +283,7 @@ sub set_ghost_path {
             eval { $chr = $pdmp->chromosome; };
             if ($@ and $@ =~ /Chromosome unknown/) {
                 $chr = 'UNKNOWN';
-            } else {
+            } elsif ($@) {
                 die "Error determining chromosome:\n$@";
             }
             $path .= "/$p->[1]$chr";
