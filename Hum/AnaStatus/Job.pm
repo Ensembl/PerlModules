@@ -6,6 +6,7 @@ package Hum::AnaStatus::Job;
 use strict;
 use Carp;
 use Hum::Submission 'prepare_statement';
+use Hum::AnaStatus::Sequence;
 
 sub new {
     my( $pkg ) = @_;
@@ -124,11 +125,51 @@ sub lsf_error {
     return $self->{'_lsf_error'};
 }
 
+sub get_AnaSequence {
+    my( $self ) = @_;
+    
+    my( $ana_seq );
+    unless ($ana_seq = $self->{'_ana_sequence'}) {
+        my $ana_seq_id = $self->ana_seq_id
+            or confess "No ana_seq_id";
+        $ana_seq = Hum::AnaStatus::Sequence
+            ->new_from_ana_seq_id($ana_seq_id);
+        $self->{'_ana_sequence'} = $ana_seq;
+    }
+    return $ana_seq;
+}
+
+{
+    my( %_task_command );
+    
+    sub task_command {
+        my( $self ) = @_;
+        
+        unless (%_task_command) {
+            my $sth = prepare_statement(q{
+                SELECT task_name
+                  , run_command
+                FROM ana_task
+                });
+            $sth->execute;
+            while (my ($name, $com) = $sth->fetchrow) {
+                $_task_command{$name} = $com;
+            }
+        }
+        my $name = $self->task_name
+            or confess "No task_name";
+        retrun $_task_command{$name}
+            || confess "No run_command for task '$task_name'";
+    }
+}
+
 sub submit {
     my( $self, $wrapper_command ) = @_;
     
     $self->store;
     my $ana_job_id = $self->ana_job_id;
+    
+    $wrapper_command ||= 'run_ana_job';
     
     my $bsub_pipe = "bsub $wrapper_command -ana_job_id $ana_job_id 2>&1 |";
     local *BSUB_PIPE;
@@ -142,10 +183,27 @@ sub submit {
         $lsf_job_id = $1 if /^Job\s+\<(\d+)\>/;;
     }
     unless ($lsf_job_id and close(BSUB_PIPE)) {
-        confess "Error running '$bsub_pipe' :\n$bsub_out";
+        confess "Error running '$bsub_pipe' : exit $?\n$bsub_out";
     }
     $self->lsf_job_id($lsf_job_id);
     $self->store_lsf_job_id;
+}
+
+{
+    my( $default_wrapper );
+
+    sub default_wrapper_command {
+        
+        unless ($default_wrapper) {
+            my $command_dir = $0;
+            $command_dir =~ s{([^/]+)$}{};
+            $default_wrapper = "$command_dir/run_ana_job";
+            confess "Default wrapper not executable : '$default_wrapper'"
+                unless -x $default_wrapper;
+        }
+        
+        return $default_wrapper;
+    }
 }
 
 sub store {
