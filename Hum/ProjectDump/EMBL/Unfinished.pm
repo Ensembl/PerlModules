@@ -6,6 +6,7 @@ package Hum::ProjectDump::EMBL::Unfinished;
 use strict;
 use Carp;
 use Hum::ProjectDump::EMBL;
+use Hum::Submission 'prepare_statement';
 use Hum::Tracking 'prepare_track_statement';
 
 use vars qw{ @ISA };
