@@ -401,6 +401,7 @@ sub express_data_fetch {
             my($name, $start, $end) = @$sub_txt;
             my $t_seq = $ace->fetch(Sequence => $name)
                 or die "No such Subsequence '$name'\n";
+            $name =~ s/^em://i;
             my $sub = Hum::Ace::SubSeq
                 ->new_from_name_start_end_transcript_seq(
                     $name, $start, $end, $t_seq,

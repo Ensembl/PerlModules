@@ -194,10 +194,10 @@ sub process_ace_start_end_transcript_seq {
     
     # Parse Contined_from and Continues_as
     if (my ($from) = $t_seq->at('Structure.Continued_from[1]')) {
-        $self->upstream_subseq_name($from->name);
+        $self->upstream_subseq_name($self->strip_Em($from->name));
     }
     if (my ($as) = $t_seq->at('Structure.Continues_as[1]')) {
-        $self->downstream_subseq_name($as->name);
+        $self->downstream_subseq_name($self->strip_Em($as->name));
     }
 
     # Remarks
@@ -263,6 +263,14 @@ sub process_ace_start_end_transcript_seq {
     }
 
     $self->validate;
+}
+
+sub strip_Em {
+    my( $self, $ace_obj ) = @_;
+    
+    my $name = $ace_obj->name;
+    $name =~ s/^em://i;
+    return $name;
 }
 
 sub take_otter_ids {

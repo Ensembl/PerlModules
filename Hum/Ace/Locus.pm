@@ -177,7 +177,9 @@ sub is_truncated {
 
         my( @pos_name );
         foreach my $pos ($ace_locus->at('Positive.Positive_sequence[1]')) {
-            push(@pos_name, $pos->name);
+            my $name = $pos->name;
+            $name =~ s/^em://i;
+            push(@pos_name, $name);
         }
         $self->set_positive_SubSeq_names(@pos_name);
 
@@ -429,7 +431,7 @@ sub make_Otter_Gene {
     my $i = 0;
     foreach my $set ($self->make_transcript_sets) {
         $i++;
-        my $t_name = sprintf("%s-%03d", $otter_gene_name, $i);
+        my $t_name = sprintf("%s-%03d", $gene_name, $i);
         my $trans = $self->make_transcript($gene, $set, $t_name);
     }
     if (scalar(@{$gene->get_all_Transcripts})) {
