@@ -28,8 +28,9 @@ sub add_source_FT {
     $ft->addQualifierStrings('organism',   $binomial)           if $binomial;
 
     # check point for $binomial ne 'Danio rerio' is now omitted
-    # as it is agreed that linkage group = chromosome
-    $ft->addQualifierStrings('chromosome', $chr);
+    # as it is agreed that linkage group = chromosome;
+    # but enforce checking if chromosome info is available
+    $ft->addQualifierStrings('chromosome', $chr) if $chr =~ /\d+/;
 
     $ft->addQualifierStrings('map',        $map)                if $map;
     $ft->addQualifierStrings('clone',      $external_clone)     if $external_clone;
