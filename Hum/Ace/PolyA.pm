@@ -13,7 +13,17 @@ sub new {
     return bless {}, $pkg;
 }
 
-sub find_best {
+sub clone {
+    my( $self ) = @_;
+    
+    my $new = ref($self)->new;
+    $new->signal_position($self->signal_position);
+    $new->site_position  ($self->site_position);
+    $new->consensus      ($self->consensus);
+    return $new;
+}
+
+sub find_best_in_SubSeq {
     my( $pkg, $sub, $site, $limit ) = @_;
     
     my @exons = $sub->get_all_Exons;
@@ -36,13 +46,13 @@ sub find_best {
     
     my @poly = $pkg->find_best_in_string($seq->sequence_string);
     foreach my $p (@poly) {
-        my  $sig_pos = $sub->remap_coords_mRNA_to_genomic($p->signal_position);
+        my  ($sig_pos) = $sub->remap_coords_mRNA_to_genomic($p->signal_position);
         $p->signal_position($sig_pos);
-        my $site_pos = $sub->remap_coords_mRNA_to_genomic($p->site_position);
+        my ($site_pos) = $sub->remap_coords_mRNA_to_genomic($p->site_position);
         $p->site_position($site_pos);
     }
     
-    # Were we asked for a maximum nuber of hits?
+    # Were we asked for a maximum number of hits?
     if ($limit) {
         return @poly[0..$limit - 1];
     } else {

@@ -6,6 +6,7 @@ package Hum::Ace::SubSeq;
 use strict;
 use Hum::Sequence::DNA;
 use Hum::Ace::Exon;
+use Hum::Ace::PolyA;
 use Carp;
 
 sub new {
@@ -146,14 +147,6 @@ sub process_ace_start_end_transcript_seq {
     }
 
     $self->validate;
-
-    #  Feature  "polyA_signal" 36228 36233 0.500000 "polyA_signal"
-    #  Feature  "polyA_signal" 36239 36244 0.500000 "polyA_signal"
-    #  Feature  "polyA_signal" 79853 79848 0.500000 "polyA_signal"
-    #  Feature  "polyA_site" 36257 36258 0.500000 "polyA_site"
-    #  Feature  "polyA_site" 79831 79830 0.500000 "polyA_site"
-    # Is the PolyA signal marked?
-    
 }
 
 sub clone {
@@ -184,6 +177,12 @@ sub clone {
         my $new_ex = $old_ex->clone;
         $new->add_Exon($new_ex);
     }
+    
+    # Clone all the PolyA sites
+    foreach my $poly ($old->get_all_PolyA) {
+        $new->add_PolyA($poly->clone);
+    }
+    
     return $new;
 }
 
@@ -243,6 +242,57 @@ sub downstream_subseq_name {
     return $self->{'_downstream_subseq_name'};
 }
 
+# Can't call this method before clone_Sequence is attached
+sub add_all_PolyA_from_ace {
+    my( $self, $ace ) = @_;
+    
+    # Is the PolyA signal marked?
+    my( %name_signal );
+    foreach my $sig ($ace->at('Feature.polyA_signal[1]')) {
+        my($x, $y, $score, $name) =  map $_->name, $sig->row;
+        unless (($x and $y) and ($x < $y)) {
+            confess "Bad polyA_signal ('$x' -> '$y', score = '$score')";
+        }
+        $name_signal{$name} = $x;
+    }
+    
+    return unless %name_signal;
+    
+    my $mRNA = $self->exon_Sequence;
+
+    # The two numbers for the polyA_site are the last
+    # two bases of the mRNA in the genomic sequence
+    # (Laurens' counterintuitive idea.)
+    foreach my $site ($ace->at('Feature.polyA_site[1]')) {
+        my($x, $y, $score, $name) = map $_->name, $site->row;
+        unless (($x and $y) and ($x + 1 == $y)) {
+            confess "Bad polyA_site coordinates ('$x','$y')";
+        }
+        my $sig_pos = $name_signal{$name}
+            or confess "Can't find site for polyA_signal [$x, $y, $score, $name]";
+        my $signal = $mRNA
+            ->sub_sequence($sig_pos, $sig_pos + 5)
+            ->sequence_string;
+        my $cons = Hum::Ace::PolyA::Consensus->fetch_by_signal($signal);
+
+        my ($sig_start) = $self->remap_coords_mRNA_to_genomic($sig_pos);
+        my ($site_end)  = $self->remap_coords_mRNA_to_genomic($y);
+
+        my $p = Hum::Ace::PolyA->new;
+        $p->signal_position($sig_start);
+        $p->site_position($site_end);
+        $p->consensus($cons);
+        
+        $self->add_PolyA($p);
+    }
+}
+
+sub find_PolyA_above_score {
+    my( $self, $score ) = @_;
+    
+    return grep $_->score >= $score, Hum::Ace::PolyA->find_best_in_SubSeq($self);
+}
+
 sub add_PolyA {
     my( $self, $polyA ) = @_;
     
@@ -264,6 +314,42 @@ sub replace_all_PolyA {
     my( $self, @poly ) = @_;
     
     $self->{'_PolyA'} = [@poly];
+}
+
+#  Feature  "polyA_signal" 36228 36233 0.500000 "polyA_signal"
+#  Feature  "polyA_signal" 36239 36244 0.500000 "polyA_signal"
+#  Feature  "polyA_signal" 79853 79848 0.500000 "polyA_signal"
+#  Feature  "polyA_site" 36257 36258 0.500000 "polyA_site"
+#  Feature  "polyA_site" 79831 79830 0.500000 "polyA_site"
+sub make_PolyA_ace_string {
+    my( $self ) = @_;
+    
+    my $ace = '';
+    
+    foreach my $poly ($self->get_all_PolyA) {
+        my $gen_sig_start = $poly->signal_position;
+        my $gen_site_end  = $poly->site_position;
+        my $signal        = $poly->consensus->signal;
+        my $score = sprintf "%.2f", $poly->score;
+        
+        my ($sig_start, $site_end) = $self
+            ->remap_coords_genomic_to_mRNA($gen_sig_start, $gen_site_end);
+        
+        # Check remapping was successful
+        my $err = '';
+        $err .= "failed to remap PolyA signal position '$gen_sig_start'\n" unless $sig_start;
+        $err .= "failed to remap PolyA site position '$gen_site_end'\n"    unless $site_end;
+        confess $err if $err;
+        
+        my $sig_end = $sig_start + 5;
+        my $site_start = $site_end - 1;
+        
+        my $name = "polyA $signal ($site_start-$sig_end)";
+        $ace .= qq{Feature  "polyA_signal"  $sig_start  $sig_end  $score  "$name"\n};
+        $ace .= qq{Feature  "polyA_site"  $site_start  $site_end  $score  "$name"\n};
+    }
+    
+    return $ace;
 }
 
 sub clone_Sequence {
@@ -293,7 +379,7 @@ sub exon_Sequence {
     }
     $seq->sequence_string($seq_str);
     
-    if ($seq->strand == -1) {
+    if ($self->strand == -1) {
         $seq = $seq->reverse_complement;
     }
     
@@ -559,6 +645,39 @@ sub remap_coords_mRNA_to_genomic {
     return @remapped;
 }
 
+sub remap_coords_genomic_to_mRNA {
+    my( $self, @coords ) = @_;
+    
+    my $strand = $self->strand;
+    my @exons = $self->get_all_Exons;
+    if ($strand == -1) {
+        @exons = reverse @exons;
+    }
+    
+    my( @remapped );
+    my $cds_length = 0;
+    foreach my $exon (@exons) {
+        my $start = $exon->start;
+        my $end   = $exon->end;
+        
+        for (my $i = 0; $i < @coords; $i++) {
+            next if $remapped[$i];  # Already remapped
+            my $pos = $coords[$i];
+            if ($pos >= $start and $pos <= $end) {
+                if ($strand == 1) {
+                    $remapped[$i] = $pos - $start + 1 + $cds_length;
+                } else {
+                    $remapped[$i] = $end - $pos   + 1 + $cds_length;
+                }
+            }
+        }
+        
+        $cds_length += $exon->length;
+    }
+    
+    return @remapped;
+}
+
 sub translation_region {
     my( $self, $start, $end ) = @_;
     
@@ -583,36 +702,8 @@ sub translation_region {
 sub cds_coords {
     my( $self ) = @_;
     
-    my @t_region    = $self->translation_region;
-    my @exons       = $self->get_all_Exons;
-    my( @cds_coords );
-    my $cds_length = 0;
-    if ($self->strand == 1) {
-        foreach my $exon (@exons) {
-            my $start = $exon->start;
-            my $end   = $exon->end;
-            for (my $i = 0; $i < @t_region; $i++) {
-                my $pos = $t_region[$i];
-                if ($pos >= $start and $pos <= $end) {
-                    $cds_coords[$i] = $pos - $start + 1 + $cds_length;
-                }
-            }
-            $cds_length += $exon->length;
-        }
-    } else {
-        @t_region = reverse @t_region;
-        foreach my $exon (reverse @exons) {
-            my $start = $exon->start;
-            my $end   = $exon->end;
-            for (my $i = 0; $i < @t_region; $i++) {
-                my $pos = $t_region[$i];
-                if ($pos >= $start and $pos <= $end) {
-                    $cds_coords[$i] = $end - $pos + 1 + $cds_length;
-                }
-            }
-            $cds_length += $exon->length;
-        }
-    }
+    my @t_region   = $self->translation_region;
+    my @cds_coords = $self->remap_coords_genomic_to_mRNA(@t_region);
     
     my $err = "";
     for (my $i = 0; $i < @t_region; $i++) {
@@ -624,6 +715,51 @@ sub cds_coords {
     
     return @cds_coords;
 }
+
+#sub OLD_cds_coords {
+#    my( $self ) = @_;
+#    
+#    my @t_region    = $self->translation_region;
+#    my @exons       = $self->get_all_Exons;
+#    my( @cds_coords );
+#    my $cds_length = 0;
+#    if ($self->strand == 1) {
+#        foreach my $exon (@exons) {
+#            my $start = $exon->start;
+#            my $end   = $exon->end;
+#            for (my $i = 0; $i < @t_region; $i++) {
+#                my $pos = $t_region[$i];
+#                if ($pos >= $start and $pos <= $end) {
+#                    $cds_coords[$i] = $pos - $start + 1 + $cds_length;
+#                }
+#            }
+#            $cds_length += $exon->length;
+#        }
+#    } else {
+#        @t_region = reverse @t_region;
+#        foreach my $exon (reverse @exons) {
+#            my $start = $exon->start;
+#            my $end   = $exon->end;
+#            for (my $i = 0; $i < @t_region; $i++) {
+#                my $pos = $t_region[$i];
+#                if ($pos >= $start and $pos <= $end) {
+#                    $cds_coords[$i] = $end - $pos + 1 + $cds_length;
+#                }
+#            }
+#            $cds_length += $exon->length;
+#        }
+#    }
+#    
+#    my $err = "";
+#    for (my $i = 0; $i < @t_region; $i++) {
+#        unless ($cds_coords[$i]) {
+#            $err .= qq{Translation coord '$t_region[$i]' does not lie within any Exon\n};
+#        }
+#    }
+#    confess $err if $err;
+#    
+#    return @cds_coords;
+#}
 
 sub subseq_length {
     my( $self ) = @_;
@@ -762,6 +898,8 @@ sub ace_string {
         
         . qq{-D Continued_from\n}
         . qq{-D Continues_as\n}
+        . qq{-D Feature "polyA_signal"\n}
+        . qq{-D Feature "polyA_site"\n}
         
         . qq{\nSequence "$name"\n}
         . qq{Source "$clone"\n}
@@ -816,6 +954,8 @@ sub ace_string {
             $out .= qq{Source_Exons  $x $y\n};
         }
     }
+    
+    $out .= $self->make_PolyA_ace_string;
     
     $out .= "\n";
     
