@@ -420,10 +420,6 @@ Sanger project names, and the values the
 internationally approved convention for naming
 clones.
 
-If the list only contains one element, then the
-single external clone name is returned; not a 
-reference to a hash.
-
 =cut
 
 sub external_clone_name {

@@ -94,6 +94,13 @@ BEGIN {
         [qw(Branchiostoma floridae), 'Florida lancelet', qw(
             Eukaryota Metazoa Chordata Cephalochordata Branchiostomida Branchiostoma 
             )],
+        
+        'zebrafish' =>
+        [qw(Danio rerio), 'zebrafish', qw(
+            Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi
+            Actinopterygii Neopterygii Teleostei Euteleostei Ostariophysi
+            Cypriniformes Cyprinidae Rasborinae Danio
+            )],
     );
 
     sub add_Organism {
