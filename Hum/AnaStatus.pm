@@ -93,23 +93,6 @@ use Hum::Submission 'prepare_statement';
 {
     my( $sth );
 
-    sub add_seq_id_dir {
-        my( $seq_id, $ana_dir ) = @_;
-        
-        $sth ||= prepare_statement(q{
-            INSERT ana_sequence( ana_seq_id
-                  , is_current
-                  , seq_id
-                  , analysis_directory)
-            VALUES (NULL,'Y',?,?)
-            });
-        $sth->execute($seq_id, $ana_dir);
-    }
-}
-
-{
-    my( $sth );
-
     sub set_ana_sequence_not_current {
         my( $seq_id ) = @_;
         
