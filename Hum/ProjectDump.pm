@@ -8,7 +8,7 @@ use Hum::Tracking 'track_db';
 use Hum::ProjectDump::EMBL;
 use Hum::EMBL;
 use Hum::EBI_FTP;
-use Hum::Conf qw( FTP_ROOT FTP_GHOST );
+use Hum::Conf qw( FTP_ROOT FTP_GHOST FTP_STRUCTURE );
 use File::Path;
 
 sub new {
@@ -197,17 +197,8 @@ sub set_ghost_path {
 }
 
 # Where to dump different projects
-BEGIN {
+{
 
-    my %species_dirs = (
-                        'Human'         => [ 'human/sequences', 'Chr_' ],
-                        'Mouse'         => [ 'mouse',           'Chr_' ],
-                        'Chicken'       => [ 'chicken'                 ],
-                        'Fugu'          => [ 'fugu'                    ],
-                        'Zebrafish'     => [ 'zebrafish'               ],
-                        'Drosophila'    => [ 'drosophila'              ],
-                        'Arabidopsis'   => [ 'arabidopsis'             ],
-                        );
     my $unfinished = 'unfinished_sequence';
     
     sub set_path {
@@ -217,7 +208,7 @@ BEGIN {
         my $species = $pdmp->species;
         my $chr     = $pdmp->chromosome;
         my $phase   = $pdmp->htgs_phase;
-        my $p = $species_dirs{$species}
+        my $p = $FTP_STRUCTURE->{$species}
             or confess "Don't know about '$species'";
 
         my $path = "$base_dir/$p->[0]";
@@ -242,8 +233,8 @@ BEGIN {
         confess("base_dir not supplied") unless $base_dir;
         
         my( @dirs );
-        foreach my $species (sort keys %species_dirs) {
-            my($dir_name, $chr_prefix) = @{$species_dirs{$species}};
+        foreach my $species (sort keys %$FTP_STRUCTURE) {
+            my($dir_name, $chr_prefix) = @{$FTP_STRUCTURE->{$species}};
             
             my $dir = "$base_dir/$dir_name";
             if ($chr_prefix) {
@@ -472,16 +463,13 @@ sub cleanup_contigs {
 
     $cutoff = 1000 unless defined $cutoff;
 
+    # Remove any detected contamination
     foreach my $contig ($pdmp->contig_list) {
         my $dna  = $pdmp->DNA        ($contig);
         my $qual = $pdmp->BaseQuality($contig);
-
-        # Check that all pads are removed
-        confess "Bad characters in dna contig '$contig':\n$$dna"
-            if $$dna =~ /[^acgtn]/;
         
-        # Remove any detected contamination
         if (my $contam = $pdmp->contamination($contig)) {
+            #warn "Contig '$contig' is contaminated\n";
             foreach my $c (@$contam) {
                 my $offset = $c->[0] - 1;
                 my $length = $c->[1] - $c->[0] + 1;
@@ -491,11 +479,31 @@ sub cleanup_contigs {
                 substr($$dna,  $offset, $length) = '#'    x $length;
                 substr($$qual, $offset, $length) = "\177" x $length;
             }
-            # Delete contaminated DNA
-            $$dna  =~ s/#//g;
-            $$qual =~ s/\177//g;
+            
+            # Get dna and quality strings which are above the cutoff length
+            my @dna_bits  = grep length($_) >= $cutoff, split /#+/,    $$dna;
+            my @qual_bits = grep length($_) >= $cutoff, split /\177+/, $$qual;
+            
+            # Delete the old contig
+            $pdmp->delete_contig($contig);
+            
+            # Store any significant fragments remaining
+            for (my $i = 0; $i < @dna_bits; $i++) {
+                my $name = "$contig.$i";
+                $pdmp->DNA        ($name,  \$dna_bits[$i]);
+                $pdmp->BaseQuality($name, \$qual_bits[$i]);
+            }
         }
+    }
 
+    foreach my $contig ($pdmp->contig_list) {
+        my $dna  = $pdmp->DNA        ($contig);
+        my $qual = $pdmp->BaseQuality($contig);
+
+        # Check that all pads are removed
+        confess "Bad characters in dna contig '$contig':\n$$dna"
+            if $$dna =~ /[^acgtn]/;
+    
         # Remove trailing n's from contig
         if ($$dna =~ s/(n+)$//) {
             my $n_len = length($1);
@@ -509,7 +517,6 @@ sub cleanup_contigs {
             $pdmp->delete_contig($contig);
         }
     }
-    
     confess "No significant contigs found" unless $pdmp->contig_count;
     
     # Check that dna and basequality strings are all the same length
