@@ -58,18 +58,32 @@ sub ref_from_query {
 
     sub sub_db () {
         unless ($db) {
-            my $user = (getpwuid($<))[0];
-                       
-            my $dbname;            
-            if ($ENV{'SUB_DB_HOST'}) { 
-                $dbname = $ENV{'SUB_DB_HOST'};
-            }else {
-                $dbname = "submissions";
+            
+            my $user   = (getpwuid($<))[0];
+            my $dbname = 'submissions';
+            my $host   = 'humsrv1';
+            my $port   = 3399;
+            
+            if (my $test = $ENV{'SUBMISSION_TEST_DB'}) {
+                # Legal formats:
+                #
+                # submissions_test
+                # submissions_test:3306
+                # submissions_test@ecs2b
+                # submissions_test@ecs2b:3306
+            
+                if ($test =~ /^([\w_\$]+)(?:\@([\w-\.]+))?(?::(\d+))?$/) {
+                    $dbname = $1;
+                    $host   = $2 if $1;
+                    $port   = $3 if $3;
+                } else {
+                    confess "Can't parse SUBMISSION_TEST_DB environment variable '$test'";
+                }
             }
             
             # Make the database connection
-            $db = DBI->connect("DBI:mysql:host=humsrv1;port=3399;database=$dbname;user=$user",
-                               undef, undef, {RaiseError => 1})
+            $db = DBI->connect("DBI:mysql:host=$host;port=$port;database=$dbname",
+                               $user, undef, {RaiseError => 1, PrintError => 0})
                 or die "Can't connect to submissions database as '$user' ",
                 DBI::errstr();
         }
