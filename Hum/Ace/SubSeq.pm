@@ -253,7 +253,6 @@ sub take_otter_ids {
         for (my $j = 0; $j < @old_exons; ) {
             my $o_ex = $old_exons[$j];
             if ($n_ex->overlaps($o_ex)) {
-                warn "Remapped otter id for exon\n";
                 $n_ex->otter_id($o_ex->otter_id);
                 splice(@old_exons, $j, 1);
             } else {
@@ -270,7 +269,6 @@ sub clone {
     my $new = ref($old)->new;
     
     # Copy scalar fields (But not is_archival!)
-    ### How to deal with Otter_id?
     foreach my $meth (qw{
         name
         clone_Sequence
@@ -981,7 +979,6 @@ sub ace_string {
     my $clone = $clone_seq->name
         or confess "No sequence name in clone_Sequence";
     
-    # Position in parent sequence
     my $out = qq{\nSequence "$clone"\n};
     if ($old_name) {
         $out .= qq{-D SubSequence "$old_name"\n}
@@ -991,6 +988,7 @@ sub ace_string {
     
     $out .= qq{\nSequence "$clone"\n};
     
+    # Position in parent sequence
     my( $start, $end, $strand );
     if (@exons) {
         $start  = $self->start;
