@@ -34,7 +34,7 @@ sub simple_location {
         $loc->strand('C');
         $loc->exons([$end,$start]);
     } elsif ($start == $end) {
-        $loc->strand('C');
+        $loc->strand('W');
         $loc->exons($start);
     }
     return $loc;
