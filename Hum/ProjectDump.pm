@@ -502,6 +502,27 @@ sub read_submission_data {
     }
 }
 
+sub get_seqby_and_fundby {
+    my( $pdmp ) = @_;
+    
+    my $proj = $pdmp->project_name
+        or confess "project_name not set";
+    my $sth = prepare_track_statement(q{
+        SELECT c.funded_by
+          , c.sequenced_by
+        FROM clone_project cp
+          , clone c
+        WHERE cp.clonename = c.clonename
+          AND cp.projectname = ?
+        });
+    $sth->execute($proj);
+    my ($fund_by, $seq_by) = $sth->fetchrow;
+    $sth->finish;
+    
+    $pdmp->funded_by($fund_by);
+    $pdmp->sequenced_by($seq_by);
+}
+
 sub fasta_file_path {
     my( $pdmp ) = @_;
     
