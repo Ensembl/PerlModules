@@ -68,7 +68,8 @@ sub elements {
     my( $self ) = @_;
     
     unless ($self->strand) {
-        confess "Strand not set\n";
+        confess sprintf "Strand not set for %s\n",
+            $self->accession_sv;
     }
     
     return (

@@ -192,7 +192,7 @@ sub _process_contig {
             $cl->seq_start($pb->position);
         }
     }
-    $cl->strand($strand);
+    $cl->strand($strand || 1);
 }
 
 sub insert_missing_overlap_pad {

@@ -266,6 +266,11 @@ sub make_transcript_sets {
             # Only get SubSeqs from this locus
             next unless $is_locus_seq{$t_name};
             
+            unless ($t->get_all_Exons) {
+                warn "Transcript '$t_name' has zero exons in golden path - skipping\n";
+                next;
+            }
+            
             my( $pair_name, $is_mRNA ) = $t_name =~ /^(.+?)(\.mRNA)?$/;
             unless ($is_mRNA) {
                 if ($t->GeneMethod->name =~ /mRNA$/) {
@@ -321,8 +326,6 @@ sub make_transcript_sets {
                 my $cds_name  = $cds->name;
                 my $mrna_name = $mrna->name;
                 
-                ### contains_all_exons can be improved so that it
-                ### checks for mismatches in internal exons.
                 unless ($mrna->contains_all_exons($cds)) {
                     confess "'$mrna_name' doesn't contain all the exons in '$cds_name'";
                 } else {
