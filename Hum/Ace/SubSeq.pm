@@ -309,11 +309,16 @@ sub clone {
         downstream_subseq_name
         })
     {
+        if ( $meth eq 'translation_region' && (! $old->translation_region_is_set)  ) {
+            ## if values are not set this method returns defaults - which are the start and end
+            next ;
+        }
         $new->$meth($old->$meth());
     }
 
     # Clone each exon, and add to new SubSeq
     foreach my $old_ex ($old->get_all_Exons) {
+                
         my $new_ex = $old_ex->clone;
         $new->add_Exon($new_ex);
     }
@@ -487,7 +492,7 @@ sub translatable_Sequence {
     
     my ($t_start, $t_end)   = $self->translation_region;
     my $strand              = $self->strand;
-    my $phase               = $self->start_phase;
+    my $phase               = $self->start_phase  ;
     my $clone_seq           = $self->clone_Sequence or confess "No clone_Sequence";
     
     #warn "strand = $strand, phase = $phase\n";
@@ -628,6 +633,7 @@ sub GeneMethod {
     if ($GeneMethod) {
         $self->{'_GeneMethod'} = $GeneMethod;
     }
+   
     return $self->{'_GeneMethod'};
 }
 
@@ -694,7 +700,7 @@ sub is_archival {
 
 sub is_mutable {
     my( $self ) = @_;
-    
+
     if (my $locus = $self->Locus) {
         if ($locus->is_truncated) {
             return 0;
