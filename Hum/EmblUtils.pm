@@ -128,7 +128,7 @@ BEGIN {
     }
     
     sub species_binomial {
-        my( $species ) = @_;
+        my $species = lc shift;
         
         if (my $latin = $class{$species}) {
             return join('', $latin->[0], $latin->[1] );
