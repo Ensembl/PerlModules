@@ -169,7 +169,7 @@ sub submit {
     $self->store;
     my $ana_job_id = $self->ana_job_id;
     
-    $wrapper_command ||= 'run_ana_job';
+    $wrapper_command ||= $self->default_wrapper_command;
     
     my $bsub_pipe = "bsub $wrapper_command -ana_job_id $ana_job_id 2>&1 |";
     local *BSUB_PIPE;
