@@ -34,11 +34,12 @@ my (@libs, @path);
 # Set up @INC
 BEGIN {
     @libs = qw(
-	       /nfs/disk100/humpub/modules/PerlModules
-               /nfs/disk100/humpub/modules/bioperl-0.6
-	       /nfs/disk100/humpub/modules
-	       /usr/local/badger/bin
-	       );
+        /nfs/disk100/humpub/modules/ensembl/modules
+        /nfs/disk100/humpub/modules/bioperl
+        /nfs/disk100/humpub/modules/PerlModules
+        /nfs/disk100/humpub/modules
+        /usr/local/badger/bin
+        );
 }
 use lib @libs;
 
