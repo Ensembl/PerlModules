@@ -42,7 +42,6 @@ BEGIN {
         author
         dump_time
         chromosome
-        embl_checksum
         embl_name
         htgs_phase
         online_path
@@ -1144,8 +1143,8 @@ sub write_quality_file {
 sub read_embl_file {
     my( $pdmp ) = @_;
     
-    my $dir = $pdmp->file_path or confess "file_path not set";
     my $seq_name = $pdmp->sequence_name;
+    my $dir = $pdmp->file_path or confess "file_path not set";
     my $file = "$dir/$seq_name.embl";
     
     if (-e $file) {
@@ -1164,7 +1163,7 @@ sub write_embl_file {
     my( $pdmp ) = @_;
 
     my $seq_name = $pdmp->sequence_name;
-    my $dir = $pdmp->file_path;
+    my $dir = $pdmp->file_path or confess "file_path not set";
     my $file = "$dir/$seq_name.embl";
     
     my $embl = $pdmp->embl_file;
@@ -1193,23 +1192,44 @@ sub write_embl_file {
     }
 }
 
-sub embl_file {
-    my( $pdmp ) = @_;
-    
-    unless ($pdmp->{'_embl_file'}) {
-        my( $embl );
-        if ($pdmp->read_list) {
-            # We have read details, so it's a new dump
-            bless $pdmp, 'Hum::ProjectDump::EMBL';
-            $embl = $pdmp->make_embl($pdmp);
-        } else {
-            # Read the existing file, or make a new
-            # one from the fasta file
-            $embl = $pdmp->read_embl_file || $pdmp->make_old_embl;
+{
+    sub embl_file {
+        my( $pdmp, $embl ) = @_;
+
+        if ($embl) {
+            $pdmp->{'_embl_file'} = $embl;
         }
-        $pdmp->{'_embl_file'} = $embl;
+        elsif (! $pdmp->{'_embl_file'}) {
+            if ($pdmp->read_list) {
+                # We have read details, so it's a new dump
+                bless $pdmp, 'Hum::ProjectDump::EMBL';
+                $embl = $pdmp->make_embl($pdmp);
+            } else {
+                # Read the existing file, or make a new
+                # one from the fasta file
+                $embl = $pdmp->read_embl_file || $pdmp->make_old_embl;
+            }
+            $pdmp->{'_embl_file'} = $embl;
+        }
+        return $pdmp->{'_embl_file'}
     }
-    return $pdmp->{'_embl_file'}
+
+    sub embl_checksum {
+        my( $pdmp, $sum ) = @_;
+
+        # Return the checksum from the embl entry if we have it
+        if ($pdmp->{'_embl_file'}) {
+            confess("Can't set checksum when embl_file is set!") if $sum;
+            return $pdmp->{'_embl_file'}->embl_checksum;
+        }
+        # Or set or return the stored value
+        else {
+            if ($sum) {
+                $pdmp->{'_embl_checksum'} = $sum;
+            }
+            return $pdmp->{'_embl_checksum'};
+        }
+    }
 }
 
 sub read_accession_data {
@@ -1252,9 +1272,7 @@ sub read_accession_data {
         }
         my $time = time;
         
-        warn "Not actually submitting to the EBI" and return;
-        
-        my $seq_name = $pdmp->sequence_name;
+        my $seq_name = $pdmp->sequence_name or confess "sequence_name not set";
         my $em_file = $pdmp->file_path .'/'. $seq_name .'.embl';
         confess "No such file '$em_file'" unless -e $em_file;
         
