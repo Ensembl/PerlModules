@@ -15,6 +15,7 @@ use Hum::ProjectDump::EMBL;
 use Hum::ProjectDump::EMBL::HGMP;
 use Hum::EBI_FTP;
 use Hum::Conf qw( FTP_ROOT FTP_GHOST FTP_STRUCTURE );
+use Symbol 'gensym';
 use File::Path;
 
 sub new {
@@ -1541,11 +1542,11 @@ sub read_embl_file {
     
     
     if (-e $file) {
-        local *EMBL;
+        my $fh = gensym();
         my $parser = Hum::EMBL->new;
-        open EMBL, $file or die "Can't read '$file' : $!";
+        open $fh, $file or die "Can't read '$file' : $!";
         my $embl = $parser->parse(\*EMBL) or die "No embl file returned";
-        close EMBL;
+        close $fh;
         return $embl;
     } else {
         return;
@@ -1558,10 +1559,10 @@ sub write_embl_file {
     my $file = $pdmp->embl_file_path;    
     my $embl = $pdmp->embl_file;
     
-    local *EMBL;
-    open EMBL, "> $file" or confess "Can't write to '$file' : $!";
-    print EMBL $embl->compose or confess "Can't write to '$file' : $!";
-    close EMBL or confess "Error creating EMBL file ($?) $!";
+    my $fh = gensym();
+    open $fh, "> $file" or confess "Can't write to '$file' : $!";
+    print $fh $embl->compose or confess "Can't write to '$file' : $!";
+    close $fh or confess "Error creating EMBL file ($?) $!";
 }
 
 {

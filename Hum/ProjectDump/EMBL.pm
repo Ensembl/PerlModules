@@ -3,6 +3,8 @@ package Hum::ProjectDump::EMBL;
 
 use strict;
 use Carp;
+use Hum::ProjectDump;
+
 use vars qw( @ISA );
 
 @ISA = 'Hum::ProjectDump';

@@ -115,7 +115,7 @@ sub default_server_executable {
 }
 
 sub timeout_string {
-    return '0:1:0';
+    return '0:0:0';
 }
 
 sub server_pid {
@@ -204,6 +204,17 @@ sub DESTROY {
 __END__
 
 =head1 NAME - Hum::Ace::LocalServer
+
+=head1 DESCRIPTION
+
+This is a LocalServer for local programs.
+
+Connecting using AcePerl via tace is unreliable,
+but it is always OK via a server.  This module
+starts a socket server on a database, and gives
+you an AcePerl handle to it.  Remember, the
+database should be on a local disk, not mounted
+over NFS - that is always a bad idea!
 
 =head1 AUTHOR
 
