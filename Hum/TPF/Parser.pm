@@ -69,7 +69,7 @@ sub parse {
                 die "Bad TPF gap line: $_\nGap lines must begin with 'GAP'\n";
             }
             if ($acc ne '?' and $uniq_accession{$acc}) {
-                die "Accession '$acc' appears twice in TPF";
+                die "Accession '$acc' appears twice in TPF\n";
             }
             $row = Hum::TPF::Row::Clone->new;
             $row->accession($acc);
@@ -79,7 +79,7 @@ sub parse {
             } else {
                 $row->intl_clone_name($intl);
                 if ($intl ne '?' and $uniq_clone{$intl}) {
-                    die "Clone name '$intl' appears twice in TPF";
+                    die "Clone name '$intl' appears twice in TPF\n";
                 }
             }
             $row->contig_name($contig_name);
