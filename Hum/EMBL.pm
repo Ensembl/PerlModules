@@ -4,6 +4,8 @@ package Hum::EMBL;
 use strict;
 use Carp;
 use Hum::EMBL::Line;    # Contains most of the line handling packages
+use Hum::EMBL::Handle;
+use Symbol 'gensym';
 
 BEGIN {
 
@@ -121,7 +123,24 @@ BEGIN {
 }
 
 sub parse {
-    my( $embl, $fh ) = @_;
+    my( $embl, $arg ) = @_;
+    
+    # Make $arg into a reference - (allows $parser->parse(*ARGV)
+    # syntax instead of $parser->parse(\*ARGV)).
+    $arg = \$arg unless ref($arg);
+    
+    my $type = ref($arg);
+    my( $fh );
+    if ($type eq 'GLOB') {
+        $fh = $arg;
+    } elsif ($type eq 'SCALAR') {
+        # A bit of magic which makes a string
+        # behave like a filehandle
+        $fh = gensym();
+        tie( *{$fh}, 'Hum::EMBL::Handle', $arg );
+    } else {
+        confess("argument must be ref to 'GLOB' or 'SCALAR', not '$type'");
+    }
     
     my $entry = $embl->new();
     
