@@ -181,6 +181,8 @@ sub new_from_sanger_id {
     $pdmp->read_accession_data;
     $pdmp->read_submission_data;
     $pdmp->read_tracking_details;
+    
+    return $pdmp;
 }
 
 sub read_submission_data {
