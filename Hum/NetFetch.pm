@@ -29,7 +29,7 @@ sub netfetch {
     return \%Request unless @$list;
 
     %Request = map { $_, 0 } ('EMAIL_LOG_FILE', @$list);
-    $TIMEOUT ||= 600;   # Kill ourselves after timeout
+    $TIMEOUT ||= 1200;   # Kill ourselves after timeout
 
     $SIG{'ALRM'} = sub {
                         die "Timeout.  Couldn't retrieve the following:\n",
@@ -78,11 +78,14 @@ sub netfetch {
                 }
             } elsif ($first_line =~ /^$/) {
                 while (<MSG_FILE>) {
+                    chomp;
                     if (/^\* File NUC:(\S+) (sent|not found)\.$/) {
                         $Request{ 'EMAIL_LOG_FILE' } = 1;
                         if ($2 eq 'not found') {
                             $Request{ $1 } = 'FAILED' if exists $Request{ $_ };
                         }
+                    } else {
+                        warn "Didn't match: ('$_')\n";
                     }
                 }
                 # File must be email log, or an EMBL file
@@ -95,6 +98,8 @@ sub netfetch {
         last unless missing(\%Request);
         sleep 10;
     }
+    
+    alarm 0;
 
     # Warn about failed requests
     if (my @Failed = grep { $Request{$_} eq 'FAILED' } keys %Request) {
