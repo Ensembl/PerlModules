@@ -822,6 +822,45 @@ sub get_all_completed_EnsAnalysis {
         ->fetch_all_complete_for_ana_seq_id($ana_seq_id);
 }
 
+sub get_accession_and_sv {
+    my( $self ) = @_;
+    
+    my $seq_id = $self->seq_id;
+    
+    my( $acc, $sv );
+    if (my $pre = $self->db_prefix) {
+        confess "Unknown db prefix '$pre'" if $pre ne 'Em:';
+        # External sequence
+        $acc = $self->sequence_name;
+        my $sth = prepare_statement(qq{
+            SELECT sequence_version
+            FROM sequence
+            WHERE seq_id = $seq_id
+            });
+        $sth->execute;
+        ($sv) = $sth->fetchrow;
+    } else {
+        # Sanger sequence
+        my $sth = prepare_statement(qq{
+            SELECT a.accession
+              , s.sequence_version
+            FROM sequence s
+              , project_dump d
+              , project_acc a
+            WHERE s.seq_id = d.seq_id
+              AND d.sanger_id = a.sanger_id
+              AND s.seq_id = $seq_id
+            });
+        $sth->execute;
+        ($acc, $sv) = $sth->fetchrow;
+    }
+    
+    confess "Can't determine accession"        unless $acc;
+    confess "Can't determine sequence version" unless $sv;
+    
+    return($acc, $sv);
+}
+
 1;
 
 __END__

@@ -63,8 +63,7 @@ sub make_embl {
 
     # AC * line
     my $ac_star = $embl->newAC_star;
-    my $identifier = '_'. uc $project;
-    $ac_star->identifier($identifier);
+    $ac_star->identifier($pdmp->sanger_id);
     $embl->newXX;
 
     # DE line
