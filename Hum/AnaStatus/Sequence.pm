@@ -8,6 +8,7 @@ use Carp;
 use Hum::Submission qw( prepare_statement timeace );
 use Hum::AnaStatus qw( annotator_full_name );
 use Hum::AnaStatus::AceFile;
+use Hum::AnaStatus::Job;
 use Hum::AnaStatus::AceDatabase;
 
 sub new {
@@ -343,7 +344,7 @@ sub analysis_priority {
     sub set_analysis_priority {
         my( $self, $new_priority ) = @_;
         
-        confess "No new analysis_priority given" unless $new_priority;
+        confess "No new analysis_priority given" unless defined $new_priority;
         if (my $old_priority = $self->analysis_priority) {
             return if $old_priority == $new_priority;
         }
@@ -716,6 +717,47 @@ sub get_dna_seq {
     warn "'get_dna_seq' is deprecated; use 'bio_seq' instead";
     return $self->bio_seq(@_);
 }
+
+sub get_all_Jobs {
+    my( $self ) = @_;
+    
+    my( $ajl );
+    unless ($ajl = $self->{'_ana_job_list'}) {
+        
+        my $ana_seq_id = $self->ana_seq_id
+            or confess "No ana_seq_id";
+        my $sth = prepare_statement(qq{
+            SELECT ana_job_id
+              , task_name
+              , submit_time
+              , lsf_job_id
+              , lsf_error
+            FROM ana_job
+            WHERE ana_seq_id = $ana_seq_id
+            });
+        $sth->execute;
+        
+        $ajl = [];
+        while (my ($ana_job_id, $task_name, $submit_time,
+                   $lsf_job_id, $lsf_error) = $sth->fetchrow)
+        {
+            my $job = Hum::AnaStatus::Job->new;
+            $job->ana_job_id($ana_job_id);
+            $job->ana_seq_id($ana_seq_id);
+            $job->task_name($task_name);
+            $job->submit_time($submit_time);
+            $job->lsf_job_id($lsf_job_id);
+            $job->lsf_error($lsf_error);
+            
+            push(@$ajl, $job);
+        }
+        
+        $self->{'_ana_job_list'} = $ajl;
+    }
+    
+    return @$ajl;
+}
+
 
 1;
 
