@@ -315,17 +315,33 @@ sub parse_assembled_from {
     my ($pdmp, $name, $seq) = @_;
 
     my @af;
+    my $read_extents = $pdmp->{_read_extents} || {};
 
     foreach my $line (split(/\n/, $$seq)) {
 	my ($af, $read, $cs, $ce, $rs, $re) = split(" ", $line);
 	if ($af eq "Assembled_from") {
 	    push(@af, [$read, $cs, $ce, $rs, $re]);
+	    my $dirn = ($cs > $ce);
+	    if ($dirn) { ($cs, $ce) = ($ce, $cs); }
+	    if (exists($read_extents->{$read})) {
+
+		my ($contig, $ecs, $ece, $ers, $ere)
+		    = @{$read_extents->{$read}};
+
+		if ($cs > $ecs) { $cs = $ecs; }
+		if ($ce < $ece) { $ce = $ece; }
+		if ($rs > $ers) { $rs = $ers; }
+		if ($re < $ere) { $re = $ere; }
+	    }
+
+	    $read_extents->{$read} = [$name, $cs, $ce, $rs, $re, $dirn];
 	}
     }
 
     @af = sort { $a->[0] cmp $b->[0] || $a->[3] <=> $b->[3] || $a cmp $b } @af;
 
     $pdmp->{_assembled_from}->{$name} = \@af;
+    $pdmp->{_read_extents} = $read_extents;
 }
 
 sub read_quality {
@@ -405,7 +421,10 @@ sub read_gap_contigs {
 		    my ($seq_vec) = $value =~ /Sequencing_vector\s+\"(\S+)\"/;
 		    $pdmp->count_vector($seq_vec);
 		    $pdmp->count_chemistry($name);
-		    
+		    if (/Clone_vec\s+CVEC/) {
+			$pdmp->record_clone_vec($name, \$value);
+		    }
+
 		} elsif ($class eq 'BaseQuality') {
 		    
 		    $pdmp->read_quality($name, pack("C*",
@@ -442,6 +461,18 @@ sub count_chemistry {
 	    $pdmp->{_chem_count}->{$pdmp->{suffix_chemistry}->{$suffix}}++;
 	}
     }
+}
+
+sub record_clone_vec {
+    my ($pdmp, $name, $seq) = @_;
+
+    my ($start, $end, $vec_end)
+	= $$seq =~ /Clone_vec\s+CVEC\s+(\d+)\s+(\d+)\s+\"CAF\:End\=(Left|Right)/;
+    return unless ($vec_end);
+
+    print STDERR "$name, $start, $end, $vec_end\n";
+
+    push(@{$pdmp->{_found_vector}->{$vec_end}}, [$name, $start, $end]);
 }
 
 sub make_read_comments {
@@ -575,6 +606,62 @@ sub count_q20_for_contig {
     }
 
     return $q20_count;
+}
+
+sub find_vector_ends {
+    my ($pdmp) = @_;
+
+    my %ends;
+    my $read_extents = $pdmp->{_read_extents} || {};
+
+    foreach my $vec_end ('Left', 'Right') {
+	print STDERR "$vec_end\n";
+	next unless (exists($pdmp->{_found_vector}->{$vec_end}));
+
+	my $contig;
+	my $contig_end;
+
+	foreach my $found_vec (@{$pdmp->{_found_vector}->{$vec_end}}) {
+	    my ($read, $start, $end) = @$found_vec;
+	    print STDERR "$read $start $end\n";
+	    next unless (exists($read_extents->{$read}));
+
+	    my ($name, $cs, $ce, $rs, $re, $dirn)
+		= @{$read_extents->{$read}};
+
+	    print STDERR "$read, $start, $end ==== $name, $cs, $ce, $rs, $re, $dirn\n";
+	    unless ($contig) { $contig = $name; }
+	    if ($contig ne $name) {
+		$contig = "";
+		last;
+	    }
+
+	    my $rcontig_end;
+
+	    if ($dirn) {
+		# Reverse read
+		if ($end < $rs)      { $rcontig_end = "right"; }
+		elsif ($start > $re) { $rcontig_end = "left";  }
+	    } else {
+		# Forward read
+		if ($end < $rs)      { $rcontig_end = "left";  }
+		elsif ($start > $re) { $rcontig_end = "right"; }
+	    }
+	    unless ($rcontig_end) { next; }
+
+	    unless ($contig_end) { $contig_end = $rcontig_end; }
+	    if ($contig_end ne $rcontig_end) {
+		$contig = "";
+		last;
+	    }
+	}
+
+	if ($contig) {
+	    $ends{$vec_end}->{$contig} = $contig_end;
+	}
+    }
+
+    return \%ends;
 }
 
 sub read_fasta_file {

@@ -41,7 +41,8 @@ use Hum::EMBL (
 use Hum::EMBL::Utils qw( EMBLdate );
 
 BEGIN {
-    my $eight_hundred_Ns = 'n' x 800;
+    my $number_Ns = 800;
+    my $eight_hundred_Ns = 'n' x $number_Ns;
 
     sub make_embl {
         my( $pdmp ) = @_;
@@ -65,12 +66,24 @@ BEGIN {
             or die "Can't get latin name for '$species'";
 
         # Make the sequence
-        my( $dna, %contig_lengths );
+        my $dna = "";
+	my %contig_lengths;
+	my $pos = 0;
+	my @contig_order; # [contig name, start pos, end pos]
+
         foreach my $contig ($pdmp->contig_list) {
             my $con = $pdmp->DNA($contig);
-            $contig_lengths{$contig} = length($$con);
-            $dna .= $eight_hundred_Ns if $dna;
+	    my $contig_length = length($$con);
+            $contig_lengths{$contig} = $contig_length;
+            if ($dna) {
+		$dna .= $eight_hundred_Ns;
+		$pos += $number_Ns;
+	    }
+	    my $contig_start = $pos + 1;
             $dna .= $$con;
+	    $pos += $contig_length;
+	    my $contig_end = $pos;
+	    push(@contig_order, [$contig, $contig_start, $contig_end]);
         }
         my $seqlength = length($dna);
 
@@ -151,7 +164,25 @@ foreign sequence from E.coli, yeast, vector, phage etc.");
         # Feature table source feature
         my( $libraryname ) = library_and_vector( $project );
         add_source_FT( $embl, $seqlength, $binomial, $ext_clone,
-                       $chr, $map, $libraryname );            
+                       $chr, $map, $libraryname );	
+	my $vec_ends = $pdmp->find_vector_ends();
+	foreach my $cpos (@contig_order) {
+	    my ($contig, $start, $end) = @$cpos;
+	    my $fragment = $embl->newFT;
+	    $fragment->key('misc_feature');
+	    my $loc = $fragment->newLocation;
+	    $loc->exons([$start, $end]);
+	    $loc->strand('W');
+	    $fragment->addQualifierStrings('note', "assembly_fragment:$contig");
+	    if (exists($vec_ends->{'Left'}->{$contig})) {
+		$fragment->addQualifierStrings('note', "clone_end:SP6");
+		$fragment->addQualifierStrings('note', "vector_side:$vec_ends->{'Left'}->{$contig}");
+	    }
+	    if (exists($vec_ends->{'Right'}->{$contig})) {
+		$fragment->addQualifierStrings('note', "clone_end:T7");
+		$fragment->addQualifierStrings('note', "vector_side:$vec_ends->{'Right'}->{$contig}");
+	    }
+	}
         $embl->newXX;
     
         # Sequence
