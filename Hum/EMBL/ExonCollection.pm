@@ -103,12 +103,14 @@ sub end_not_found {
 sub start {
     my( $loc ) = @_;
     
-    return $loc->strand eq 'W' ? $loc->five_prime : $loc->three_prime;
+    confess "Needs to be fixed";
+    #return $loc->strand eq 'W' ? $loc->five_prime : $loc->three_prime;
 }
 sub end {
     my( $loc ) = @_;
     
-    return $loc->strand eq 'W' ? $loc->three_prime : $loc->five_prime;
+    confess "Needs to be fixed";
+    #return $loc->strand eq 'W' ? $loc->three_prime : $loc->five_prime;
 }
 
 sub length {
@@ -193,7 +195,6 @@ sub hash_key {
 
     warn "This needs to be changed\n";
     my @exons = $loc->exons;
-    my @key;
         
     my( @key );
     if (ref($loc->{'exons'}[0])) {

@@ -70,6 +70,8 @@ sub accession_version {
     return $self->{_hum_embl_location_exon_accession_version};
 }
 
+1;
+
 __END__
  
 =head1 AUTHOR
