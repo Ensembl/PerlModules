@@ -276,8 +276,6 @@ sub strip_Em {
 sub take_otter_ids {
     my( $self, $old ) = @_;
     
-    warn "remapping otter IDs";
-    
     $self->otter_id($old->otter_id);
     my @new_exons = $self->get_all_Exons;
     my @old_exons =  $old->get_all_Exons;
@@ -287,7 +285,6 @@ sub take_otter_ids {
         for (my $j = 0; $j < @old_exons; ) {
             my $o_ex = $old_exons[$j];
             if ($n_ex->overlaps($o_ex)) {
-                printf STDERR "copying '%s'\n", $o_ex->otter_id || 'undef';
                 $n_ex->otter_id($o_ex->otter_id);
                 splice(@old_exons, $j, 1);
             } else {
