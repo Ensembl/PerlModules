@@ -130,9 +130,21 @@ sub temporary_directory {
     return $self->{'_temporary_directory'};
 }
 
+sub crossmatch_log_file {
+    my( $self, $crossmatch_log_file ) = @_;
+    
+    if ($crossmatch_log_file) {
+        $self->{'_crossmatch_log_file'} = $crossmatch_log_file;
+    }
+    return $self->{'_crossmatch_log_file'};
+}
+
 sub DESTROY {
     my( $self ) = @_;
     
+    if (my $log = $self->crossmatch_log_file) {
+        unlink($log);
+    }
     if (my $dir = $self->temporary_directory) {
         #warn "Removing '$dir'";
         rmtree($dir);

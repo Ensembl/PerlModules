@@ -44,11 +44,11 @@ sub show_alignments {
 }
 
 sub run {
-    my( $self, $subject, $query ) = @_;
+    my( $self, $query, $subject ) = @_;
     
     my $tmp = $self->make_tmp_dir;
-    my $subject_file = $self->_get_file_path($tmp, $subject);
     my   $query_file = $self->_get_file_path($tmp, $query);
+    my $subject_file = $self->_get_file_path($tmp, $subject);
     
     
     my $cmd_pipe = $self->make_command_pipe($tmp, $query_file, $subject_file);
@@ -58,6 +58,7 @@ sub run {
     my $parser = Hum::Analysis::Parser::CrossMatch->new;
     $parser->results_filehandle($fh);
     $parser->temporary_directory($tmp);
+    $parser->crossmatch_log_file("$query_file.log");
     return $parser;
 }
 
