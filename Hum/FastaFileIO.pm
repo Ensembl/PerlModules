@@ -63,16 +63,27 @@ sub sequence_class {
     return $ffio->{'_sequence_class'} || 'Hum::Sequence';
 }
 
-sub _last_line {
-    my( $ffio, $_last_line ) = @_;
-
-    if ($_last_line) {
-        $ffio->{'__last_line'} = $_last_line;
+sub _next_line {
+    my( $ffio ) = @_;
+    
+    if (my $line = $ffio->{'_last_line'}) {
+        $ffio->{'_last_line'} = undef;
+        return $line;
     } else {
-        my $last = $ffio->{'__last_line'};
-        $ffio->{'__last_line'} = undef;
-        return $last;
+        my $fh = $ffio->{'_file_handle'} || return;
+        if ($line = <$fh>) {
+            return $line;
+        } else {
+            $ffio->{'_file_handle'} = undef;
+            return;
+        }
     }
+}
+
+sub _push_back {
+    my( $ffio, $line ) = @_;
+
+    $ffio->{'_last_line'} = $line;
 }
 
 sub _last_quality_line {
@@ -133,28 +144,26 @@ sub read_one_sequence {
     local $/ = "\n";
     
     my $class = $ffio->sequence_class;
-    my $fh = $ffio->file_handle
-        or confess "No file handle";
-    my $first_line = $ffio->_last_line || <$fh> || return;
-    my ($name, $desc) = $first_line =~ /^>(\S+)\s*(.*)/
-        or die "Invalid first line '$first_line'";
-    my $seq_obj = $class->new();
-    $seq_obj->name($name);
-    $seq_obj->description($desc) if $desc;
-    
-    #warn "Parsing '$name'\n";
     
     my $seq_string = '';
-    while (<$fh>) {
-        chomp;
-        if (/^>/) {
-            $ffio->_last_line($_);
-            last;
+    my( $seq_obj );
+    while ($_ = $ffio->_next_line) {
+        if (my ($name, $desc) = /^>(\S+)\s*(.*)/) {
+            #warn "Got '$name'\n";
+            if ($seq_obj) {
+                $ffio->_push_back($_);
+                last;
+            } else {
+                $seq_obj = $class->new();
+                $seq_obj->name($name);
+                $seq_obj->description($desc) if $desc;
+            }
         } else {
+            chomp;
             $seq_string .= $_;
         }
     }
-    
+    return unless $seq_obj;
     $seq_obj->sequence_string($seq_string);
     
     # Read quality values if we've got a handle to a quality file
