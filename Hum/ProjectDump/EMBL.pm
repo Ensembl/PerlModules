@@ -279,6 +279,9 @@ sub add_FT_entries {
                   'Washington University School of Medicine, 4444 Forest',
                   'Park Parkway, St. Louis, MO 63108, USA',
                   'http://genome.wustl.edu/gsc/index.shtml'],
+        GTC =>   ['Draft Sequence Produced by Genome Therapeutics Corp,',
+                  '100 Beaver Street, Waltham, MA 02453, USA',
+                  'http://www.genomecorp.com'],
         );
 
     my %sequencing_center = (
