@@ -12,10 +12,14 @@
 #
 
 =head1 NAME Hum::EMBL::Exon
- 
-=head2 Constructor:
 
- ??
+=head2 Description
+
+Object used during the dumping of EMBL entries for finished genomic
+sequence, to hold exon information.
+
+These objects are added to a Hum::EMBL::ExonLocation object as part of
+the process (see Bio::Otter::EMBL::Factory)
 
 =cut
 
@@ -24,12 +28,26 @@ package Hum::EMBL::Exon;
 use strict;
 use Carp;
 
+=head2 new
+
+my $exon = Hum::EMBL::Exon->new;
+
+=cut
 
 sub new {
     my( $pkg ) = @_;
                                                                                  
     return bless {}, $pkg;
 }
+
+=head2 strand
+
+Get/set method for the strand of the exon. 
+Convention: forward strand +1, reverse strand -1. 
+Same as Ensembl and others. This is checked
+explicitly.
+
+=cut
 
 sub strand {
     my ($self, $value) = @_;
@@ -43,6 +61,14 @@ sub strand {
     return $self->{_hum_embl_location_exon_strand};
 }
 
+=head2 start
+
+Get/set method for the position of the exon. Should be >= 1.
+As this is  populated from Ensembl/Otter exons, start will always
+be less than end.
+
+=cut
+
 sub start {
     my ($self, $value) = @_;
     
@@ -52,6 +78,14 @@ sub start {
     return $self->{_hum_embl_location_exon_start};
 }
 
+=head2 end
+
+Get/set method for the position of the exon. Should be >= 1.
+As this is copied from Ensembl/Otter exons, end will always
+be greater than start.
+
+=cut
+
 sub end {
     my ($self, $value) = @_;
     
@@ -60,6 +94,15 @@ sub end {
     }
     return $self->{_hum_embl_location_exon_end};
 }
+
+=head2 accession_version
+
+Get/set method for the accession.version string for the clone
+in which the exon is found/predicted.
+
+  e.g. AL669831.13
+
+=cut
 
 sub accession_version {
     my ($self, $value) = @_;
