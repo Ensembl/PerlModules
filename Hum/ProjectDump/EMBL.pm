@@ -130,6 +130,7 @@ BEGIN {
 	$embl->newCC->list("Assembly program: XGAP4; version 4.5");
 	$embl->newCC->list($pdmp->make_consensus_q_summary(),
 			   $pdmp->make_consensus_length_report());
+	$embl->newCC->list($pdmp->make_q20_depth_report());
 	$embl->newXX;
 
         my $unfin_cc = $embl->newCC;

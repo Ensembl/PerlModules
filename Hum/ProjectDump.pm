@@ -311,6 +311,33 @@ BEGIN {
     }
 }
 
+sub parse_assembled_from {
+    my ($pdmp, $name, $seq) = @_;
+
+    my @af;
+
+    foreach my $line (split(/\n/, $$seq)) {
+	my ($af, $read, $cs, $ce, $rs, $re) = split(" ", $line);
+	if ($af eq "Assembled_from") {
+	    push(@af, [$read, $cs, $ce, $rs, $re]);
+	}
+    }
+
+    @af = sort { $a->[0] cmp $b->[0] || $a->[3] <=> $b->[3] || $a cmp $b } @af;
+
+    $pdmp->{_assembled_from}->{$name} = \@af;
+}
+
+sub read_quality {
+    my ($pdmp, $name, $qual) = @_;
+
+    if (defined($qual)) {
+	$pdmp->{_read_quality}->{$name} = $qual;
+    }
+
+    return $pdmp->{_read_quality}->{$name};
+}
+
 sub read_gap_contigs {
     my( $pdmp ) = @_;
     my $db_name  = uc $pdmp->project_name;
@@ -321,7 +348,7 @@ sub read_gap_contigs {
 
     my $contig_prefix = "Contig_prefix_ezelthrib";
 
-    open(GAP2CAF, "cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $contig_prefix 2> /dev/null |")
+    open(GAP2CAF, "cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $contig_prefix 2> /dev/null | caf_depad |")
 	|| die "COULDN'T OPEN PIPE FROM GAP2CAF : $!\n";
     
     while (<GAP2CAF>) {
@@ -332,22 +359,58 @@ sub read_gap_contigs {
 	# tags as gap2caf was told to put $contig_prefix in front of the
 	# contig staden id.
 	
-	if ($object =~ /(DNA|BaseQuality)\s+\:\s+$contig_prefix(\d+)/) {
-	    
-	    my ($class, $name) = ($1, $2);
-	    if ($class eq 'DNA') {
-		$value =~ s/\s+//g;
-                $value = lc $value;
-		$pdmp->DNA($name, \$value);
+#	if ($object =~ /(DNA|BaseQuality)\s+\:\s+$contig_prefix(\d+)/) {
+#	    
+#	    my ($class, $name) = ($1, $2);
+#	    if ($class eq 'DNA') {
+#		$value =~ s/\s+//g;
+#                $value = lc $value;
+#		$pdmp->DNA($name, \$value);
+#	    } else {
+#		$pdmp->BaseQuality($name, [split(/\s+/, $value)]);
+#	    }
+#	    
+#	} elsif (my ($name) = $object =~ /Sequence\s+\:\s+(\S+)/) {
+#	    if ($value =~ /Is_read/) {
+#		my ($seq_vec) = $value =~ /Sequencing_vector\s+\"(\S+)\"/;
+#		$pdmp->count_vector($seq_vec);
+#		$pdmp->count_chemistry($name);
+#	    }
+#	}
+	if (my ($class, $name)
+	    = $object =~ /(DNA|BaseQuality|Sequence)\s+\:\s+(\S+)/) {
+
+	    if (my ($contig) = $name =~ /$contig_prefix(\d+)/o) {
+		# Contig object
+		if ($class eq 'DNA') {
+		    
+		    $value =~ s/\s+//g;
+		    $value = lc $value;
+		    $pdmp->DNA($contig, \$value);
+		    
+		} elsif ($class eq 'BaseQuality') {
+		    
+		    $pdmp->BaseQuality($contig, [split(/\s+/, $value)]);
+		    
+		} elsif ($class eq 'Sequence') {
+		    
+		    $pdmp->parse_assembled_from($contig, \$value);
+		    
+		}
 	    } else {
-		$pdmp->BaseQuality($name, [split(/\s+/, $value)]);
-	    }
-	    
-	} elsif (my ($name) = $object =~ /Sequence\s+\:\s+(\S+)/) {
-	    if ($value =~ /Is_read/) {
-		my ($seq_vec) = $value =~ /Sequencing_vector\s+\"(\S+)\"/;
-		$pdmp->count_vector($seq_vec);
-		$pdmp->count_chemistry($name);
+		# Read object
+		
+		if ($class eq 'Sequence' && $value =~ /Is_read/) {
+		    
+		    my ($seq_vec) = $value =~ /Sequencing_vector\s+\"(\S+)\"/;
+		    $pdmp->count_vector($seq_vec);
+		    $pdmp->count_chemistry($name);
+		    
+		} elsif ($class eq 'BaseQuality') {
+		    
+		    $pdmp->read_quality($name, pack("C*",
+						    split(/\s+/, $value)));
+		}
 	    }
 	}
     }
@@ -463,6 +526,55 @@ sub make_consensus_length_report {
     }
 
     return @report;
+}
+
+sub make_q20_depth_report {
+    my ($pdmp) = @_;
+
+    my $est_len   = 0;
+    my $q20_bases = 0;
+
+    foreach my $contig ($pdmp->contig_list) {
+	$est_len += $pdmp->contig_length($contig);
+	$q20_bases += $pdmp->count_q20_for_contig($contig);
+    }
+    unless ($est_len) { $est_len = 1; }
+    my @report;
+    push(@report,
+	 sprintf("Quality coverage: %.2fx in Q20 bases; sum-of-contigs",
+		 $q20_bases / $est_len));
+    
+    if (my $ag_len = $pdmp->agarose_length()) {
+    push(@report,
+	 sprintf("Quality coverage: %.2fx in Q20 bases; agarose-fp",
+		 $q20_bases / $ag_len));
+    }
+
+    return @report;
+}
+
+sub count_q20_for_contig {
+    my ($pdmp, $contig) = @_;
+
+    my $afs = $pdmp->{_assembled_from}->{$contig};
+
+    my $read = "";
+    my $quals;
+    my $q20_count = 0;
+    
+    foreach my $af (@$afs) {
+	if ($read ne $af->[0]) {
+	    $read = $af->[0];
+	    $quals = $pdmp->read_quality($read);
+	}
+
+	my ($start, $end) = ($af->[3], $af->[4]);
+	if ($start > $end) { ($start, $end) = ($end, $start); }
+	my $part = substr($quals, $start - 1, $end - $start + 1);
+	$q20_count += $part =~ tr/\000-\023//c;
+    }
+
+    return $q20_count;
 }
 
 sub read_fasta_file {
