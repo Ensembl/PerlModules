@@ -27,7 +27,7 @@ sub find_best_in_string {
     foreach my $cons (Hum::Ace::PolyA::Consensus->fetch_all) {
         my $range  = $cons->scan_range_length;
         my $signal = $cons->signal;
-        warn "scanning for: $signal\n";
+        #warn "scanning for: $signal\n";
         my $pos = $len - $range;
         while (($pos = index($string, $signal, $pos)) > -1) {
             my $poly = $pkg->new;
@@ -121,7 +121,6 @@ sub score {
             or confess "No consensus";
         $self->{'_score'} = $score = $cons->score_for_position($hex_pos);
     }
-    warn "score=$score\n";
     return $score;
 }
 

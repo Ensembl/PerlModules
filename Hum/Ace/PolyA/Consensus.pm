@@ -66,8 +66,6 @@ sub scan_range_length {
 sub score_for_position {
     my( $self, $pos ) = @_;
     
-    #warn "calculating score for pos '$pos'\n";
-    
     my $Z = (abs($pos) - $self->mean) / $self->sd;
 
     # Find the area in the two tails of the
