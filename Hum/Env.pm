@@ -41,35 +41,41 @@ BEGIN {
 }
 use lib @libs;
 
-# Make @INC get propagated to system calls
-$ENV{'PERL5LIB'} = join ':', @libs;
+# Ensure @INC gets propagated in system calls
+$ENV{PERL5LIB} = join ':', @libs;
+
+my $staden_home = '/usr/local/badger/staden';
+
+# For Staden programs
+if ($^O eq 'dec_osf') {
+    $ENV{LD_LIBRARY_PATH} = "$ENV{LD_LIBRARY_PATH}:$staden_home/lib/alpha-binaries";
+}
 
 # List of dirs for PATH
-@path = qw(
-	   /nfs/disk100/humpub/OSFbin
-	   /nfs/disk100/humpub/scripts
-	   /usr/local/pubseq/scripts
-	   /usr/local/badger/bin
-           /usr/local/badger/staden/bin
-	   /usr/local/pubseq/bin
-	   /nfs/disk100/pubseq/compugen/OSF/exe
-	   /usr/local/oracle/bin
-	   /usr/local/lsf/bin
-	   /usr/local/bin
-	   /bin
-	   /usr/sbin
-	   /usr/bin
-	   /usr/bin/X11
-	   /usr/etc
-	   /usr/bsd
-	   );
+@path = (qw(
+	    /nfs/disk100/humpub/OSFbin
+	    /nfs/disk100/humpub/scripts
+	    /usr/local/pubseq/scripts
+	    /usr/local/badger/bin
+	    /usr/local/pubseq/bin
+	    /nfs/disk100/pubseq/compugen/OSF/exe
+	    /usr/local/oracle/bin
+	    /usr/local/lsf/bin
+	    /usr/local/bin
+	    /bin
+	    /usr/sbin
+	    /usr/bin
+	    /usr/bin/X11
+	    /usr/etc
+	    /usr/bsd
+	    ), "$staden_home/bin");
 
 # Set PATH environment
-$ENV{'PATH'} = join ':', @path;
+$ENV{PATH} = join ':', @path;
 
 # For scripts which access oracle
-$ENV{'ORACLE_HOME'} = '/usr/local/oracle';
-$ENV{'TWO_TASK'}    = 'sids';
+$ENV{ORACLE_HOME} = '/usr/local/oracle';
+$ENV{TWO_TASK}    = 'sids';
 
 # For blast
 $ENV{BLASTDB}       = '/nfs/disk100/humpub/blast';
