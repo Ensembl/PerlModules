@@ -282,12 +282,13 @@ sub revcomp_contig {
 
     confess "Can't call revcomp_contig() without contig name"
         unless defined $contig;
+    warn "Reverse complementing contig '$contig'\n";
     my $dna = $pdmp->DNA($contig)
         or confess "No such DNA '$contig'";
     $$dna = reverse($$dna);
     $$dna =~ tr{acgtrymkswhbvdnACGTRYMKSWHBVDN}
                {tgcayrkmswdvbhnTGCAYRKMSWDVBHN};
-    my $qual = $pdmp->BaseQuality
+    my $qual = $pdmp->BaseQuality($contig)
         or confess "No such BaseQuality '$contig'";
     $$qual = reverse($$qual);
     
@@ -426,7 +427,6 @@ sub read_gap_contigs {
     }
     close(GAP2CAF) || confess $! ? "ERROR RUNNING GAP2CAF : exit status $?\n"
                                  : "ERROR RUNNING GAP2CAF : $!\n";
-    $pdmp->order_contigs;
 }
 
 sub parse_read_sequence {
@@ -492,11 +492,11 @@ sub read_extent {
     return $pdmp->{'_read_extents'}{$name};
 }
 
-sub read_extents_ref {
-    my( $pdmp ) = @_;
-    
-    return $pdmp->{'_read_extents'};
-}
+#sub read_extents_ref {
+#    my( $pdmp ) = @_;
+#    
+#    return $pdmp->{'_read_extents'};
+#}
 
 sub read_quality {
     my ($pdmp, $name, $qual) = @_;
@@ -628,36 +628,27 @@ sub get_vector_end_reads {
 sub vector_ends {
     my( $pdmp, $contig ) = @_;
 
-    #my %ends;
-    #my $read_extents = $pdmp->read_extents;
-
     unless (exists $pdmp->{'_vector_ends'}) {
         $pdmp->{'_vector_ends'} = undef;
         
-        foreach my $vec_end ('Left', 'Right') {
+        VECTOR_END: foreach my $vec_end ('Left', 'Right') {
 
             my @ends = $pdmp->get_vector_end_reads($vec_end) or next;
-
-	    #next unless (exists($pdmp->{_vector_end}->{$vec_end}));
 
 	    my $contig;
 	    my $contig_end;
 
-	    #foreach my $found_vec (@{$pdmp->{_vector_end}->{$vec_end}}) {
 	    foreach my $found_vec (@ends) {
 	        my ($read, $start, $end) = @$found_vec;
 
-	        #next unless (exists($read_extents->{$read}));
                 my $extent = $pdmp->read_extent($read) or next;
 
-                #my ($name, $cs, $ce, $rs, $re, $dirn)
-                #= @{$read_extents->{$read}};
                 my ($name, $cs, $ce, $rs, $re, $dirn) = @$extent;
 
-	        unless ($contig) { $contig = $name; }
+	        $contig ||= $name;
 	        if ($contig ne $name) {
-		    $contig = "";
-		    last;
+                    # Contradictory vector end info
+		    next VECTOR_END;
 	        }
 
 	        my $rcontig_end;
@@ -671,21 +662,16 @@ sub vector_ends {
 		    if    ($end   < $rs) { $rcontig_end = "left";  }
 		    elsif ($start > $re) { $rcontig_end = "right"; }
 	        }
-	        #unless ($rcontig_end) { next; }
                 next unless $rcontig_end;
 
-	        #unless ($contig_end) { $contig_end = $rcontig_end; }
                 $contig_end ||= $rcontig_end;
 	        if ($contig_end ne $rcontig_end) {
-		    $contig = "";
-		    last;
+                    # Contradictory vector end info
+		    next VECTOR_END;
 	        }
 	    }
 
-	    if ($contig) {
-	        #$ends{$vec_end}->{$contig} = $contig_end;
-                $pdmp->{'_vector_ends'}{$contig}{$vec_end} = $contig_end;
-	    }
+            $pdmp->{'_vector_ends'}{$contig}{$vec_end} = $contig_end;
         }
     }
 
@@ -721,7 +707,7 @@ sub order_contigs {
         #my $template = $read_templates->{$read};
         #my $insert_size = $insert_sizes->{$template};
     foreach my $read (@read_names) {
-        my $extent      = $pdmp->read_extent($read);
+        my $extent      = $pdmp->read_extent($read) or next;
 	my $template    = $pdmp->read_template($read);
 	my $insert_size = $pdmp->insert_size($template);
 

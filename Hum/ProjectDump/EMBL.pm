@@ -44,9 +44,9 @@ use Hum::EMBL (
 use Hum::EMBL::Utils qw( EMBLdate );
 
 {
-    my $number_Ns = 800;
+    my $number_Ns = 100;
     my $padding_Ns = 'n'  x $number_Ns;
-    my $padding_Qs = "\0" x $number_Ns;
+    my $padding_Zeroes = "\0" x $number_Ns;
 
     sub make_embl {
         my( $pdmp ) = @_;
@@ -84,7 +84,7 @@ use Hum::EMBL::Utils qw( EMBLdate );
             # Add padding if we're not at the start
             if ($dna) {
 		$dna          .= $padding_Ns;
-                $base_quality .= $padding_Qs;
+                $base_quality .= $padding_Zeroes;
 		$pos          += $number_Ns;
 	    }
             
