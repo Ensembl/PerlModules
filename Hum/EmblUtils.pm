@@ -103,7 +103,7 @@ BEGIN {
             Tetraodontiformes Tetraodontoidei Tetraodontidae Fugu
             )],
 
-        tetrodon =>
+        tetraodon =>
         [qw(Tetraodon nigroviridis), undef, qw(
             Eukaryota Metazoa Chordata Craniata Vertebrata Actinopterygii
             Neopterygii Teleostei Euteleostei Acanthopterygii Percomorpha
