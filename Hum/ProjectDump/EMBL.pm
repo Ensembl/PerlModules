@@ -29,6 +29,15 @@ sub embl_checksum {
     return $pdmp->embl_file->Sequence->embl_checksum;
 }
 
+# Overrides method in Hum::ProjectDump
+sub htgs_phase {
+    my( $pdmp ) = @_;
+    
+    $pdmp->{'_actual_htgs_phase'} ||=
+        Hum::Tracking::is_finished($pdmp->project_name) ? 3 : 1;
+    return $pdmp->{'_actual_htgs_phase'};
+}
+
 sub make_embl {
     my( $pdmp ) = @_;
 
