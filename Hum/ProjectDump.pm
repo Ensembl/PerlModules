@@ -1732,9 +1732,7 @@ sub store_dump {
         or confess "Got no seq_id from _store_sequence()";
     $pdmp->seq_id($seq_id);
     $pdmp->_store_project_dump;
-    if ($pdmp->can('store_draft_info')) {
-        $pdmp->store_draft_info;
-    }
+    $pdmp->store_draft_info;
 }
 
 sub is_htgs_draft {
