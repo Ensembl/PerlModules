@@ -205,35 +205,29 @@ sub new_from_accession {
 
 sub new_from_seqname_sv {
     my( $pkg, $name, $sv ) = @_;
-    my $ana_seq_id;
 
-    if ( $name ){
-      my $sth = prepare_statement(q{
+    my $sth = prepare_statement(q{
         SELECT a.ana_seq_id
         FROM sequence s
           , ana_sequence a
         WHERE s.seq_id = a.seq_id
           AND s.sequence_name = ?
           AND s.sequence_version = ?
-          AND a.is_current = 'Y'
         ORDER BY s.seq_id DESC
         LIMIT 1
         });
-      $sth->execute($name, $sv);
-      $ana_seq_id = $sth->fetchrow;
+    $sth->execute($name, $sv);
+    my ($ana_seq_id) = $sth->fetchrow;
 
-      confess "Can't get ana_seq_id for '$name' with SV '$sv'" unless $ana_seq_id;
-    }
+    confess "Can't get ana_seq_id for '$name' with SV '$sv'" unless $ana_seq_id;
 
     return $pkg->fetch_old_by_ana_seq_id($ana_seq_id);
 }
 
 sub fetch_old_by_ana_seq_id {
     my( $pkg, $asid ) = @_;
-    my $sth;
-
-    if ( $asid ){
-      $sth = prepare_statement(qq{
+    
+    my $sth = prepare_statement(qq{
         SELECT a.analysis_directory
           , a.analysis_priority
           , a.seq_id
@@ -254,9 +248,8 @@ sub fetch_old_by_ana_seq_id {
           AND s.chromosome_id = sc.chromosome_id
           AND a.ana_seq_id = $asid
         });
-      $sth->execute;
-    }
-
+    $sth->execute;
+    
     my ( $analysis_directory,
          $analysis_priority,
          $seq_id,
@@ -282,7 +275,7 @@ sub fetch_old_by_ana_seq_id {
     $self->annotator_uname($annotator_uname);
     $self->chr_name($chr_name);
     $self->species_name($species_name);
-
+            
     # Return a new Hum::AnaStatus::Sequence object
     return $self;
 }
