@@ -24,12 +24,14 @@ I<Tracking> database.
 use strict;
 use WrapDBI;
 use Exporter;
+use Carp;
 
 use vars qw( @ISA @EXPORT_OK );
 
 @ISA = qw( Exporter );
 
-@EXPORT_OK = qw( expand_project_name ref_from_query );
+@EXPORT_OK = qw( expand_project_name ref_from_query
+                 find_project_directories );
 
 =pod
 
@@ -66,6 +68,53 @@ sub expand_project_name {
     } else {
         return $name;
     }
+}
+
+=pod
+
+=head2 find_project_directories( LIST_OF_PROJECT_NAMES )
+
+Returns ref to a hash, with keys the project
+names, and values the path to the project, or
+undef if the path couldn't be found. 
+B<find_project_directories>  croaks if it finds
+more than one online path for any of the
+projects.
+
+=cut
+
+#'
+
+sub find_project_directories {
+    my @name_list = @_;
+    confess "No names supplied" unless @name_list;
+    my %dir = map {$_, undef} @name_list;
+    my $projects = join(',', map "'$_'", @name_list);
+    
+    my $ans = ref_from_query(qq(
+                                 select p.projectname, o.online_path
+                                 from project p, online_data o
+                                 where
+                                     p.id_online = o.id_online and
+                                     o.is_available = 1 and
+                                     p.projectname in ($projects)
+                                ));
+
+    # Store results in %dir
+    for (my $i = 0; $i < @$ans; $i++) {
+        my( $name, $dir ) = @{$ans->[$i]};
+        
+        # Check that we don't get multiple online paths for one project
+        if ($dir{$name}) {
+            croak "Multiple directories for '$name' : ",
+                map "  '$_->[1]'\n",
+                grep $_->[0] eq $name, @$ans;
+        } else {
+            $dir{$name} = $dir;
+        }
+    }                            
+    
+    return \%dir;
 }
 
 =pod
