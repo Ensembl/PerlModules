@@ -10,58 +10,6 @@ use Hum::EMBL::Utils qw( EMBLdate );
 use vars '@ISA';
 @ISA = 'Hum::ProjectDump::EMBL';
 
-{
-    my( @author_list );
-
-    my $author_list = q{
-
-        North P.
-        Leaves N.
-        Greystrong J.
-        Coppola M.
-        Manjunath S.
-        Russell E.
-        Smith M.
-        Strachan G.
-        Tofts C.
-        Boal E.
-        Cobley V.
-        Hunter G.
-        Kimberley C.
-        Thomas D.
-        Cave-Berry L.
-        Weston P.
-        Botcherby M.R.M.
-
-        };
-    
-    foreach my $line (split /\n/, $author_list) {
-        next unless $line =~ /\w/;
-        $line =~ s/^\s+|\s*$//g;
-        push(@author_list, $line);
-    }
-
-    sub add_Reference {
-        my( $pdmp, $embl, $seqlength ) = @_;
-
-        my $date = EMBLdate();
-        my $ext_clone = $pdmp->external_clone_name;
-        my $bi_nom = $pdmp->species_binomial;
-        
-        my $ref = $embl->newReference;
-        $ref->number(1);
-        $ref->positions("1-$seqlength");
-        $ref->comments('HGMP-RC part of the UK Mouse Sequencing Consortium');
-        $ref->authors(@author_list);
-        #$ref->title("The sequence of $bi_nom clone $ext_clone");
-        $ref->locations(
-            "Submitted ($date) to the EMBL/Genbank/DDBJ databases.",
-            'Mouse Sequencing Group, HGMP-RC, Hinxton, Cambridge, CB10 1SB, UK.',
-            'E-mail enquiries:- mrbotche@hgmp.mrc.ac.uk or pnorth@hgmp.mrc.ac.uk');
-        $embl->newXX;
-    }
-}
-
 sub add_Description {
     my( $pdmp, $embl ) = @_;
     
