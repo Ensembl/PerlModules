@@ -135,6 +135,11 @@ sub process_ace_start_end_transcript_seq {
         }
     }
 
+    # Are we missing the 3' end?
+    if ($t_seq->at('Properties.End_not_found')) {
+        $self->end_not_found(1);
+    }
+
     $self->validate;
 }
 
@@ -438,7 +443,8 @@ sub get_all_CDS_Exons {
         push(@cds_exons, $cds);
     }
     
-    # Add the phase to the first exon
+    # Add the phase to the first exon.
+    # (Needed by the ace -> ensembl transfer system.)
     my $start_exon = $strand == 1 ? $cds_exons[0] : $cds_exons[$#cds_exons];
     $start_exon->phase($phase);
     #warn "Setting exon phase=$phase ", join(' ',
@@ -976,11 +982,11 @@ sub ace_string {
 }
 
 
-sub DESTROY {
-    my( $self ) = @_;
-    
-    print STDERR "SubSeq ", $self->name, " is released\n";
-}
+#sub DESTROY {
+#    my( $self ) = @_;
+#    
+#    print STDERR "SubSeq ", $self->name, " is released\n";
+#}
 
 
 1;

@@ -382,7 +382,7 @@ sub make_transcript_sets {
     }
     print STDERR "isoforms=$isoform_count\n" if $isoform_count > 1;
 
-    # Show the sets we have made
+    # Show the clone sets we have made
     foreach my $c (@clone_sets) {
         print STDERR "\nclone:\n";
         foreach my $pair (@$c) {
@@ -398,6 +398,9 @@ sub make_transcript_sets {
         print STDERR "Processing multi-clone multi-isoform locus\n";
     
         @sets = $self->make_transcript_sets_for_complex_locus(@clone_sets);
+        foreach my $s (@sets) {
+            
+        }
     } else {
         for (my $i = 0; $i < $isoform_count; $i++) {
             my @s = map {defined($_) ? $_->[$i] : undef} @clone_sets;
@@ -517,7 +520,8 @@ sub make_transcript {
     
     print STDERR "\nNew transcript: '$t_name'\n";
     
-    my @locus_clones = $self->get_all_CloneSeqs;
+    my @locus_clones = $self->get_all_CloneSeqs
+        or confess "No CloneSeqs attached";
     
     # Make the transcript
     my $trans = Bio::EnsEMBL::Transcript->new;
@@ -527,7 +531,7 @@ sub make_transcript {
     my $translation = Bio::EnsEMBL::Translation->new;
     $translation->stable_id($t_name);  # Same name as transcript
     
-    # The orientation of the clone on the golden path (chromosome)
+    # The orientation of the transcript on the golden path (chromosome)
     my( $golden_orientation );
     
     my $is_coding = 0;
@@ -550,12 +554,7 @@ sub make_transcript {
 
         # Check the orientation of this piece of the gene
         # relative to the chromosome
-        my( $ori );
-        if ($clone_strand == 1) {
-            $ori = $pair_strand;
-        } else {
-            $ori = $pair_strand * -1;
-        }
+        my $ori = $pair_strand * $clone_strand;
         if ($golden_orientation) {
             confess "In pair '$pair_name' ori '$ori' doesn't match chromosome ori '$golden_orientation'"
                 unless $ori == $golden_orientation;
@@ -975,11 +974,11 @@ sub get_unique_EnsEMBL_Exon {
 }
 
 
-sub DESTROY {
-    my( $self ) = @_;
-    
-    print STDERR "Locus ", $self->name, " is released\n";
-}
+#sub DESTROY {
+#    my( $self ) = @_;
+#    
+#    print STDERR "Locus ", $self->name, " is released\n";
+#}
 
 
 1;
