@@ -8,7 +8,7 @@ use Time::Local qw( timelocal );
 use Exporter;
 use vars qw( @ISA @EXPORT_OK );
 @ISA = qw( Exporter );
-@EXPORT_OK = qw( EMBLdate dateEMBL );
+@EXPORT_OK = qw( EMBLdate dateEMBL crc32 );
 
 BEGIN {
 
@@ -41,6 +41,49 @@ BEGIN {
     }
 }
 
+
+{
+    my( @crcTable );
+    
+    sub generateCRCTable {
+        # 10001000001010010010001110000100
+        # 32 
+        my $poly = 0xEDB88320;
+        
+        foreach my $i (0..255) {
+            my $crc = $i;
+            for (my $j=8; $j > 0; $j--) {
+                if ($crc & 1) {
+                    $crc = ($crc >> 1) ^ $poly;
+                }
+                else {
+                    $crc >>= 1;
+                }
+            }
+            $crcTable[$i] = $crc;
+        }
+    }
+
+    sub crc32 {
+        my( $str ) = @_;
+
+        die "Argument to SwissCRC32() must be ref to scalar"
+            unless ref($str) eq 'SCALAR';
+
+        generateCRCTable() unless @crcTable;
+
+        my $len = length($$str);
+
+        my $crc = 0xFFFFFFFF;
+        for (my $i = 0; $i < $len; $i++) {
+            # Get upper case value of each letter
+            my $int = ord uc substr $$str, $i, 1;
+            $crc = (($crc >> 8) & 0x00FFFFFF) ^ $crcTable[ ($crc ^ $int) & 0xFF ];
+        }
+        #return sprintf "%X", $crc; # SwissProt format
+        return $crc;
+    }
+}
 
 
 1;
