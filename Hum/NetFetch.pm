@@ -4,12 +4,13 @@ package Hum::NetFetch;
 use strict;
 use Exporter;
 use vars qw( @EXPORT_OK @ISA );
+use LWP::Simple qw( get );
 use humConf qw( HUMPUB_ROOT );
 use Hum::Lock;
 use Embl;
 
 @ISA = qw( Exporter );
-@EXPORT_OK = qw( netfetch );
+@EXPORT_OK = qw( netfetch wwwfetch );
 
 # email address of EBI email sequence server
 my $NetServ = 'netserv\@ebi.ac.uk';
@@ -19,8 +20,24 @@ my $NetServ = 'netserv\@ebi.ac.uk';
 # named "msg.<UNIQUE KEY>".
 my $EMBL_emails_dir = "$HUMPUB_ROOT/data/EMBL_netserv_email";
 
-
-
+BEGIN {
+    my $embl_simple_url = 'http://www.ebi.ac.uk/cgi-bin/emblfetch';
+    
+    sub wwwfetch {
+        my( $ac ) = @_;
+        my $embl = get("$embl_simple_url?$ac")
+            or die "No response from '$embl_simple_url'";
+        die "Entry for '$ac' not found by server '$embl_simple_url'"
+            if $embl =~ /no entries found/i;
+        
+        # Remove html markup
+        $embl =~ s   {^<PRE>}{} or die "Can't remove leading '<PRE>' tag";
+        $embl =~ s{\n</PRE>$}{} or die "Can't remove trailing '</PRE>' tag";
+        $embl =~ s{<A HREF=.+?>([^<]+)</A>}{$1}g;
+        
+        return $embl;
+    }
+}
 sub netfetch {
     my( $list, $TIMEOUT ) = @_;
 
