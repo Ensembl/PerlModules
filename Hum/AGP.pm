@@ -62,9 +62,7 @@ sub new_Clone_from_tpf_Clone {
     my $cl = $self->new_Clone;
     $cl->seq_start(1);
     $cl->seq_end($inf->sequence_length);
-    if ($inf->htgs_phase == 3) {
-        $cl->is_finished(1);
-    }
+    $cl->htgs_phase($inf->htgs_phase);
     $cl->accession_sv("$acc.$sv");
     $cl->remark($tpf_cl->remark);
     return $cl;

@@ -54,15 +54,34 @@ sub accession_sv {
     return $self->{'_accession_sv'};
 }
 
-sub is_finished {
-    my( $self, $is_finished ) = @_;
+sub htgs_phase {
+    my( $self, $htgs_phase ) = @_;
     
-    if (defined $is_finished) {
-        $self->{'_is_finished'} = $is_finished ? 1 : 0;
+    if ($htgs_phase) {
+        $self->{'_htgs_phase'} = $htgs_phase;
     }
-    return $self->{'_is_finished'};
+    return $self->{'_htgs_phase'};
 }
 
+
+{
+    my %phase_letter = (
+        1 => 'U',   # Unfinished
+        2 => 'A',   # Almost finished
+        3 => 'F',   # Finished
+        );
+    
+    sub phase_letter {
+        my $self = shift;
+        
+        confess "read-only method" if @_;
+        my $phase = $self->htgs_phase
+            or confess "htgs_phase not set";
+        my $letter = $phase_letter{$phase}
+            or confess "No letter for phase '$phase'";
+        return $letter;
+    }
+}
 
 sub elements {
     my( $self ) = @_;
@@ -73,7 +92,7 @@ sub elements {
     }
     
     return (
-        $self->is_finished ? 'F' : 'U',     ### Is "U" correct?
+        $self->phase_letter,
         $self->accession_sv,
         $self->seq_start,
         $self->seq_end,

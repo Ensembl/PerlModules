@@ -16,11 +16,23 @@ sub new {
 
 sub fetch_by_SequenceInfo_pair {
     my( $pkg, $seq_a, $seq_b ) = @_;
+
+    return $pkg->_generic_fetch($seq_a, $seq_b, ' AND s.id_status != 3 ');
+}
+
+sub fetch_by_SequenceInfo_pair_including_refuted {
+    my( $pkg, $seq_a, $seq_b ) = @_;
+
+    return $pkg->_generic_fetch($seq_a, $seq_b, '');
+}
+
+sub _generic_fetch {
+    my( $pkg, $seq_a, $seq_b, $where_clause ) = @_;
     
     confess "Need two SequenceInfo objects, but got '$seq_a' and '$seq_b'"
         unless $seq_a and $seq_b;
     
-    my $sth = track_db->prepare_cached(q{
+    my $sth = track_db->prepare_cached(qq{
         SELECT oa.position
           , oa.is_3prime
           , ob.position
@@ -43,9 +55,9 @@ sub fetch_by_SequenceInfo_pair {
           AND o.id_overlap = ob.id_overlap
           AND o.id_overlap = s.id_overlap
           AND s.iscurrent = 1
-          AND s.id_status != 3
           AND oa.id_sequence = ?
           AND ob.id_sequence = ?
+          $where_clause
         });
     $sth->execute($seq_a->db_id, $seq_b->db_id);
     
