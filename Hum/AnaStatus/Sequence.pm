@@ -49,8 +49,8 @@ sub new {
         my ($pkg, $ana_seq_id) = @_;
 
         my $sth = prepare_statement($_std_query 
-            . qq{\n AND a.ana_seq_id = ?\n});
-        $sth->execute($ana_seq_id);
+            . qq{\n AND a.ana_seq_id = $ana_seq_id\n});
+        $sth->execute;
         
         return $pkg->_new_from_statement_handle($sth, "ana_seq_id '$ana_seq_id'");
     }
@@ -59,8 +59,8 @@ sub new {
         my ($pkg, $seq_name) = @_;
 
         my $sth = prepare_statement($_std_query 
-            . qq{\n AND s.sequence_name = ?\n});
-        $sth->execute($seq_name);
+            . qq{\n AND s.sequence_name = '$seq_name'\n});
+        $sth->execute;
         
         return $pkg->_new_from_statement_handle($sth, "sequence_name '$seq_name'");
     }
@@ -123,28 +123,24 @@ sub new {
     }
 }
 
-{
-    my( $sth );
+sub new_from_accession {
+    my( $pkg, $acc ) = @_;
 
-    sub new_from_accession {
-        my( $pkg, $acc ) = @_;
+    my $sth = prepare_statement(q{
+        SELECT s.sequence_name
+        FROM project_acc a
+          , project_dump d
+          , sequence s
+        WHERE a.sanger_id = d.sanger_id
+          AND d.seq_id = s.seq_id
+          AND d.is_current = 'Y'
+          AND a.accession = '$acc'
+        });
+    $sth->execute;
+    my ($seq_name) = $sth->fetchrow;
+    $seq_name ||= $acc;
 
-        $sth ||= prepare_statement(q{
-            SELECT s.sequence_name
-            FROM project_acc a
-              , project_dump d
-              , sequence s
-            WHERE a.sanger_id = d.sanger_id
-              AND d.seq_id = s.seq_id
-              AND d.is_current = 'Y'
-              AND a.accession = ?
-            });
-        $sth->execute($acc);
-        my ($seq_name) = $sth->fetchrow;
-        $seq_name ||= $acc;
-        
-        return $pkg->new_from_sequence_name($seq_name);
-    }
+    return $pkg->new_from_sequence_name($seq_name);
 }
 
 sub ace_database {
@@ -160,81 +156,73 @@ sub ace_database {
     return $self->{'_ace_database'};
 }
 
-{
-    my( $set_not_current, $new_status );
+sub set_status {
+    my ( $self, $status, $time ) = @_;
 
-    sub set_status {
-        my ( $self, $status, $time ) = @_;
-        
-        # Time will not normally be supplied, so the
-        # current time is recorded.  This is for
-        # filling in historic records.
-        $time ||= time;
-        
-        confess "status id not defined" unless $status;
-        
-        # Just return TRUE if we already have this status
-        return 1 if $status == $self->status_id;
-        
-        confess "Unknown status_id '$status'"
-            unless $self->_is_valid_status_id($status);
+    # Time will not normally be supplied; this is for
+    # filling in historic records.
+    #
+    # The current time is recorded:
+    $time ||= time;
 
-        my $ana_seq_id = $self->ana_seq_id
-            or confess "No ana_seq_id in object";
+    confess "status id not defined" unless $status;
 
-        $set_not_current ||= prepare_statement(q{
-            UPDATE ana_status
-            SET is_current = 'N'
-            WHERE ana_seq_id = ?
-            });
+    # Just return TRUE if we already have this status
+    return 1 if $status == $self->status_id;
 
-        $new_status ||= prepare_statement(q{
-            INSERT ana_status( ana_seq_id
-                  , is_current
-                  , status_date
-                  , status_id )
-            VALUES( ?
-                  , 'Y'
-                  , FROM_UNIXTIME(?)
-                  , ?)
-            });
-        
-        $set_not_current->execute($ana_seq_id);
-        $new_status->execute($ana_seq_id, $time, $status);
-        my $rows = $new_status->rows;
-        if ($rows == 1) {
-            $self->{'_status_id'}   = $status;
-            $self->{'_status_date'} = $time;
-            return 1;
-        } else {
-            confess "ana_status INSERT failed";
-        }
+    confess "Unknown status_id '$status'"
+        unless $self->_is_valid_status_id($status);
+
+    my $ana_seq_id = $self->ana_seq_id
+        or confess "No ana_seq_id in object";
+
+    my $set_not_current = prepare_statement(q{
+        UPDATE ana_status
+        SET is_current = 'N'
+        WHERE ana_seq_id = $ana_seq_id
+        });
+
+    my $new_status = prepare_statement(q{
+        INSERT ana_status( ana_seq_id
+              , is_current
+              , status_date
+              , status_id )
+        VALUES( $ana_seq_id
+              , 'Y'
+              , FROM_UNIXTIME($time)
+              , $status)
+        });
+
+    $set_not_current->execute;
+    $new_status->execute;
+    my $rows = $new_status->rows;
+    if ($rows == 1) {
+        $self->{'_status_id'}   = $status;
+        $self->{'_status_date'} = $time;
+        return 1;
+    } else {
+        confess "ana_status INSERT failed";
     }
 }
 
-{
-    my $set_annotator_uname;
-    
-    sub set_annotator_uname {
-        my ($self, $annotator_uname ) = @_;
-        
-        confess "annotator_uname not defined" unless $annotator_uname;
-        $self->annotator_uname($annotator_uname);
-        
-        my $ana_seq_id = $self->ana_seq_id
-            or confess "No ana_seq_id in object";
-        
-        $set_annotator_uname ||= prepare_statement(q{            
-            INSERT ana_sequence_person (annotator_uname
-                  , ana_seq_id)
-            VALUES(?,?)
-            });
-        
-        confess "Invalid annotator_uname '$annotator_uname'"
-            unless annotator_full_name($annotator_uname);
-        
-        $set_annotator_uname->execute($annotator_uname, $ana_seq_id);
-    }
+sub set_annotator_uname {
+    my ($self, $annotator_uname ) = @_;
+
+    confess "annotator_uname not defined" unless $annotator_uname;
+    $self->annotator_uname($annotator_uname);
+
+    my $ana_seq_id = $self->ana_seq_id
+        or confess "No ana_seq_id in object";
+
+    confess "Invalid annotator_uname '$annotator_uname'"
+        unless annotator_full_name($annotator_uname);
+
+    my $set_annotator_uname = prepare_statement(q{            
+        INSERT ana_sequence_person (annotator_uname
+              , ana_seq_id)
+        VALUES('$annotator_uname', $ana_seq_id))
+        });
+    $set_annotator_uname->execute;
 }
 
 sub status_id {
@@ -306,25 +294,22 @@ sub analysis_directory {
     return $self->{'_analysis_directory'};
 }
 
-{
-    my( $sth );
-    
-    sub set_analysis_directory {
-        my( $self, $new_ana_dir ) = @_;
-        
-        confess "No new analysis_directory given" unless $new_ana_dir;
-        if (my $old_ana_dir = $self->analysis_directory) {
-            return if $old_ana_dir eq $new_ana_dir;
-        }
-        $sth ||= prepare_statement(q{
-            UPDATE ana_sequence
-            SET analysis_directory = ?
-            WHERE ana_seq_id = ?
-            });
-        $sth->execute($new_ana_dir, $self->ana_seq_id);
-        $self->{'_analysis_directory'} = $new_ana_dir;
-        return 1;
+sub set_analysis_directory {
+    my( $self, $new_ana_dir ) = @_;
+
+    confess "No new analysis_directory given" unless $new_ana_dir;
+    if (my $old_ana_dir = $self->analysis_directory) {
+        return if $old_ana_dir eq $new_ana_dir;
     }
+    my $ana_seq_id = $self->ana_seq_id;
+    my $sth = prepare_statement(q{
+        UPDATE ana_sequence
+        SET analysis_directory = '$new_ana_dir'
+        WHERE ana_seq_id = $ana_seq_id
+        });
+    $sth->execute;
+    $self->{'_analysis_directory'} = $new_ana_dir;
+    return 1;
 }
 
 sub analysis_priority {
@@ -338,25 +323,22 @@ sub analysis_priority {
     return $self->{'_analysis_priority'};
 }
 
-{
-    my( $sth );
-    
-    sub set_analysis_priority {
-        my( $self, $new_priority ) = @_;
-        
-        confess "No new analysis_priority given" unless defined $new_priority;
-        if (my $old_priority = $self->analysis_priority) {
-            return if $old_priority == $new_priority;
-        }
-        $sth ||= prepare_statement(q{
-            UPDATE ana_sequence
-            SET analysis_priority = ?
-            WHERE ana_seq_id = ?
-            });
-        $sth->execute($new_priority, $self->ana_seq_id);
-        $self->{'_analysis_priority'} = $new_priority;
-        return 1;
+sub set_analysis_priority {
+    my( $self, $new_priority ) = @_;
+
+    confess "No new analysis_priority given" unless defined $new_priority;
+    if (my $old_priority = $self->analysis_priority) {
+        return if $old_priority == $new_priority;
     }
+    my $ana_seq_id = $self->ana_seq_id;
+    my $sth = prepare_statement(q{
+        UPDATE ana_sequence
+        SET analysis_priority = $new_priority
+        WHERE ana_seq_id = $ana_seq_id
+        });
+    $sth->execute;
+    $self->{'_analysis_priority'} = $new_priority;
+    return 1;
 }
 
 sub sequence_version {
@@ -494,8 +476,8 @@ sub species_name {
         unless (%valid_annotators){
             my @valid_annotators;
             my $sth = prepare_statement (q{
-            SELECT annotator_uname
-            FROM ana_person });
+                SELECT annotator_uname
+                FROM ana_person });
             
             $sth->execute;
             
@@ -554,42 +536,38 @@ sub get_all_AceFiles {
     return values %{$self->AceFile_hash};
 }
 
-{
-    my( $fetch_acefile_data );
+sub AceFile_hash {
+    my ($self) = @_;
 
-    sub AceFile_hash {
-        my ($self) = @_;
+    unless ($self->{'_acefile'}) {
+        $self->{'_acefile'} = {};
 
-        unless ($self->{'_acefile'}) {
-            $self->{'_acefile'} = {};
-            
-            my $ana_seq_id = $self->ana_seq_id
-                or confess "No ana_seq_id in object";
+        my $ana_seq_id = $self->ana_seq_id
+            or confess "No ana_seq_id in object";
 
-            $fetch_acefile_data ||= prepare_statement(q{
-                SELECT acefile_name
-                  , acefile_status_id
-                  , UNIX_TIMESTAMP(creation_time)
-                FROM ana_acefile
-                WHERE ana_seq_id = ?
-                });
-            $fetch_acefile_data->execute($ana_seq_id);
+        my $fetch_acefile_data = prepare_statement(q{
+            SELECT acefile_name
+              , acefile_status_id
+              , UNIX_TIMESTAMP(creation_time)
+            FROM ana_acefile
+            WHERE ana_seq_id = $ana_seq_id
+            });
+        $fetch_acefile_data->execute;
 
-            while ( my($acefile_name,
-                $acefile_status_id,
-                $creation_time ) = $fetch_acefile_data->fetchrow) {
+        while ( my($acefile_name,
+            $acefile_status_id,
+            $creation_time ) = $fetch_acefile_data->fetchrow) {
 
-                my $acefile = Hum::AnaStatus::AceFile->new;
-                $acefile->ana_seq_id($ana_seq_id);
-                $acefile->acefile_name($acefile_name);
-                $acefile->acefile_status_id($acefile_status_id);
-                $acefile->creation_time($creation_time);
+            my $acefile = Hum::AnaStatus::AceFile->new;
+            $acefile->ana_seq_id($ana_seq_id);
+            $acefile->acefile_name($acefile_name);
+            $acefile->acefile_status_id($acefile_status_id);
+            $acefile->creation_time($creation_time);
 
-                $self->add_AceFile($acefile);
-            }
+            $self->add_AceFile($acefile);
         }
-        return $self->{'_acefile'};
     }
+    return $self->{'_acefile'};
 }
 
 sub new_AceFile_from_filename_and_time {
@@ -659,24 +637,21 @@ sub parse_filename {
     return $acefile_name;
 }
 
-{
-    my( $sth );
+sub set_not_current {
+    my( $self ) = @_;
+
+    my $ana_seq_id = $self->ana_seq_id;
+    my $sth = prepare_statement(q{
+        UPDATE ana_sequence
+        SET is_current = 'N'
+        WHERE ana_seq_id = $ana_seq_id
+        });
+    $sth->execute;
     
-    sub set_not_current {
-        my( $self ) = @_;
-        
-        my $ana_seq_id = $self->ana_seq_id;
-        $sth ||= prepare_statement(q{
-            UPDATE ana_sequence
-            SET is_current = 'N'
-            WHERE ana_seq_id = ?
-            });
-        $sth->execute($ana_seq_id);
-        if ($sth->rows) {
-            return 1;
-        } else {
-            confess "Error setting ana_seq_id=$ana_seq_id not current";
-        }
+    if ($sth->rows) {
+        return 1;
+    } else {
+        confess "Error setting ana_seq_id=$ana_seq_id not current";
     }
 }
 

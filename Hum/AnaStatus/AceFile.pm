@@ -89,43 +89,33 @@ sub acefile_status_id_name {
     return $status_dict{$self->{'_acefile_status_id'}};
 }
 
+sub set_acefile_status {
+    my( $self, $acefile_status) = @_;
 
+    confess "Acefile status not given" unless $acefile_status;
+    return 1 if $acefile_status == $self->acefile_status_id;
+    confess "Unknown acefile status '$acefile_status'"
+        unless $self->is_valid_acefile_status_id($acefile_status);
 
-{
-    my ( $new_acefile_status );
+    my $acefile_name = $self->acefile_name
+        or confess "No acefile_name in object";
+    my $ana_seq_id = $self->ana_seq_id
+        or confess "No ana_seq_id in object";
 
-    sub set_acefile_status {
-        my( $self, $acefile_status) = @_;
+    my $new_acefile_status = prepare_statement(q{
+        UPDATE ana_acefile
+        SET acefile_status_id = $acefile_status
+        WHERE acefile_name = '$acefile_name'
+          AND ana_seq_id = $ana_seq_id
+        });
+    $new_acefile_status->execute;
 
-        confess "Acefile status not given" unless $acefile_status;
-        return 1 if $acefile_status == $self->acefile_status_id;
-        confess "Unknown acefile status '$acefile_status'"
-            unless $self->is_valid_acefile_status_id($acefile_status);
-
-        my $acefile_name = $self->acefile_name
-            or confess "No acefile_name in object";
-        my $ana_seq_id = $self->ana_seq_id
-            or confess "No ana_seq_id in object";
-    
-        $new_acefile_status ||= prepare_statement(q{
-            UPDATE ana_acefile
-            SET acefile_status_id = ?
-            WHERE acefile_name = ?
-              AND ana_seq_id = ?
-            });
-        $new_acefile_status->execute(
-            $acefile_status,
-            $acefile_name,
-            $ana_seq_id,
-            );
-
-        my $rows = $new_acefile_status->rows;
-        if ($rows == 1) {
-            $self->{'_acefile_status_id'} = $acefile_status;
-            return 1;
-        } else {
-            confess "acefile_status UPDATE failed";
-        }
+    my $rows = $new_acefile_status->rows;
+    if ($rows == 1) {
+        $self->{'_acefile_status_id'} = $acefile_status;
+        return 1;
+    } else {
+        confess "acefile_status UPDATE failed";
     }
 }
 
@@ -165,109 +155,89 @@ sub task_name {
     return $task_name;
 }
 
-{
-    my( $store_acefile );
+sub store {
+    my( $self ) = @_;
 
-    sub store {
-        my( $self ) = @_;
-
-        my $acefile_name = $self->acefile_name
-            or confess "acefile_name is empty";
-        my $acefile_status_id = $self->acefile_status_id
-            or confess "acefile_status_id is empty";
-        my $ana_seq_id = $self->ana_seq_id
-            or confess "ana_seq_id is empty";
-        my $creation_time = $self->creation_time;
-        unless ($creation_time) {
-            $creation_time = time;
-            $self->creation_time($creation_time);
-        }
-
-        $store_acefile ||= prepare_statement(q{
-            INSERT ana_acefile (acefile_name
-              , acefile_status_id
-              , ana_seq_id
-              , creation_time)
-            VALUES(?
-            , ?
-            , ?
-            , FROM_UNIXTIME(?))
-            });
-        $store_acefile->execute(
-            $acefile_name,
-            $acefile_status_id,
-            $ana_seq_id,
-            $creation_time);
-        
-        $self->store_acefile_date_range;
+    my $acefile_name = $self->acefile_name
+        or confess "acefile_name is empty";
+    my $acefile_status_id = $self->acefile_status_id
+        or confess "acefile_status_id is empty";
+    my $ana_seq_id = $self->ana_seq_id
+        or confess "ana_seq_id is empty";
+    my $creation_time = $self->creation_time;
+    unless ($creation_time) {
+        $creation_time = time;
+        $self->creation_time($creation_time);
     }
+
+    my $store_acefile = prepare_statement(q{
+        INSERT ana_acefile (acefile_name
+          , acefile_status_id
+          , ana_seq_id
+          , creation_time)
+        VALUES('$acefile_name'
+        , $acefile_status_id
+        , $ana_seq_id
+        , FROM_UNIXTIME($creation_time))
+        });
+    $store_acefile->execute;
+
+    $self->store_acefile_date_range;
 }
 
-{
-    my( $get_acefile_date,
-        $add_new_acefile_date,
-        $update_latest_date,
-        $update_earliest_date,
-        $add_dates );
-    
-    sub store_acefile_date_range {
-        my( $self ) = @_;
+sub store_acefile_date_range {
+    my( $self ) = @_;
 
-        my $time = $self->creation_time
-            or confess "creation_time is empty";
-        my $acefile_name = $self->acefile_name
-            or confess "acefile_name is empty";
-        
-        $get_acefile_date ||= prepare_statement(q{
-            SELECT UNIX_TIMESTAMP(earliest_date)
-              , UNIX_TIMESTAMP(latest_date)
-            FROM ana_task_version
-            WHERE acefile_name = ?
-            });
-        $get_acefile_date->execute($acefile_name);
-        my($earliest, $latest) = $get_acefile_date->fetchrow;
+    my $time = $self->creation_time
+        or confess "creation_time is empty";
+    my $acefile_name = $self->acefile_name
+        or confess "acefile_name is empty";
 
-        # Update the row if we have a later date
-        # than the latest stored in the database
-        if ($earliest) {
-            if ($time > $latest) {
-                $update_latest_date ||= prepare_statement(q{
-                    UPDATE ana_task_version
-                    SET latest_date = FROM_UNIXTIME(?)
-                    WHERE acefile_name = ?
-                    });
-                $update_latest_date->execute($time, $acefile_name);
-            }
-            if ($time < $earliest) {
-                $update_earliest_date ||= prepare_statement(q{
-                    UPDATE ana_task_version
-                    SET earliest_date = FROM_UNIXTIME(?)
-                    WHERE acefile_name = ?
-                    });
-                $update_earliest_date->execute($time, $acefile_name);
-            }
-        } else {
-            # Add a new row
-            confess "$acefile_name latest date: $latest. Earliest date not defined"
-                if $latest;##?
-            my $task_name = $self->task_name
-                or confess "task_name is empty";
-            $add_dates ||= prepare_statement(q{
-                INSERT ana_task_version (acefile_name
-                  , task_name
-                  , earliest_date
-                  , latest_date)
-                VALUES (?
-                    , ?
-                    , FROM_UNIXTIME(?)
-                    , FROM_UNIXTIME(?))                
+    my $get_acefile_date = prepare_statement(q{
+        SELECT UNIX_TIMESTAMP(earliest_date)
+          , UNIX_TIMESTAMP(latest_date)
+        FROM ana_task_version
+        WHERE acefile_name = '$acefile_name'
+        });
+    $get_acefile_date->execute;
+    my($earliest, $latest) = $get_acefile_date->fetchrow;
+
+    # Update the row if we have a later date
+    # than the latest stored in the database
+    if ($earliest) {
+        if ($time > $latest) {
+            my $update_latest_date = prepare_statement(q{
+                UPDATE ana_task_version
+                SET latest_date = FROM_UNIXTIME($time)
+                WHERE acefile_name = '$acefile_name'
                 });
-            $add_dates->execute(
-                $acefile_name,
-                $task_name,
-                $time,
-                $time);
+            $update_latest_date->execute;
         }
+        if ($time < $earliest) {
+            my $update_earliest_date = prepare_statement(q{
+                UPDATE ana_task_version
+                SET earliest_date = FROM_UNIXTIME($time)
+                WHERE acefile_name = '$acefile_name'
+                });
+            $update_earliest_date->execute;
+        }
+    } else {
+        # Add a new row
+        confess "$acefile_name latest date: $latest. Earliest date not defined"
+            if $latest;##?
+        my $task_name = $self->task_name
+            or confess "task_name is empty";
+        my $add_dates = prepare_statement(q{
+            INSERT ana_task_version (acefile_name
+              , task_name
+              , earliest_date
+              , latest_date)
+            VALUES ('$acefile_name'
+                , '$task_name'
+                , FROM_UNIXTIME($time)
+                , FROM_UNIXTIME($time))
+            });
+        $add_dates->execute;
     }
 }
 

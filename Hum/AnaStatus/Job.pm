@@ -29,9 +29,9 @@ sub new_from_ana_job_id {
           , lsf_job_id
           , lsf_error
         FROM ana_job
-        WHERE ana_job_id = ?
+        WHERE ana_job_id = $ana_job_id
         });
-    $sth->execute($ana_job_id);
+    $sth->execute;
     
     my $ans = $sth->fetchall_arrayref;
     if (@$ans == 1) {
@@ -234,9 +234,9 @@ sub store {
               , ana_seq_id
               , task_name
               , submit_time )
-        VALUES (NULL, ?, ?, NOW())
+        VALUES (NULL, $ana_seq_id, '$task_name', NOW())
         });
-    $insert->execute( $ana_seq_id, $task_name );
+    $insert->execute;
     my $ana_job_id = $insert->{'insertid'}
         or confess "No insertid from statement handle";
     $self->ana_job_id($ana_job_id);
@@ -252,11 +252,11 @@ sub store_lsf_job_id {
     
     my $update = prepare_statement(q{
         UPDATE ana_job
-        SET lsf_job_id = ?
+        SET lsf_job_id = $lsf_job_id
           , lsf_error = NULL
-        WHERE ana_job_id = ?
+        WHERE ana_job_id = $ana_job_id
         });
-    $update->execute($lsf_job_id, $ana_job_id);
+    $update->execute;
     my $rows_affected = $update->rows;
     confess "Error: '$rows_affected' rows updated"
         unless $rows_affected == 1;
@@ -314,21 +314,17 @@ sub unlock {
     destroy_lock($self->lock_name);
 }
 
-{
-    my( $sth );
+sub is_locked {
+    my( $self ) = @_;
 
-    sub is_locked {
-        my( $self ) = @_;
-
-        $sth ||= prepare_statement(q{
-            SELECT count(*)
-            FROM general_lock
-            WHERE lock_name = ?
-            });
-        $sth->execute($self->lock_name);
-        my ($c) = $sth->fetchrow;
-        return $c;
-    }
+    my $sth = prepare_statement(q{
+        SELECT count(*)
+        FROM general_lock
+        WHERE lock_name = ?
+        });
+    $sth->execute($self->lock_name);
+    my ($c) = $sth->fetchrow;
+    return $c;
 }
 
 1;

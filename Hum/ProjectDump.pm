@@ -36,54 +36,46 @@ sub get_all_dumps_for_project {
     }
 }
 
-{
-    my( $get_sids );
-    
-    sub get_all_existing_dumps_for_project {
-        my( $pkg, $project ) = @_;
+sub get_all_existing_dumps_for_project {
+    my( $pkg, $project ) = @_;
 
-        $get_sids ||= prepare_statement(q{
-            SELECT a.sanger_id
-            FROM project_acc a
-              , project_dump d
-            WHERE a.sanger_id = d.sanger_id
-              AND d.is_current = 'Y'
-              AND a.project_name = ?
-            });
-        $get_sids->execute($project);
+    my $get_sids = prepare_statement(q{
+        SELECT a.sanger_id
+        FROM project_acc a
+          , project_dump d
+        WHERE a.sanger_id = d.sanger_id
+          AND d.is_current = 'Y'
+          AND a.project_name = '$project'
+        });
+    $get_sids->execute;
 
-        my(@dumps);
-        while (my($sid) = $get_sids->fetchrow) {
-            my $pdmp = $pkg->new_from_sanger_id($sid);
-            push(@dumps, $pdmp);
-        }
-
-        return @dumps;
+    my(@dumps);
+    while (my($sid) = $get_sids->fetchrow) {
+        my $pdmp = $pkg->new_from_sanger_id($sid);
+        push(@dumps, $pdmp);
     }
+
+    return @dumps;
 }
 
-{
-    my( $active_count );
-    
-    sub create_new_dump_object {
-        my( $pkg, $project ) = @_;
+sub create_new_dump_object {
+    my( $pkg, $project ) = @_;
 
-        $active_count ||= prepare_statement(q{
-            SELECT count(*)
-            FROM project_check
-            WHERE is_active = 'Y'
-              AND project_name = ?
-            });
-        $active_count->execute($project);
-        my ($is_active) = $active_count->fetchrow;
-        if ($is_active) {
-            my $pdmp = $pkg->new;
-            $pdmp->project_name($project);
-            $pdmp->sanger_id("_\U$project");
-            return $pdmp;
-        } else {
-            confess "Project '$project' is not active";
-        }
+    my $active_count = prepare_statement(q{
+        SELECT count(*)
+        FROM project_check
+        WHERE is_active = 'Y'
+          AND project_name = '$project'
+        });
+    $active_count->execute;
+    my ($is_active) = $active_count->fetchrow;
+    if ($is_active) {
+        my $pdmp = $pkg->new;
+        $pdmp->project_name($project);
+        $pdmp->sanger_id("_\U$project");
+        return $pdmp;
+    } else {
+        confess "Project '$project' is not active";
     }
 }
 
@@ -145,64 +137,56 @@ sub submission_type {
     return $pdmp->_submission_data('submission_type', @_);
 }
 
-{
-    my( $sth );
-    
-    sub _submission_data {
-        my( $pdmp, $field, $value ) = @_;
+sub _submission_data {
+    my( $pdmp, $field, $value ) = @_;
 
-        my $data = $pdmp->{'_submission_data'};
-        if ($value) {
-            unless ($data) {
-                $pdmp->{'_submission_data'} = $data = {};
-            }
-            $data->{$field} = $value;
+    my $data = $pdmp->{'_submission_data'};
+    if ($value) {
+        unless ($data) {
+            $pdmp->{'_submission_data'} = $data = {};
         }
-        elsif (! $data) {
-            $data = {};
-            my $seq_id = $pdmp->seq_id
-                or confess "No seq_id";
-            $sth ||= prepare_statement(q{
-                SELECT UNIX_TIMESTAMP(submission_time)
-                  , submission_type
-                FROM submission
-                WHERE seq_id = ?
-                ORDER BY submission_time DESC
-                LIMIT 1
-                });
-            $sth->execute($seq_id);
-            if (my($time, $type) = $sth->fetchrow) {
-                $data->{'submission_time'} = $time;
-                $data->{'submission_type'} = $type;
-            }
-            $pdmp->{'_submission_data'} = $data;
-        }
-        return $data->{$field};
+        $data->{$field} = $value;
     }
+    elsif (! $data) {
+        $data = {};
+        my $seq_id = $pdmp->seq_id
+            or confess "No seq_id";
+        my $sth = prepare_statement(q{
+            SELECT UNIX_TIMESTAMP(submission_time)
+              , submission_type
+            FROM submission
+            WHERE seq_id = $seq_id
+            ORDER BY submission_time DESC
+            LIMIT 1
+            });
+        $sth->execute;
+        if (my($time, $type) = $sth->fetchrow) {
+            $data->{'submission_time'} = $time;
+            $data->{'submission_type'} = $type;
+        }
+        $pdmp->{'_submission_data'} = $data;
+    }
+    return $data->{$field};
 }
 
-{
-    my( $sth );
+sub accept_date {
+    my( $pdmp ) = @_;
 
-    sub accept_date {
-        my( $pdmp ) = @_;
-
-        unless ($pdmp->{'_accept_date'}) {
-            my $seq_id = $pdmp->seq_id
-                or confess "No seq_id";
-            $sth ||= prepare_statement(q{
-                SELECT UNIX_TIMESTAMP(accept_date)
-                FROM acception
-                WHERE seq_id = ?
-                ORDER BY accept_date DESC
-                LIMIT 1
-                });
-            $sth->execute($seq_id);
-            my ($date) = $sth->fetchrow;
-            $pdmp->{'_accept_date'} = $date;
-        }
-        return $pdmp->{'_accept_date'};
+    unless ($pdmp->{'_accept_date'}) {
+        my $seq_id = $pdmp->seq_id
+            or confess "No seq_id";
+        my $sth = prepare_statement(q{
+            SELECT UNIX_TIMESTAMP(accept_date)
+            FROM acception
+            WHERE seq_id = $seq_id
+            ORDER BY accept_date DESC
+            LIMIT 1
+            });
+        $sth->execute;
+        my ($date) = $sth->fetchrow;
+        $pdmp->{'_accept_date'} = $date;
     }
+    return $pdmp->{'_accept_date'};
 }
 
 sub online_path {
@@ -441,10 +425,10 @@ sub read_submission_data {
         WHERE c.project_name = a.project_name
           AND a.sanger_id = d.sanger_id
           AND d.seq_id = s.seq_id
-          AND a.sanger_id = ?
+          AND a.sanger_id = $sid
           AND d.is_current = 'Y'
         });
-    $get_dump->execute($sid);
+    $get_dump->execute;
     if (my $ans = $get_dump->fetchrow_hashref) {
         map $pdmp->$_($ans->{$_}), keys %$ans; 
     } else {
@@ -1668,44 +1652,44 @@ sub draft_institute {
     return $pdmp->{'_draft_institute'};
 }
 
-{
-    my( $record_submission );
+sub ebi_submit {
+    my( $pdmp ) = @_;
 
-    sub ebi_submit {
-        my( $pdmp ) = @_;
+    my $seq_id = $pdmp->seq_id
+        or confess "No seq_id";
 
-        $record_submission ||= prepare_statement(q{
-            INSERT submission( seq_id
-                             , submission_time
-                             , submission_type )
-            VALUES (?,FROM_UNIXTIME(?),?)
-            });
-
-        my $sub_type = $pdmp->submission_type;
-        unless ($sub_type) {
-            my $phase = $pdmp->htgs_phase;
-            if ($phase eq '1') {
-                $sub_type = 'UNFIN';
-            }
-            elsif ($phase eq '3') {
-                $sub_type = 'FIN';
-            }
-            else {
-                confess("Can't determine submission type");
-            }
+    my $sub_type = $pdmp->submission_type;
+    unless ($sub_type) {
+        my $phase = $pdmp->htgs_phase;
+        if ($phase eq '1') {
+            $sub_type = 'UNFIN';
         }
-        my $time = time;
-        
-        my $seq_name = $pdmp->sequence_name or confess "sequence_name not set";
-        my $em_file = $pdmp->embl_file_path;
-        confess "No such file '$em_file'" unless -e $em_file;
-        
-        my $ebi_ftp = 'Hum::EBI_FTP'->new();
-        $ebi_ftp->put_project( $seq_name, $em_file );
-        
-        $record_submission->execute($pdmp->seq_id, $time, $sub_type);
-        $pdmp->submission_time($time);
+        elsif ($phase eq '3') {
+            $sub_type = 'FIN';
+        }
+        else {
+            confess("Can't determine submission type");
+        }
     }
+
+    my $time = time;
+
+    my $seq_name = $pdmp->sequence_name or confess "sequence_name not set";
+    my $em_file = $pdmp->embl_file_path;
+    confess "No such file '$em_file'" unless -e $em_file;
+
+    my $ebi_ftp = 'Hum::EBI_FTP'->new();
+    $ebi_ftp->put_project( $seq_name, $em_file );
+
+    my $record_submission = prepare_statement(q{
+        INSERT submission( seq_id
+                         , submission_time
+                         , submission_type )
+        VALUES ($seq_id, FROM_UNIXTIME($time), '$sub_type')
+        });
+    $record_submission->execute;
+
+    $pdmp->submission_time($time);
 }
 
 {
@@ -1730,7 +1714,7 @@ sub draft_institute {
                   , dyeset
                 WHERE dyeset.id_dyeset = seqchem.id_dyeset
                 });
-            $get_chem->execute();
+            $get_chem->execute;
 
             while (my ($suffix, $is_primer, $dyeset) = $get_chem->fetchrow_array()) {
 	        $suffix =~ s/^\.//;
@@ -1870,23 +1854,19 @@ sub current_status_number {
     return $pdmp->{'_current_status_number'};
 }
 
-{
-    my( $sth );
+sub store_draft_info {
+    my( $pdmp ) = @_;
 
-    sub store_draft_info {
-        my( $pdmp ) = @_;
-
-        my $seq_id = $pdmp->seq_id;
-        my $is_draft = ($pdmp->is_htgs_draft) ? 'Y' : 'N';
-        my ($q20_depth) = $pdmp->contig_and_agarose_depth_estimate;
-        $sth ||= prepare_statement(q{
-            INSERT draft_status(seq_id
-                  , is_htgs_draft
-                  , q20_contig_depth)
-            VALUES(?,?,?)
-            });
-        $sth->execute($seq_id, $is_draft, $q20_depth);
-    }
+    my $seq_id = $pdmp->seq_id;
+    my $is_draft = ($pdmp->is_htgs_draft) ? 'Y' : 'N';
+    my ($q20_depth) = $pdmp->contig_and_agarose_depth_estimate;
+    my $sth = prepare_statement(q{
+        INSERT draft_status(seq_id
+              , is_htgs_draft
+              , q20_contig_depth)
+        VALUES($seq_id, '$is_draft', $q20_depth)
+        });
+    $sth->execute;
 }
 
 
@@ -1908,7 +1888,6 @@ sub current_status_number {
 =cut
 
 {
-    my( $insert );
     my @fields = qw(
         sequence_name
         embl_checksum
@@ -1921,7 +1900,7 @@ sub current_status_number {
     sub _store_sequence {
         my( $pdmp ) = @_;
 
-        $insert ||= prepare_statement(q{
+        my $insert = prepare_statement(q{
             INSERT INTO sequence(seq_id,}
             . join(',', @fields)
             . q{) VALUES (NULL,?,?,?,?,?,?)}
@@ -1946,7 +1925,6 @@ sub current_status_number {
 =cut
 
 {
-    my( $update, $insert );
     my @fields = qw(
         sanger_id 
         dump_time 
@@ -1958,7 +1936,7 @@ sub current_status_number {
         my( $pdmp ) = @_;
         
         # Unset is_current for previous rows
-        $update ||= prepare_statement(q{
+        my $update = prepare_statement(q{
             UPDATE project_dump
             SET is_current = 'N'
             WHERE sanger_id = ?
@@ -1966,7 +1944,7 @@ sub current_status_number {
             });
         $update->execute($pdmp->sanger_id, $pdmp->seq_id);
 
-        $insert ||= prepare_statement(q{
+        my $insert = prepare_statement(q{
             INSERT INTO project_dump(is_current,}
             . join(',', @fields)
             . q{) VALUES ('Y',?,FROM_UNIXTIME(?),?,?)}
@@ -1975,23 +1953,19 @@ sub current_status_number {
     }
 }
 
-{
-    my( $update );
+sub _set_not_current {
+    my( $pdmp ) = @_;
 
-    sub _set_not_current {
-        my( $pdmp ) = @_;
+    my $seq_id = $pdmp->seq_id
+        or confess "No seq_id for dump";
 
-        my $seq_id = $pdmp->seq_id
-            or confess "No seq_id for dump";
-
-        # Now unset is_current for previous rows
-        $update ||= prepare_statement(q{
-            UPDATE project_dump
-            SET is_current = 'N'
-            WHERE seq_id = ?
-            });
-        $update->execute($seq_id);
-    }
+    # Now unset is_current for previous rows
+    my $update = prepare_statement(q{
+        UPDATE project_dump
+        SET is_current = 'N'
+        WHERE seq_id = $seq_id
+        });
+    $update->execute;
 }
 
 {
@@ -2002,24 +1976,22 @@ sub current_status_number {
         project_suffix
     );
     
-    my( $insert, $exists );
-    
     sub _store_project_acc {
         my( $pdmp ) = @_;
 
         my $sid = $pdmp->sanger_id
             or confess "No Sanger ID";
 
-        $exists ||= prepare_statement(q{
+        my $exists = prepare_statement(q{
             SELECT count(*)
             FROM project_acc
-            WHERE sanger_id = ?
+            WHERE sanger_id = $sid
             });
-        $exists->execute($sid);
+        $exists->execute;
         my ($count) = $exists->fetchrow;
         
         unless ($count) {
-            $insert ||= prepare_statement(q{
+            my $insert = prepare_statement(q{
                 INSERT INTO project_acc(}
                 . join(',', @fields)
                 . q{) VALUES (?,?,?)}

@@ -16,47 +16,40 @@ sub new {
         }, $pkg;
 }
 
-{
-    my( $sth );
+sub new_from_set_name {
+    my( $pkg, $set_name ) = @_;
 
-    sub new_from_set_name {
-        my( $pkg, $set_name ) = @_;
+    my $sth = prepare_statement(q{
+        SELECT aset.set_id
+           , aset.set_description
+		       , s.sequence_name
+        FROM ana_set aset
+          , ana_sequence_set ss
+          , ana_sequence a
+          , sequence s
+        WHERE aset.set_id = ss.set_id
+          AND ss.ana_seq_id = a.ana_seq_id
+          AND a.seq_id = s.seq_id
+          AND a.is_current = 'Y'
+          AND aset.set_name = '$set_name'
+        ORDER BY ss.rank ASC
+        });
+    $sth->execute;
 
-        $sth ||= prepare_statement(q{
-            SELECT aset.set_id
-               , aset.set_description
-			   , s.sequence_name
-            FROM ana_set aset
-              , ana_sequence_set ss
-              , ana_sequence a
-              , sequence s
-            WHERE aset.set_id = ss.set_id
-              AND ss.ana_seq_id = a.ana_seq_id
-              AND a.seq_id = s.seq_id
-              AND a.is_current = 'Y'
-              AND aset.set_name = ?
-            ORDER BY ss.rank ASC
-            });
-        $sth->execute($set_name);
-        
-        my( $set_id, $set_description, @seq_name );
-        while (my ($id, $desc, $name) = $sth->fetchrow) {
-        
-			
-            $set_id          = $id;
-            $set_description = $desc;
-            push(@seq_name, $name);
-        
-		}
-        
-        my $self = $pkg->new;
-        $self->set_id($set_id);
-        $self->set_name($set_name);
-        $self->set_description($set_description);
-        $self->add_sequence_by_name(@seq_name);
-        
-        return $self;
+    my( $set_id, $set_description, @seq_name );
+    while (my ($id, $desc, $name) = $sth->fetchrow) {
+        $set_id          = $id;
+        $set_description = $desc;
+        push(@seq_name, $name);
     }
+
+    my $self = $pkg->new;
+    $self->set_id($set_id);
+    $self->set_name($set_name);
+    $self->set_description($set_description);
+    $self->add_sequence_by_name(@seq_name);
+
+    return $self;
 }
 
 sub set_id {
@@ -125,48 +118,44 @@ sub sequence_list {
     return @{$self->{'_sequence_list'}};
 }
 
-{
-    my( $insert_set, $insert_seq );
+sub store {
+    my( $self ) = @_;
 
-    sub store {
-        my( $self ) = @_;
+    my $set_id = $self->set_id;
+    confess "Set already stored under ID '$set_id'"
+        if $set_id;
+    my $set_name = $self->set_name
+        or confess "set_name not set";
+    my @seq_list = $self->sequence_list
+        or confess "empty set";
+    my $set_description = $self->set_description || '';
 
-        my $set_id = $self->set_id;
-        confess "Set already stored under ID '$set_id'"
-            if $set_id;
-        my $set_name = $self->set_name
-            or confess "set_name not set";
-        my @seq_list = $self->sequence_list
-            or confess "empty set";
-        my $set_description = $self->set_description || '';
+    my $insert_set = prepare_statement(q{
+        INSERT ana_set(set_id
+              , set_name
+              , set_description)
+        VALUES(NULL,'$set_name', '$set_decription')
+        });
+    $insert_set->execute;
+    $set_id = $insert_set->{'insertid'}
+        or confess "Didn't get a set_id";
 
-        $insert_set ||= prepare_statement(q{
-            INSERT ana_set(set_id
-                  , set_name
-                  , set_description)
-            VALUES(NULL,?,?)
-            });
-        $insert_set->execute($set_name, $set_description);
-        $set_id = $insert_set->{'insertid'}
-            or confess "Didn't get a set_id";
-        
-        $insert_seq ||= prepare_statement(q{
-            INSERT ana_sequence_set(ana_seq_id
-                  , set_id
-                  , rank)
-            VALUES(?,?,?)
-            });
-        
-        for (my $i = 0; $i < @seq_list; $i++) {
-            my $rank = $i + 1;
-            my $seq = $seq_list[$i];
-            my $ana_seq_id = $seq->ana_seq_id
-                or confess "No ana_seq_id";
-            $insert_seq->execute($ana_seq_id, $set_id, $rank);
-        }
-        
-        return 1;
+    my $insert_seq = prepare_statement(q{
+        INSERT ana_sequence_set(ana_seq_id
+              , set_id
+              , rank)
+        VALUES(?,?,?)
+        });
+
+    for (my $i = 0; $i < @seq_list; $i++) {
+        my $rank = $i + 1;
+        my $seq = $seq_list[$i];
+        my $ana_seq_id = $seq->ana_seq_id
+            or confess "No ana_seq_id";
+        $insert_seq->execute($ana_seq_id, $set_id, $rank);
     }
+
+    return 1;
 }
 
 1;

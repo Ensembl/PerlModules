@@ -44,8 +44,8 @@ sub ref_from_query {
     my $dbh = sub_db();
 
     my $sth = $dbh->prepare( $query );
-    $sth->execute();
-    return $sth->fetchall_arrayref();
+    $sth->execute;
+    return $sth->fetchall_arrayref;
 }
 
 
@@ -90,35 +90,31 @@ sub ref_from_query {
     }
 }
 
-{
-    my( $get_acc_data );
+sub acc_data {
+    my( $sid ) = @_;
 
-    sub acc_data {
-        my( $sid ) = @_;
+    my $dbh = sub_db();
 
-        my $dbh = sub_db();
+    my $get_acc_data = prepare_statement(q{
+        SELECT a.accession
+          , a.embl_name
+          , s.secondary
+        FROM project_acc a
+        LEFT JOIN secondary_acc s
+          ON a.accession = s.accession
+        WHERE a.sanger_id = $sid
+        });
+    $get_acc_data->execute;
 
-        $get_acc_data ||= prepare_statement(q{
-            SELECT a.accession
-              , a.embl_name
-              , s.secondary
-            FROM project_acc a
-            LEFT JOIN secondary_acc s
-              ON a.accession = s.accession
-            WHERE a.sanger_id = ?
-            });
-        $get_acc_data->execute($sid);
-
-        my( $acc, $name, $s, @sec );
-        while (my $ans = $get_acc_data->fetchrow_arrayref) {
-            ($acc, $name, $s) = @$ans;
-            push(@sec, $s) if $s;
-        }
-        if (defined($acc) and $acc eq 'UNKNOWN') {
-            $acc = undef;
-        }
-        return ( $acc, $name, @sec );
+    my( $acc, $name, $s, @sec );
+    while (my $ans = $get_acc_data->fetchrow_arrayref) {
+        ($acc, $name, $s) = @$ans;
+        push(@sec, $s) if $s;
     }
+    if (defined($acc) and $acc eq 'UNKNOWN') {
+        $acc = undef;
+    }
+    return ( $acc, $name, @sec );
 }
 
 sub create_lock {
@@ -126,16 +122,16 @@ sub create_lock {
     
     confess "Can't create lock without a name" unless $name;
     
-    my $create_lock = sub_db()->prepare(qq{
+    my $create_lock = prepare_statement(qq{
         INSERT INTO general_lock(lock_name, lock_time)
-        VALUES (?, NOW())
+        VALUES ('$name', NOW())
         });
     
     # This is a bit "belt and braces".  It will work
     # wether {RaiseError => 1} is set or not
     my( $success );
     eval{
-        $create_lock->execute($name);
+        $create_lock->execute;
         $success = $create_lock->rows;
     };
     
@@ -151,16 +147,16 @@ sub destroy_lock {
     
     confess "Can't create lock without a name" unless $name;
     
-    my $destroy_lock = sub_db()->prepare(qq{
+    my $destroy_lock = prepare_statement(qq{
         DELETE FROM general_lock
-        WHERE lock_name = ?
+        WHERE lock_name = '$name'
         });
     
     # This is a bit "belt and braces".  It will work
     # wether {RaiseError => 1} is set or not
     my( $success );
     eval{
-        $destroy_lock->execute($name);
+        $destroy_lock->execute;
         $success = $destroy_lock->rows;
     };
     
@@ -171,29 +167,26 @@ sub destroy_lock {
     }
 }
 
-{
-    my( $last_dump );
+sub die_if_dumped_recently {
+    my( $project, $hr ) = @_;
 
-    sub die_if_dumped_recently {
-        my( $project, $hr ) = @_;
+    my $last_dump = prepare_statement(q{
+        SELECT UNIX_TIMESTAMP(d.dump_time)
+          , d.dump_time
+        FROM project_acc a
+          , project_dump d
+        WHERE a.sanger_id = d.sanger_id
+          AND a.project_name = '$project'
+        });
+    $last_dump->execute;
 
-        $last_dump ||= prepare_statement(q{
-            SELECT UNIX_TIMESTAMP(d.dump_time), d.dump_time
-            FROM project_acc a
-              , project_dump d
-            WHERE a.sanger_id = d.sanger_id
-              AND a.project_name = ?
-            });
-        $last_dump->execute($project);
-
-        if (my($dump_int, $dump_time) = $last_dump->fetchrow) {
-            my $limit = time() - ($hr * 60 * 60);
-            if ($dump_int > $limit) {
-                die "Project '$project' was last dumped on '$dump_time', which is less than ${hr}h ago";
-            }
+    if (my($dump_int, $dump_time) = $last_dump->fetchrow) {
+        my $limit = time() - ($hr * 60 * 60);
+        if ($dump_int > $limit) {
+            die "Project '$project' was last dumped on '$dump_time', which is less than ${hr}h ago";
         }
-        return 1;
     }
+    return 1;
 }
 
 {
@@ -388,27 +381,23 @@ a time string as input, or defaulting to current time.
 }
 
 
-{
-    my( $sth );
+sub sanger_name {
+    my( $acc ) = @_;
 
-    sub sanger_name {
-        my( $acc ) = @_;
-        
-        $sth ||= prepare_statement(q{
-            SELECT s.sequence_name
-            FROM project_acc a
-              , project_dump d
-              , sequence s
-            WHERE a.sanger_id = d.sanger_id
-              AND d.seq_id = s.seq_id
-              AND d.is_current = 'Y'
-              AND a.accession = ?
-            });
-        $sth->execute($acc);
-        my ($name) = $sth->fetchrow;
-        $name ||= "Em:$acc";
-        return $name;
-    }
+    my $sth = prepare_statement(q{
+        SELECT s.sequence_name
+        FROM project_acc a
+          , project_dump d
+          , sequence s
+        WHERE a.sanger_id = d.sanger_id
+          AND d.seq_id = s.seq_id
+          AND d.is_current = 'Y'
+          AND a.accession = '$acc'
+        });
+    $sth->execute;
+    my ($name) = $sth->fetchrow;
+    $name ||= "Em:$acc";
+    return $name;
 }
 
 
