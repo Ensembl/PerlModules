@@ -205,7 +205,7 @@ sub parse_Subject {
             
             # Parse out the identity
             # Identities = 544/544
-            my ($identity) = /Identities\s*=\s*(\d+)\//
+            my ($identity, $length) = /Identities\s*=\s*(\d+)\/(\d+)/
                 or confess("Can't parse identity from ('$_')");
             
             # Parse out the expect value
@@ -215,22 +215,18 @@ sub parse_Subject {
             my ($expect) = /Expect(?:\(\d+\))?\s*=\s*([\d\.eE\-\+]+)/
                 or confess("Can't parse expect value from ('$_')");
                         
-            # expect_cutoff can be set to zero
-            # if we want all HSPs
-            unless ($expect < $expect_cutoff) {
-                $hsp = $subject->new_HSP;
-                $hsp->score($score);
-                $hsp->identity($identity);
-                $hsp->expect($expect);
-            }
+            # Make a new HSP
+            $hsp = $subject->new_HSP;
+            $hsp->score($score);
+            $hsp->identity($identity);
+            $hsp->hsp_length($length);
+            $hsp->expect($expect);
         }
         elsif (/^\s*Query:\s*(\d+)[^\d]+(\d+)/) {
-            next unless $hsp;   # expect is below cutoff
             $hsp->query_start($1) unless $hsp->query_start;
             $hsp->query_end($2);
         }
         elsif (/^\s*Sbjct:\s*(\d+)[^\d]+(\d+)/) {
-            next unless $hsp;   # expect is below cutoff
             $hsp->subject_start($1) unless $hsp->subject_start;
             $hsp->subject_end($2);
         }

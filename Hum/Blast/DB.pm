@@ -5,7 +5,7 @@ package Hum::Blast::DB;
 
 use strict;
 use Carp;
-use Digest::MD5;
+#use Digest::MD5;
 
 sub new {
     my( $pkg, $path ) = @_;
