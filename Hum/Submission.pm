@@ -13,7 +13,7 @@ use vars qw( @ISA @EXPORT_OK );
                  acc_data
                  create_lock
                  destroy_lock
-                 ftp_path
+                 prepare_statement
                  timeace
                  ghost_path
                  dateMySQL
@@ -36,8 +36,52 @@ use vars qw( @ISA @EXPORT_OK );
         return $db;
     }
 
+    my( @active_statement_handles );
+    
+    sub prepare_statement {
+        my( $text ) = @_;
+        
+        my $sth = sub_db()->prepare($text);
+        push(@active_statement_handles, $sth);
+        return $sth;
+    }
+    
     END {
+        foreach my $sth (@active_statement_handles) {
+            $sth->finish if $sth;
+        }
         $db->disconnect if $db;
+    }
+}
+
+{
+    my( $get_acc_data );
+
+    sub acc_data {
+        my( $sid ) = @_;
+
+        my $dbh = sub_db();
+
+        $get_acc_data ||= prepare_statement(q{
+            SELECT a.accession
+              , a.embl_name
+              , s.secondary
+            FROM project_acc a
+            LEFT JOIN secondary_acc s
+              ON a.accession = s.accession
+            WHERE a.sanger_id = ?
+            });
+        $get_acc_data->execute($sid);
+
+        my( $acc, $name, $s, @sec );
+        while (my $ans = $get_acc_data->fetchrow_arrayref) {
+            ($acc, $name, $s) = @$ans;
+            push(@sec, $s) if $s;
+        }
+        if (defined($acc) and $acc eq 'UNKNOWN') {
+            $acc = undef;
+        }
+        return ( $acc, $name, @sec );
     }
 }
 
@@ -91,34 +135,9 @@ sub destroy_lock {
     }
 }
 
-sub acc_data {
-    my( $sid ) = @_;
 
-    my $dbh = sub_db();
-    
-    my $sth = $dbh->prepare(qq{
-        SELECT a.accession
-          , a.embl_name
-          , s.secondary
-        FROM project_acc a
-        LEFT JOIN secondary_acc s
-          ON a.accession = s.accession
-        WHERE a.sanger_id = '$sid'
-    });
-    $sth->execute;
-    
-    my( $acc, $name, $s, @sec );
-    while (my $ans = $sth->fetchrow_arrayref) {
-        ($acc, $name, $s) = @$ans;
-        push(@sec, $s) if $s;
-    }
-    if (defined($acc) and $acc eq 'UNKNOWN') {
-        $acc = undef;
-    }
-    return ( $acc, $name, @sec );
-}
 
-BEGIN {
+{
 
     my @two_figure = ('00'..'60');
     

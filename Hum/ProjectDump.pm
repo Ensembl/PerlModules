@@ -111,40 +111,6 @@ BEGIN {
     }
 }
 
-# Fills in information found in the oracle Tracking database
-#sub read_tracking_details {
-#    my( $pdmp ) = @_;
-#
-#    my $project = $pdmp->project_name;
-#    my $dbh = track_db();
-#    my $query = qq{
-#        SELECT c.clonename sequence_name
-#          , c.speciesname species
-#          , c_dict.chromosome
-#          , o.online_path
-#        FROM chromosomedict c_dict
-#          , clone c
-#          , clone_project cp
-#          , project p
-#          , online_data o
-#        WHERE c_dict.id_dict = c.chromosome
-#          AND c.clonename = cp.clonename
-#          AND cp.projectname = p.projectname
-#          AND p.id_online = o.id_online (+)
-#          AND p.projectname = '$project'
-#        };
-#    my $project_details = $dbh->prepare($query);
-#    $project_details->execute;
-#    if (my $ans = $project_details->fetchrow_hashref) {
-#        foreach my $field (keys %$ans) {
-#            my $meth = lc $field;
-#            $pdmp->$meth($ans->{$field});
-#        }
-#    } else {
-#        die "Couldn't get project details with query:\n$query"
-#    }
-#}
-
 sub online_path {
     my( $pdmp ) = @_;
     
