@@ -146,6 +146,9 @@ sub run_pressdb {
         $blast,     # The name for the blast database
         ) = @_;
     
+    my ($name) = $blast =~ m{([^/]+)$};
+    $name = "$name.v". ace_date();
+    
     die "Names for new and old databases are both '$blast'"
         if $blast eq $build;
     
@@ -157,7 +160,7 @@ sub run_pressdb {
     # List of extensions for blast files
     my @extn = ('', qw( .csq .nhd .ntb ));
     
-    my $pressdb = "pressdb $build 2>&1 |";
+    my $pressdb = "pressdb -t $name $build 2>&1 |";
     open PRESSDB, $pressdb
         or die "Can't open pipe ('$pressdb') $!";
     my @outLines = <PRESSDB>;
@@ -178,6 +181,19 @@ sub run_pressdb {
     }
 }
 
+{
+    my( @two_digit ) = ('00'..'31');
+    sub ace_date {
+        my( $time ) = @_;
+
+        $time ||= time;
+
+        my($mday,$mon,$year) = (localtime($time))[3,4,5];
+        $year += 1900;
+        ($mday,$mon) = @two_digit[$mday,$mon+1];
+        return "$year-$mday-$mon";
+    }
+}
 
 1;
 
