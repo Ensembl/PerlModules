@@ -99,8 +99,6 @@ sub netfetch {
                         $Request{ 'EMAIL_LOG_FILE' } = 1;
                         if ($2 eq 'not found') {
                             $Request{ $1 } = 'FAILED' if exists $Request{ $_ };
-                        } else {
-                            warn "$2 $1\n";
                         }
                     }
                 }
