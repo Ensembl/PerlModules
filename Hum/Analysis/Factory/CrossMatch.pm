@@ -47,8 +47,8 @@ sub run {
     my( $self, $query, $subject ) = @_;
     
     my $tmp = $self->make_tmp_dir;
-    my   $query_file = $self->_get_file_path($tmp, $query);
-    my $subject_file = $self->_get_file_path($tmp, $subject);
+    my   $query_file = $self->_get_file_path('query',   $tmp, $query);
+    my $subject_file = $self->_get_file_path('subject', $tmp, $subject);
     
     
     my $cmd_pipe = $self->make_command_pipe($tmp, $query_file, $subject_file);
@@ -80,7 +80,7 @@ sub make_command_pipe {
 }
 
 sub _get_file_path {
-    my( $self, $dir, $thing ) = @_;
+    my( $self, $name, $dir, $thing ) = @_;
     
     my $type = ref($thing);
     
@@ -110,7 +110,7 @@ sub _get_file_path {
         confess "Non Hum::Sequence in '@$seq_list'";
     }
     
-    $file = "$dir/" . $thing->name . '.seq';
+    $file = "$dir/$name.seq";
     my $seq_out = Hum::FastaFileIO->new_DNA_IO("> $file");
     $seq_out->write_sequences(@$seq_list);
     return $file;
