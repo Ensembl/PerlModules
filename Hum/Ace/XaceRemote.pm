@@ -101,7 +101,7 @@ sub load_ace {
     eval{
         $self->send_command("parse $tmp_ace");
     };
-    unlink($tmp_ace);
+    #unlink($tmp_ace);
     confess("Error parsing:\n$ace", $@) if $@;
 }
 

@@ -636,7 +636,7 @@ sub contains_all_exons {
 }
 
 sub ace_string {
-    my( $self ) = @_;
+    my( $self, $old_name ) = @_;
         
     my $name        = $self->name
         or confess "name not set";
@@ -650,9 +650,14 @@ sub ace_string {
         or confess "No sequence name in clone_Sequence";
     
     # Position in parent sequence
-    my $out = qq{\nSequence "$clone"\n}
-        . qq{-D SubSequence "$name"\n}
-        . qq{\nSequence "$clone"\n};
+    my $out = qq{\nSequence "$clone"\n};
+    if ($old_name) {
+        $out .= qq{-D SubSequence "$old_name"\n}
+    } else {
+        $out .= qq{-D SubSequence "$name"\n}
+    }
+    
+    $out .= qq{\nSequence "$clone"\n};
     
     my( $start, $end, $strand );
     if (@exons) {
@@ -665,6 +670,9 @@ sub ace_string {
             $out .= qq{SubSequence "$name"  $end $start\n};
         }
     }
+    
+    $out .= qq{\n-R Sequence "$old_name" "$name"\n}
+        if $old_name;
     
     $out .= qq{\nSequence "$name"\n}
         . qq{-D Source\n}
@@ -735,6 +743,8 @@ sub ace_string {
             $out .= qq{Source_Exons  $x $y\n};
         }
     }
+    
+    $out .= "\n";
     
     return $out;
 }
