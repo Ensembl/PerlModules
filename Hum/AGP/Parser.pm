@@ -35,17 +35,16 @@ sub parse {
     local $/ = "\n";
     my $fh = $self->file or confess "file not set";
     my $agp = Hum::AGP->new;
+    my( $chr_name );
     while (<$fh>) {
         chomp;
         next if /^\s*#/;
         next if /^\s*$/;
         my( $name,
             $chr_start, $chr_end,
-            $row_num, $row_type,
-            $acc_sv, $rest ) = split /\s+/, $_, 7;
-        unless ($agp->name) {
-            $agp->name($name);
-        }
+            $row_num, $type,
+            $rest ) = split /\s+/, $_, 6;
+        $chr_name ||= $name;
         
         my( $row );
         if ($type eq 'N') {
@@ -58,16 +57,17 @@ sub parse {
                 $seq_start, $seq_end,
                 $strand ) = split /\s+/, $rest, 4;
             $row = $agp->new_Clone;
+            $row->accession_sv($acc_sv);
             $row->seq_start($seq_start);
             $row->seq_end($seq_end);
             $row->strand($strand eq '+' ? 1 : -1);
-            $row->is_finished($row_type eq 'F' ? 1 : 0);
+            $row->is_finished($type eq 'F' ? 1 : 0);
         }
     }
     $self->{'_file'} = undef;
     
     confess "Got zero rows" unless $agp->fetch_all_Rows;
-    
+    $agp->chr_name($chr_name);
     return $agp;
 }
 
