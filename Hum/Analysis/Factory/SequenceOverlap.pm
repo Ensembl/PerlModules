@@ -69,9 +69,9 @@ sub make_SequenceOverlap {
             $pos_a->position($feat->seq_end + 1);
         }
         if ($pos_b->is_3prime) {
-            $pos_b->position($feat->hit_start);
-        } else {
             $pos_b->position($feat->hit_end);
+        } else {
+            $pos_b->position($feat->hit_start);
         }
     } else {
         # The usual "downstairs" overlap (ie: most clones
