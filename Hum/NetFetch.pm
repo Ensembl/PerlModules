@@ -27,11 +27,15 @@ BEGIN {
     sub wwwfetch {
         my( $ac ) = @_;
         my $get = "$embl_simple_url$ac";
-        my $embl = get($get)
-            or die "No response from '$get'";
-        die "Entry for '$ac' not found by request '$get'"
-            if $embl =~ /no entries found/i;
-        return $embl;
+        my $embl = get($get);
+        unless (defined $embl) {
+            die "No response from '$get'";
+        }
+        elsif (! $embl) {
+            die "Entry for '$ac' not found by request '$get'"
+        } else {
+            return $embl;
+        }
     }
 }
 
