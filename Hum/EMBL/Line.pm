@@ -59,7 +59,7 @@ sub _compose {
     my( $line ) = @_;
     
     my $pkg = ref($line);
-    confess "compose method not implemented in package '$pkg'";
+    confess "_compose method not implemented in package '$pkg'";
 }
 
 sub makeFieldAccessFuncs {
