@@ -10,6 +10,7 @@ use vars qw( @ISA @EXPORT_OK );
 
 @ISA = ('Exporter');
 @EXPORT_OK = qw( sub_db
+		 ref_from_query
                  acc_data
                  create_lock
                  destroy_lock
@@ -18,6 +19,29 @@ use vars qw( @ISA @EXPORT_OK );
                  ghost_path
                  dateMySQL
                  MySQLdatetime );
+
+=pod
+
+=head2 ref_from_query( SQL )
+
+Returns a reference to an array of anonymous
+arrays containing the results from running the
+B<SQL> query on the database.  
+
+=cut
+
+
+sub ref_from_query {
+    my( $query ) = @_;
+
+    my $dbh = sub_db();
+
+    my $sth = $dbh->prepare( $query );
+    $sth->execute();
+    return $sth->fetchall_arrayref();
+}
+
+
 
 # sub_db returns the database handle
 {
