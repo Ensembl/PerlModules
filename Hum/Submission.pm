@@ -409,47 +409,6 @@ __END__
 
 =head1 NAME - Hum::Submission
 
-=head1 DESCRIPTION
-
-
-Tables in oracle providing a view into the EMBL
-oracle database:
-
-=head2 v_gp_projects
-
-Codes for the large scale sequencing projects in
-EMBL.
-
-    Name    Description
-    ------  --------------------------------
-    CODE    PROJECT# in v_gp_primary
-    NAME    Brief description of the project
-
-=head2 v_gp_secondary
-
-Mapping of primary to secondary accessions.
-
-    Name       Description
-    ---------  --------------------
-    PRIMARY    Primary accession number
-    SECONDARY  Secondary accession number
-
-=head2 v_gp_primary
-
-Details of primary submissions.
-
-    Name          Description              Null?     Type
-    ------------  -----------------------  --------  ------------
-    PROJECT#      Sequencing project code  NOT NULL  NUMBER(2)
-    NAME          EMBL ID                  NOT NULL  VARCHAR2(10)
-    ACC           Primary accession        NOT NULL  VARCHAR2(15)
-    gp_id   eg: 12_DJ1187J4                    VARCHAR2(45)
-    SEQLEN        Length of sequence       NOT NULL  NUMBER(15)
-    CRC32         EMBL checksum            NOT NULL  NUMBER(15)
-    SV            Sequence version         NOT NULL  NUMBER(5)
-    LAST_MOD      Last modified date                 DATE
-
-
 =head1 AUTHOR
 
 James Gilbert B<email> jgrg@sanger.ac.uk
