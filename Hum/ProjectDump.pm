@@ -1898,12 +1898,15 @@ sub _set_not_current {
     sub _store_project_acc {
         my( $pdmp ) = @_;
 
+        my $sid = $pdmp->sanger_id
+            or confess "No Sanger ID";
+
         $exists ||= prepare_statement(q{
             SELECT count(*)
             FROM project_acc
             WHERE sanger_id = ?
             });
-        $exists->execute($pdmp);
+        $exists->execute($sid);
         my ($count) = $exists->fetchrow;
         
         unless ($count) {
