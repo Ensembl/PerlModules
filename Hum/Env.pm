@@ -104,6 +104,11 @@ $ENV{WISECONFIGDIR} = '/nfs/disk100/pubseq/wise/wisecfg';
 # For mkcon-gap (and therefore hcon)
 $ENV{TAGDB}         = '/usr/local/badger/staden/tables/TAGDB';
 
+# Spangle stuff
+$ENV{SPANGLECGI} = "http://intweb.sanger.ac.uk/cgi-bin/users/jgrg/spangle5.cgi";
+$ENV{SPANGLE}    = "/nfs/disk100/humpub/modules/PerlModules/Spangle/bin/spantest";
+
+
 1;
 
 __END__
