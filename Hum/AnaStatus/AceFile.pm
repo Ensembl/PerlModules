@@ -70,8 +70,7 @@ sub acefile_status_id {
         my( $self, $acefile_status) = @_;
 
         confess "Acefile status not defined" unless $acefile_status;
-        confess "Acefile already has status '$acefile_status'"
-            if $acefile_status == $self->acefile_status_id;
+        return 1 if $acefile_status == $self->acefile_status_id;
         confess "Unknown acefile status '$acefile_status'"
             unless $self->is_valid_acefile_status_id($acefile_status);
 
