@@ -660,11 +660,15 @@ sub ace_string {
         . qq{-D Method\n}
         . qq{-D CDS\n}
         . qq{-D Source_Exons\n}
-        . qq{-D Start_not_found\n}
-        . qq{-D End_not_found\n}
+        
+        #. qq{-D Start_not_found\n}
+        #. qq{-D End_not_found\n}
+        #. qq{-D Predicted_gene\n}
+        # Commented out above block and replaced with:
+        . qq{-D Properties\n}
+        
         . qq{-D Continued_from\n}
         . qq{-D Continues_as\n}
-        . qq{-D Predicted_gene\n}
         
         . qq{\nSequence "$name"\n}
         . qq{Source "$clone"\n}
@@ -680,7 +684,11 @@ sub ace_string {
             $out .= qq{CDS  $cds_start $cds_end\n};
         }
         elsif ($mn =~ /pseudo/i) {
-            $out .= qq{CDS\n};
+            $out .= qq{CDS\nPseudogene\n};
+        }
+        
+        if ($mn =~ /mRNA/i) {
+            $out .= qq{Processed_mRNA\n};
         }
     }
     
