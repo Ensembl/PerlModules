@@ -8,8 +8,7 @@ use vars qw( @ISA );
 
 BEGIN {
     @ISA = qw( Hum::EMBL::Line );
-    Hum::EMBL::Line::AC_star->makeFieldAccessFuncs(qw( primary     ));
-    Hum::EMBL::Line::AC_star->makeListAccessFuncs (qw( secondaries ));
+    Hum::EMBL::Line::AC_star->makeFieldAccessFuncs(qw( identifier ));
 }
 
 sub parse {
@@ -28,9 +27,11 @@ sub parse {
 sub compose {
     my( $line ) = @_;
     
-    my $ac = join( '', map "$_;", ($line->primary(), $line->secondaries()) );
+    my $identifier = $line->identifier;
+    confess "Identifier '$identifier' too long"
+        if length($identifier) > 75;
     
-    return $line->string($line->wrap('AC * ', $ac));
+    return $line->string("AC * $identifier");
 }
 
 1;
