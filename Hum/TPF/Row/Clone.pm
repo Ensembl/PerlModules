@@ -41,6 +41,15 @@ sub intl_clone_name {
     return $self->{'_intl_clone_name'};
 }
 
+sub current_seq_id {
+    my( $self, $current_seq_id ) = @_;
+    
+    if ($current_seq_id) {
+        $self->{'_current_seq_id'} = $current_seq_id;
+    }
+    return $self->{'_current_seq_id'};
+}
+
 sub set_intl_clone_name_from_sanger_int_ext {
     my( $self, $clonename, $int_pre, $ext_pre ) = @_;
 
@@ -123,10 +132,17 @@ sub SequenceInfo {
     if ($seq) {
         confess "empty SequenceInfo" unless keys %$seq;
         $self->{'_SequenceInfo'} = $seq;
+    } else {
+        $seq = $self->{'_SequenceInfo'};
+        unless ($seq) {
+            if (my $inf_db_id = $self->current_seq_id) {
+                $seq = $self->{'_SequenceInfo'} =
+                    Hum::SequenceInfo->fetch_by_db_id($inf_db_id);
+            }
+        }
     }
-    return $self->{'_SequenceInfo'};
+    return $seq;
 }
-
 
 sub string {
     my( $self ) = @_;

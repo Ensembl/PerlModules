@@ -13,6 +13,8 @@ sub new {
 }
 
 sub is_gap {
+    my( $self ) = @_;
+
     return ref($self) =~ /gap/i ? 1 : 0;
 }
 
@@ -20,7 +22,7 @@ sub check_positive_integer {
     my( $self, $int ) = @_;
     
     confess "Not my kind of integer '$int'"
-        unless $int =~ /^[1-9]\d+$/;
+        unless $int =~ /^[1-9]\d*$/;
 }
 
 1;

@@ -160,6 +160,7 @@ sub _express_fetch_TPF_Rows {
           , l.internal_prefix
           , l.external_prefix
           , s.accession
+          , s.id_sequence
         FROM tpf_row r
           , clone c
           , library l
@@ -173,9 +174,10 @@ sub _express_fetch_TPF_Rows {
         ORDER BY r.rank ASC
         });
     $sth->execute($db_id);
-    my( $clone_id, $clone_rank, $clonename, $contigname, $int_pre, $ext_pre, $acc );
+    my( $clone_id, $clone_rank, $clonename, $contigname,
+        $int_pre, $ext_pre, $acc, $current_seq_id );
     $sth->bind_columns(\$clone_id, \$clone_rank, \$clonename, \$contigname,
-        \$int_pre, \$ext_pre, \$acc);
+        \$int_pre, \$ext_pre, \$acc, \$current_seq_id);
     
     my $rank = 1;
     while ($sth->fetch) {
@@ -193,6 +195,7 @@ sub _express_fetch_TPF_Rows {
         $clone->contig_name($contigname);
         $clone->sanger_clone_name($clonename);
         $clone->accession($acc);
+        $clone->current_seq_id($current_seq_id);
         
         # If the clonename is same as the accession, this means
         # that we don't know the clonename is, so don't set it.
@@ -232,6 +235,7 @@ sub _express_fetch_TPF_Gaps_rank_hash {
     
     my $rank_gap = {};
     while ($sth->fetch) {
+        $gap_length = undef if $gap_length eq '?';
         my $gap = Hum::TPF::Row::Gap->new;
         $gap->db_id($gap_id);
         $gap->gap_length($gap_length);

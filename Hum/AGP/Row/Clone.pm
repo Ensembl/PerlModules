@@ -28,6 +28,11 @@ sub seq_end {
     return $self->{'_seq_end'};
 }
 
+sub chr_length {
+    my( $self ) = @_;
+    
+    return $self->seq_end - $self->seq_start + 1;
+}
 
 sub strand {
     my( $self, $strand ) = @_;
@@ -47,6 +52,18 @@ sub accession_sv {
         $self->{'_accession_sv'} = $accession_sv;
     }
     return $self->{'_accession_sv'};
+}
+
+sub elements {
+    my( $self ) = @_;
+    
+    return (
+        'F',
+        $self->accession_sv,
+        $self->seq_start,
+        $self->seq_end,
+        $self->strand == 1 ? '+' : '-',
+        );
 }
 
 1;

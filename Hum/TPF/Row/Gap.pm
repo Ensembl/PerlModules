@@ -38,7 +38,7 @@ sub gap_length {
     if ($gap_length) {
         $self->{'_gap_length'} = $gap_length;
     }
-    return $self->{'_gap_length'} || '?';
+    return $self->{'_gap_length'};
 }
 
 sub string {
