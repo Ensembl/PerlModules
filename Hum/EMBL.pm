@@ -70,8 +70,8 @@ sub defaultHandler {
              RT => 'Hum::EMBL::Reference',
              RL => 'Hum::EMBL::Reference',
              DR => 'Hum::EMBL::DR',
-             FH => 'Hum::EMBL::FeatureTable',
-             FT => 'Hum::EMBL::FeatureTable',
+             FH => 'Hum::EMBL::FH',
+             FT => 'Hum::EMBL::FT',
              CC => 'Hum::EMBL::CC',
              XX => 'Hum::EMBL::XX',
              SQ => 'Hum::EMBL::Sequence',
@@ -198,12 +198,12 @@ sub handler {
                 *$func = sub {
                     my( $entry ) = @_;
 
-                    my @lines = grep { ref($_) eq $class } $entry->lines()
-                        or confess "No line types from '$class' class in entry";
+                    my @lines = grep { ref($_) eq $class } $entry->lines();
 
                     if (wantarray) {
                         return @lines;
                     } else {
+                        confess "No line types from '$class' class in entry" unless @lines;
                         return $lines[0];
                     }
                 }
@@ -380,14 +380,9 @@ sub field {
 
 sub wrap {
     my( $line, $prefix, $text ) = @_;
-
-    my $margin = $line->wrapMargin() - 1;
-    
-    # Pad prefix to 5 characters
-    $prefix = $prefix . ( ' ' x (5 - length($prefix)) );
     
     my( @lines );
-    while ($text =~ /(.{0,$margin}\S)(\s+|$)/g) {
+    while ($text =~ /(.{0,73}\S)(\s+|$)/g) {
         push( @lines, $prefix . $1 . "\n" );
     }
     
@@ -396,27 +391,12 @@ sub wrap {
 
 sub commaWrap {
     my( $line, $prefix, $text ) = @_;
-
-    my $margin = $line->wrapMargin() - 1;
-    
-    # Pad prefix to 5 characters
-    $prefix = $prefix . ( ' ' x (5 - length($prefix)) );
     
     my( @lines );
-    while ($text =~ /(.{1,$margin}(,|$))/g) {
+    while ($text =~ /(.{1,73}(,|$))/g) {
         push( @lines, $prefix . $1 . "\n" );
     }
     return @lines;
-}
-
-sub wrapMargin {
-    my( $line, $margin ) = @_;
-    
-    if ($margin) {
-        $line->{'_wrap_margin'} = $margin;
-    } else {
-        return $line->{'_wrap_margin'} || 74;
-    }
 }
 
 ###############################################################################
@@ -442,7 +422,7 @@ sub compose {
     
     my( @compose );
     foreach my $txt ($line->list()) {
-        push( @compose, $line->wrap('CC', $txt) );
+        push( @compose, $line->wrap('CC   ', $txt) );
     }
     return @compose;
 }
@@ -526,7 +506,7 @@ sub compose {
     
     my $ac = join( '', map "$_;", ($line->primary(), $line->secondaries()) );
     
-    return $line->wrap('AC', $ac);
+    return $line->wrap('AC   ', $ac);
 }
 
 ###############################################################################
@@ -557,7 +537,7 @@ sub compose {
     
     my $kw = join('; ', $line->list()) . '.';
     
-    return $line->wrap('KW', $kw);
+    return $line->wrap('KW   ', $kw);
 }
 
 ###############################################################################
@@ -681,7 +661,7 @@ sub compose {
     
     my( @compose );
     foreach my $txt ($line->list()) {
-        push( @compose, $line->wrap('DE', $txt) );
+        push( @compose, $line->wrap('DE   ', $txt) );
     }
     return @compose;
 }
@@ -897,11 +877,11 @@ sub compose {
     push( @compose, "RN   [$num]\n" );
     
     foreach my $comment ($line->comments) {
-        push( @compose, $line->wrap('RC', $comment) );
+        push( @compose, $line->wrap('RC   ', $comment) );
     }
     
     my $pos_line = join(',', $line->positions);
-    push( @compose, $line->commaWrap('RP', $pos_line) );
+    push( @compose, $line->commaWrap('RP   ', $pos_line) );
     
     foreach my $xr ($line->xrefs) {
         my $db = $xr->db();
@@ -910,16 +890,16 @@ sub compose {
     }
     
     my $au_line = join(', ', $line->authors) . ';';
-    push( @compose, $line->commaWrap('RA', $au_line) );
+    push( @compose, $line->commaWrap('RA   ', $au_line) );
     
     if (my $title = $line->title) {
-        push( @compose, $line->wrap('RT', qq("$title";)) );
+        push( @compose, $line->wrap('RT   ', qq("$title";)) );
     } else {
         push( @compose, "RT   ;\n" );
     }
     
     foreach my $loc ($line->locations) {
-        push( @compose, $line->wrap('RL', $loc) );
+        push( @compose, $line->wrap('RL   ', $loc) );
     }
     
     return( @compose );
@@ -932,30 +912,12 @@ package Hum::EMBL::XRef;
 use strict;
 use Carp;
 
-sub new {
-    my( $pkg ) = @_;
-    
-    return bless [], $pkg;
-}
-
-sub db {
-    my( $line, $db ) = @_;
-    
-    if ($db) {
-        $line->[0] = $db;
-    } else {
-        return $line->[0];
-    }
-}
-
-sub id {
-    my( $line, $id ) = @_;
-    
-    if ($id) {
-        $line->[1] = $id;
-    } else {
-        return $line->[1];
-    }
+BEGIN {
+    Hum::EMBL::Reference->makeFieldAccessFuncs(qw(
+                                                  db
+                                                  id
+                                                  secondary
+                                                  ));
 }
 
 ###############################################################################
@@ -966,14 +928,7 @@ use strict;
 use Carp;
 use vars qw( @ISA );
 
-BEGIN {
-    @ISA = qw( Hum::EMBL::Line );
-    Hum::EMBL::Reference->makeFieldAccessFuncs(qw(
-                                                  db
-                                                  primary
-                                                  secondary
-                                                  ));
-}
+@ISA = qw( Hum::EMBL::XRef );
 
 sub store {
     my $pkg = shift;
@@ -992,10 +947,11 @@ sub parse {
     
     my $string = $line->pullString();
     
-    my( $db, $prim, $sec ) = $string =~ /DR   (\S+); (\S+); (\S+)\.$/
+    my( $db, $id, $sec ) = $string =~ /DR   (\S+); (\S+); (\S+)\.$/
         or confess "Can't parse DR line: $string";
+    my $xref = Hum::EMBL::XRef->new();
     $line->db       ( $db   );
-    $line->primary  ( $prim );
+    $line->id       ( $id );
     $line->secondary( $sec  );
 }
 
@@ -1003,7 +959,7 @@ sub compose {
     my( $line ) = @_;
     
     my $db   = $line->db();
-    my $prim = $line->primary();
+    my $prim = $line->id();
     my $sec  = $line->secondary();
     
     return "DR   $db; $prim; $sec.\n";
@@ -1063,7 +1019,7 @@ sub compose {
     $os .= "\n";
     
     my $class_string = join('; ', $line->classification()) . '.';
-    return( $os, $line->wrap('OC', $class_string ) );
+    return( $os, $line->wrap('OC   ', $class_string ) );
 }
 
 ###############################################################################
@@ -1099,7 +1055,36 @@ sub compose {
 
 ###############################################################################
 
-package Hum::EMBL::FeatureTable;
+package Hum::EMBL::FH;
+
+use strict;
+use Carp;
+use vars qw( @ISA );
+@ISA = qw( Hum::EMBL::Line );
+
+
+sub new {
+    my( $pkg ) = @_;
+    return bless {}, $pkg;
+}
+
+sub store {
+    my $pkg = shift;
+    
+    if (@_) {
+        return $pkg->new();
+    } else {
+        confess "No data provided";
+    }
+}
+
+sub compose {
+    return "FH   Key             Location/Qualifiers\nFH\n";
+}
+
+###############################################################################
+
+package Hum::EMBL::FT;
 
 use strict;
 use Carp;
@@ -1125,6 +1110,8 @@ sub store {
     $last->string( $string );
     return( @features, $last );    
 }
+
+
 
 ###############################################################################
 
