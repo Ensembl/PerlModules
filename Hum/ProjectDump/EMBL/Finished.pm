@@ -284,12 +284,17 @@ Em:, EMBL; Sw:, SWISSPROT; Tr:, TREMBL; Wp:, WORMPEP;
 Information on the WORMPEP database can be found at
 http://www.sanger.ac.uk/Projects/C_elegans/wormpep');
     
-    my $zeb_repeat =
+    my @zfish_specific = (
+'Clone-derived Zebrafish pUC subclones occasionally display inconsistency
+over the length of mononucleotide A/T runs and conserved TA repeats. 
+Where this is found the longest good quality representation will be 
+submitted.',
+
 'Repeat names beginning "Dr" were identified by the Recon repeat discovery
 system (Zhirong Bao and Sean Eddy, submitted), and those beginning "drr"
 were identified by Rick Waterman (Stephen Johnson lab, WashU).  For
 further information see
-http://www.sanger.ac.uk/Projects/D_rerio/fishmask.shtml';
+http://www.sanger.ac.uk/Projects/D_rerio/fishmask.shtml');
 
     sub add_standard_CC {
         my( $pdmp, $embl ) = @_;
@@ -308,9 +313,11 @@ http://www.sanger.ac.uk/Projects/D_rerio/fishmask.shtml';
         }
         
         if ($pdmp->species eq 'Zebrafish') {
-            my $cc = $embl->newCC;
-            $cc->list($zeb_repeat);
-            $embl->newXX;
+            foreach my $entry (@zfish_specific) {
+                my $cc = $embl->newCC;
+                $cc->list($entry);
+                $embl->newXX;
+            }
         }
     }
 }
