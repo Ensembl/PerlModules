@@ -69,6 +69,7 @@ sub gene_type_prefix {
         [qw{ Novel_Transcript   Type.Gene.Novel_Transcript }],
         [qw{ Pseudogene         Type.Pseudogene            }],
         [qw{ Putative           Type.Putative              }],
+        [qw{ Transposon         Type.Transposon            }],
         );
 
     sub save_locus_info {
