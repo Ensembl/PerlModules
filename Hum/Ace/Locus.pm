@@ -70,7 +70,6 @@ sub new_from_Locus {
         $new->$method( $old->$method() );
     }
 
-   
 
     return $new;
 }
@@ -433,9 +432,13 @@ sub make_Otter_Gene {
     }
     if (scalar(@{$gene->get_all_Transcripts})) {
         # Gene type is aggregate function of transcript types
-        $gene->set_gene_type_from_transcript_classes;
+        #$gene->set_gene_type_from_transcript_classes;
+        my $type = Bio::Otter::Converter::gene_type_from_transcript_set($gene->get_all_Transcripts(), $geneinfo->known_flag());
+        print "Decided on genetype '$type'\n";
+        $gene->type($type);
         return $gene;
     } else {
+        warn "Gene didn't get assigned any transcripts\n";
         return;
     }
 }
