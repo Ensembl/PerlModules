@@ -36,7 +36,8 @@ use vars qw( @ISA @EXPORT_OK );
                 clone_from_project
                 project_from_clone
                 find_project_directories
-                finised_accession
+                entry_name
+                finished_accession
                 unfinised_accession
                 localisation_data
                 external_clone_name
@@ -305,7 +306,40 @@ sub finished_accession {
 
 =pod
 
-=head2 unfinised_accession( PROJECT )
+=head2 entry_name( ACCESSION )
+
+Returns the EMBL ID corresponding to the
+ACCESSION supplied.
+
+=cut
+
+sub entry_name {
+    my( $acc ) = @_;
+    
+    # Get the entryname for this accession
+
+    my $ans = ref_from_query(qq( select name
+                                 from embl_submission
+                                 where accession = '$acc' ));
+    my @nam = map $_->[0], @$ans;
+    
+    my( $entry_name );
+    if (@nam > 1) {
+        die "Multiple names for accession '$acc' : ",
+            join(', ', map "'$_'", @nam);
+    } elsif (@nam == 0) {
+        $entry_name = 'ENTRYNAME';
+    } else {                 
+        $entry_name = $nam[0];
+    }                
+    
+    return $entry_name;
+}
+
+
+=pod
+
+=head2 unfinished_accession( PROJECT )
 
 Returns the accession number for the unfinished
 sequence corresponding to project B<PROJECT>. 
@@ -314,7 +348,7 @@ Multiple matches, or no matches, are fatal.
 =cut
 
 sub unfinished_accession {
-    my( $project, $suffix ) = @_;
+    my( $project ) = @_;
     
     my $query = qq( select accession
                     from unfinished_submission
@@ -324,10 +358,10 @@ sub unfinished_accession {
     if (@$ans == 1) {
         return $ans->[0][0];
     } elsif (@$ans > 1) {
-        die "Mulitple accessions found for '$project' and suffix '$suffix' : ",
+        die "Mulitple accessions found for '$project' : ",
             join(', ', map "'$_->[0]'", @$ans);
     } else {
-        die "No accession found for projectname '$project' and suffix '$suffix'";
+        die "No accession found for projectname '$project'";
     }
 }
 

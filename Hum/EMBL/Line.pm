@@ -635,6 +635,7 @@ package Hum::EMBL::Line::XRef;
 
 use strict;
 use Carp;
+use vars qw( @ISA );
 
 BEGIN {
     @ISA = qw( Hum::EMBL::Line );

@@ -31,8 +31,8 @@ BEGIN {
             if $embl =~ /no entries found/i;
         
         # Remove html markup
-        $embl =~ s   {^<PRE>}{} or die "Can't remove leading '<PRE>' tag";
-        $embl =~ s{\n</PRE>$}{} or die "Can't remove trailing '</PRE>' tag";
+        $embl =~ s     {^<PRE>}{}i or die "Can't remove leading '<PRE>' tag";
+        $embl =~ s{\n</PRE>.+$}{}i or die "Can't remove trailing '</PRE>' tag";
         $embl =~ s{<A HREF=.+?>([^<]+)</A>}{$1}g;
         
         return $embl;
