@@ -155,14 +155,14 @@ sub acefile_status_id_name {
 sub task_name {
     my ( $self ) = @_;
 
-    if (my $task_name = $self->{'_task_name'}) {
-        return $task_name;
-    } else {
+    my( $task_name );
+    unless ($task_name = $self->{'_task_name'}) {
         $task_name = $self->acefile_name
             or confess "acefile_name not set";
         $task_name =~ s/[^a-zA-Z]//g;
         $self->{'_task_name'} = $task_name;
     }
+    return $task_name;
 }
 
 {
