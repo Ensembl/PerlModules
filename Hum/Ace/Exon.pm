@@ -38,11 +38,35 @@ sub phase {
     my( $self, $phase ) = @_;
     
     if (defined $phase) {
-        confess "Illegal phase '$phase'; must be one of (0,1,2)"
-            unless $phase =~ /^[012]$/;
+        confess "Illegal phase '$phase'; must be one of (1,2,3)"
+            unless $phase =~ /^[123]$/;
         $self->{'_phase'} = $phase;
     }
     return $self->{'_phase'};
+}
+
+#sub phase {
+#    my( $self, $phase ) = @_;
+#    
+#    if (defined $phase) {
+#        confess "Illegal phase '$phase'; must be one of (0,1,2)"
+#            unless $phase =~ /^[012]$/;
+#        $self->{'_phase'} = $phase;
+#    }
+#    return $self->{'_phase'};
+#}
+
+sub ensembl_phase {
+    my( $self, $arg ) = @_;
+    
+    if (defined $arg) {
+        confess "ensembl_phase is read-only";
+    }
+    if (my $ace_phase = $self->phase) {
+        return( (3 - ($ace_phase - 1)) % 3 );
+    } else {
+        return;
+    }
 }
 
 sub unset_phase {

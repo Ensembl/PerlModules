@@ -188,7 +188,10 @@ sub process_ace_transcript {
                 confess("Bad codon start ('$codon_start') in '$t_seq'");
             }
             # EMBL/ACeDB -> EnsEMBL phase conversion
-            $start_phase = (3 - ($codon_start - 1)) % 3;
+            #$start_phase = (3 - ($codon_start - 1)) % 3;
+            
+            # Decided to store as ace phase instead
+            $start_phase = $codon_start;
         }
     }
     
