@@ -130,7 +130,7 @@ BEGIN {
             Eukaryota Metazoa Chordata Cephalochordata Branchiostomida Branchiostoma 
             )],
         
-        'zebrafish' =>
+        zebrafish =>
         [qw(Danio rerio), 'zebrafish', qw(
             Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi
             Actinopterygii Neopterygii Teleostei Euteleostei Ostariophysi
@@ -143,16 +143,28 @@ BEGIN {
             Batrachia Anura Mesobatrachia Pipoidea Pipidae Xenopodinae Xenopus
             )],
         
-        'platypus' =>
+        platypus =>
         [qw(Ornithorhynchus anatinus), 'platypus', qw(
             Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia
             Monotremata Ornithorhynchidae Ornithorhynchus
             )],
 
-        'carp' =>
+        carp =>
         [qw(Cyprinus carpio), 'carp', qw(
             Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Actinopterygii
             Neopterygii Teleostei Ostariophysi Cypriniformes Cyprinidae Cyprinus
+            )],
+        
+        chimp =>
+        [qw(Pan troglodytes), 'chimp', qw(
+            Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia
+            Eutheria Primates Catarrhini Hominidae Pan
+            )],
+
+        rhesus =>
+        [qw(Macaca mulatta), 'rhesus monkey', qw(
+            Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia
+            Eutheria Primates Catarrhini Cercopithecidae Cercopithecinae Macaca
             )],
     );
 
