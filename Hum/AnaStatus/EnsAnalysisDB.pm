@@ -5,7 +5,7 @@ package Hum::AnaStatus::EnsAnalysisDB;
 
 use strict;
 use Carp;
-use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor;
 use Hum::Submission 'prepare_statement';
 use Hum::AnaStatus::EnsAnalysis;
 
@@ -20,7 +20,17 @@ use Hum::AnaStatus::EnsAnalysis;
             $db = $ens_db_cache{$db_id}
                 = $pkg->new_from_ensembl_db_id($db_id);
         }
+        
         return $db;
+    }
+    
+    sub disconnect_all_ensembl_dbs {
+        foreach my $db (values %ens_db_cache) {
+            foreach my $key (keys %$db) {
+                $db->{$key} = undef;
+            }
+        }
+        %ens_db_cache = ();
     }
 }
 
@@ -113,6 +123,15 @@ sub user {
     return $self->{'_user'};
 }
 
+sub password {
+    my( $self, $password ) = @_;
+    
+    if ($password) {
+        $self->{'_password'} = $password;
+    }
+    return $self->{'_password'};
+}
+
 sub ensembl_db_id {
     my( $self, $ensembl_db_id ) = @_;
     
@@ -131,6 +150,15 @@ sub golden_path_type {
     return $self->{'_golden_path_type'};
 }
 
+sub ace_data_factory {
+    my( $self, $ace_data_factory ) = @_;
+    
+    if ($ace_data_factory) {
+        $self->{'_ace_data_factory'} = $ace_data_factory;
+    }
+    return $self->{'_ace_data_factory'};
+}
+
 
 sub db_adaptor {
     my( $self ) = @_;
@@ -142,13 +170,15 @@ sub db_adaptor {
         my $user    = $self->user    or confess    "user not set";
         my $type    = $self->golden_path_type
                             or confess "golden_path_type not set";
+        my $pass    = $self->password || '';
         
         $db_adaptor
             = $self->{'_db_adaptor'}
-            = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+            = Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor->new(
                 -HOST   => $host,
                 -DBNAME => $db_name,
                 -USER   => $user,
+                -PASS   => $pass,
                 );
         $db_adaptor->static_golden_path_type($type);
     }
