@@ -275,7 +275,7 @@ sub translatable_Sequence {
     my $phase               = $self->start_phase;
     my $clone_seq           = $self->clone_Sequence or confess "No clone_Sequence";
     
-    warn "strand = $strand, phase = $phase\n";
+    #warn "strand = $strand, phase = $phase\n";
     
     my $seq = Hum::Sequence::DNA->new;
     $seq->name($self->name);
@@ -664,9 +664,11 @@ sub ace_string {
         . qq{-D End_not_found\n}
         . qq{-D Continued_from\n}
         . qq{-D Continues_as\n}
+        . qq{-D Predicted_gene\n}
         
         . qq{\nSequence "$name"\n}
         . qq{Source "$clone"\n}
+        . qq{Predicted_gene\n}
         ;
     
     
@@ -676,6 +678,9 @@ sub ace_string {
         if ($method->is_coding) {
             my( $cds_start, $cds_end ) = $self->cds_coords;
             $out .= qq{CDS  $cds_start $cds_end\n};
+        }
+        elsif ($mn =~ /pseudo/i) {
+            $out .= qq{CDS\n};
         }
     }
     
