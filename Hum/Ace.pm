@@ -10,6 +10,7 @@ use Hum::Ace::CloneSeq;
 use Hum::Ace::Locus;
 use Hum::Ace::LocalServer;
 use Hum::Ace::XaceRemote;
+use Hum::Ace::GeneMethod;
 
 1;
 
