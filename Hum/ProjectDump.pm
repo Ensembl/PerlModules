@@ -425,7 +425,7 @@ sub read_submission_data {
         WHERE c.project_name = a.project_name
           AND a.sanger_id = d.sanger_id
           AND d.seq_id = s.seq_id
-          AND a.sanger_id = $sid
+          AND a.sanger_id = '$sid'
           AND d.is_current = 'Y'
         });
     $get_dump->execute;
