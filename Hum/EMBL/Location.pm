@@ -122,6 +122,8 @@ sub locationFromHomolBlock {
         map { $sum += $_->[0] } @data;
         next unless $sum >= $score;
         
+        @data = sort numeric_ascend @data;
+        
         # Make a location string
         my @exons = map "$_->[1]..$_->[2]", @data;
         my $loc = Hum::EMBL::Location->new($strand, @exons);
