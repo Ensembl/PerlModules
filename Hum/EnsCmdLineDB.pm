@@ -83,7 +83,13 @@ use Term::ReadKey qw{ ReadMode ReadLine };
 
         # Connect to the EnsEMBL database
         my $db_adaptor = $adaptor_class->new(@adaptor_args);
-        $db_adaptor->static_golden_path_type($sgp_type) if $sgp_type;
+        if ($sgp_type) {
+            if ($db_adaptor->can('assembly_type')) {
+                $db_adaptor->assembly_type($sgp_type);
+            } else {
+                $db_adaptor->static_golden_path_type($sgp_type);
+            }
+        }            
         
         $passwd = '';
         

@@ -142,6 +142,12 @@ BEGIN {
             Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Amphibia 
             Batrachia Anura Mesobatrachia Pipoidea Pipidae Xenopodinae Xenopus
             )],
+        
+        'Platypus' =>
+        [qw(Ornithorhynchus anatinus), 'platypus', qw(
+            Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia
+            Monotremata Ornithorhynchidae Ornithorhynchus
+            )],
     );
 
     sub add_Organism {
