@@ -186,7 +186,7 @@ sub warn_match {
     push(@feat, $hit_end) unless $seq_end == $hit_end;
     
     foreach my $feat (@feat) {
-        printf("   %5.1f%% %16s %6d %6d %16s %6d %6d     %3s\n",
+        printf("  %7.3f%% %16s %6d %6d %16s %6d %6d     %3s\n",
             $feat->percent_identity,
             $feat->seq_name,
             $feat->seq_start,
@@ -235,18 +235,8 @@ sub merge_features {
         $ins_count += $gap_length;
         my $percent = 100 * ($ins_count / $new_feat->seq_length);
         $new_feat->percent_insertion($percent);
-        
-        $new_feat->alignment_string(
-            $seq->alignment_string
-            . "   GAP OF $gap_length bp\n"
-            . $hit->alignment_string
-            );
-    } else {
-        $new_feat->alignment_string(
-            $seq->alignment_string . $hit->alignment_string
-            );
     }
-
+    
     return $new_feat;
 }
 
