@@ -173,8 +173,7 @@ sub store {
         $self->htgs_phase,
         $self->sequence_length,
         $self->embl_checksum,
-        $self->projectname || 'NONE',   # "NONE" is a hack until Dave makes
-                                        # the PROJECTNAME column non null
+        $self->projectname,
         );
 }
 

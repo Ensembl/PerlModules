@@ -130,6 +130,9 @@ sub _fetch_generic {
     $sth->execute(@data);
     my ($db_id, $entry_date, $prog, $operator,
         $subregion, $species, $chr) = $sth->fetchrow;
+    
+    confess "No tpf found" unless $db_id;
+    
     my $self = $pkg->new;
     $self->db_id($db_id);
     $self->entry_date(iso2time($entry_date));
