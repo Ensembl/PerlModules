@@ -79,6 +79,8 @@ sub make_embl {
     # Making Bio::Otter::EMBL::Factory object
     # As required to be able to get DE and KW information for for clone
     my $ft_factory = $pdmp->make_ft_factory();
+    $ft_factory->accession($acc);
+    $ft_factory->sequence_version($pdmp->sequence_version);
     
     # DE line
     $pdmp->add_Description($embl, $ft_factory);

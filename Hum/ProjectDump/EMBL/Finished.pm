@@ -103,8 +103,7 @@ sub add_Description {
     
     my @desc = ($species_chr_desc);
     if (my $ds = $pdmp->DataSet) {
-        push(@desc, $ft_factory->get_description($pdmp->accession
-             , $pdmp->sequence_version));
+        push(@desc, $ft_factory->get_description_from_otter);
     }
     
     my $de = $embl->newDE;
@@ -117,8 +116,7 @@ sub add_Keywords {
 
     my @key_words = ('HTG');
     if (my $ds = $pdmp->DataSet) {
-        push(@key_words, $ft_factory->get_keywords($pdmp->accession, 
-            , $pdmp->sequence_version));
+        push(@key_words, $ft_factory->get_keywords_from_otter);
     }
     
     my $kw = $embl->newKW;
