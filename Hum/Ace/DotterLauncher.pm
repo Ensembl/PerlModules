@@ -50,6 +50,15 @@ sub subject_name {
     return $self->{'_subject_name'};
 }
 
+sub revcomp_subject {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_revcomp_subject'} = $flag;
+    }
+    return $self->{'_revcomp_subject'} || 0;
+}
+
 sub fork_dotter {
     my( $self ) = @_;
 
@@ -72,6 +81,10 @@ sub fork_dotter {
             # Write the subject with pfetch
             my ($subject_seq) = Hum::Pfetch::get_Sequences($subject_name);
             die "Can't fetch '$subject_name'\n" unless $subject_seq;
+            if ($self->revcomp_subject) {
+                bless($subject_seq, 'Hum::Sequence::DNA');  # hack!
+                $subject_seq = $subject_seq->reverse_complement;
+            }
             my $subject_out = Hum::FastaFileIO->new("> $subject_file");
             $subject_out->write_sequences($subject_seq);
             $subject_out = undef;
@@ -84,6 +97,7 @@ sub fork_dotter {
             # Run dotter
             my $offset = $start - 1;
             my $dotter_command = "dotter -q $offset $query_file $subject_file ; rm $query_file $subject_file";
+            warn "RUNNING: $dotter_command\n";
             exec($dotter_command) or warn "Failed to exec '$dotter_command' : $!";
         };
         if ($@) {
