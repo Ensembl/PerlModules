@@ -54,6 +54,9 @@ sub acefile_status_id {
     if ($acefile_status_id) {
         confess "Can't modify acefile_status_id"
             if $self->{'_acefile_status_id'};
+        confess "Unknown acefile_status_id '$acefile_status_id'"
+            unless $self->is_valid_ace_status_id($acefile_status_id);
+                                    
         $self->{'_acefile_status_id'} = $acefile_status_id;
     }
     return $self->{'_acefile_status_id'};
@@ -65,6 +68,11 @@ sub task_name {
     if ($task_name) {
         confess "Can't modify task_name"
             if $self->{'_task_name'};
+            
+            #still no task_names in submissions db
+        #confess "Unknown task_name '$task_name'"
+        #    unless $self->is_valid_task_name($task_name);    
+            
         $self->{'_task_name'} = $task_name;
     }
     return $self->{'_task_name'};

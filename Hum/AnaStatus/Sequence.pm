@@ -17,7 +17,7 @@ sub new_from_sequence_name {
           , a.seq_id
           , a.ana_seq_id
           , status.status_id
-          , status.status_date
+          , UNIX_TIMESTAMP(status.status_date)
           , s.embl_checksum
           , person.annotator_uname
         FROM sequence s
@@ -28,6 +28,7 @@ sub new_from_sequence_name {
           ON a.ana_seq_id = person.ana_seq_id                        
         WHERE s.seq_id = a.seq_id
           AND a.is_current = 'Y'
+          AND status.is_current = 'Y'
           AND s.sequence_name = ?
         });
 
@@ -86,9 +87,9 @@ sub new_from_sequence_name {
         
         confess "status id not defined" unless $status;
         confess "Sequence already has status '$status'"
-            if $status == $self->status;
-        
-        #$status =~ /^\d+$/ or confess "Illegal status_id '$status'";
+            if $status == $self->status_id;
+        confess "Unknown status_id '$status'"
+            unless $self->is_valid_status_id($status);
 
         my $ana_seq_id = $self->ana_seq_id
             or confess "No ana_seq_id in object";
