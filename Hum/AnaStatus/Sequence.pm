@@ -805,6 +805,14 @@ sub hum_Sequence {
     my $seq_in = Hum::FastaFileIO->new_DNA_IO($seq_file);
     my $seq = $seq_in->read_one_sequence
         or confess "No sequence from '$seq_file'";
+    if (my $pre = $self->db_prefix) {
+        my $name = $seq->name;
+        my $full = $self->full_sequence_name;
+        if ($name ne $full) {
+            warn "Name from sequence file in analyis directory '$name' doesn't match full name '$full'\n";
+            $seq->name($full);
+        }
+    }
     return $seq;
 }
 

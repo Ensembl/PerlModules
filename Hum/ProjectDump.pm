@@ -113,7 +113,7 @@ sub get_all_existing_dumps_for_project {
 }
 
 sub create_new_dump_object {
-    my( $pkg, $project ) = @_;
+    my( $pkg, $project, $force_flag ) = @_;
 
     my $active_count = prepare_statement(qq{
         SELECT count(*)
@@ -123,7 +123,7 @@ sub create_new_dump_object {
         });
     $active_count->execute;
     my ($is_active) = $active_count->fetchrow;
-    if ($is_active) {
+    if ($force_flag or $is_active) {
         my $pdmp = $pkg->new;
         $pdmp->project_name($project);
         $pdmp->sanger_id("_\U$project");
