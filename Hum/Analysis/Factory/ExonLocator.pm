@@ -44,9 +44,12 @@ sub find_Feature_sets {
     my $ex_list = [];
     for (my $i = 0; $i < @$exon_seqs; $i++) {
         #my $exon = $exon_seqs->[$i];
-        my $feat = $features->[$i];
-        @$feat = sort {$b->hit_length <=> $a->hit_length} @$feat;
-        push(@$ex_list, shift @$feat);
+        if (my $feat = $features->[$i]) {
+            @$feat = sort {$b->hit_length <=> $a->hit_length} @$feat;
+            push(@$ex_list, shift @$feat);
+        } else {
+            push(@$ex_list, undef);
+        }
     }
     
     # Check that features are colinear - no use when we are finding $gene->get_all_Exons
