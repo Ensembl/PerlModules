@@ -115,8 +115,8 @@ sub parse {
         $loc->strand('W');
     }
     
-    $loc->missing_5_prime if $loc =~ /</;
-    $loc->missing_3_prime if $loc =~ />/;
+    $loc->missing_5_prime if $loc =~ s/<//;
+    $loc->missing_3_prime if $loc =~ s/>//;
     
     my( @exons );
     while ($$s =~ /(\d+)\.\.(\d+)/g) {
