@@ -105,6 +105,7 @@ sub splice_defaults_into_ARGV {
     local *ENSDEF;
     if (open ENSDEF, $defaults_file) {
         while (<ENSDEF>) {
+            next if /^\s*#/;
             push(@options, split);
         }
     }
