@@ -56,7 +56,7 @@ sub netfetch {
 
         foreach my $msg ( @msg_files ) {
         
-        
+            local *MSG_FILE;
             open MSG_FILE, $msg or die "Can't open ('$msg') : $!";
             my $first_line = <MSG_FILE>;
 
@@ -90,24 +90,25 @@ sub netfetch {
                     }
                 } else {
                     # File may still be being written to
-                    warn "End didn't match: $end";
+                    #warn "End didn't match: $end";
                     $msg = 0;
                 }
             } else {
+                seek( MSG_FILE, 0, 0 );
                 while (<MSG_FILE>) {
-                    if (/^\* File NUC:(\S+) (sent|not found)\.$/) {
+                    # * File NUC:bK285F3 not found.
+                    #      * File NUC:bK285F3 not found.
+                    if (/^\* File NUC:(\S+) (sent|not found)/) {
                         $Request{ 'EMAIL_LOG_FILE' } = 1;
                         if ($2 eq 'not found') {
-                            $Request{ $1 } = 'FAILED' if exists $Request{ $_ };
+                            $Request{ $1 } = 'FAILED' if exists $Request{ $1 };
                         }
                     }
                 }
                 $msg = 0 unless $Request{ 'EMAIL_LOG_FILE' };
-                # File must be email log, or an EMBL file
-                #die "Invalid file ('$msg')" unless $Request{ 'EMAIL_LOG_FILE' };
             }
             if ($msg) {
-                #unlink( $msg ) or die "Can't unlink ('$msg')";
+                unlink( $msg ) or die "Can't unlink ('$msg')";
             }
         }
         last unless missing(\%Request);
@@ -127,6 +128,7 @@ sub netfetch {
 
 sub send_nuc_request {
     my( $address, @request_list ) = @_;
+    local *NETSRV;
      open NETSRV, "| mailx $address" or die "Can't open mailx to ('$address') : $!";
     print NETSRV "\nSIZE 1900\n"; # Sanger email size limit
     print NETSRV map "GET NUC:$_\n", @request_list;
