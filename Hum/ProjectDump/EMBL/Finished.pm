@@ -505,18 +505,20 @@ sub add_genes_FT {
     # Load up the genes hash
     my( %genes );
     
-    # Some subsequences have an "SC:" prefix (Zebrafish)
-    my $prefix = '';
+    # We use SI prefix for Zebrafish
+    my $prefix = $pdmp->species eq 'Zebrafish' ? 'SI:' : '';
     
+    my $clone_name = $ace->name;
     foreach my $g ($ace->at('Structure.Subsequence[1]')) {
+        my $nam = $clone_name;
+        
         # Allow for sloppy capitalization of sequence name
-        my $nam = $ace->name;
         $nam =~ s{^([A-Za-z])}{ my $f = $1; '['. lc($f) . uc($f) .']' }e;
-        if ($g =~ /^(SC[:\.])?$nam\.(\d+)(?:\.(\d+))?(\.mRNA)?/) {
-	    $prefix = $1 if $1;
-            my $num = $2;       # The gene number
-            my $iso = $3 || 0;  # The isoform number -- zero if no isoforms
-            my $key = $4 ? 'mRNA' : 'CDS';
+        
+        if ($g =~ /^$nam\.(\d+)(?:\.(\d+))?(\.mRNA)?/) {
+            my $num = $1;       # The gene number
+            my $iso = $2 || 0;  # The isoform number -- zero if no isoforms
+            my $key = $3 ? 'mRNA' : 'CDS';
             $genes{$num}->[$iso]{$key} = $g;
         }
     }
@@ -611,7 +613,11 @@ sub add_genes_FT {
                 }
                 
                 unless ($method eq 'Transposon') {
-                   $ft->addQualifierStrings('gene', $locusname);
+                    if ($clone_name eq substr($locusname, 0, length($clone_name))) {
+                        $ft->addQualifierStrings('gene', "$prefix$locusname");
+                    } else {
+                        $ft->addQualifierStrings('gene', $locusname);
+                    }
                 }
 
                 # Add /product qualifier, and any further remarks
