@@ -125,7 +125,69 @@ sub lsf_error {
 }
 
 sub submit {
-    warn "submit not implemented";
+    my( $self, $wrapper_command ) = @_;
+    
+    $self->store;
+    my $ana_job_id = $self->ana_job_id;
+    
+    my $bsub_pipe = "bsub $wrapper_command -ana_job_id $ana_job_id 2>&1 |";
+    local *BSUB_PIPE;
+    open BSUB_PIPE, $bsub_pipe
+        or die "Can't open pipe '$bsub_pipe' : $!";
+    
+    my $bsub_out = '';
+    my( $lsf_job_id );
+    while (<BSUB_PIPE>) {
+        $bsub_out .= $_;
+        $lsf_job_id = $1 if /^Job\s+\<(\d+)\>/;;
+    }
+    unless ($lsf_job_id and close(BSUB_PIPE)) {
+        confess "Error running '$bsub_pipe' :\n$bsub_out";
+    }
+    $self->lsf_job_id($lsf_job_id);
+    $self->store_lsf_job_id;
+}
+
+sub store {
+    my( $self ) = @_;
+    
+    my $insert = prepare_statement(q{
+        INSERT ana_job( ana_job_id
+              , ana_seq_id
+              , task_name
+              , submit_time )
+        VALUES (NULL
+              , ?
+              , ?
+              , NOW())
+        });
+    $insert->execute(
+        $self->ana_seq_id,
+        $self->task_name,
+        );
+    my $ana_job_id = $insert->{'insertid'}
+        or confess "No insertid from statement handle";
+    $self->ana_job_id($ana_job_id);
+}
+
+sub store_lsf_job_id {
+    my( $self ) = @_;
+    
+    my $ana_job_id = $self->ana_job_id
+        or confess "No ana_job_id.  'store' not called?";
+    my $lsf_job_id = $self->lsf_job_id
+        or confess "No lsf_job_id.  bsub not done?";
+    
+    my $update = prepare_statement(q{
+        UPDATE ana_job
+        SET lsf_job_id = ?
+          , lsf_error = NULL
+        WHERE ana_job_id = ?
+        });
+    $update->execute($lsf_job_id, $ana_job_id);
+    my $rows_affected = $update->rows;
+    confess "Error: '$rows_affected' rows updated"
+        unless $rows_affected == 1;
 }
 
 1;
