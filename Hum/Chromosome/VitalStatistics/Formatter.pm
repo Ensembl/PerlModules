@@ -18,7 +18,8 @@ sub file {
     
     if (ref($file)) {
         $self->{'_file'} = $file;
-    } else {
+    }
+    elsif ($file) {
         my $fh = gensym();
         open $fh, "> $file" or confess "Can't write to '$file' : $!";
         $self->{'_file'} = $fh;
