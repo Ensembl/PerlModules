@@ -36,6 +36,7 @@ my $humpub_disk1a  = '/nfs/disk100/humpub1a';
 my $humpub_disk2  = '/nfs/disk100/humpub2';
 my $humpub_disk2a  = '/nfs/disk100/humpub2a';
 my $humpub_disk3  = '/nfs/disk100/humpub3';
+my $public_human_disk = '/nfs/repository/p100';
 
 # TimDB legacy system
 my $sanger_path="/nfs/disk100/humpub1a/unfinished_ana";
@@ -59,6 +60,7 @@ $cgp_path{'EF'}="$ext_path/EF";
 	    HUMPUB_DISK2  => $humpub_disk2,
 	    HUMPUB_DISK2A => $humpub_disk2a,
 	    HUMPUB_DISK3  => $humpub_disk3,
+	    PUBLIC_HUMAN_DISK => $public_human_disk,
             HUMACE_DUMP   => '/nfs/disk100/humpub2/data',
 	    HUMACE_RO_DIR => '/nfs/humace/humpub/humace-live-ro',
 	    HUMACE_QUEUE => "$humpub/humace/queue",
