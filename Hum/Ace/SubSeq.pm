@@ -97,6 +97,11 @@ sub process_ace_start_end_transcript_seq {
     if (my ($as) = $t_seq->at('Structure.Continues_as[1]')) {
         $self->downstream_subseq_name($as->name);
     }
+
+    # Parse Supporting evidence tags
+    foreach my $evidence ($t_seq->at('Annotation.Sequence_matches[1]')) {
+	$self->add_SupportingEvidence_accession($evidence->row);
+    }
     
     my @exons = $self->get_all_Exons
         or confess "No exons in '", $self->name, "'";
@@ -329,11 +334,13 @@ sub make_PolyA_ace_string {
 }
 
 sub add_SupportingEvidence_accession {
-
+    my($self,$type,$acc)=@_;
+    push(@{$self->{'_Evidence'}},[$type,$acc]);
 }
 
 sub get_all_SupportingEvidence_accessions {
-
+    my($self)=@_;
+    return $self->{'_Evidence'};
 }
 
 sub clone_Sequence {
