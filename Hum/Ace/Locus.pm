@@ -418,14 +418,14 @@ sub make_name_hashes_from_continue_tags {
     my( @name_hashes );
     foreach my $name (keys %name_SubSeq) {
         my $sub = $name_SubSeq{$name} or next;
-        warn "\n  Starting from: '$name'\n";
+        #warn "\n  Starting from: '$name'\n";
         $name_SubSeq{$name} = 0;
         my $nh = {$name => 1};
         push(@name_hashes, $nh);
     
         my $up = $sub;
         while (my $up_name = $up->upstream_subseq_name) {
-            warn "       Upstream: '$up_name'\n";
+            #warn "       Upstream: '$up_name'\n";
             $up = $name_SubSeq{$up_name}
                 or confess "Can't see '$up_name'";
             $name_SubSeq{$up_name} = 0;
@@ -434,7 +434,7 @@ sub make_name_hashes_from_continue_tags {
 
         my $down = $sub;
         while (my $down_name = $down->downstream_subseq_name) {
-            warn "     Downstream: '$down_name'\n";
+            #warn "     Downstream: '$down_name'\n";
             $down = $name_SubSeq{$down_name}
                 or confess "Can't see '$down_name'";
             $name_SubSeq{$down_name} = 0;
