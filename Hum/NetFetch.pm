@@ -21,7 +21,7 @@ my $NetServ = 'netserv\@ebi.ac.uk';
 my $EMBL_emails_dir = "$HUMPUB_ROOT/data/EMBL_netserv_email";
 
 BEGIN {
-    my $embl_simple_url = 'http://www.ebi.ac.uk/cgi-bin/emblfetch?style=raw&format=embl&id=';
+    my $embl_simple_url = 'http://www.ebi.ac.uk/cgi-bin/dbfetch?db=sva&format=default&stlyle=raw&id=';
     
     sub wwwfetch {
         my( $ac ) = @_;
