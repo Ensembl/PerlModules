@@ -88,17 +88,22 @@ of Shotgun_complete or Half_shotgun_complete.
 
 =cut
 
-sub is_shotgun_complete {
-    my( $project ) = @_;
+{
+    my( $count_shotgun );
+    
+    sub is_shotgun_complete {
+        my( $project ) = @_;
 
-    my $ans = ref_from_query(qq(
-        SELECT COUNT(*)
-        FROM project_status 
-        WHERE status IN(15,30)
-        AND projectname = '$project'
-        ));
+        $count_shotgun ||= prepare_track_statement(qq{
+            SELECT COUNT(*)
+            FROM project_status 
+            WHERE status IN(15,30)
+            AND projectname = ?
+            });
+        $count_shotgun->execute($project);
 
-    return $ans->[0][0];
+        return $count_shotgun->fetchrow_arrayref->[0];
+    }
 }
 
 =pod
