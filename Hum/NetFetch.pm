@@ -29,7 +29,7 @@ BEGIN {
         unless (defined $embl) {
             die "No response from '$get'";
         }
-        elsif (! $embl) {
+        elsif (substr($embl, 0, 5) ne 'ID   ') {
             die "Entry for '$ac' not found by request '$get'"
         } else {
             return $embl;
