@@ -178,7 +178,7 @@ sub add_extra_CC {
     
     return unless my $ds = $pdmp->DataSet;
 
-    warn "Adding Comment lines from otter database not yet implemented";
+    #warn "Adding Comment lines from otter database not yet implemented";
     return;
 
     # Add any CC lines

@@ -149,7 +149,7 @@ sub add_Reference {
         my $author = $pdmp->author;
         my $date = EMBLdate();
 
-        my $query_email = 'humquery';
+        my $query_email = 'vega';
         if ($pdmp->species eq 'Zebrafish') {
             $query_email = 'zfish-help';
         }
@@ -387,7 +387,7 @@ sub add_FT_entries {
         5  => ['Center: Wellcome Trust Sanger Institute',
                'Center code: SC',
                'Web site: http://www.sanger.ac.uk',
-               'Contact: humquery@sanger.ac.uk',],
+               'Contact: vega@sanger.ac.uk',],
         57 => ['Center: UK Medical Research Council',
                'Center code: UK-MRC',
                'Web site: http://mrcseq.har.mrc.ac.uk',
@@ -411,7 +411,7 @@ sub add_FT_entries {
             );
         
         if ($pdmp->species eq 'Zebrafish') {
-            $seq_center[4] =~ s/humquery/zfish-help/;
+            $seq_center[4] =~ s/vega/zfish-help/;
         }
         
         return @seq_center;
