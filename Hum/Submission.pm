@@ -19,6 +19,7 @@ use Hum::SubmissionConf;
                  prepare_statement
                  prepare_cached_statement
                  sanger_name
+                 accession_from_sanger_name
                  sanger_id_from_accession
                  project_name_and_suffix_from_sequence_name
                  submission_disconnect
@@ -432,6 +433,24 @@ sub sanger_name {
     my ($name) = $sth->fetchrow;
     $name ||= "Em:$acc";
     return $name;
+}
+
+sub accession_from_sanger_name {
+    my( $name ) = @_;
+
+    my $sth = prepare_statement(qq{
+        SELECT a.accession
+        FROM project_acc a
+          , project_dump d
+          , sequence s
+        WHERE a.sanger_id = d.sanger_id
+          AND d.seq_id = s.seq_id
+          AND d.is_current = 'Y'
+          AND s.sequence_name = '$name'
+        });
+    $sth->execute;
+    my ($acc) = $sth->fetchrow;
+    return $acc;
 }
 
 sub project_name_and_suffix_from_sequence_name {
