@@ -301,6 +301,12 @@ http://www/Projects/D_rerio/fishmask.shtml';
     sub add_standard_CC {
         my( $pdmp, $embl ) = @_;
 
+        # STD sequencing centre comment for Greg Schuler
+        # (see: http://ray.nlm.nih.gov/genome/cloneserver/)
+        my $seq_cen = $embl->newCC;
+        $seq_cen->list($pdmp->seq_center_lines, '--------------');
+        $embl->newXX;
+
         # Add the standard headers
         foreach my $t (@std) {
             my $cc = $embl->newCC;

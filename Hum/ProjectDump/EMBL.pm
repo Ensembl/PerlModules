@@ -361,71 +361,79 @@ sub add_FT_entries {
                'Contact: mouseq@har.mrc.ac.uk',],
         );
 
-    sub add_Headers {
-        my( $pdmp, $embl, $contig_map ) = @_;
-
-        $pdmp->add_external_draft_CC($embl);
+    # So that the UK-MRC funded sequences end up in the correct
+    # bin at http://ray.nlm.nih.gov/genome/cloneserver/
+    sub seq_center_lines {
+        my( $pdmp ) = @_;
         
-        my $project = $pdmp->project_name;
-
-        my $draft_or_unfinished = is_shotgun_complete($project)
-            ? 'working draft'
-            : 'unfinished';
-
-        # So that the UK-MRC funded sequences end up in the correct
-        # bin at http://ray.nlm.nih.gov/genome/cloneserver/
         my $genome_center_lines =
                $sequencing_center{$pdmp->funded_by}
             || $sequencing_center{$pdmp->sequenced_by}
             || $sequencing_center{5};
-        my @comment_lines = (
+        return(
             '-------------- Genome Center',
             @$genome_center_lines,
-            '-------------- Project Information',
-            "Center project name: $project",
-            '-------------- Summary Statistics',
-            'Assembly program: XGAP4; version 4.5',
-            $pdmp->make_read_comments(),
-            $pdmp->make_consensus_quality_summary(),
-            $pdmp->make_consensus_length_report(),
-            $pdmp->make_q20_depth_report(),
-            '--------------',
-            "* NOTE: This is a '$draft_or_unfinished' sequence. It currently",
-            "* consists of ". scalar(@$contig_map) ." contigs. The true order of the pieces is",
-            "* not known and their order in this sequence record is",
-            "* arbitrary.  Where the contigs adjacent to the vector can",
-            "* be identified, they are labelled with 'clone_end' in the",
-            "* feature table.  Some order and orientation information",
-            "* can tentatively be deduced from paired sequencing reads",
-            "* which have been identified to span the gap between two",
-            "* contigs.  These are labelled as part of the same",
-            "* 'fragment_chain', and the order and relative orientation",
-            "* of the pieces within a fragment_chain is reflected in",
-            "* this file.  Gaps between the contigs are represented as",
-            "* runs of N, but the exact sizes of the gaps are unknown.",
-        );
-        
-        if ($pdmp->is_cancelled) {
-            push(@comment_lines,
-                "* ",
-                "* The sequencing of this clone has been cancelled. The most",
-                "* likely reason for this is that its sequence is redundant,",
-                "* and therefore not needed to complete the finished genome.",
-                "* ",
-                );
-        } else {
-            push(@comment_lines,
-                "* This record will be updated with the finished sequence as",
-                "* soon as it is available and the accession number will be",
-                "* preserved.",
-                );
-        }
-        
-        $embl->newCC->list(
-            @comment_lines,
-            $pdmp->make_fragment_summary($embl, $contig_map),
-        );   
+            );
     }
+}
+
+sub add_Headers {
+    my( $pdmp, $embl, $contig_map ) = @_;
+
+    $pdmp->add_external_draft_CC($embl);
+
+    my $project = $pdmp->project_name;
+
+    my $draft_or_unfinished = is_shotgun_complete($project)
+        ? 'working draft'
+        : 'unfinished';
+
+    my @comment_lines = (
+        $pdmp->seq_center_lines,
+        '-------------- Project Information',
+        "Center project name: $project",
+        '-------------- Summary Statistics',
+        'Assembly program: XGAP4; version 4.5',
+        $pdmp->make_read_comments(),
+        $pdmp->make_consensus_quality_summary(),
+        $pdmp->make_consensus_length_report(),
+        $pdmp->make_q20_depth_report(),
+        '--------------',
+        "* NOTE: This is a '$draft_or_unfinished' sequence. It currently",
+        "* consists of ". scalar(@$contig_map) ." contigs. The true order of the pieces is",
+        "* not known and their order in this sequence record is",
+        "* arbitrary.  Where the contigs adjacent to the vector can",
+        "* be identified, they are labelled with 'clone_end' in the",
+        "* feature table.  Some order and orientation information",
+        "* can tentatively be deduced from paired sequencing reads",
+        "* which have been identified to span the gap between two",
+        "* contigs.  These are labelled as part of the same",
+        "* 'fragment_chain', and the order and relative orientation",
+        "* of the pieces within a fragment_chain is reflected in",
+        "* this file.  Gaps between the contigs are represented as",
+        "* runs of N, but the exact sizes of the gaps are unknown.",
+    );
+
+    if ($pdmp->is_cancelled) {
+        push(@comment_lines,
+            "* ",
+            "* The sequencing of this clone has been cancelled. The most",
+            "* likely reason for this is that its sequence is redundant,",
+            "* and therefore not needed to complete the finished genome.",
+            "* ",
+            );
+    } else {
+        push(@comment_lines,
+            "* This record will be updated with the finished sequence as",
+            "* soon as it is available and the accession number will be",
+            "* preserved.",
+            );
+    }
+
+    $embl->newCC->list(
+        @comment_lines,
+        $pdmp->make_fragment_summary($embl, $contig_map),
+    );   
 }
 
 
