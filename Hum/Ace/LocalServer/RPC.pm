@@ -4,6 +4,7 @@
 package Hum::Ace::LocalServer::RPC;
 
 use strict;
+use Carp;
 use Hum::Ace::LocalServer;
 use vars '@ISA';
 
@@ -35,6 +36,10 @@ sub default_server_executable {
 
 sub timeout_string {
     return '0:0:0';
+}
+
+sub additional_server_parameters {
+    return;
 }
 
 sub kill_server {

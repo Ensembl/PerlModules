@@ -6,6 +6,8 @@ package Hum::Ace::LocalServer;
 use strict;
 use Carp;
 use Ace;
+use Socket; # For working out a port which is unused
+use Symbol 'gensym';
 
 sub new {
     my( $pkg, $path ) = @_;
@@ -33,11 +35,42 @@ sub port {
     
     my( $port );
     unless ($port = $self->{'_port'}) {
-        ### FIXME -- need smart way to select random port
-        $port = 55000;
+        $port = $self->_reserve_random_port;
+        
         $self->{'_port'} = $port;
     }
     return $port;
+}
+
+sub _reserve_random_port {
+    my( $self ) = @_;
+    
+    my $tcp = getprotobyname('tcp');
+    my $sock = gensym();
+    socket($sock, PF_INET, SOCK_STREAM, $tcp);
+
+    # Choose an unoccupied port at random
+    my $base = 55000;
+    my $port = 0;
+    until ($port) {
+        $port = $base + int(rand 5000);
+        warn "Trying port '$port'\n";
+        last if bind($sock, sockaddr_in($port, INADDR_ANY));
+        $port = 0;
+    }
+    
+    $self->{'_reserved_socket'} = $sock;
+    
+    return $port;
+}
+
+sub _release_reserved_port {
+    my( $self ) = @_;
+    
+    if (my $sock = $self->{'_reserved_socket'}) {
+        close($sock);
+        $self->{'_reserved_socket'} = undef;
+    }
 }
 
 sub path {
@@ -47,6 +80,19 @@ sub path {
         $self->{'_path'} = $path;
     }
     return $self->{'_path'};
+}
+
+sub default_server_executable {
+    return 'saceserver';
+}
+
+sub timeout_string {
+    return '0:1:0';
+}
+
+sub additional_server_parameters {
+    #return('-silent');
+    return;
 }
 
 sub ace_handle {
@@ -110,14 +156,6 @@ sub server_executable {
         || $self->default_server_executable;
 }
 
-sub default_server_executable {
-    return 'saceserver';
-}
-
-sub timeout_string {
-    return '0:0:0';
-}
-
 sub server_pid {
     my( $self, $pid ) = @_;
     
@@ -139,7 +177,7 @@ sub kill_server {
     my( $self ) = @_;
 
     my $ace = $self->ace_handle;
-    $ace->raw_query('shutdown');
+    $ace->raw_query('shutdown now');
     $ace = undef;
     $self->disconnect_client;
 }
@@ -153,6 +191,11 @@ sub start_server {
         or confess "path not set";
     my $port = $self->port
         or confess "no port number";
+    
+    if ($self->can('_release_reserved_port')) {
+        $self->_release_reserved_port;
+    }
+    
     if (my $pid = fork) {
         $self->server_pid($pid);
         return 1;
@@ -161,6 +204,9 @@ sub start_server {
         my $exe = $self->server_executable;
         my $tim = $self->timeout_string;
         my @exec_list = ($exe, $path, $port, $tim);
+        if (my @param = $self->additional_server_parameters) {
+            push(@exec_list, @param);
+        }
         warn "Trying (@exec_list)";
         exec(@exec_list)
             or confess("exec(",
