@@ -15,6 +15,7 @@ use Hum::Submission 'prepare_statement';
     add_new_sequence_entry
     set_ana_sequence_not_current
     annotator_full_name
+    date_dir
     };
 
 {
@@ -132,6 +133,21 @@ use Hum::Submission 'prepare_statement';
         
         return $annotator{$uid};
     }
+}
+
+sub date_dir {
+    my $time = shift || time;
+
+    # Get time info
+    my ($mday, $mon, $year) = (localtime($time))[3,4,5];
+
+    # Change numbers to double-digit format
+    ($mon, $mday) = ('00'..'31')[$mon + 1, $mday];
+
+    # Make year
+    $year += 1900;
+
+    return "$year$mon$mday";
 }
 
 

@@ -52,6 +52,7 @@ use vars qw( @ISA @EXPORT_OK );
                 project_from_clone
                 project_finisher
                 project_team_leader
+                record_finished_length
                 ref_from_query
                 sanger_id_to_project
                 species_from_project
@@ -519,14 +520,14 @@ sub find_project_directories {
     my $projects = join(',', map "'$_'", @name_list);
     
     my $ans = ref_from_query(qq(
-                                SELECT p.projectname
-                                  , o.online_path
-                                FROM project p
-                                  , online_data o
-                                WHERE p.id_online = o.id_online
-                                  AND o.is_available = 1
-                                  AND p.projectname IN($projects)
-                                ));
+        SELECT p.projectname
+          , o.online_path
+        FROM project p
+          , online_data o
+        WHERE p.id_online = o.id_online
+          AND o.is_available = 1
+          AND p.projectname IN($projects)
+        ));
 
     # Store results in %dir
     for (my $i = 0; $i < @$ans; $i++) {
@@ -534,7 +535,7 @@ sub find_project_directories {
         
         # Check that we don't get multiple online paths for one project
         if ($dir{$name}) {
-            croak "Multiple directories for '$name' : ",
+            confess "Multiple directories for '$name' : ",
                 map "  '$_->[1]'\n",
                 grep $_->[0] eq $name, @$ans;
         } else {
@@ -940,6 +941,48 @@ more than one match in the project table.
         }
         
         return($proj, $suffix);
+    }
+}
+
+{
+    my( $lock, $record );
+
+    sub record_finished_length {
+        my( $project, $length ) = @_;
+
+        # Check we're given a vanilla integer
+        unless ($length =~ /^\d+$/) {
+            confess "Non-integer length ('$length')";   
+        }
+
+        $lock ||= prepare_track_statement(qq{
+            SELECT rowid
+            FROM project
+            WHERE projectname = ?
+            FOR UPDATE
+            });
+
+        $record ||= prepare_track_statement(qq{
+            UPDATE project
+            SET internal_length_bp = ?
+            WHERE rowid = ?
+            });
+
+        eval {
+            $lock->execute($project);
+            my ($rowid) = $lock->fetchrow
+                or confess "No ROWID for project '$project'";
+            $record->execute($length, $rowid);
+            $record->rows or confess "zero rows affected\n";
+        };
+
+        if ($@) {
+            confess "Error updating internal_length_bp:\n$@";
+        } else {
+            track_db_commit();
+        }
+
+        return 1;
     }
 }
 
