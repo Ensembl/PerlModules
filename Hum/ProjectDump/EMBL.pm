@@ -135,6 +135,11 @@ sub add_Reference {
     
     my $author = $pdmp->author;
     my $date = EMBLdate();
+    
+    my $query_email = 'humquery';
+    if ($pdmp->species_name eq 'Zebrafish') {
+        $query_email = 'zface';
+    }
 
     my $ref = $embl->newReference;
     $ref->number(1);
@@ -142,7 +147,7 @@ sub add_Reference {
     $ref->authors($author);
     $ref->locations("Submitted ($date) to the EMBL/Genbank/DDBJ databases.",
                     'Wellcome Trust Sanger Institute, Hinxton, Cambridgeshire, CB10 1SA, UK.',
-                    'E-mail enquiries: humquery@sanger.ac.uk',
+                    "E-mail enquiries: $query_email\@sanger.ac.uk",
                     'Clone requests: clonerequest@sanger.ac.uk');
     $embl->newXX;
 }
@@ -388,8 +393,13 @@ sub add_Headers {
         ? 'working draft'
         : 'unfinished';
 
+    my $seq_centre = $pdmp->seq_center_lines;
+    if ($pdmp->species_name eq 'Zebrafish') {
+        $seq_centre =~ s/humquery/zface/;
+    }
+
     my @comment_lines = (
-        $pdmp->seq_center_lines,
+        $seq_centre,
         '-------------- Project Information',
         "Center project name: $project",
         '-------------- Summary Statistics',
