@@ -474,22 +474,23 @@ Submissions database
 
 =item set_status
 
-$ana_seq->set_status (3);
+  $ana_seq->set_status(3);
 
-This method changes the status of an analysis-sequence object
-in the database, or throws an exception when the new status is
-equal to the previous status. 
+If the current status is equal to the new status
+given, this method returns TRUE.  Otherwise
+set_status adds a new status to the database,
+using the current time.
 
 =item set_annotator_uname
 
-$ana_seq->set_annotator_uname ('ak1');
+  $ana_seq->set_annotator_uname('ak1');
 
 This method stores the annotator username assigned to a sequence.  
 
 =item new_AceFile_from_filename_and_time
 
-my $ace_file =
- $ana_seq->new_AceFile_from_filename_and_time (acefile_name, creation_time);
+  my $ace_file =
+      $ana_seq->new_AceFile_from_filename_and_time(acefile_name, creation_time);
  
 Given the name of an acefile and its creation time (in unix-time
 or in ace-time format), this method returns an AceFile object and stores
