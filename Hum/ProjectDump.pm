@@ -1589,6 +1589,20 @@ BEGIN {
     }
 }
 
+sub expire_dump {
+    my( $pdmp ) = @_;
+    
+    my $seq_id = $pdmp->seq_id
+        or confess "No seq_id for dump";
+    my $update = sub_db()->prepare(q{
+        UPDATE project_dump
+        SET is_current = 'N'
+        WHERE seq_id = ?
+        });
+    $update->execute($seq_id);
+    $pdmp = undef;
+}
+
 sub store_dump {
     my( $pdmp ) = @_;
     
