@@ -138,7 +138,7 @@ sub process_TPF {
                 $contig = [];
                 my $gap = $self->new_Gap;
                 $gap->chr_length(50_000);
-                $gap->remark('clone\tno\t# Unfinished_sequence');
+                $gap->remark("clone\tno\t# Unfinished_sequence");
             }
         }
     }
@@ -220,7 +220,9 @@ sub _process_contig {
 sub insert_missing_overlap_pad {
     my( $self ) = @_;
     
-    $self->new_Gap->chr_length($self->missing_overlap_pad);
+    my $gap = $self->new_Gap;
+    $gap->chr_length($self->missing_overlap_pad);
+    $gap->remark("clone\tno");
 }
 
 sub _chr_end {
