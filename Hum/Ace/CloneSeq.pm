@@ -385,12 +385,13 @@ sub express_data_fetch {
     my $cre_txt = Hum::Ace::AceText->new($cre_list);
     foreach my $cre ($cre_txt->get_values('Clone_right_end')) {
         my ($name, $right) = @$cre;
-        my $pos_array = $name_pos{$name} or die "Missing Clone_left_end tag for '$name'";
+        my $pos_array = $name_pos{$name} or next;
         push(@$pos_array, $right);
     }
     while (my ($name, $pos) = each %name_pos) {
-        die "Missing Clone_right_end tag for '$name'" unless @$pos == 2;
-        $self->add_clone_span($name, @$pos);
+        if (@$pos == 2) {
+            $self->add_clone_span($name, @$pos);
+        }
     }
 
     my $sub_list = $ace->raw_query('show -a Subsequence');
