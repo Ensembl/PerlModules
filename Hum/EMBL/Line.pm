@@ -231,7 +231,7 @@ sub parse {
 sub compose {
     my( $line ) = @_;
     
-    my $ac = join( '', map "$_;", ($line->primary(), $line->secondaries()) );
+    my $ac = join( ' ', map "$_;", ($line->primary(), $line->secondaries()) );
     
     return $line->string($line->wrap('AC   ', $ac));
 }
