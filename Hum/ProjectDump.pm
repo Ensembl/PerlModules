@@ -341,11 +341,8 @@ sub chromosome {
     my( $pdmp ) = @_;
     
     unless (exists $pdmp->{'_chromosome'}) {
-        my( $chr );
-        eval{
-            $chr = Hum::Tracking::chromosome_from_project($pdmp->project_name);
-        };
-        $pdmp->{'_chromosome'} = $chr;
+        $pdmp->{'_chromosome'} = 
+            Hum::Tracking::chromosome_from_project($pdmp->project_name);
     }
     return $pdmp->{'_chromosome'};
 }
@@ -453,13 +450,7 @@ sub set_ghost_path {
         
         # Get the chromosome name if this species splits on chromosome
         if ($p->[1]) {
-            my( $chr );
-            eval { $chr = $pdmp->chromosome; };
-            if ($@ and $@ =~ /Chromosome unknown/) {
-                $chr = 'UNKNOWN';
-            } elsif ($@) {
-                die "Error determining chromosome:\n$@";
-            }
+            my $chr = $pdmp->chromosome || 'UNKNOWN';
             $path .= "/$p->[1]$chr";
         }
         
