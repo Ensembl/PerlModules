@@ -473,6 +473,22 @@ sub store_if_new {
     return 1;
 }
 
+sub remove {
+    my( $self ) = @_;
+    
+    my( @del_sth );
+    foreach my $table (qw{ OVERLAP_STATUS SEQUENCE_OVERLAP OVERLAP }) {
+        push(@del_sth, track_db()->prepare_cached(qq{
+            DELETE from $table WHERE id_overlap = ?
+            }));
+    }
+    
+    my $id = $self->db_id or confess "db_id not set - overlap not stored?";
+    foreach my $sth (@del_sth) {
+        $sth->execute($id);
+    }
+}
+
 1;
 
 __END__
