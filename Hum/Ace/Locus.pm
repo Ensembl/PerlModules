@@ -808,7 +808,8 @@ sub make_transcript {
         # relative to the chromosome
         my $ori = $pair_strand * $clone_strand;
         if ($golden_orientation) {
-            confess "In pair '$pair_name' ori '$ori' doesn't match chromosome ori '$golden_orientation'"
+            #confess "In pair '$pair_name' ori '$ori' doesn't match chromosome ori '$golden_orientation'"
+            warn "In pair '$pair_name' ori '$ori' doesn't match chromosome ori '$golden_orientation'"
                 unless $ori == $golden_orientation;
         } else {
             $golden_orientation = $ori;

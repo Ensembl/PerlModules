@@ -285,6 +285,9 @@ sub take_otter_ids {
             }
         }
     }
+    if (@old_exons) {
+        warn "Failed to remap ", scalar(@old_exons), " Otter IDs to new exons\n";
+    }
 }
 
 sub clone {
@@ -989,7 +992,7 @@ sub subseq_length {
 sub validate {
     my( $self ) = @_;
     
-    return -1 unless $self->get_all_Exons;
+    confess "No Exons" unless $self->get_all_Exons;
     
     $self->valid_exon_coordinates;
     $self->cds_coords;
