@@ -304,7 +304,7 @@ block, to ensure a graceful exit.
         if ($arg) {
             $user = $arg;
         }
-        return $user || 'reports';
+        return $user || 'snapreport';
     }
 
     sub prepare_track_statement {
