@@ -162,14 +162,12 @@ sub make_Otter_CloneInfo {
         -email => "$author_name\@sanger.ac.uk",
         );
 
-    my $ott_clone_info = new Bio::Otter::CloneInfo 
-                                     (-clone_id  => $self->EnsEMBL_Contig->clone->dbID,
-                                      -author    => $author,
-                                      -timestamp => 100,
-                                      -is_active => 1,
-                                      -remark    => \@clone_remarks,
-                                      -keyword   => \@clone_keywords,
-                                      -source    => 'SANGER');
+    my $ott_clone_info = new Bio::Otter::CloneInfo(
+        -clone_id  => $self->EnsEMBL_Contig->clone->dbID,
+        -author    => $author,
+        -remark    => \@clone_remarks,
+        -keyword   => \@clone_keywords,
+        );
 
     return $ott_clone_info;
 }
