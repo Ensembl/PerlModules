@@ -86,6 +86,7 @@ my $humace_queue = "$humpub/humace/queue";
     SPECIES_LIST =>  [keys %$ftp_structure],
 
     PFETCH_SERVER_LIST => [
+        [qw{ cbi2.internal.sanger.ac.uk      22100 }],
         [qw{ pubseq.internal.sanger.ac.uk    22100 }],
         ],
 
