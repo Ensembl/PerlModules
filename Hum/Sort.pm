@@ -64,6 +64,13 @@ __END__
     # Sorting objects
     @sorted_obj = { ace_sort($a->name, $b->name) } @objects;
 
+=head2 ace_sort
+
+Sorts objects in a human intuitive way.  This is
+especially nice for sorting things like clone
+names, and is copied from how acedb sorts data in
+its displays.
+
 =head1 AUTHOR
 
 James Gilbert B<email> jgrg@sanger.ac.uk
