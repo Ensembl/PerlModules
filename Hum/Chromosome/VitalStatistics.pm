@@ -92,40 +92,32 @@ sub make_stats_from_VirtualContig {
     my( $self, $vc ) = @_;
     
     my $type = $self->gene_type or confess "gene_type not set";
-    my $dba = $vc->dbobj;
-    my $static_type = $dba->static_golden_path_type;
-    
-    my $contig_ids =
-        join ', ',
-        map $_->internal_id,
-        $vc->_vmap->get_all_RawContigs;
-    
-    my $sth = $dba->prepare(qq{
-        SELECT distinct(gsid.stable_id)
-        FROM gene_stable_id gsid
-          , gene g
-          , transcript t
-          , exon_transcript et
-          , exon e
-          , static_golden_path sgp
-        WHERE gsid.gene_id = g.gene_id
-          AND g.gene_id = t.gene_id
-          AND t.transcript_id = et.transcript_id
-          AND et.exon_id = e.exon_id
-          AND e.contig_id = sgp.raw_id
-          AND sgp.raw_id IN ($contig_ids)
-          AND sgp.type = '$static_type'
-          AND g.type = '$type'
-        });
-    $sth->execute;
+        
+    my $length = $vc->length;
     
     my( @gene_id );
-    while (my ($id) = $sth->fetchrow) {
-        push(@gene_id, $id);
+    foreach my $vg ($vc->get_all_VirtualGenes_startend) {
+        my $id        = $vg->gene->stable_id;
+        my $this_type = $vg->gene->type;
+        unless ($this_type) {
+            print STDERR "type not set for gene '$id'\n";
+            next;
+        }
+        elsif ($this_type ne $type) {
+            #warn "'$this_type' ne '$type'\n";
+            next;
+        }
+        if ($vg->end < 1 or $vg->start > $length) {
+            printf STDERR "Skipping gene '%s' outside (%d-%d) VC of length %d\n",
+                $id, $vg->start, $vg->end, $length;
+        } else {
+            #warn "adding gene '$id'\n";
+            push(@gene_id, $id);
+        }
     }
     
     if (@gene_id) {
-        return $self->make_stats($dba, @gene_id);
+        return $self->make_stats($vc->dbobj, @gene_id);
     } else {
         warn "no '$type' genes in vc\n";
         return;
@@ -187,6 +179,11 @@ sub make_stats {
             $msg .= "\n";
             warn $msg;
             next;
+        }
+        
+        unless ($gene->type eq $type) {
+            confess sprintf "Gene '%s' does not have type '%s' but '%s'",
+                $gene->stable_id, $type, $gene->type;
         }
         
         my $vg = Bio::EnsEMBL::VirtualGene->new(

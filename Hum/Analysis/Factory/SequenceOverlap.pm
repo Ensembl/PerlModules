@@ -186,7 +186,7 @@ sub is_three_prime_hit {
                 'gap_extension_penalty' => -3,
             },
 
-            # This is better at finding short overlaps containing
+            # This is better at finding short overlaps that contain
             # an insertion in one sequence in one piece.
             {
                 'bandwidth'             => 14,
