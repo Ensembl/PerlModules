@@ -244,10 +244,10 @@ sub _express_fetch_TPF_Clones_hash {
         $clone->sanger_clone_name($clonename);
         $clone->remark($remark);
         
-        if ($clone_remark =~ /MULTIPLE/) {
+        if ($clone_remark and $clone_remark =~ /MULTIPLE/) {
             $clone->is_multi_clone(1);
         }
-        elsif ($clone_remark !~ /UNKNOWN/) {
+        elsif (! $clone_remark or $clone_remark !~ /UNKNOWN/) {
             $clone->set_intl_clone_name_from_sanger_int_ext($clonename, $int_pre, $ext_pre);
         }
         

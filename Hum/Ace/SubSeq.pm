@@ -100,22 +100,18 @@ sub new_from_start_end_fox_subseq {
     }
 
     # Is this a partial CDS?
-    my( $start_phase );
-    {
-        my $s_n_f = $txt->count_tag('Start_not_found');
-        my ($snf_val) = $txt->get_values('Start_not_found');
-        my $codon_start = $snf_val->[0] if $snf_val;
-        if ($s_n_f) {
-            $codon_start ||= 1;
-            $self->start_not_found($codon_start);
-        }
+    my $s_n_f = $txt->count_tag('Start_not_found');
+    my ($snf_val) = $txt->get_values('Start_not_found');
+    my $codon_start = $snf_val->[0] if $snf_val;
+    if ($s_n_f) {
+        # Store phase in AceDB convention (not EnsEMBL)
+        $codon_start ||= 1;
         if ($codon_start and $txt->count_tag('CDS')) {
-            unless ($codon_start =~ /^[123]$/) {
+            if ($codon_start =~ /^[123]$/) {
+                $self->start_not_found($codon_start);
+            } else {
                 confess("Bad codon start ('$codon_start') in '$name'");
             }
-            
-            # Store phase in AceDB convention (not EnsEMBL)
-            $start_phase = $codon_start;
         }
     }
 
@@ -217,21 +213,17 @@ sub process_ace_start_end_transcript_seq {
     }
 
     # Is this a partial CDS?
-    my( $start_phase );
-    {
-        my( $s_n_f, $codon_start );
-        eval{ ($s_n_f, $codon_start) = map "$_", $t_seq->at('Properties.Start_not_found')->row() };
-        if ($s_n_f) {
-            $codon_start ||= 1;
-            $self->start_not_found($codon_start);
-        }
-        if ($codon_start and $t_seq->at('Properties.Coding.CDS')) {
-            unless ($codon_start =~ /^[123]$/) {
+    my( $s_n_f, $codon_start );
+    eval{ ($s_n_f, $codon_start) = map "$_", $t_seq->at('Properties.Start_not_found')->row() };
+    if ($s_n_f) {
+        # Store phase in AceDB convention (not EnsEMBL)
+        $codon_start ||= 1;
+        if ($t_seq->at('Properties.Coding.CDS')) {
+            if ($codon_start =~ /^[123]$/) {
+                $self->start_not_found($codon_start);
+            } else {
                 confess("Bad codon start ('$codon_start') in '$t_seq'");
             }
-            
-            # Store phase in AceDB convention (not EnsEMBL)
-            $start_phase = $codon_start;
         }
     }
 

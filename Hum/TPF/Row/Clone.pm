@@ -81,18 +81,23 @@ sub sanger_clone_name {
                 # intl = '?' or where it is "Multiple"
                 return $self->accession;
             } else {
-                my ($intl_prefix, $body) = $intl =~ /^([^-]+)-(.+)$/;
-                $intl_prefix ||= '';
-                $body        ||= $intl;
-                if (my $sang_prefix = $self->get_sanger_prefix($intl_prefix)) {
-                    $self->{'_sanger_clone_name'} = $clone = $sang_prefix . $body;
-                } else {
-                    $self->{'_sanger_clone_name'} = $clone = $body;
-                }
+                my( $lib );
+                ($clone, $lib) = $self->get_sanger_clone_and_libraryname_from_intl_name($intl);
+                $self->{'_sanger_clone_name'} = $clone;
+                $self->sanger_library_name($lib);
             }
         }
         return $clone;
     }
+}
+
+sub sanger_library_name {
+    my( $self, $lib_name ) = @_;
+    
+    if ($lib_name) {
+        $self->{'_sanger_library_name'} = $lib_name;
+    }
+    return $self->{'_sanger_library_name'};
 }
 
 {
@@ -101,25 +106,53 @@ sub sanger_clone_name {
     
     sub _init_prefix_hash {
         my $sth = prepare_track_statement(q{
-            SELECT internal_prefix, external_prefix
+            SELECT libraryname
+              , internal_prefix
+              , external_prefix
+              , first_plate
+              , last_plate
             FROM library
+            ORDER BY libraryname
+              , first_plate
             });
         $sth->execute;
-        my( $sang, $intl );
-        $sth->bind_columns(\$sang, \$intl);
+        my( $libname, $sang, $intl, $first, $last );
+        $sth->bind_columns(\$libname, \$sang, \$intl, \$first, \$last);
         while ($sth->fetch) {
             next unless $sang and $intl;
             next if $intl eq 'XX';
-            $intl_sanger{$intl} = $sang;
+            my $lib_info = $intl_sanger{$intl} ||= [];
+            push(@$lib_info, [$sang, $libname, $first, $last]);
         }
         $init_flag = 1;
     }
     
-    sub get_sanger_prefix {
+    sub get_sanger_clone_and_libraryname_from_intl_name {
         my( $self, $intl ) = @_;
         
         _init_prefix_hash() unless $init_flag;
-        return $intl_sanger{$intl};
+        
+        my ($intl_prefix, $plate, $rest) = $intl =~ /^([^-]+)-(\d*)(.+)$/;
+        $intl_prefix ||= '';
+        $plate       ||= '';
+        $rest        ||= $intl;
+        if (my $lib_info = $intl_sanger{$intl_prefix}) {
+            if ($plate) {
+                foreach my $inf (@$lib_info) {
+                    my ($sang, $libname, $first, $last) = @$inf;
+                    if ($plate >= $first and $plate <= $last) {
+                        return($sang . $plate . $rest, $libname);
+                    }
+                }
+                warn "Couldn't place plate from '$intl' in any of:\n",
+                    map "  [@$_]\n", @$lib_info;
+            }
+            # Just take the first
+            my ($sang, $libname) = @{$lib_info->[0]};
+            return($sang . $plate . $rest, $libname);
+        } else {
+            return($plate . $rest);
+        }
     }
 }
 
@@ -235,6 +268,7 @@ sub store_clone_if_missing {
     # Insert into clone table
     my $insert = prepare_cached_track_statement(q{
         INSERT INTO clone(clonename
+              , libraryname
               , speciesname
               , sequenced_by
               , funded_by
@@ -249,9 +283,14 @@ sub store_clone_if_missing {
         });
     $insert->execute(
         $self->sanger_clone_name,
+        $self->sanger_library_name,
         $tpf->species,
         $remark,
         );
+    
+    printf STDERR "Added clone  %14s  %s\n",
+        $self->sanger_clone_name,
+        $remark;
     
     # and into clone status
     my $status_insert = prepare_cached_track_statement(q{
