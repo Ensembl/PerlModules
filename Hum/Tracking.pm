@@ -469,7 +469,7 @@ International Clone name for that clone.
 
 
 {
-    my( %clone_intl );
+    my( $sth, %clone_intl );
     
     sub intl_clone_name {
         my( $clone ) = @_;
@@ -478,7 +478,7 @@ International Clone name for that clone.
         
         my( $intl );
         unless ($intl = $clone_intl{$clone}) {
-            my $sth = prepare_track_statement(q{
+            $sth ||= prepare_track_statement(q{
                 SELECT l.internal_prefix
                   , l.external_prefix
                 FROM clone c
