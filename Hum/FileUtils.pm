@@ -4,6 +4,8 @@ package Hum::FileUtils;
 use strict;
 use Carp;
 use Exporter;
+use File::Copy 'copy';
+use File::Path 'mkpath';
 use Programs 'cksum';
 use vars qw( @ISA @EXPORT_OK );
 
