@@ -39,7 +39,7 @@ sub get_all_dumps_for_project {
 sub get_all_existing_dumps_for_project {
     my( $pkg, $project ) = @_;
 
-    my $get_sids = prepare_statement(q{
+    my $get_sids = prepare_statement(qq{
         SELECT a.sanger_id
         FROM project_acc a
           , project_dump d
@@ -61,7 +61,7 @@ sub get_all_existing_dumps_for_project {
 sub create_new_dump_object {
     my( $pkg, $project ) = @_;
 
-    my $active_count = prepare_statement(q{
+    my $active_count = prepare_statement(qq{
         SELECT count(*)
         FROM project_check
         WHERE is_active = 'Y'
@@ -151,7 +151,7 @@ sub _submission_data {
         $data = {};
         my $seq_id = $pdmp->seq_id
             or confess "No seq_id";
-        my $sth = prepare_statement(q{
+        my $sth = prepare_statement(qq{
             SELECT UNIX_TIMESTAMP(submission_time)
               , submission_type
             FROM submission
@@ -175,7 +175,7 @@ sub accept_date {
     unless ($pdmp->{'_accept_date'}) {
         my $seq_id = $pdmp->seq_id
             or confess "No seq_id";
-        my $sth = prepare_statement(q{
+        my $sth = prepare_statement(qq{
             SELECT UNIX_TIMESTAMP(accept_date)
             FROM acception
             WHERE seq_id = $seq_id
@@ -405,7 +405,7 @@ sub read_submission_data {
     my( $pdmp ) = @_;
     
     my $sid = $pdmp->sanger_id or confess "No sanger_id";
-    my $get_dump = prepare_statement(q{
+    my $get_dump = prepare_statement(qq{
         SELECT a.project_name
           , a.project_suffix
           , UNIX_TIMESTAMP(d.dump_time) dump_time
@@ -1681,7 +1681,7 @@ sub ebi_submit {
     my $ebi_ftp = 'Hum::EBI_FTP'->new();
     $ebi_ftp->put_project( $seq_name, $em_file );
 
-    my $record_submission = prepare_statement(q{
+    my $record_submission = prepare_statement(qq{
         INSERT submission( seq_id
                          , submission_time
                          , submission_type )
@@ -1860,7 +1860,7 @@ sub store_draft_info {
     my $seq_id = $pdmp->seq_id;
     my $is_draft = ($pdmp->is_htgs_draft) ? 'Y' : 'N';
     my ($q20_depth) = $pdmp->contig_and_agarose_depth_estimate;
-    my $sth = prepare_statement(q{
+    my $sth = prepare_statement(qq{
         INSERT draft_status(seq_id
               , is_htgs_draft
               , q20_contig_depth)
@@ -1960,7 +1960,7 @@ sub _set_not_current {
         or confess "No seq_id for dump";
 
     # Now unset is_current for previous rows
-    my $update = prepare_statement(q{
+    my $update = prepare_statement(qq{
         UPDATE project_dump
         SET is_current = 'N'
         WHERE seq_id = $seq_id
@@ -1982,7 +1982,7 @@ sub _set_not_current {
         my $sid = $pdmp->sanger_id
             or confess "No Sanger ID";
 
-        my $exists = prepare_statement(q{
+        my $exists = prepare_statement(qq{
             SELECT count(*)
             FROM project_acc
             WHERE sanger_id = $sid

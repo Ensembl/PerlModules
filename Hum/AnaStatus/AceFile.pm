@@ -102,7 +102,7 @@ sub set_acefile_status {
     my $ana_seq_id = $self->ana_seq_id
         or confess "No ana_seq_id in object";
 
-    my $new_acefile_status = prepare_statement(q{
+    my $new_acefile_status = prepare_statement(qq{
         UPDATE ana_acefile
         SET acefile_status_id = $acefile_status
         WHERE acefile_name = '$acefile_name'
@@ -170,7 +170,7 @@ sub store {
         $self->creation_time($creation_time);
     }
 
-    my $store_acefile = prepare_statement(q{
+    my $store_acefile = prepare_statement(qq{
         INSERT ana_acefile (acefile_name
           , acefile_status_id
           , ana_seq_id
@@ -193,7 +193,7 @@ sub store_acefile_date_range {
     my $acefile_name = $self->acefile_name
         or confess "acefile_name is empty";
 
-    my $get_acefile_date = prepare_statement(q{
+    my $get_acefile_date = prepare_statement(qq{
         SELECT UNIX_TIMESTAMP(earliest_date)
           , UNIX_TIMESTAMP(latest_date)
         FROM ana_task_version
@@ -206,7 +206,7 @@ sub store_acefile_date_range {
     # than the latest stored in the database
     if ($earliest) {
         if ($time > $latest) {
-            my $update_latest_date = prepare_statement(q{
+            my $update_latest_date = prepare_statement(qq{
                 UPDATE ana_task_version
                 SET latest_date = FROM_UNIXTIME($time)
                 WHERE acefile_name = '$acefile_name'
@@ -214,7 +214,7 @@ sub store_acefile_date_range {
             $update_latest_date->execute;
         }
         if ($time < $earliest) {
-            my $update_earliest_date = prepare_statement(q{
+            my $update_earliest_date = prepare_statement(qq{
                 UPDATE ana_task_version
                 SET earliest_date = FROM_UNIXTIME($time)
                 WHERE acefile_name = '$acefile_name'
@@ -227,7 +227,7 @@ sub store_acefile_date_range {
             if $latest;##?
         my $task_name = $self->task_name
             or confess "task_name is empty";
-        my $add_dates = prepare_statement(q{
+        my $add_dates = prepare_statement(qq{
             INSERT ana_task_version (acefile_name
               , task_name
               , earliest_date

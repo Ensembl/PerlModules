@@ -26,7 +26,7 @@ sub add_seq_id_dir {
 
     $db_prefix ||= '';
 
-    my $sth = prepare_statement(q{
+    my $sth = prepare_statement(qq{
         INSERT ana_sequence( ana_seq_id
           , is_current
           , seq_id
@@ -44,7 +44,7 @@ sub make_status_entered {
     my( $ana_seq_id ) = @_;
 
     # status_id of 1 = "Entered"
-    my $sth = prepare_statement(q{
+    my $sth = prepare_statement(qq{
         INSERT ana_status( ana_seq_id
           , is_current
           , status_date
@@ -82,7 +82,7 @@ sub add_new_sequence_entry {
 sub set_ana_sequence_not_current {
     my( $seq_id ) = @_;
 
-    my $sth = prepare_statement(q{
+    my $sth = prepare_statement(qq{
         UPDATE ana_sequence
         SET is_current = 'N'
         WHERE seq_id = $seq_id

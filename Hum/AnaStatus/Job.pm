@@ -22,7 +22,7 @@ sub new {
 sub new_from_ana_job_id {
     my( $pkg, $ana_job_id ) = @_;
     
-    my $sth = prepare_statement(q{
+    my $sth = prepare_statement(qq{
         SELECT ana_seq_id
           , task_name
           , submit_time
@@ -229,7 +229,7 @@ sub store {
         or confess "ana_seq_id not set";
     my $task_name = $self->task_name
         or confess "task_name not set";
-    my $insert = prepare_statement(q{
+    my $insert = prepare_statement(qq{
         INSERT ana_job( ana_job_id
               , ana_seq_id
               , task_name
@@ -250,7 +250,7 @@ sub store_lsf_job_id {
     my $lsf_job_id = $self->lsf_job_id
         or confess "No lsf_job_id.  bsub not done?";
     
-    my $update = prepare_statement(q{
+    my $update = prepare_statement(qq{
         UPDATE ana_job
         SET lsf_job_id = $lsf_job_id
           , lsf_error = NULL

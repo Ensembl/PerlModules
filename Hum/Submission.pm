@@ -95,7 +95,7 @@ sub acc_data {
 
     my $dbh = sub_db();
 
-    my $get_acc_data = prepare_statement(q{
+    my $get_acc_data = prepare_statement(qq{
         SELECT a.accession
           , a.embl_name
           , s.secondary
@@ -170,7 +170,7 @@ sub destroy_lock {
 sub die_if_dumped_recently {
     my( $project, $hr ) = @_;
 
-    my $last_dump = prepare_statement(q{
+    my $last_dump = prepare_statement(qq{
         SELECT UNIX_TIMESTAMP(d.dump_time)
           , d.dump_time
         FROM project_acc a
@@ -384,7 +384,7 @@ a time string as input, or defaulting to current time.
 sub sanger_name {
     my( $acc ) = @_;
 
-    my $sth = prepare_statement(q{
+    my $sth = prepare_statement(qq{
         SELECT s.sequence_name
         FROM project_acc a
           , project_dump d

@@ -19,7 +19,7 @@ sub new {
 sub new_from_set_name {
     my( $pkg, $set_name ) = @_;
 
-    my $sth = prepare_statement(q{
+    my $sth = prepare_statement(qq{
         SELECT aset.set_id
            , aset.set_description
 		       , s.sequence_name
@@ -130,11 +130,11 @@ sub store {
         or confess "empty set";
     my $set_description = $self->set_description || '';
 
-    my $insert_set = prepare_statement(q{
+    my $insert_set = prepare_statement(qq{
         INSERT ana_set(set_id
               , set_name
               , set_description)
-        VALUES(NULL,'$set_name', '$set_decription')
+        VALUES(NULL,'$set_name', '$set_description')
         });
     $insert_set->execute;
     $set_id = $insert_set->{'insertid'}

@@ -126,7 +126,7 @@ sub new {
 sub new_from_accession {
     my( $pkg, $acc ) = @_;
 
-    my $sth = prepare_statement(q{
+    my $sth = prepare_statement(qq{
         SELECT s.sequence_name
         FROM project_acc a
           , project_dump d
@@ -176,13 +176,13 @@ sub set_status {
     my $ana_seq_id = $self->ana_seq_id
         or confess "No ana_seq_id in object";
 
-    my $set_not_current = prepare_statement(q{
+    my $set_not_current = prepare_statement(qq{
         UPDATE ana_status
         SET is_current = 'N'
         WHERE ana_seq_id = $ana_seq_id
         });
 
-    my $new_status = prepare_statement(q{
+    my $new_status = prepare_statement(qq{
         INSERT ana_status( ana_seq_id
               , is_current
               , status_date
@@ -217,7 +217,7 @@ sub set_annotator_uname {
     confess "Invalid annotator_uname '$annotator_uname'"
         unless annotator_full_name($annotator_uname);
 
-    my $set_annotator_uname = prepare_statement(q{            
+    my $set_annotator_uname = prepare_statement(qq{            
         INSERT ana_sequence_person (annotator_uname
               , ana_seq_id)
         VALUES('$annotator_uname', $ana_seq_id))
@@ -302,7 +302,7 @@ sub set_analysis_directory {
         return if $old_ana_dir eq $new_ana_dir;
     }
     my $ana_seq_id = $self->ana_seq_id;
-    my $sth = prepare_statement(q{
+    my $sth = prepare_statement(qq{
         UPDATE ana_sequence
         SET analysis_directory = '$new_ana_dir'
         WHERE ana_seq_id = $ana_seq_id
@@ -331,7 +331,7 @@ sub set_analysis_priority {
         return if $old_priority == $new_priority;
     }
     my $ana_seq_id = $self->ana_seq_id;
-    my $sth = prepare_statement(q{
+    my $sth = prepare_statement(qq{
         UPDATE ana_sequence
         SET analysis_priority = $new_priority
         WHERE ana_seq_id = $ana_seq_id
@@ -475,7 +475,7 @@ sub species_name {
                 
         unless (%valid_annotators){
             my @valid_annotators;
-            my $sth = prepare_statement (q{
+            my $sth = prepare_statement(q{
                 SELECT annotator_uname
                 FROM ana_person });
             
@@ -545,7 +545,7 @@ sub AceFile_hash {
         my $ana_seq_id = $self->ana_seq_id
             or confess "No ana_seq_id in object";
 
-        my $fetch_acefile_data = prepare_statement(q{
+        my $fetch_acefile_data = prepare_statement(qq{
             SELECT acefile_name
               , acefile_status_id
               , UNIX_TIMESTAMP(creation_time)
@@ -641,7 +641,7 @@ sub set_not_current {
     my( $self ) = @_;
 
     my $ana_seq_id = $self->ana_seq_id;
-    my $sth = prepare_statement(q{
+    my $sth = prepare_statement(qq{
         UPDATE ana_sequence
         SET is_current = 'N'
         WHERE ana_seq_id = $ana_seq_id
