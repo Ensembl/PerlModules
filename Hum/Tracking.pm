@@ -48,6 +48,7 @@ use vars qw( @ISA @EXPORT_OK );
                 is_full_shotgun_complete
                 is_shotgun_complete
                 library_and_vector
+                library_from_clone
                 localisation_data
                 online_path_from_project
                 prepare_track_statement
@@ -865,6 +866,20 @@ sub fishParse {
             return;
         }
     }
+}
+
+sub library_from_clone {
+    my( $clone ) = @_;
+
+    my $sth = prepare_cached_track_statement(q{
+        SELECT libraryname
+        FROM clone
+        WHERE clonename = ?
+        });
+    $sth->execute($clone);
+    my ($lib) = $sth->fetchrow;
+    $sth->finish;
+    return $lib;
 }
 
 {

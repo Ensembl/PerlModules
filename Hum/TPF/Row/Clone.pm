@@ -237,7 +237,7 @@ sub store {
     confess("row is already stored with id_tpfrow=", $self->db_id)
         if $self->db_id;
     
-    $self->store_clone_if_missing($tpf);
+    $self->store_clone_if_missing($tpf->species);
     $self->store_SequenceInfo_and_link;
     
     my $db_id = $self->get_next_id_tpfrow;
@@ -261,7 +261,7 @@ sub store {
 }
 
 sub store_clone_if_missing {
-    my( $self, $tpf ) = @_;
+    my( $self, $species ) = @_;
     
     my $upper = uc $self->sanger_clone_name;
     my $get_clone = prepare_cached_track_statement(q{
@@ -305,7 +305,7 @@ sub store_clone_if_missing {
     $insert->execute(
         $self->sanger_clone_name,
         $self->sanger_library_name,
-        $tpf->species,
+        $species,
         $remark,
         );
     
