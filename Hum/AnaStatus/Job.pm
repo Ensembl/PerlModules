@@ -178,7 +178,7 @@ sub submit {
     my $ana_job_id      = $self->ana_job_id;
     my $wrapper_command = $self->wrapper_command;
     
-    my $bsub_pipe = "bsub $wrapper_command -ana_job_id $ana_job_id' 2>&1 |";
+    my $bsub_pipe = "bsub $wrapper_command -ana_job_id $ana_job_id 2>&1 |";
     local *BSUB_PIPE;
     open BSUB_PIPE, $bsub_pipe
         or die "Can't open pipe '$bsub_pipe' : $!";
