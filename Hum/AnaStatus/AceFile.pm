@@ -63,6 +63,34 @@ sub acefile_status_id {
 }
 
 
+sub acefile_status_id_name {
+    my ( $self, $acefile_status_id ) = @_;
+
+			my %status_dict =  (
+                                '1' => 'Begin',
+                                '2' => 'Complete',
+                                '3' => 'Loaded',
+                                '4' => 'Load Error',
+                                '5' => 'Compressed',
+                                '6' => 'Deleted',
+                                '7' => 'Create Error',
+                                '%' => 'Any'
+								);
+								
+
+    if ($acefile_status_id) {
+        confess "Can't modify acefile_status_id"
+            if $self->{'_acefile_status_id'};
+        confess "Unknown acefile_status_id '$acefile_status_id'"
+            unless $self->is_valid_acefile_status_id($acefile_status_id);
+                                    
+        $self->{'_acefile_status_id'} = $status_dict{$acefile_status_id};
+    }
+    return $status_dict{$self->{'_acefile_status_id'}};
+}
+
+
+
 {
     my ( $new_acefile_status );
 

@@ -23,14 +23,14 @@ sub new {
         my( $pkg, $set_name ) = @_;
 
         $sth ||= prepare_statement(q{
-            SELECT s.sequence_name
-              , aset.set_id
-              , aset.set_description
+            SELECT aset.set_id
+               , aset.set_description
+			   , s.sequence_name
             FROM ana_set aset
               , ana_sequence_set ss
               , ana_sequence a
               , sequence s
-            WHERE aset.set_id = ss.seq_id
+            WHERE aset.set_id = ss.set_id
               AND ss.ana_seq_id = a.ana_seq_id
               AND a.seq_id = s.seq_id
               AND a.is_current = 'Y'
@@ -41,16 +41,18 @@ sub new {
         
         my( $set_id, $set_description, @seq_name );
         while (my ($id, $desc, $name) = $sth->fetchrow) {
+        
+			
             $set_id          = $id;
             $set_description = $desc;
             push(@seq_name, $name);
-        }
+        
+		}
         
         my $self = $pkg->new;
         $self->set_id($set_id);
         $self->set_name($set_name);
         $self->set_description($set_description);
-        
         $self->add_sequence_by_name(@seq_name);
         
         return $self;

@@ -37,8 +37,8 @@ sub new_from_sequence_name {
           , ana_status status
           , species_chromosome sc
         LEFT JOIN ana_sequence_person person
-          ON a.ana_seq_id = person.ana_seq_id                        
-        WHERE s.seq_id = a.seq_id
+          ON a.ana_seq_id = person.ana_seq_id
+		  WHERE s.seq_id = a.seq_id
           AND a.ana_seq_id = status.ana_seq_id
           AND s.chromosome_id = sc.chromosome_id
           AND status.is_current = 'Y'
