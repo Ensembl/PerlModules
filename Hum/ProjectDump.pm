@@ -101,6 +101,7 @@ BEGIN {
         project_suffix
         sanger_id
         seq_id
+        sequence_version
         sequenced_by
         funded_by
     );
@@ -450,6 +451,7 @@ sub read_submission_data {
           , d.htgs_phase
           , s.seq_id
           , s.sequence_name
+          , s.sequence_version
           , s.embl_checksum
           , s.unpadded_length
           , s.contig_count
