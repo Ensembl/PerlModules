@@ -375,10 +375,16 @@ sub add_FT_entries {
                $sequencing_center{$pdmp->funded_by}
             || $sequencing_center{$pdmp->sequenced_by}
             || $sequencing_center{5};
-        return(
+        my @seq_center = (
             '-------------- Genome Center',
             @$genome_center_lines,
             );
+        
+        if ($pdmp->species eq 'Zebrafish') {
+            $seq_center[4] =~ s/humquery/zface/;
+        }
+        
+        return @seq_center;
     }
 }
 
@@ -393,13 +399,8 @@ sub add_Headers {
         ? 'working draft'
         : 'unfinished';
 
-    my $seq_centre = $pdmp->seq_center_lines;
-    if ($pdmp->species eq 'Zebrafish') {
-        $seq_centre =~ s/humquery/zface/;
-    }
-
     my @comment_lines = (
-        $seq_centre,
+        $pdmp->seq_center_lines,
         '-------------- Project Information',
         "Center project name: $project",
         '-------------- Summary Statistics',
