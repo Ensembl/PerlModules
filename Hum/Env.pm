@@ -39,6 +39,7 @@ BEGIN {
         /nfs/disk100/humpub/modules/PerlModules
         /nfs/disk100/humpub/modules
         /usr/local/badger/bin
+        /usr/local/badger/staden/alpha-bin
         );
 }
 use lib @libs;
