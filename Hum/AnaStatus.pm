@@ -151,6 +151,14 @@ sub make_ana_dir_from_species_chr_seqname_time {
     my $ana_dir = "$ana_root/$chr/$seq_name/$date_dir";
     my $rawdata = "$ana_dir/rawdata";
     mkpath($rawdata);
+    
+    # Make ana_dir owned by group vertann
+    my $gid = (getgrnam("vertann"))[2];
+    chown($<, $gid, $ana_dir);
+    
+    # Turns on group write access and group sticky
+    chmod(02775, $ana_dir);
+    
     confess "Failed to make '$rawdata'" unless -d $rawdata;
     return $ana_dir;
 }
