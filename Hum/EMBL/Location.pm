@@ -47,6 +47,14 @@ sub exons {
     }
 }
 
+sub numeric_ascend {
+    $a->[1] <=> $b->[1];
+}
+
+sub numeric_descend {
+    $b->[1] <=> $a->[1];
+}
+
 sub locationFromHomolBlock {
     my( $block, $score ) = @_;
     $score ||= 200;
@@ -71,13 +79,21 @@ sub locationFromHomolBlock {
         my $pos = undef;
         my $dir = undef;
         
-        foreach my $r (sort {$a->[1] <=> $b->[1]} @{$strand{$str}}) {            
+        # Need to sort matches in opposite directions for different strands
+        my( $sort_func );
+        if ($str eq 'W') {
+            $sort_func = \*numeric_ascend;
+        } else {
+            $sort_func = \*numeric_descend;
+        }
+        
+        foreach my $r (sort $sort_func @{$strand{$str}}) {            
             # Get the direction of the match in the database hit
             my $d = $r->[3] < $r->[4] ? 1 : 0;
             $dir = $d unless defined $dir;
             
             # The end of the match is in a different field,
-            # depending up the direction.
+            # depending upon the direction.
             my $p = $d ? $r->[4] : $r->[3];
             $pos = $p unless defined $pos;
             
