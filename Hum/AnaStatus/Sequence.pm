@@ -282,6 +282,25 @@ sub analysis_directory {
     return $self->{'_analysis_directory'};
 }
 
+{
+    my( $sth );
+    
+    sub set_analysis_directory {
+        my( $self, $new_ana_dir ) = @_;
+        
+        confess "No new analysis_directory given" unless $new_ana_dir;
+        if (my $old_ana_dir = $self->analysis_directory) {
+            return if $old_ana_dir eq $new_ana_dir;
+        }
+        $sth ||= prepare_statement(q{
+            UPDATE ana_sequence
+            SET analysis_directory = ?
+            WHERE ana_seq_id = ?
+            });
+        $sth->execute($new_ana_dir, $self->ana_seq_id);
+        return 1;
+    }
+}
 
 sub analysis_priority {
     my ( $self, $analysis_priority ) = @_;

@@ -16,6 +16,7 @@ use vars qw( @ISA @EXPORT_OK );
                  destroy_lock
                  die_if_dumped_recently
                  prepare_statement
+                 sanger_name
                  submission_disconnect
                  acetime
                  timeace
@@ -384,6 +385,32 @@ a time string as input, or defaulting to current time.
         return $species_chr{$species}{$chr};
     }
 }
+
+
+{
+    my( $sth );
+
+    sub sanger_name {
+        my( $acc ) = @_;
+        
+        $sth ||= prepare_statement(q{
+            SELECT s.sequence_name
+            FROM project_acc a
+              , project_dump d
+              , sequence s
+            WHERE a.sanger_id = d.sanger_id
+              AND d.seq_id = s.seq_id
+              AND d.is_current = 'Y'
+              AND a.accession = ?
+            });
+        $sth->execute($acc);
+        my ($name) = $sth->fetchrow;
+        $name ||= "Em:$acc";
+        return $name;
+    }
+}
+
+
 
 1;
 

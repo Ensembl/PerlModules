@@ -6,12 +6,12 @@
 =head1 DESCRIPTION
 
 The file containing this package contains the
-line handling package for most of the standard
-EMBL line types, and their baseclass
-B<Hum::EMBL::Line>.  The baseclass contains
-subroutines called at compile time to generate
-standard data access functions for the line
-objects.
+baseclass B<Hum::EMBL::Line> and line handling
+packages for most of the standard EMBL line
+types, which all inherit from it.  The baseclass
+contains subroutines called at compile time to
+generate standard data access functions for the
+line object classes.
 
 See L<Hum::EMBL> for more complete information.
 
