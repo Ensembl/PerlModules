@@ -162,7 +162,7 @@ BEGIN {
             )],
 
         opossum =>
-        [qw(Didelphis virginiana), 'North American oppossum', qw(
+        [qw(Didelphis virginiana), 'North American opossum', qw(
             Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia
             Metatheria Didelphimorphia Didelphidae Didelphis
             )],

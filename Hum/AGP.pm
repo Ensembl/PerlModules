@@ -138,7 +138,7 @@ sub process_TPF {
                 $contig = [];
                 my $gap = $self->new_Gap;
                 $gap->chr_length(50_000);
-                $gap->remark('Unfinished_sequence');
+                $gap->remark('clone\tno\t# Unfinished_sequence');
             }
         }
     }
