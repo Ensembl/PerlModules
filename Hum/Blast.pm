@@ -33,6 +33,15 @@ sub expect_cutoff {
     return $self->{'_expect_cutoff'} || 0.001;
 }
 
+sub identity_cutoff {
+    my( $self, $cutoff ) = @_;
+    
+    if (defined $cutoff) {
+        $self->{'_identity_cutoff'} = $cutoff;
+    }
+    return $self->{'_identity_cutoff'} || 0.9;
+}
+
 sub query_name {
     my( $self, $query ) = @_;
     
@@ -91,6 +100,8 @@ sub next_Subject {
     my $fh = $self->file_handle
         or confess "No file_handle";
     $_ = $self->get_line_cache;
+    my $expect_cutoff   = $self->expect_cutoff;
+    my $identity_cutoff = $self->identity_cutoff;
 
     my( $hit );
     while (defined($_ ||= <$fh>)) {
@@ -110,13 +121,32 @@ sub next_Subject {
             $self->database_name($db_name);
         }
         elsif (/^>/) {
+            # Start of a subjec, so check that we've found
+            # both the database_name and query_name
             my $db_name        = $self->database_name;
             my $query_seq_name = $self->query_name;
             unless ($db_name and $query_seq_name) {
                 die "Failed to parse header: db_name='$db_name' query_name='$query_seq_name'";
             }
+            
+            # Parse the subject
             $self->set_line_cache($_);
-            if (my $subject = $self->parse_Subject) {
+            my $subject = $self->parse_Subject;
+            
+            # Filter on expect and identity if set
+            my $above_cutoff = 1;
+            if ($expect_cutoff != -1) {
+                $above_cutoff = 0
+                    if $subject->min_expect > $expect_cutoff;
+            }
+            if ($expect_cutoff != -1) {
+                $above_cutoff = 0
+                    if $subject->total_identity < $identity_cutoff;
+            }
+            
+            # Return the subject if the match is above any
+            # cutoff set, or go on to the next subject.
+            if ($above_cutoff) {
                 return $subject;
             } else {
                 $_ = $self->get_line_cache;
@@ -238,12 +268,8 @@ sub parse_Subject {
     }
     
     # Sort the HSPs in the Subject, and return it
-    if ($subject->count_HSPs) {
-        $subject->sort_HSPs_by_query_start_end;
-        return $subject;
-    } else {
-        return;
-    }
+    $subject->sort_HSPs_by_query_start_end;
+    return $subject;
 }
 
 
