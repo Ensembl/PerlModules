@@ -641,6 +641,11 @@ Checks that the md5 digest of the file matches
 the value stored in the index.  Fatal if they
 don't match.
 
+=item B<db_list>
+
+Returns itself in list context.  Provided for
+compatability with B<Hum::Blast::DB::Multi>.
+
 =back
 
 =head1 SEE ALSO
