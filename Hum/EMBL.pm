@@ -261,6 +261,8 @@ sub bio_primary_seq {
     
     my $acc = $embl->AC->primary;
     
+    $type = 'DNA' if $type =~ /DNA/i;
+    
     return Bio::PrimarySeq->new(
         -id        => $name,
         -accession => $acc,
@@ -280,6 +282,8 @@ sub bio_seq {
     my $seq  = $embl->Sequence->seq;
     
     my $acc = $embl->AC->primary;
+    
+    $type = 'DNA' if $type =~ /DNA/i;
     
     return Bio::Seq->new(
         -id        => $name,

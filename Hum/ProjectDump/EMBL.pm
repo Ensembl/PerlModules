@@ -51,7 +51,7 @@ sub make_embl {
     my $id = $embl->newID;
     $id->entryname($embl_id);
     $id->dataclass('standard');
-    $id->molecule('DNA');
+    $id->molecule('genomic DNA');
     $id->division($division);
     $id->seqlength($seqlength);
     $embl->newXX;
