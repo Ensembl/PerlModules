@@ -97,13 +97,16 @@ sub is_mutable {
 }
 
 sub is_coding {
-    my( $self ) = @_;
+    my( $self, $flag ) = @_;
     
-    ### Bad to base on just method name
-    if ($self->name =~ /(pseudo|mrna)/i) {
-        return 0;
+    if (defined $flag) {
+        $self->{'_is_coding'} = $flag ? 1 : 0;
     } else {
-        return 1;
+        if (defined($flag = $self->{'_is_coding'})) {
+            return $flag;
+        } else {
+            return $self->name =~ /(pseudo|mrna)/i ? 0 : 1;
+        }
     }
 }
 

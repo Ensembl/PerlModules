@@ -18,6 +18,7 @@ use Term::ReadKey qw{ ReadMode ReadLine };
     my $sgp_type = '';
     my $prompt   = 1;
     my $pipeline = 0;
+    my $otter    = 0;
     my $port     = 3306;
 
     my( $dna_host, $dna_dbname, $dna_user, $dna_password );
@@ -28,22 +29,23 @@ use Term::ReadKey qw{ ReadMode ReadLine };
         splice_defaults_into_ARGV();
     
         GetOptions(
-            'host=s'        => \$host,
-            'dbname=s'      => \$dbname,
-            'user=s'        => \$user,
-            'password=s'    => \$password,
-            'nopassword'    => sub{ $password = undef; $prompt = 0 },
-            'port=i'        => \$port,
-            #'port=i'        => sub{ $port = $_[1]; warn "GOT PORT=$port\n" },
+            'host=s'                => \$host,
+            'dbname=s'              => \$dbname,
+            'user=s'                => \$user,
+            'password=s'            => \$password,
+            'nopassword'            => sub{ $password = undef; $prompt = 0 },
+            'port=i'                => \$port,
+            #'port=i'                => sub{ $port = $_[1]; warn "GOT PORT=$port\n" },
 
-            'dnahost=s'     => \$dna_host,
-            'dnadbname=s'   => \$dna_dbname,
-            'dnauser=s'     => \$dna_user,
-            'dnapassword=s' => \$dna_password,
+            'dnahost=s'             => \$dna_host,
+            'dnadbname=s'           => \$dna_dbname,
+            'dnauser=s'             => \$dna_user,
+            'dnapassword=s'         => \$dna_password,
 
-            'sgp|gold=s'    => \$sgp_type,
-            'prompt!'       => \$prompt,
-            'pipeline!'     => \$pipeline,
+            'sgp|gold|assembly=s'   => \$sgp_type,
+            'prompt!'               => \$prompt,
+            'pipeline!'             => \$pipeline,
+            'otter!'                => \$otter,
             @script_args,
             ) or die "Error processing command line\n";
         die "No database name (dbname) parameter given" unless $dbname;
@@ -66,9 +68,16 @@ use Term::ReadKey qw{ ReadMode ReadLine };
         #warn "Adaptor args = [@adaptor_args]\n";
 
         my $adaptor_class = 'Bio::EnsEMBL::DBSQL::DBAdaptor';
-        if ($pipeline) {
+        if ($pipeline and $otter) {
+            die "Can't set both -pipeline and -otter";
+        }
+        elsif ($pipeline) {
             require Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor;
             $adaptor_class = 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor';
+        }
+        elsif ($otter) {
+            require Bio::Otter::DBSQL::DBAdaptor;
+            $adaptor_class = 'Bio::Otter::DBSQL::DBAdaptor';
         }
 
         if ($dna_dbname) {

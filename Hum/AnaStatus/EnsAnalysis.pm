@@ -132,7 +132,20 @@ sub get_EnsEMBL_VirtualContig_of_contig {
         ->fetch_VirtualContig_of_contig($contig_id, 0);
 }
 
+sub get_EnsEMBL_Slice_of_contig {
+    my( $self ) = @_;
+    
+    my $contig_id = $self->ensembl_contig_id
+        or confess "ensembl_contig_id not set";
+    print "Fetching contig by name $contig_id\n";
+    return $self
+        ->get_EnsAnalysisDB
+        ->db_adaptor
+        ->get_SliceAdaptor
+        ->fetch_by_contig_name($contig_id, 0);
+}
 
+#SMJS TODO
 sub get_GeneBuild_VirtualContig_of_contig {
     my( $self ) = @_;
     

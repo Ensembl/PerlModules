@@ -36,7 +36,7 @@ sub send_command {
         -id         => $self->xace_window_id,
         -remote     => $com_str,
         );
-    #warn "command = @xrem_com\n";
+    warn "command = @xrem_com\n";
     if (system(@xrem_com) == 0) {
         return 1;
     } else {

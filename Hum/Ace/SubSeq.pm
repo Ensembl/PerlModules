@@ -29,101 +29,102 @@ sub new_from_ace_subseq_tag {
     return $sub;
 }
 
-sub new_from_start_end_fox_subseq {
-    my( $pkg, $start, $end, $sub ) = @_;
-    
-    my $self = $pkg->new;
-    my $name = $sub->name;
-    $self->name($name);
-    my $txt = $sub->mutable_data;
-
-    # Sort out the strand
-    my( $strand );
-    if ($start < $end) {
-        $strand = 1;
-    } else {
-        ($start, $end) = ($end, $start);
-        $strand = -1;
-    }
-    $self->strand($strand);
-
-    # Make the exons
-    foreach my $ints ($txt->get_values('Source_exons')) {
-        
-        # Make an Exon object
-        my $exon = Hum::Ace::Exon->new;
-        
-        my ($x, $y) = @$ints;
-        die "Missing coordinate in '$name' : start='$x' end='$y'\n"
-            unless $x and $y;
-        if ($strand == 1) {
-            foreach ($x, $y) {
-                $_ = $start + $_ - 1;
-            }
-        } else {
-            foreach ($x, $y) {
-                $_ = $end - $_ + 1;
-            }
-            ($x, $y) = ($y, $x);
-        }
-        $exon->start($x);
-        $exon->end($y);
-        $self->add_Exon($exon);
-    }
-    
-    # Parse Contines_from and Continues_as
-    if (my ($from) = $txt->get_values('Continued_from')) {
-        $self->upstream_subseq_name($from->[0]);
-    }
-    if (my ($as) = $txt->get_values('Continues_as')) {
-        $self->downstream_subseq_name($as->[0]);
-    }
-
-    # Parse Supporting evidence tags
-    foreach my $type (qw{ Protein_match EST_match cDNA_match }) {
-        foreach my $evidence ($txt->get_values($type)) {
-	    $self->add_SupportingEvidence_accession($type, @$evidence);
-        }
-    }
-    
-    my @exons = $self->get_all_Exons
-        or confess "No exons in '", $self->name, "'";
-
-    # Add CDS coordinates
-    if (my ($cds) = $txt->get_values('CDS')) {
-        if (@$cds == 2) {
-            $self->set_translation_region_from_cds_coords(@$cds);
-        }
-        elsif (@$cds != 0) {
-            warn "ERROR: Got ", scalar(@$cds), " coordinates from CDS tag";
-        }
-    }
-
-    # Is this a partial CDS?
-    my $s_n_f = $txt->count_tag('Start_not_found');
-    my ($snf_val) = $txt->get_values('Start_not_found');
-    my $codon_start = $snf_val->[0] if $snf_val;
-    if ($s_n_f) {
-        # Store phase in AceDB convention (not EnsEMBL)
-        $codon_start ||= 1;
-        if ($codon_start and $txt->count_tag('CDS')) {
-            if ($codon_start =~ /^[123]$/) {
-                $self->start_not_found($codon_start);
-            } else {
-                confess("Bad codon start ('$codon_start') in '$name'");
-            }
-        }
-    }
-
-    # Are we missing the 3' end?
-    if ($txt->count_tag('End_not_found')) {
-        $self->end_not_found(1);
-    }
-
-    $self->validate;
-    
-    return $self;
-}
+### I don't think this was ever used
+#   sub new_from_start_end_fox_subseq {
+#       my( $pkg, $start, $end, $sub ) = @_;
+#       
+#       my $self = $pkg->new;
+#       my $name = $sub->name;
+#       $self->name($name);
+#       my $txt = $sub->mutable_data;
+#   
+#       # Sort out the strand
+#       my( $strand );
+#       if ($start < $end) {
+#           $strand = 1;
+#       } else {
+#           ($start, $end) = ($end, $start);
+#           $strand = -1;
+#       }
+#       $self->strand($strand);
+#   
+#       # Make the exons
+#       foreach my $ints ($txt->get_values('Source_exons')) {
+#           
+#           # Make an Exon object
+#           my $exon = Hum::Ace::Exon->new;
+#           
+#           my ($x, $y) = @$ints;
+#           die "Missing coordinate in '$name' : start='$x' end='$y'\n"
+#               unless $x and $y;
+#           if ($strand == 1) {
+#               foreach ($x, $y) {
+#                   $_ = $start + $_ - 1;
+#               }
+#           } else {
+#               foreach ($x, $y) {
+#                   $_ = $end - $_ + 1;
+#               }
+#               ($x, $y) = ($y, $x);
+#           }
+#           $exon->start($x);
+#           $exon->end($y);
+#           $self->add_Exon($exon);
+#       }
+#       
+#       # Parse Contines_from and Continues_as
+#       if (my ($from) = $txt->get_values('Continued_from')) {
+#           $self->upstream_subseq_name($from->[0]);
+#       }
+#       if (my ($as) = $txt->get_values('Continues_as')) {
+#           $self->downstream_subseq_name($as->[0]);
+#       }
+#   
+#       # Parse Supporting evidence tags
+#       foreach my $type (qw{ Protein_match EST_match cDNA_match }) {
+#           foreach my $evidence ($txt->get_values($type)) {
+#   	    $self->add_SupportingEvidence_accession($type, @$evidence);
+#           }
+#       }
+#       
+#       my @exons = $self->get_all_Exons
+#           or confess "No exons in '", $self->name, "'";
+#   
+#       # Add CDS coordinates
+#       if (my ($cds) = $txt->get_values('CDS')) {
+#           if (@$cds == 2) {
+#               $self->set_translation_region_from_cds_coords(@$cds);
+#           }
+#           elsif (@$cds != 0) {
+#               warn "ERROR: Got ", scalar(@$cds), " coordinates from CDS tag";
+#           }
+#       }
+#   
+#       # Is this a partial CDS?
+#       my $s_n_f = $txt->count_tag('Start_not_found');
+#       my ($snf_val) = $txt->get_values('Start_not_found');
+#       my $codon_start = $snf_val->[0] if $snf_val;
+#       if ($s_n_f) {
+#           # Store phase in AceDB convention (not EnsEMBL)
+#           $codon_start ||= 1;
+#           if ($codon_start and $txt->count_tag('CDS')) {
+#               if ($codon_start =~ /^[123]$/) {
+#                   $self->start_not_found($codon_start);
+#               } else {
+#                   confess("Bad codon start ('$codon_start') in '$name'");
+#               }
+#           }
+#       }
+#   
+#       # Are we missing the 3' end?
+#       if ($txt->count_tag('End_not_found')) {
+#           $self->end_not_found(1);
+#       }
+#   
+#       $self->validate;
+#       
+#       return $self;
+#   }
 
 sub new_from_name_start_end_transcript_seq {
     my( $pkg, $name, $start, $end, $t_seq ) = @_;
@@ -192,7 +193,7 @@ sub process_ace_start_end_transcript_seq {
         $self->add_Exon($exon);
     }
     
-    # Parse Contines_from and Continues_as
+    # Parse Contined_from and Continues_as
     if (my ($from) = $t_seq->at('Structure.Continued_from[1]')) {
         $self->upstream_subseq_name($from->name);
     }
@@ -200,9 +201,33 @@ sub process_ace_start_end_transcript_seq {
         $self->downstream_subseq_name($as->name);
     }
 
+    # Remarks
+    my( @remarks );
+    foreach my $rem ($t_seq->at('Remark[1]')) {
+        push(@remarks, $rem->name);
+    }
+    foreach my $title ($t_seq->at('Visible.Title[1]')) {
+        push(@remarks, $title->name);
+    }
+    $self->remarks(@remarks);
+    
+    my( @annotation_remarks );
+    foreach my $rem ($t_seq->at('Annotation.Annotation_remark[1]')) {
+        push(@annotation_remarks, $rem->name);
+    }
+    $self->annotation_remarks(@annotation_remarks);
+
     # Parse Supporting evidence tags
-    foreach my $evidence ($t_seq->at('Annotation.Sequence_matches[1]')) {
-	$self->add_SupportingEvidence_accession(map $_->name, $evidence->row);
+    foreach my $type (qw{ Protein EST cDNA Genomic }) {
+        my $tag = "${type}_match";
+        my $list = [];
+        foreach my $evidence ($t_seq->at('Annotation.Sequence_matches.' . $tag . '[1]')) {
+            # print "Evidence row " . $evidence->asString . "\n";
+  	    my $id = $evidence->name;
+            $id =~ s/^[a-zA-Z]{2}://;
+            push(@$list, $id) if $id;
+        }
+        $self->add_evidence_list($type, $list) if @$list;
     }
     
     my @exons = $self->get_all_Exons
@@ -364,6 +389,32 @@ sub otter_id {
     return $self->{'_otter_id'};
 }
 
+sub remarks {
+    my( $self, @remarks ) = @_;
+    
+    if (@remarks) {
+        $self->{'_remarks'} = [@remarks];
+    }
+    if (my $rem = $self->{'_remarks'}) {
+        return @$rem;
+    } else {
+        return;
+    }
+}
+
+sub annotation_remarks {
+    my( $self, @annotation_remarks ) = @_;
+    
+    if (@annotation_remarks) {
+        $self->{'_annotation_remarks'} = [@annotation_remarks];
+    }
+    if (my $rem = $self->{'_annotation_remarks'}) {
+        return @$rem;
+    } else {
+        return;
+    }
+}
+
 # Can't call this method before clone_Sequence is attached
 sub add_all_PolyA_from_ace {
     my( $self, $ace ) = @_;
@@ -450,22 +501,16 @@ sub make_PolyA_ace_string {
     return $ace;
 }
 
-sub add_SupportingEvidence_accession {
-    my($self,$type,$acc)=@_;
-    # convert Em:ACxxxx.1 -> ACxxxx
-    $acc=~s/^(Em|Tr|Sw)://;
-    $acc=~s/\.\d+$//;
-    $type=~s/_match$//;
-    push(@{$self->{'_Evidence'}},[$type,$acc]);
+sub add_evidence_list {
+    my($self, $type, $list) = @_;
+    
+    $self->{'_evidence'}{$type} = $list;
 }
 
-sub get_all_SupportingEvidence_accessions {
-    my($self)=@_;
-    if($self->{'_Evidence'}){
-	return @{$self->{'_Evidence'}};
-    }else{
-	return;
-    }
+sub evidence_hash {
+    my( $self ) = @_;
+    
+    return $self->{'_evidence'} || {};
 }
 
 sub clone_Sequence {
@@ -840,7 +885,7 @@ sub translation_region {
                 confess "Bad pos (start = '$start', end = '$end')";
             }
         }
-        confess "start '$start' not less than end '$end'"
+        confess "start '$start' not less than or equal to end '$end'"
             unless $start <= $end;
         $self->{'_translation_region'} = [$start, $end];
     }

@@ -106,7 +106,7 @@ sub fasta_string {
         or confess "No name";
     my $desc = $seq_obj->description;
     my $seq  = $seq_obj->sequence_string
-        or confess "No sequence";
+        or confess "No sequence in '$name'";
     my $fasta_string = ">$name";
     $fasta_string .= "  $desc" if $desc;
     $fasta_string .= "\n";

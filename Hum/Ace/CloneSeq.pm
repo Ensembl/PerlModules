@@ -6,11 +6,19 @@ package Hum::Ace::CloneSeq;
 use strict;
 use Carp;
 
+use Hum::Fox::AceData::GenomeSequence;
+
 use Hum::Sequence::DNA;
 use Hum::Ace::Locus;
 use Hum::Ace::GeneMethod;
 use Hum::Ace::SubSeq;
 use Hum::Ace::AceText;
+use Bio::Otter::Keyword;
+use Bio::Otter::CloneRemark;
+use Bio::Otter::Author;
+use Bio::Otter::CloneInfo;
+use Bio::Otter::AnnotatedClone;
+use Bio::EnsEMBL::SimpleFeature;
 
 sub new {
     my( $pkg ) = shift;
@@ -130,11 +138,103 @@ sub get_all_SubSeqs {
     return @{$self->{'_SubSeq_list'}};
 }
 
+sub make_Otter_CloneInfo {
+    my ($self) = @_; 
+
+    my @clone_remarks;
+    foreach my $remark ($self->get_all_Remarks) {
+        push @clone_remarks,new Bio::Otter::CloneRemark(-remark => $remark);
+    }
+
+    my @clone_keywords;
+    foreach my $keyword ($self->get_all_Keywords) {
+        push @clone_keywords,new Bio::Otter::Keyword(-name => $keyword);
+    }
+
+    my ($author_name, $edit_time) = Hum::Fox::AceData::GenomeSequence
+        ->get_who_and_edit_time($self->sequence_name);
+    if (! $author_name or $author_name eq 'jgrg') {
+        $author_name = 'vega';
+    }
+    $edit_time ||= time;
+    my $author = new Bio::Otter::Author(
+        -name  => $author_name,
+        -email => "$author_name\@sanger.ac.uk",
+        );
+
+    my $ott_clone_info = new Bio::Otter::CloneInfo 
+                                     (-clone_id  => $self->EnsEMBL_Contig->clone->dbID,
+                                      -author    => $author,
+                                      -timestamp => 100,
+                                      -is_active => 1,
+                                      -remark    => \@clone_remarks,
+                                      -keyword   => \@clone_keywords,
+                                      -source    => 'SANGER');
+
+    return $ott_clone_info;
+}
+
+sub make_Otter_Clone {
+    my ($self) = @_; 
+
+    my $clone_info = $self->make_Otter_CloneInfo;
+
+    my $clone = $self->EnsEMBL_Contig->clone;
+
+    bless $clone, 'Bio::Otter::AnnotatedClone';
+
+    $clone->clone_info($clone_info);
+
+    return $clone;
+}
+
+#Create simple features to represent polyA features
+sub make_EnsEMBL_PolyA_Features {
+    my ($self) = @_; 
+
+    my $ana_adaptor = $self->EnsEMBL_Contig->adaptor->db->get_AnalysisAdaptor;
+
+    $self->throw("No analysis adaptor for PolyA conversion") if (!defined($ana_adaptor));
+
+    my @ens_polyAs;
+    my %anahash;
+    foreach my $polyA ($self->get_all_PolyAs) {
+      if (scalar(@$polyA) == 5) {
+        my $start = $polyA->[1];
+        my $end   = $polyA->[2];
+        my $sf;
+        if ($start > $end) {
+          $sf = new Bio::EnsEMBL::SimpleFeature(-start       => $end,
+                                                -end         => $start,
+                                                -strand      => -1,
+                                                -score       => $polyA->[3],
+                                                );
+        } else {
+          $sf = new Bio::EnsEMBL::SimpleFeature(-start       => $start,
+                                                -end         => $end,
+                                                -strand      => 1,
+                                                -score       => $polyA->[3],
+                                                );
+        }
+        if (!exists($anahash{$polyA->[0]})) {
+          my $ana = $ana_adaptor->fetch_by_logic_name($polyA->[0]);
+          croak("No analysis in table for " . $polyA->[0]) if (!defined($ana));
+          $anahash{$polyA->[0]} = $ana;
+        }
+        $sf->analysis($anahash{$polyA->[0]});
+        $sf->contig($self->EnsEMBL_Contig);
+        $sf->display_label($polyA->[4]);
+  
+        push @ens_polyAs,$sf;
+      }
+    }
+    return \@ens_polyAs;
+}
 sub EnsEMBL_Contig {
     my( $self, $ens_contig ) = @_;
     
     if ($ens_contig) {
-        my $class = 'Bio::EnsEMBL::DB::RawContigI';
+        my $class = 'Bio::EnsEMBL::RawContig';
         confess "'$ens_contig' is not a '$class' object"
             unless $ens_contig->isa($class);
         $self->{'_EnsEMBL_Contig'} = $ens_contig;
@@ -230,6 +330,39 @@ sub express_data_fetch {
     # These raw_queries are much faster than
     # fetching the whole Genome_Sequence object!
     $ace->raw_query("find Sequence $clone_name");
+    
+    my $key_list = $ace->raw_query('show -a Keyword');
+    my $keytxt = Hum::Ace::AceText->new($key_list);
+    foreach my $keyword ($keytxt->get_values('Keyword')) {
+      if (defined($keyword->[0])) {
+        $self->add_Keyword($keyword->[0]);
+      }
+    }
+
+    my $rem_list = $ace->raw_query('show -a Annotation_remark');
+    my $remtxt = Hum::Ace::AceText->new($rem_list);
+    foreach my $remark ($remtxt->get_values('Annotation_remark')) {
+      if (defined($remark->[0])) {
+        $self->add_Remark("Annotation_remark- " . $remark->[0]);
+      }
+    }
+
+    my $dump_list = $ace->raw_query('show -a EMBL_dump_info');
+    my $dumptxt = Hum::Ace::AceText->new($dump_list);
+    foreach my $embldump ($dumptxt->get_values('EMBL_dump_info.DE_line')) {
+      if (defined($embldump->[0])) {
+        $self->add_Remark("EMBL_dump_info.DE_line- " . $embldump->[0]);
+      }
+    }
+
+    my $polyA_list = $ace->raw_query('show -a Feature');
+    my $polyAtxt = Hum::Ace::AceText->new($polyA_list);
+    foreach my $polyA ($polyAtxt->get_values('Feature')) {
+      if (defined($polyA->[0])) {
+        $self->add_PolyA($polyA);
+      }
+    } 
+
     my $sub_list = $ace->raw_query('show -a Subsequence');
     my $txt = Hum::Ace::AceText->new($sub_list);
     
@@ -330,51 +463,46 @@ sub new_Sequence_from_ace_handle {
     return $seq;
 }
 
-sub add_support_to_Clone {
-    my ($self ,$ens_ana)=@_;
-
-    # Connect to appropriate enspipe database to get supporting evidence
-    my $ens_ana_db = $ens_ana->get_EnsAnalysisDB;
-
-    my $host=$ens_ana_db->host;
-    my $db_name=$ens_ana_db->db_name;
-
-    # get vc, contigs and features (but doesn't work)
-    #my $ens_db_f = $ens_ana_db->db_adaptor;
-    #my $ens_clone_f = $ens_db_f->get_Clone($self->accession);
-    # (expect finished sequence - one contig)
-    #my ($ens_contig_f) = $ens_clone_f->get_all_Contigs();
-    #my $ens_contig_f_id=$ens_contig_f->id;
-    #my $len=$ens_contig_f[0]->length;
-
-    # fetching features off $ens_contig_f doesn't seem to work...
-    my $ens_contig_f2=$ens_ana->get_EnsEMBL_VirtualContig_of_contig;
-    #my $len2=$ens_contig_f2->length;
-    #print "$seq_name: length: $len, $len2\n";
-
-    my $n=0;
-    # filter features
-    foreach my $feature ($ens_contig_f2->get_all_SimilarityFeatures()){
-	#print join ' ', $feature->analysis->dbID, $feature->primary_tag, $feature->source_tag, $feature->hseqname, 
-	#$feature->start, $feature->end, $feature->hstart, $feature->hend, "\n";
-	my $analysis = $feature->analysis;
-	next if($analysis->logic_name=~/\./);
-	$n++;
-	push(@{$self->{'_supporting_evidence_object'}},$feature);
-    }
-    print "Fetched $n features from $host, $db_name for ".$self->sequence_name."\n";
-    
+sub add_Keyword {
+    my($self,$keyword)=@_;
+    push(@{$self->{'_Keywords'}},$keyword);
 }
 
-sub get_all_support {
-    my( $self ) = @_;
-    
-    if (my $se = $self->{'_supporting_evidence_object'}) {
-        return @$se;
-    } else {
-        return;
+sub get_all_Keywords {
+    my($self)=@_;
+    if($self->{'_Keywords'}){
+        return @{$self->{'_Keywords'}};
+    }else{
+        return ();
     }
 }
+
+sub add_Remark {
+    my($self,$remark)=@_;
+    push(@{$self->{'_Remarks'}},$remark);
+}
+sub get_all_Remarks {
+    my($self)=@_;
+    if($self->{'_Remarks'}){
+        return @{$self->{'_Remarks'}};
+    }else{
+        return ();
+    }
+}
+
+sub add_PolyA {
+    my($self,$polyAref)=@_;
+    push(@{$self->{'_PolyAs'}},$polyAref);
+}
+sub get_all_PolyAs {
+    my($self)=@_;
+    if($self->{'_PolyAs'}){
+        return @{$self->{'_PolyAs'}};
+    }else{
+        return ();
+    }
+}
+
 
 #sub DESTROY {
 #    my( $self ) = @_;
