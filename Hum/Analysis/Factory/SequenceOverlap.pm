@@ -180,13 +180,6 @@ sub find_end_overlap {
         print $matches_fh map($_->pretty_string, @matches), "\n";
     }
     
-    # I don't think we need to sort
-    #@matches = sort {
-    #    $a->seq_start  <=> $b->seq_start  ||
-    #    $a->seq_end    <=> $b->seq_end    ||
-    #    $a->seq_strand <=> $b->seq_strand
-    #    } @matches;
-    
     my $seq_end = $self->closest_end_best_pid(  $query->sequence_length, $end_distances{'seq'}, @matches);
     my $hit_end = $self->closest_end_best_pid($subject->sequence_length, $end_distances{'hit'}, @matches);
     
@@ -198,39 +191,8 @@ sub find_end_overlap {
     elsif ($seq_end == $hit_end) {
         return $seq_end;
     } else {
-        # If the end features overlap on either sequence
-        # then choose the feature that is closest to the
-        # ends of both sequences.
-        if ($seq_end->seq_overlaps($hit_end) or $seq_end->hit_overlaps($hit_end)) {
-            return $self->choose_feature_lowest_end_distance(
-                $query->sequence_length, $seq_end,
-              $subject->sequence_length, $hit_end,
-              );
-        } else {
-            # There is a gap between feartures, so merge them
-            # to produce a single feature.
-            return $self->merge_features($seq_end, $hit_end);
-        }
+        return $self->merge_features($seq_end, $hit_end);
     }
-}
-
-sub choose_feature_lowest_end_distance {
-    my( $self, $seq_length, $seq_end, $hit_length, $hit_end ) = @_;
-    
-    my $seq_distance = $self->min_end_distance($seq_end, $seq_length, $hit_length);
-    my $hit_distance = $self->min_end_distance($hit_end, $seq_length, $hit_length);
-    return $seq_distance < $hit_distance ? $seq_end : $hit_end;
-}
-
-sub min_end_distance {
-    my( $self, $feat, $seq_length, $hit_length ) = @_;
-    
-    my @seq_dist = $end_distances{'seq'}->($feat, $seq_length);
-    my @hit_dist = $end_distances{'hit'}->($feat, $hit_length);
-    
-    my $min_seq = $seq_dist[0] < $seq_dist[1] ? $seq_dist[0] : $seq_dist[1];
-    my $min_hit = $hit_dist[0] < $hit_dist[1] ? $hit_dist[0] : $hit_dist[1];
-    return $min_seq + $min_hit;
 }
 
 sub warn_match {
@@ -275,12 +237,22 @@ sub merge_features {
         $new_feat->$perc($percent);
     }
     
-    # Add the length of the gap between the two features
-    # into the percent_insertion figure.
-    my ($gap_type, $gap_length) = $self->gap_between_features($seq, $hit);
-    print STDERR "GAP in $gap_type of length $gap_length bp\n";
+    # Add the length of the gap or overlap between the
+    # two features into the percent_insertion figure.
+    my ($gap_name, $gap_length) = $self->gap_between_features($seq, $hit);
+    my( $gap_info );
     my $ins_count = $new_feat->seq_length * ($seq->percent_insertion / 100);
-    $ins_count += $gap_length;
+    if ($gap_length < 0) {
+        # It is an overlap
+        $ins_count += $gap_length * -1;
+        $gap_info = sprintf "OVERLAP in %s of length %d bp", $gap_name, $gap_length * -1;
+    } else {
+        # There is a gap
+        $ins_count += $gap_length;
+        $gap_info = sprintf "GAP in %s of length %d bp", $gap_name, $gap_length;
+    }
+    warn "$gap_info\n";
+    
     my $percent = 100 * ($ins_count / $new_feat->seq_length);
     $new_feat->percent_insertion($percent);
     
@@ -289,7 +261,7 @@ sub merge_features {
         $new_feat->alignment_string(
             $sort[0]->alignment_string
             . "\n"
-            . " " x 12 . ">" x 20 . "  GAP OF LENGTH $gap_length  " . "<" x 20
+            . " " x 12 . ">" x 10 . "  $gap_info  " . "<" x 10
             . "\n\n"
             . $sort[1]->alignment_string
             );
@@ -298,6 +270,8 @@ sub merge_features {
     return $new_feat;
 }
 
+# Actually returns the biggest gap or smallest overlap
+# If the gap is negative, then it is an overlap
 sub gap_between_features {
     my( $self, $fa, $fb ) = @_;
     
@@ -310,21 +284,17 @@ sub gap_between_features {
         ($fa, $fb) = ($fb, $fa);
     }
     my $hit_gap = $fb->hit_start - $fa->hit_end - 1;
-
-    my( $gap, $type );
+    
+    my( $gap, $name );
     if ($seq_gap > $hit_gap) {
-        $type = 'seq';
+        $name = $fa->seq_name;
         $gap = $seq_gap;
     } else {
-        $type = 'hit';
+        $name = $fa->hit_name;
         $gap = $hit_gap;
     }
 
-    if ($gap > 0) {
-        return($type, $gap);
-    } else {
-        return;
-    }
+    return($name, $gap);
 }
 
 sub closest_end_best_pid {
