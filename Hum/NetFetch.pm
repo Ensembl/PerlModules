@@ -26,14 +26,19 @@ BEGIN {
     
     sub wwwfetch {
         my( $ac ) = @_;
-        my $embl = get("$embl_simple_url?$ac")
+        my $result = get("$embl_simple_url?$ac")
             or die "No response from '$embl_simple_url'";
         die "Entry for '$ac' not found by server '$embl_simple_url'"
-            if $embl =~ /no entries found/i;
+            if $result =~ /no entries found/i;
+        
+        my( $embl );
+        while ($result =~ m{<pre>\s*(ID.*?//\n)\s*</pre>}gsi) {
+            my $l = length($1);
+            warn "Got match of length $l";
+            $embl .= $1;
+        }
         
         # Remove html markup
-        $embl =~ s{^.+?<PRE>}{}si or die "Can't remove leading '<PRE>' tag";
-        $embl =~ s{\n</PRE>.+$}{}i or die "Can't remove trailing '</PRE>' tag";
         $embl =~ s{<A HREF=.+?>([^<]+)</A>}{$1}g;
         
         return $embl;
