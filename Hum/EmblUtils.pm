@@ -24,6 +24,7 @@ sub add_source_FT {
     $loc->exons([1, $length]);
     $loc->strand('W');
     
+    $ft->addQualifierStrings('mol_type',   'genomic DNA');
     $ft->addQualifierStrings('organism',   $binomial)           if $binomial;
     if ($chr and $binomial ne 'Danio rerio') {
         $ft->addQualifierStrings('chromosome', $chr);
