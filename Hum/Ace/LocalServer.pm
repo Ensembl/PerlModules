@@ -151,7 +151,7 @@ sub start_server {
     }
     elsif (defined $pid) {
         my $exe = $self->server_executable;
-        my @exec_list = ($exe, $path, $port, '0:0:0:0');
+        my @exec_list = ($exe, $path, $port, '0:0');
         exec(@exec_list)
             or confess("exec(",
                 join(', ', map "'$_'", @exec_list),
