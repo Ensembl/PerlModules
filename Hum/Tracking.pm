@@ -43,6 +43,7 @@ use vars qw( @ISA @EXPORT_OK );
                 is_shotgun_complete
                 library_and_vector
                 localisation_data
+                online_path_from_project
                 project_from_clone
                 project_finisher
                 project_team_leader
@@ -575,6 +576,7 @@ sub localisation_data {
     }
 }
 
+
 sub fishParse {
     my ($fishLine) = @_;
     $fishLine =~ s/\s+$//; # Remove trailing space
@@ -619,6 +621,32 @@ sub fishParse {
     }
 }
 
+{
+    my( $get_online_path );
+    
+    sub online_path_from_project {
+        my( $project ) = @_;
+        
+        unless ($get_online_path) {
+            $get_online_path = track_db()->prepare(q{
+            SELECT o.online_path
+            FROM project p
+              , online_data o
+            WHERE p.id_online = o.id_online
+              AND o.is_available = 1
+              AND p.projectname = ?
+            });
+            push(@active_statements, $get_online_path);
+        }
+        $get_online_path->execute($project);
+        
+        if (my($path) = $get_online_path->fetchrow) {
+            return $path;
+        } else {
+            return;
+        }
+    }
+}
 
 =pod
 
