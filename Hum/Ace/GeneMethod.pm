@@ -5,6 +5,7 @@ package Hum::Ace::GeneMethod;
 
 use strict;
 use Carp;
+use Hum::Ace::Colors;
 
 sub new {
     my( $pkg ) = @_;
@@ -65,6 +66,20 @@ sub cds_color {
         $self->{'_cds_color'} = $cds_color;
     }
     return $self->{'_cds_color'};
+}
+
+sub hex_color {
+    my( $self ) = @_;
+    
+    my $color = $self->color;
+    return Hum::Ace::Colors::acename_to_webhex($color);
+}
+
+sub hex_cds_color {
+    my( $self ) = @_;
+    
+    my $color = $self->cds_color;
+    return Hum::Ace::Colors::acename_to_webhex($color);
 }
 
 sub is_mutable {

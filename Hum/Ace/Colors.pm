@@ -8,7 +8,11 @@ use Exporter;
 use Carp;
 
 use vars '@EXPORT_OK';
-@EXPORT_OK = ('acename_to_webhex');
+@EXPORT_OK = qw{
+    acename_to_rgb
+    acename_to_webhex
+    list_all_color_names
+    };
 
 my %color_rgb = (
     'WHITE'        => [ 255, 255, 255 ],
@@ -48,15 +52,42 @@ my %color_rgb = (
 my( %color_hex );
 while (my ($name, $rgb) = each %color_rgb) {
     my $hex = sprintf "#%02x%02x%02x", @$rgb;
-    warn "$name = $hex\n";
+    #warn "$name = $hex\n";
     $color_hex{$name} = $hex;
+}
+
+sub acename_to_rgb {
+    my( $name ) = @_;
+    
+    if (my $rgb = $color_rgb{$name}) {
+        return @$rgb;
+    } else {
+        confess "No such acedb color '$name'";
+    }
 }
 
 sub acename_to_webhex {
     my( $name ) = @_;
     
-    return $color_hex{$name} || confess "No such acedb color '$name'";
+    if (my $hex = $color_hex{$name}) {
+        return $hex;
+    } else {
+        confess "No such acedb color '$name'";
+    }
 }
+
+sub list_all_color_names {
+    return sort keys %color_rgb;
+}
+
+sub list_all_color_names_by_value {
+    return sort {
+        $color_rgb{$a}[0] <=> $color_rgb{$b}[0] ||
+        $color_rgb{$a}[1] <=> $color_rgb{$b}[1] ||
+        $color_rgb{$a}[2] <=> $color_rgb{$b}[2]
+        } keys %color_rgb;
+}
+
 1;
 
 __END__
