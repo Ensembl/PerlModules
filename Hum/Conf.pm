@@ -51,14 +51,14 @@ $cgp_path{'EF'}="$ext_path/EF";
 my $ftp_structure = {
     'Human'         => [ 'human/sequences', 'Chr_' ],
     'Mouse'         => [ 'mouse',           'Chr_' ],
-    'Chicken'       => [ 'chicken'                 ],
     'Fugu'          => [ 'fugu'                    ],
     'Zebrafish'     => [ 'zebrafish'               ],
-    #'Drosophila'    => [ 'drosophila/sequences'    ],
-    #'Arabidopsis'   => [ 'arabidopsis'             ],
     'B.floridae'    => [ 'b_floridae'              ],
     'Gibbon'        => [ 'gibbon'                  ],
     'Dog'           => [ 'dog'                     ],
+    #'Chicken'       => [ 'chicken'                 ],
+    #'Drosophila'    => [ 'drosophila/sequences'    ],
+    #'Arabidopsis'   => [ 'arabidopsis'             ],
     };
 
 my $humace_queue = "$humpub/humace/queue";
