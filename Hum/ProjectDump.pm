@@ -13,7 +13,7 @@ use Hum::Tracking qw( track_db
                       project_team_leader
                       fishData
                       );
-use humConf qw( FTP_ROOT FTP_GHOST );
+use Hum::Conf qw( FTP_ROOT FTP_GHOST );
 use File::Path;
 
 # Object methods

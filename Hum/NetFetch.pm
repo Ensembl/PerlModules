@@ -5,7 +5,7 @@ use strict;
 use Exporter;
 use vars qw( @EXPORT_OK @ISA );
 use LWP::Simple qw( get );
-use humConf qw( HUMPUB_ROOT );
+use Hum::Conf qw( HUMPUB_ROOT );
 use Hum::Lock;
 use Embl;
 
