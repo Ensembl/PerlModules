@@ -50,6 +50,7 @@ use vars qw( @ISA @EXPORT_OK );
                 localisation_data
                 online_path_from_project
                 prepare_track_statement
+                prepare_cached_track_statement
                 project_from_clone
                 project_finisher
                 project_team_leader
@@ -340,6 +341,14 @@ block, to ensure a graceful exit.
         my( $query ) = @_;
         
         my $sth = track_db()->prepare($query);
+        push( @active_statements, $sth );
+        return $sth;
+    }
+    
+    sub prepare_cached_track_statement {
+        my( $query ) = @_;
+
+        my $sth = track_db()->prepare_cached($query);
         push( @active_statements, $sth );
         return $sth;
     }

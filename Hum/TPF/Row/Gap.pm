@@ -8,6 +8,8 @@ use base 'Hum::TPF::Row';
 use Carp;
 
 
+sub is_gap { return 1; }
+
 sub type {
     my( $self, $type ) = @_;
     

@@ -21,7 +21,8 @@ sub db_id {
     return $self->{'_db_id'};
 }
 
-
+# This is overridden in TPF::Row::Gap
+sub is_gap { return 0; }
 
 1;
 
