@@ -133,25 +133,31 @@ BEGIN {
 }
 
 sub submission_time {
-    my( $pdmp ) = @_;
+    my $pdmp = shift;
     
-    return $pdmp->_submission_data('submission_time');
+    return $pdmp->_submission_data('submission_time', @_);
 }
 
 sub submission_type {
-    my( $pdmp ) = @_;
+    my $pdmp = shift;
     
-    return $pdmp->_submission_data('submission_type');
+    return $pdmp->_submission_data('submission_type', @_);
 }
 
 {
     my( $sth );
     
     sub _submission_data {
-        my( $pdmp, $field ) = @_;
+        my( $pdmp, $field, $value ) = @_;
 
-        my( $data );
-        unless ($data = $pdmp->{'_submission_data'}) {
+        my $data = $pdmp->{'_submission_data'};
+        if ($value) {
+            unless ($data) {
+                $pdmp->{'_submission_data'} = $data = {};
+            }
+            $data->{$field} = $value;
+        }
+        elsif (! $data) {
             $data = {};
             my $seq_id = $pdmp->seq_id
                 or confess "No seq_id";
@@ -1697,6 +1703,7 @@ sub draft_institute {
         $ebi_ftp->put_project( $seq_name, $em_file );
         
         $record_submission->execute($pdmp->seq_id, $time, $sub_type);
+        $pdmp->submission_time($time);
     }
 }
 
