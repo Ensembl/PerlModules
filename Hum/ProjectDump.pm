@@ -242,6 +242,8 @@ BEGIN {
                         'Drosophila'    => [ 'drosophila'              ],
                         'Arabidopsis'   => [ 'arabidopsis'             ],
                         );
+    my $unfinished = 'unfinished_sequence';
+    
     sub set_path {
         my( $pdmp, $base_dir ) = @_;
         
@@ -255,9 +257,53 @@ BEGIN {
         my $path = "$base_dir/$p->[0]";
         $path .= "/$p->[1]$chr" if $p->[1];
         if ($phase == 0 or $phase == 1) {
-            $path .= "/unfinished_sequence";
+            $path .= "/$unfinished";
         }
         return $pdmp->file_path($path);
+    }
+    
+    sub list_ftp_dirs {
+        return _list_dirs($FTP_ROOT);
+    }
+    
+    sub list_ghost_dirs {
+        return _list_dirs($FTP_GHOST);
+    }
+    
+    sub _list_dirs {
+        my( $base_dir ) = @_;
+        
+        confess("base_dir not supplied") unless $base_dir;
+        
+        my( @dirs );
+        foreach my $species (sort keys %species_dirs) {
+            my($dir_name, $chr_prefix) = @{$species_dirs{$species}};
+            
+            my $dir = "$base_dir/$dir_name";
+            if ($chr_prefix) {
+                local *BASE;
+                if (opendir BASE, $dir) {
+                    my @chr = grep /^$chr_prefix/, readdir BASE;
+                    closedir BASE;
+                    foreach my $c (@chr) {
+                        push(@dirs, _add_dir("$dir/$c"));
+                    }
+                }
+            } else {
+                push(@dirs, _add_dir($dir));
+            }
+        }
+        return(@dirs);
+    }
+    
+    sub _add_dir {
+        my( $dir ) = @_;
+        
+        my( @dirs );
+        foreach my $d ($dir, "$dir/$unfinished") {
+            push(@dirs, $d) if -d $d;
+        }
+        return(@dirs);
     }
 }
 
@@ -1234,6 +1280,7 @@ sub read_embl_file {
     my $dir = $pdmp->file_path or confess "file_path not set";
     my $file = "$dir/$seq_name.embl";
     
+    
     if (-e $file) {
         local *EMBL;
         my $parser = Hum::EMBL->new;
@@ -1271,7 +1318,8 @@ sub write_embl_file {
         my $seq = '';
         foreach my $contig ($pdmp->contig_list) {
             $seq .= $padding_Ns if $seq;
-            $seq .= $pdmp->DNA($contig);
+            my $dna = $pdmp->DNA($contig);
+            $seq .= $$dna;
         }
         my $embl = Hum::EMBL->new;
         $embl->newSequence->seq($seq);
@@ -1306,7 +1354,7 @@ sub write_embl_file {
 
         # Return the checksum from the embl entry if we have it
         if ($pdmp->{'_embl_file'}) {
-            confess("Can't set checksum when embl_file is set!") if $sum;
+            confess("Can't set checksum when embl_file is filled!") if $sum;
             return $pdmp->{'_embl_file'}->Sequence->embl_checksum;
         }
         # Or set or return the stored value
