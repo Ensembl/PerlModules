@@ -153,8 +153,70 @@ sub _express_fetch_TPF_Rows {
 
     my $db_id = $self->db_id;
 
-    my $rank_gap = $self->_express_fetch_TPF_Gaps_rank_hash;
+    my $rank_gap   = $self->_express_fetch_TPF_Gaps_rank_hash;
+    my $rank_clone = $self->_express_fetch_TPF_Clones_hash;
 
+    my $sql = q{
+        SELECT cs.is_current
+          , r.rank
+          , s.accession
+          , s.id_sequence
+        FROM tpf_row r
+          , clone c
+          , clone_sequence cs
+          , sequence s
+        WHERE r.clonename = c.clonename
+          AND c.clonename = cs.clonename
+          AND cs.id_sequence = s.id_sequence
+          AND r.id_tpf = ?
+        ORDER BY r.rank ASC
+        };
+    #warn $sql;
+    my $sth = prepare_cached_track_statement($sql);
+    $sth->execute($db_id);
+    my( $current, $clone_rank, $acc, $current_seq_id );
+    $sth->bind_columns(\$current, \$clone_rank, \$acc, \$current_seq_id);
+    
+    my $rank = 1;
+    while ($sth->fetch) {
+        
+        # clone_sequence.is_current index broken or missing?
+        next unless $current;
+        
+        # Add any non-sequence entries before this position
+        until ($clone_rank == $rank) {
+            my $row = $rank_clone->{$rank} || $rank_gap->{$rank};
+            confess "Can't get row for rank '$rank'" unless $row;
+            $self->add_Row($row);
+            $rank++;
+        }
+        
+        my $clone = $rank_clone->{$rank}
+            or confess "Missing Clone for rank '$rank'";
+        $clone->accession($acc);
+        $clone->current_seq_id($current_seq_id);
+        
+        # If the clonename is same as the accession,
+        # set the international clone name to the accession
+        if ($clone->sanger_clone_name eq $acc) {
+            $clone->intl_clone_name('?');
+        }
+        
+        $self->add_Row($clone);
+        $rank++;
+    }
+    
+    # Add any non-sequence entries onto the end
+    while (my $gap = $rank_clone->{++$rank} || $rank_gap->{$rank}) {
+        $self->add_Row($gap);
+    }
+    
+    return $self;
+}
+
+sub _express_fetch_TPF_Clones_hash {
+    my( $self ) = @_;
+    
     my $sql = q{
         SELECT r.id_tpfrow
           , r.rank
@@ -162,69 +224,38 @@ sub _express_fetch_TPF_Rows {
           , r.contigname
           , l.internal_prefix
           , l.external_prefix
-          , s.accession
-          , s.id_sequence
         FROM tpf_row r
           , clone c
           , library l
-          , clone_sequence cs
-          , sequence s
         WHERE r.clonename = c.clonename
           AND c.libraryname = l.libraryname (+)
-          AND c.clonename = cs.clonename (+)
-          AND cs.id_sequence = s.id_sequence (+)
-          AND cs.is_current != 0
           AND r.id_tpf = ?
-        ORDER BY r.rank ASC
         };
     #warn $sql;
     my $sth = prepare_cached_track_statement($sql);
-    $sth->execute($db_id);
+    $sth->execute($self->db_id);
     my( $clone_id, $clone_rank, $clonename, $contigname,
-        $int_pre, $ext_pre, $acc, $current_seq_id );
+        $int_pre, $ext_pre );
     $sth->bind_columns(\$clone_id, \$clone_rank, \$clonename, \$contigname,
-        \$int_pre, \$ext_pre, \$acc, \$current_seq_id);
+        \$int_pre, \$ext_pre );
     
-    my $rank = 1;
+    my $rank_clone = {};
     while ($sth->fetch) {
-        
-        # Add any gaps before this position
-        until ($clone_rank == $rank) {
-            my $gap = $rank_gap->{$rank}
-                or confess "No gap with rank '$rank'";
-            $self->add_Row($gap);
-            $rank++;
-        }
-        
         my $clone = Hum::TPF::Row::Clone->new;
         $clone->db_id($clone_id);
         $clone->contig_name($contigname);
         $clone->sanger_clone_name($clonename);
-        $clone->accession($acc);
-        $clone->current_seq_id($current_seq_id);
+        $clone->set_intl_clone_name_from_sanger_int_ext($clonename, $int_pre, $ext_pre);
         
-        # If the clonename is same as the accession, this means
-        # that we don't know the clonename is, so don't set it.
-        unless ($clonename eq $acc) {
-            $clone->set_intl_clone_name_from_sanger_int_ext($clonename, $int_pre, $ext_pre);
-        }
-        
-        $self->add_Row($clone);
-        $rank++;
+        $rank_clone->{$clone_rank} = $clone;
     }
-    
-    # Add any gaps onto the end
-    while (my $gap = $rank_gap->{++$rank}) {
-        $self->add_Row($gap);
-    }
-    
-    return $self;
+    return $rank_clone;
 }
 
 sub _express_fetch_TPF_Gaps_rank_hash {
     my( $self ) = @_;
     
-    my $sth = prepare_cached_track_statement(q{
+    my $sql = q{
         SELECT r.id_tpfrow
           , r.rank
           , g.length
@@ -233,8 +264,8 @@ sub _express_fetch_TPF_Gaps_rank_hash {
           , tpf_gap g
         WHERE r.id_tpfrow = g.id_tpfrow
           AND r.id_tpf = ?
-        ORDER BY r.rank ASC
-        });
+        };
+    my $sth = prepare_cached_track_statement($sql);
     $sth->execute($self->db_id);
     my( $gap_id, $gap_rank, $gap_length, $gap_type );
     $sth->bind_columns(\$gap_id, \$gap_rank, \$gap_length, \$gap_type);
