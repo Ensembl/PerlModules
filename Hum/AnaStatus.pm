@@ -9,7 +9,7 @@ use Carp;
 use Exporter;
 use File::Path 'mkpath';
 use Hum::Conf 'SPECIES_ANALYSIS_ROOT';
-use Hum::Submission 'prepare_statement';
+use Hum::Submission qw{ prepare_statement get_user };
 
 @ISA = ('Exporter');
 @EXPORT_OK = qw{
@@ -107,7 +107,7 @@ sub set_ana_sequence_not_current {
     
     sub get_annotator_uname {
         unless ($u_name) {
-            $u_name = (getpwuid($<))[0];
+            $u_name = get_user;
         }
         return $u_name;
     }

@@ -7,6 +7,7 @@ use Carp;
 use Time::Local qw( timelocal );
 use Exporter;
 use vars qw( @ISA @EXPORT_OK );
+use Hum::SubmissionConf;
 
 @ISA = ('Exporter');
 @EXPORT_OK = qw( sub_db
@@ -27,6 +28,9 @@ use vars qw( @ISA @EXPORT_OK );
                  dateMySQL
                  MySQLdatetime
                  datetimeMySQL
+		 submission_user
+		 user_has_access
+		 get_user
                  );
 
 =pod
@@ -60,11 +64,9 @@ sub ref_from_query {
     sub sub_db () {
         unless ($db) {
             
-            my $user   = (getpwuid($<))[0];
+            my $user=get_user();
             my $dbname = 'submissions';
-            my $host   = 'humsrv1';
-            my $port   = 3399;
-            
+            my ($host, $port)=Hum::SubmissionConf::localisation();
             if (my $test = $ENV{'SUBMISSION_TEST_DB'}) {
                 # Legal formats:
                 #
@@ -451,7 +453,116 @@ sub project_name_and_suffix_from_sequence_name {
     return( $project, $suffix );
 }
 
+# TH 11/11/02
+# return user
+# user if user provided, else via getpwuid
+# since any use has readaccess; only want to set user if trying to write.
+# write access should always have entry in ana_person, so check for this
+sub submission_user {
+    my( $user ) = @_;
+    if($user){
 
+	# check $user is in table
+	# (password not implemented right now)
+	# SELECT annotator_uname, passwd
+	my $sth = prepare_statement(q{
+	    SELECT annotator_uname
+	      FROM ana_person
+	      });
+	$sth->execute;
+
+	my $access_type='';
+	my $pwd='';
+	while (my( $db_ann, $db_pwd ) = $sth->fetchrow) {
+	    if($db_ann eq $user){
+		$pwd=$db_pwd;
+		$access_type='RW';
+	    }
+	}
+	if($access_type eq ''){
+	    die "Invalid user\n";
+	}
+
+	# if pwd in db, check it
+	if($pwd){
+	    system "stty -echo";
+	    print "Password: ";
+	    chomp(my $word = <STDIN>);
+	    print "\n";
+	    system "stty echo";
+	    if (crypt($word, $pwd) ne $pwd) {
+		die "Invalid user/password combination\n";
+	    }
+	}
+
+    }else{
+	$user = (getpwuid($<))[0];
+    }
+    return( $user );
+}
+
+# TH 11/11/02
+# function to return type of access for annotator to set_name
+# '' = no access; 'R' = read; 'RW' = readwrite
+# where annotator not in table, assume 'R'
+# where annotator in table and is_restricted = 'N', assume 'RW'
+# where annotator in table and is_restricted = 'Y', check ana_set_access
+#   where set_name/user is not in table, no access
+sub user_has_access{
+    my( $annotator, $set_name ) = @_;
+
+    my $sth = prepare_statement(q{
+        SELECT annotator_uname, is_restricted
+        FROM ana_person
+        });
+    $sth->execute;
+
+    # everyone has read access, unless have more (RW) or less (is_restricted = 'Y');
+    my $access_type='R';
+    while (my( $db_ann, $is_restricted ) = $sth->fetchrow) {
+	if($db_ann eq $annotator){
+	    if($is_restricted eq 'Y'){
+		$access_type='';
+	    }else{
+		$access_type='RW';
+	    }
+	}
+    }
+
+    # look for entries for $set_name
+    if($access_type eq ''){
+	{
+	    my $sth = prepare_statement(qq{
+		SELECT asa.annotator_uname, asa.read_write
+		  FROM ana_set_access asa, ana_set aset
+		 WHERE asa.set_id = aset.set_id
+	           AND aset.set_name = '$set_name'
+		   });
+	    $sth->execute;
+	    while (my( $db_ann, $db_rw ) = $sth->fetchrow) {
+		if($db_ann eq $annotator){
+		    $access_type=$db_rw;
+		}
+	    }
+	    ##print "$set_name: got \'$access_type\' for $annotator\n";
+	}
+    }
+    ##print "access: |$access_type|\n";
+    return $access_type;
+}
+
+sub get_user{
+    my $user;
+    eval{
+	$user=main::main_user();
+    };
+    if($@){
+	$user=(getpwuid($<))[0]
+	    or confess "Can't get user name for uid '$<'";
+	print "WARN: user ($user) was obtained via getpwuid\n";
+    }
+    return $user;
+}
 
 1;
 

@@ -923,8 +923,8 @@ sub get_accession_and_sv {
         ($acc, $sv) = $sth->fetchrow;
     }
     
-    confess "Can't determine accession"        unless $acc;
-    confess "Can't determine sequence version" unless $sv;
+    confess "Can't determine accession ($seq_id)"        unless $acc;
+    confess "Can't determine sequence version ($seq_id)" unless $sv;
     
     return($acc, $sv);
 }
