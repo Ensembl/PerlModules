@@ -82,6 +82,7 @@ sub ref_from_query {
             $sth->finish if $sth;
         }
         $db->disconnect if $db;
+        $db = undef;
     }
     
     END {
