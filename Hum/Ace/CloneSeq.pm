@@ -188,13 +188,13 @@ sub make_Otter_Clone {
     return $clone;
 }
 
-#Create simple features to represent polyA features
+# Create simple features to represent polyA signals and sites
 sub make_EnsEMBL_PolyA_Features {
     my ($self) = @_; 
 
     my $ana_adaptor = $self->EnsEMBL_Contig->adaptor->db->get_AnalysisAdaptor;
 
-    $self->throw("No analysis adaptor for PolyA conversion") if (!defined($ana_adaptor));
+    confess "No analysis adaptor for PolyA conversion" unless $ana_adaptor;
 
     my @ens_polyAs;
     my %anahash;
@@ -216,20 +216,28 @@ sub make_EnsEMBL_PolyA_Features {
                                                 -score       => $polyA->[3],
                                                 );
         }
-        if (!exists($anahash{$polyA->[0]})) {
-          my $ana = $ana_adaptor->fetch_by_logic_name($polyA->[0]);
-          croak("No analysis in table for " . $polyA->[0]) if (!defined($ana));
-          $anahash{$polyA->[0]} = $ana;
+        my $type  = $polyA->[0];
+        my $ana = $anahash{$type};
+        unless ($ana) {
+          $ana = $ana_adaptor->fetch_by_logic_name($type);
+          unless ($ana) {
+            $ana = Bio::EnsEMBL::Analysis->new(
+                -LOGIC_NAME => $type,
+                );
+            $ana_adaptor->store($ana);
+          }
+          $anahash{$type} = $ana;
         }
-        $sf->analysis($anahash{$polyA->[0]});
+        $sf->analysis($ana);
         $sf->contig($self->EnsEMBL_Contig);
         $sf->display_label($polyA->[4]);
   
-        push @ens_polyAs,$sf;
+        push @ens_polyAs, $sf;
       }
     }
     return \@ens_polyAs;
 }
+
 sub EnsEMBL_Contig {
     my( $self, $ens_contig ) = @_;
     
@@ -358,7 +366,7 @@ sub express_data_fetch {
     my $polyA_list = $ace->raw_query('show -a Feature');
     my $polyAtxt = Hum::Ace::AceText->new($polyA_list);
     foreach my $polyA ($polyAtxt->get_values('Feature')) {
-      if (defined($polyA->[0])) {
+      if ($polyA->[0] =~ /^polyA/) {
         $self->add_PolyA($polyA);
       }
     } 
@@ -379,6 +387,7 @@ sub express_data_fetch {
             $sub->clone_Sequence($seq);
 
             # Adding PolyA depends on having the clone Sequence first
+            ### This was never used
             $sub->add_all_PolyA_from_ace($t_seq);
 
             # Flag that the sequence is in the db
