@@ -328,6 +328,14 @@ sub make_PolyA_ace_string {
     return $ace;
 }
 
+sub add_SupportingEvidence_accession {
+
+}
+
+sub get_all_SupportingEvidence_accessions {
+
+}
+
 sub clone_Sequence {
     my( $self, $seq ) = @_;
     
