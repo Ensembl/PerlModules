@@ -121,7 +121,11 @@ sub get_lengths {
     print $server "-l @id_list\n";
     my( @length_list );
     for (my $i = 0; $i < @id_list; $i++) {
-        chomp( my $length = <$server> );
+        my $length = <$server>;
+		if(! $length) {
+			warn "The length of $id_list[$i] is missing";
+		}
+        chomp $length;
         if ($length eq 'no match') {
             $length_list[$i] = undef;
         } else {
