@@ -32,7 +32,7 @@ sub unknown_gap_length {
     if ($unknown_gap_length) {
         $self->{'_unknown_gap_length'} = $unknown_gap_length;
     }
-    return $self->{'_unknown_gap_length'} || 200_000;
+    return $self->{'_unknown_gap_length'} || 50_000;
 }
 
 sub new_Clone {

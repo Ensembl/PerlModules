@@ -15,7 +15,7 @@ sub type {
     my( $self, $type ) = @_;
     
     if ($type) {
-        confess "Bad type '$type'" unless $type =~ /^[12345]$/;
+        confess "Bad type '$type'" unless $type =~ /^[1234567]$/;
         $self->{'_type'} = $type;
     }
     return $self->{'_type'};
@@ -25,7 +25,7 @@ sub type_string {
     my( $self ) = @_;
     
     my $type = $self->type or confess "type not set";
-    if ($type == 5) {
+    if ($type > 4) {
         return 'type-4';
     } else {
         return "type-$type";
@@ -41,11 +41,25 @@ sub gap_length {
     return $self->{'_gap_length'};
 }
 
+{
+    my %type_identifer = (
+        5 => 'CENTROMERE',
+        6 => 'TELOMERE',
+        7 => 'SHORT_ARM',
+        );
+
+    sub gap_identifier {
+        my( $self ) = @_;
+
+        return $type_identifer{$self->type} || 'GAP';
+    }
+}
+
 sub string {
     my( $self ) = @_;
     
     return join("\t",
-        ($self->type == 5 ? 'CENTROMERE' : 'GAP'),
+        $self->gap_identifier,
         $self->type_string,
         $self->gap_length || '?')
         . "\n";

@@ -43,11 +43,18 @@ sub parse {
         }
         my @line = split /\s+/, $_;
         confess "Bad line in TPF: $_" unless @line == 3;
-        if ($line[0] =~ /^(GAP|CENTROMERE)/i) {
+        if ($line[0] =~ /(GAP|CENTROMERE|TELOMERE|SHORT_ARM)/i) {
+            my $identifier = uc $1;
             my( $type_str, $length_str ) = @line[1,2];
             my $gap = Hum::TPF::Row::Gap->new;
-            if (uc $1 eq 'CENTROMERE') {
+            if ($identifier eq 'CENTROMERE') {
                 $gap->type(5);
+            }
+            elsif ($identifier eq 'TELOMERE') {
+                $gap->type(6);
+            }
+            elsif ($identifier eq 'SHORT_ARM') {
+                $gap->type(7);
             }
             elsif ($type_str =~ /type-([1234])/i) {
                 $gap->type($1);
