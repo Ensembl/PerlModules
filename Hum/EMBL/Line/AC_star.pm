@@ -6,10 +6,8 @@ use Carp;
 use Hum::EMBL::Line;
 use vars qw( @ISA );
 
-BEGIN {
-    @ISA = qw( Hum::EMBL::Line );
-    Hum::EMBL::Line::AC_star->makeFieldAccessFuncs(qw( identifier ));
-}
+@ISA = qw( Hum::EMBL::Line );
+Hum::EMBL::Line::AC_star->makeFieldAccessFuncs(qw( identifier ));
 
 sub parse {
     my( $line, $s ) = @_;
