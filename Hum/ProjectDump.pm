@@ -218,7 +218,11 @@ sub chromosome {
     my( $pdmp ) = @_;
     
     unless (exists $pdmp->{'_chromosome'}) {
-        $pdmp->{'_chromosome'} = Hum::Tracking::chromosome_from_project($pdmp->project_name);
+        my( $chr );
+        eval{
+            $chr = Hum::Tracking::chromosome_from_project($pdmp->project_name);
+        };
+        $pdmp->{'_chromosome'} = $chr;
     }
     return $pdmp->{'_chromosome'};
 }
@@ -228,8 +232,12 @@ sub chromosome_id {
     
     my $chr     = $pdmp->chromosome;
     my $species = $pdmp->species;
-    return Hum::Submission::chromosome_id_from_species_and_chr_name($species, $chr)
-        || Hum::Submission::add_new_species_chr                    ($species, $chr);    
+    my $chr_id = Hum::Submission::chromosome_id_from_species_and_chr_name($species, $chr);
+    if (defined $chr_id) {
+        return $chr_id;
+    } else {
+        return Hum::Submission::add_new_species_chr($species, $chr);
+    }
 }
 
 sub sequence_name {

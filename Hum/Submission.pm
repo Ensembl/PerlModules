@@ -336,7 +336,8 @@ a time string as input, or defaulting to current time.
         # Make sure we are in sync with the database
         _init_species_chr_hash();
         
-        if (my $chr_id = $species_chr{$species}{$chr}) {
+        my $chr_id = $species_chr{$species}{$chr};
+        if (defined $chr_id) {
             confess "id ('$chr_id') already exists for species='$species' and chr='$chr'";
         } else {
             my $sth = prepare_statement(q{

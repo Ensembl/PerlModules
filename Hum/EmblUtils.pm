@@ -23,11 +23,11 @@ sub add_source_FT {
     $loc->exons([1, $length]);
     $loc->strand('W');
     
-    $ft->addQualifierStrings('organism',   $binomial);
-    $ft->addQualifierStrings('chromosome', $chr);
-    $ft->addQualifierStrings('map',        $map)             if $map;
-    $ft->addQualifierStrings('clone',      $external_clone);
-    $ft->addQualifierStrings('clone_lib',  $libraryname)     if $libraryname;
+    $ft->addQualifierStrings('organism',   $binomial)           if $binomial;
+    $ft->addQualifierStrings('chromosome', $chr)                if $chr;
+    $ft->addQualifierStrings('map',        $map)                if $map;
+    $ft->addQualifierStrings('clone',      $external_clone)     if $external_clone;
+    $ft->addQualifierStrings('clone_lib',  $libraryname)        if $libraryname;
     
     return $ft;
 }
@@ -88,6 +88,11 @@ BEGIN {
             euphyllophytes Spermatophyta Magnoliophyta eudicotyledons
             core eudicots Rosidae eurosids II Brassicales Brassicaceae
             Arabidopsis
+            )],
+        
+        'b.floridae' => 
+        [qw(Branchiostoma floridae), 'Florida lancelet', qw(
+            Eukaryota Metazoa Chordata Cephalochordata Branchiostomida Branchiostoma 
             )],
     );
 
