@@ -51,7 +51,9 @@ use vars qw( @ISA @EXPORT_OK );
 
 Returns a reference to an array of anonymous
 arrays containing the results from running the
-B<SQL> query on the I<Tracking> database.
+B<SQL> query on the I<Tracking> database.  This
+is the interface to the tracking database for all
+of B<Tracking.pm>.
 
 =cut
 
@@ -186,8 +188,7 @@ sub external_clone_name {
                                      cp.projectname = p.projectname and
                                      p.projectname in($proj_list)
                                 ));
-    return unless @$ans;
-    
+        
     my %proj = map { $_->[0], [@{$_}[1,2,3]] } @$ans;
     
     # Fill in any clone names missing from %proj
