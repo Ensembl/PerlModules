@@ -227,31 +227,40 @@ BEGIN {
         for (my $i = 0; $i <= $#exons; $i++) {
         
             my $exon = $exons[$i];
-            unless ($exon->strand) {
-                confess "strand not set in exon (%d to %d)", $exon->start, $exon->end;
-            }
+            my $strand = $exon->strand
+                or confess "strand not set in exon (%d to %d)", $exon->start, $exon->end;
             
             my $exon_text;
             if ($exon->accession_version) {
                 $exon_text .= $exon->accession_version . ':';
             }
 
-            #Do we need a start not found '<'
-            if (($i == 0) and $self->start_not_found) {
+            if ($i == 0 and $self->start_not_found and $strand ==  1) {
+                # First exon where end not found transcript on forward strand
                 $exon_text .= '<' . $exon->start .  '..';
-            } else {
-                $exon_text .= $exon->start .  '..';
+            }
+            elsif ($i == $#exons and $self->end_not_found and $strand == -1) {
+                # Last exon where start not found transcript on reverse strand
+                $exon_text .= '<' . $exon->start .  '..';
+            }
+            else {
+                $exon_text .=       $exon->start .  '..';
             }
 
-            #Do we need an end not found '>'
-            if (($i == $#exons) and $self->end_not_found) {
+            if ($i == 0 and $self->start_not_found and $strand == -1) {
+                # First exon on start not found transcript on reverse strand
                 $exon_text .= '>' . $exon->end;
-            } else {
-                $exon_text .= $exon->end;
+            }
+            elsif ($i == $#exons and $self->end_not_found and $strand ==  1) {
+                # Last exon on end not found transcript on forward strand
+                $exon_text .= '>' . $exon->end;
+            }
+            else {
+                $exon_text .=       $exon->end;
             }
             
             #Check strand
-            if ($exon->strand == -1) {
+            if ($strand == -1) {
                 $exon_text = 'complement(' . $exon_text . ')';
             }
             $exon_text .= ',';
