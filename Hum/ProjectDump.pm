@@ -1634,8 +1634,6 @@ sub read_accession_data {
             $seen = 1 if $sec eq $ext_sec;
         }
         push(@secondaries, $ext_sec) unless $seen;
-    } else {
-        warn "No external draft info [$ext_sec, $institute]";
     }
     $pdmp->secondary(@secondaries) if @secondaries;
 }
