@@ -153,31 +153,39 @@ sub run_pressdb {
         if $blast eq $build;
     
     # Check new database exists
-    unless (-s $build) {
-        die "Blast database ('$build') missing or empty\n";
+    unless (-e $build) {
+        die "No such fasta database '$build'\n";
     }
     
     # List of extensions for blast files
-    my @extn = ('', qw( .csq .nhd .ntb ));
+    my @extn = ('', qw( .csq .nhd .ntb .nhr .nin .nsq ));
     
-    my $pressdb = "pressdb -t $name $build 2>&1 |";
-    open PRESSDB, $pressdb
-        or die "Can't open pipe ('$pressdb') $!";
-    my @outLines = <PRESSDB>;
-    
-    if (close(PRESSDB)) {
-        # Rename new files to blast_db name
-        foreach (@extn) {
-            rename("$build$_", "$blast$_");
+    my $pressdb  = "pressdb -t $name $build 2>&1 |";
+    my $formatdb = "formatdb -t $name -p F -i $build -l /dev/null 2>&1 |";
+    my( @outLines );
+    my $error_flag = 0;
+    foreach my $pipe ($pressdb, $formatdb) {
+        local *PIPE;
+        open PIPE, $pipe or confess "Can't open pipe ('$pipe') : $!";
+        while (<PIPE>) {
+            push(@outLines, $_);
         }
-        return 1;
-    } else {
+        close PIPE or $error_flag++;
+    }
+    
+    if ($error_flag) {
         # Save BAD file for debugging
         rename( $build, "$blast.BAD" );
         unlink( map "$build$_", @extn );
         die "Creation of blast database '$blast' from '$build' failed:\n",
             @outLines,
             "Bad database file saved as '$blast.BAD'\n";
+    } else {
+        # Rename new files to blast_db name
+        foreach (@extn) {
+            rename("$build$_", "$blast$_");
+        }
+        return 1;
     }
 }
 
