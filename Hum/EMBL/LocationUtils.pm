@@ -167,6 +167,8 @@ sub location_from_subsequence {
     
     # Get the start and end coordinates
     my($start, $end) = map $_->name, $sub_tag->row(1);
+    confess "Missing coordinate for '$sub_tag' : start='$start', end='$end'"
+        unless $start and $end;
 
     # Fetch the object from the database
     my $g = $sub_tag->fetch;
@@ -177,6 +179,7 @@ sub location_from_subsequence {
         my ($x, $y) = $_->row;
         push(@exons, [$x->name, $y->name]);
     }
+    confess "No exons found for '$sub_tag'" unless @exons;
     
     my $loc = 'Hum::EMBL::Location'->new;
     

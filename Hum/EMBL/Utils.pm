@@ -11,7 +11,6 @@ use vars qw( @ISA @EXPORT_OK );
 @EXPORT_OK = qw( EMBLdate dateEMBL crc32 );
 
 BEGIN {
-
     my @months = qw( JAN FEB MAR APR MAY JUN
                      JUL AUG SEP OCT NOV DEC );
     my @mDay = ('00'..'31');
@@ -74,10 +73,12 @@ BEGIN {
         my $len = length($$str)
             or confess "Empty string";
 
+        #warn "String is $len long\n";
+
         my $crc = 0xFFFFFFFF;
         for (my $i = 0; $i < $len; $i++) {
             # Get upper case value of each letter
-            my $int = ord uc substr $$str, $i, 1;
+            my $int = ord uc substr($$str, $i, 1);
             $crc = (($crc >> 8) & 0x00FFFFFF) ^ $crcTable[ ($crc ^ $int) & 0xFF ];
         }
         #return sprintf "%X", $crc; # SwissProt format

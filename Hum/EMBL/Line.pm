@@ -945,6 +945,7 @@ package Hum::EMBL::Line::Sequence;
 use strict;
 use Carp;
 use vars qw( @ISA );
+use Hum::EMBL::Utils;
 
 @ISA = qw( Hum::EMBL::Line );
 Hum::EMBL::Line::Sequence->makeFieldAccessFuncs(qw( seq ));
@@ -961,7 +962,6 @@ sub parse {
 sub embl_checksum {
     my( $line ) = @_;
     
-    require Hum::EMBL::Utils;
     my $seq = $line->seq;
     return Hum::EMBL::Utils::crc32(\$seq);
 }
