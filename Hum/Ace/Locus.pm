@@ -806,20 +806,6 @@ sub make_transcript {
             }
         }
         
-
-
-        if ($i == 0) {
-            if ($mrna->start_not_found or ($cds and $cds->start_not_found)) {
-                $ti->mRNA_start_not_found(1);
-            }
-        }
-
-        if ($i == $#locus_clones) {
-            if ($mrna->end_not_found or ($cds and $cds->end_not_found)) {
-                $ti->mRNA_end_not_found(1);
-            }
-        }
-        
         $self->extract_transcript_remarks($mrna, $transcript_remarks);
         if ($cds) {
             $is_coding = 1;
@@ -841,6 +827,18 @@ sub make_transcript {
                 unless $ori == $golden_orientation;
         } else {
             $golden_orientation = $ori;
+        }
+
+        if (($golden_orientation == 1 and $i == 0) or ($golden_orientation == -1 and $i == $#locus_clones)) {
+            if ($mrna->start_not_found or ($cds and $cds->start_not_found)) {
+                $ti->mRNA_start_not_found(1);
+            }
+        }
+
+        if (($golden_orientation == 1 and $i == $#locus_clones) or ($golden_orientation == -1 and $i == 0)) {
+            if ($mrna->end_not_found or ($cds and $cds->end_not_found)) {
+                $ti->mRNA_end_not_found(1);
+            }
         }
         
         # Make the EnsEMBL exons

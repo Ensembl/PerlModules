@@ -536,7 +536,7 @@ sub get_all_PolyAs {
 sub add_clone_span {
     my( $self, $name, $start, $end ) = @_;
     
-    print STDERR "Adding: $self, $name, $start, $end\n";
+    #print STDERR "Adding: $self, $name, $start, $end\n";
     
     my $list = $self->{'_clone_span_list'} ||= [];
     push(@$list, [$name, $start, $end]);
