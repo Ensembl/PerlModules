@@ -407,10 +407,6 @@ sub express_data_fetch {
                     );
             $sub->clone_Sequence($seq);
 
-            # Adding PolyA depends on having the clone Sequence first
-            ### This was never used
-            $sub->add_all_PolyA_from_ace($t_seq);
-
             # Flag that the sequence is in the db
             $sub->is_archival(1);
 

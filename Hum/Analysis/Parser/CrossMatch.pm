@@ -14,6 +14,16 @@ sub new {
     return bless {}, $pkg;
 }
 
+sub get_all_Features {
+    my( $self ) = @_;
+    
+    my $all = [];
+    while (my $f = $self->next_Feature) {
+        push(@$all, $f);
+    }
+    return $all;
+}
+
 sub next_Feature {
     my( $self ) = @_;
         

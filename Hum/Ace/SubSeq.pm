@@ -463,6 +463,27 @@ sub exon_Sequence {
     return $seq;
 }
 
+sub exon_Sequence_array {
+    my( $self ) = @_;
+    
+    my $clone_seq = $self->clone_Sequence
+        or confess "No clone_Sequence";
+    
+    my $exon_seqs = [];
+    foreach my $exon ($self->get_all_Exons) {
+	my $start = $exon->start;
+	my $end   = $exon->end;
+	my $seq = $clone_seq->sub_sequence($start, $end);
+	 if ($self->strand == -1) {
+            $seq = $seq->reverse_complement;
+        }
+    }
+    if ($self->strand == -1) {
+        @$exon_seqs = reverse @$exon_seqs;
+    }
+    return $exon_seqs;
+}
+
 sub mRNA_Sequence {
     my( $self ) = @_;
     
