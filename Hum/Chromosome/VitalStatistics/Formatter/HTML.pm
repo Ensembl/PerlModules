@@ -263,7 +263,7 @@ sub html_table_largest_transcript_and_exon_count {
     my $html = '
 <table bgcolor="#cccccc" border="0" cellpadding="4" cellspacing="4">
     <tr>
-        <td bgcolor="white"></td>
+        <td></td>
         <th bgcolor="white">Count</th><th bgcolor="white">Name</th>
     </tr>
 ';

@@ -35,6 +35,10 @@ sub head {
     return $self->{'_head'};
 }
 
+sub note {
+    return 'Note: Exon and Intron statistics are derived from the longest transcript';
+}
+
 sub make_report {
     my( $self ) = @_;
     
