@@ -3,7 +3,7 @@ package Hum::EMBL;
 
 use strict;
 use Carp;
-use Hum::EMBL::Line;
+use Hum::EMBL::Line;    # Contains most of the line handling packages
 
 BEGIN {
 
@@ -47,6 +47,18 @@ BEGIN {
         # giving them the same name as the package.
         my %packages = map {$_, 1} values %_handler;
         foreach my $class (keys %packages) {
+        
+            # Load line modules not in Hum/EMBL/Line.pm (scary)
+            {
+                no strict 'refs';
+                my $symbol_table = "${class}::";
+                unless (defined %{$symbol_table}) {
+                    my $file = "$class.pm";
+                    $file =~ s{::}{/}g;
+                    require $file;
+                }
+            }
+        
             my ($name) = $class =~ /([^:]+)$/;
 
             # Don't redefine existing subroutines

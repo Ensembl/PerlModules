@@ -16,7 +16,6 @@ use Hum::EmblUtils qw( add_source_FT
                        add_Organism
                        species_binomial
                        );
-use Hum::EMBL::Line::AC_star;
 use Hum::EMBL (
          ID => 'Hum::EMBL::Line::ID',
          AC => 'Hum::EMBL::Line::AC',
@@ -39,13 +38,15 @@ use Hum::EMBL (
          XX => 'Hum::EMBL::Line::XX',
          SQ => 'Hum::EMBL::Line::Sequence',
        '  ' => 'Hum::EMBL::Line::Sequence',
+     'BQ *' => 'Hum::EMBL::Line::BQ_star',
        '//' => 'Hum::EMBL::Line::End',
     );
 use Hum::EMBL::Utils qw( EMBLdate );
 
 {
     my $number_Ns = 800;
-    my $padding_Ns = 'n' x $number_Ns;
+    my $padding_Ns = 'n'  x $number_Ns;
+    my $padding_Qs = "\0" x $number_Ns;
 
     sub make_embl {
         my( $pdmp ) = @_;
@@ -69,21 +70,30 @@ use Hum::EMBL::Utils qw( EMBLdate );
             or die "Can't get latin name for '$species'";
 
         # Make the sequence
-        my $dna = "";
-	my %contig_lengths;
+        my $dna          = "";
+        my $base_quality = "";
 	my $pos = 0;
 
 	my @contig_pos; # [contig name, start pos, end pos]
         foreach my $contig ($pdmp->contig_list) {
-            my $con = $pdmp->DNA($contig);
+            my $con  = $pdmp->DNA        ($contig);
+            my $qual = $pdmp->BaseQuality($contig);
+            
 	    my $contig_length = length($$con);
-            $contig_lengths{$contig} = $contig_length;
+            
+            # Add padding if we're not at the start
             if ($dna) {
-		$dna .= $padding_Ns;
-		$pos += $number_Ns;
+		$dna          .= $padding_Ns;
+                $base_quality .= $padding_Qs;
+		$pos          += $number_Ns;
 	    }
+            
+            # Append dna and quality
+            $dna          .= $$con;
+            $base_quality .= $$qual;
+            
+            # Record coordinates
 	    my $contig_start = $pos + 1;
-            $dna .= $$con;
 	    $pos += $contig_length;
 	    my $contig_end = $pos;
 	    push(@contig_pos, [$contig, $contig_start, $contig_end]);
@@ -262,8 +272,10 @@ use Hum::EMBL::Utils qw( EMBLdate );
         $embl->newXX;
     
         # Sequence
-        my $sq = $embl->newSequence;
-        $sq->seq($dna);
+        $embl->newSequence->seq($dna);
+        
+        # Base Quality
+        $embl->newBQ_star->quality($base_quality);
         
         $embl->newEnd;
         
