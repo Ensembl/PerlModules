@@ -55,13 +55,20 @@ sub population_fraction {
 sub scan_range_length {
     my( $self ) = @_;
 
-    return 1 + (2 * ceil($self->sd * 3));
+    my $mean = $self->mean;
+    my $half_range = ceil($self->sd * 3);
+    
+    # Only go as far downsteam from the mean as the exon end
+    my $downstream = $half_range > $mean ? $mean : $half_range;
+    return $half_range + $downstream;
 }
 
 sub score_for_position {
     my( $self, $pos ) = @_;
     
-    my $Z = ($pos - $self->mean) / $self->sd;
+    #warn "calculating score for pos '$pos'\n";
+    
+    my $Z = (abs($pos) - $self->mean) / $self->sd;
 
     # Find the area in the two tails of the
     # normal distribution bounded by -Z to +Z
@@ -152,7 +159,7 @@ The length of the sequence to scan for signals,
 centred around the mean.  This is guaranteed to
 include 3 standard deviations on either side of
 the mean, and will thus include 99.97% of
-signals.
+signals, but is trimmed to the end of the exon.
 
 =back
 

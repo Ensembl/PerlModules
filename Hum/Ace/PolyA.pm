@@ -19,8 +19,32 @@ sub find_best {
     confess "Not implemented";
 }
 
+sub find_best_in_string {
+    my( $pkg, $string ) = @_;
+    
+    my $len = length($string);
+    my( @found );
+    foreach my $cons (Hum::Ace::PolyA::Consensus->fetch_all) {
+        my $range  = $cons->scan_range_length;
+        my $signal = $cons->signal;
+        warn "scanning for: $signal\n";
+        my $pos = $len - $range;
+        while (($pos = index($string, $signal, $pos)) > -1) {
+            my $poly = $pkg->new;
+            $poly->signal_position($pos + 1);
+            $poly->site_position($len);
+            $poly->consensus($cons);
+            push(@found, $poly);
+            $pos++;
+        }
+    }
+    return sort {$b->score <=> $a->score} @found;
+}
+
 sub make_all_from_SubSeq_and_ace_tag {
     my( $pkg, $sub, $tag ) = @_;
+    
+    confess "Not implemented";
 }
 
 sub strand {
@@ -77,6 +101,30 @@ sub ace_string_for_SubSeq {
     confess "Not implemented";
 }
 
+sub hexamer_end_position {
+    my( $self ) = @_;
+    
+    my $site = $self->site_position
+        or confess "No site_position";
+    my $signal = $self->signal_position
+        or confess "No signal_position";
+    return $signal - $site + 5;
+}
+
+sub score {
+    my( $self ) = @_;
+    
+    my $score = $self->{'_score'};
+    unless (defined $score) {
+        my $hex_pos = $self->hexamer_end_position;
+        my $cons = $self->consensus
+            or confess "No consensus";
+        $self->{'_score'} = $score = $cons->score_for_position($hex_pos);
+    }
+    warn "score=$score\n";
+    return $score;
+}
+
 1;
 
 __END__
@@ -100,6 +148,14 @@ presented in B<Beaudoing et al, Genome Research,
 10:1001-1010, (2000)>.  The sequence is searched
 within 3 standard deviations either side of the
 mean site position for each hexamer consensus.
+
+=item find_best_in_string( STRING )
+
+This assumes that you are passing a lower case
+nucleotide string that represents the mRNA.  It
+scans the end of the string (end of the last
+exon) and returns a list of candidate PolyA
+obects in order of score, best to worst.
 
 =item make_all_from_SubSeq_and_ace_tag( SUBSEQ, ACE_SUBSEQ )
 
@@ -149,15 +205,3 @@ mapping.
 =head1 AUTHOR
 
 James Gilbert B<email> jgrg@sanger.ac.uk
-
-[qw{  aataaa    3286    16  4.7  }],
-[qw{  attaaa     843    17  5.3  }],
-[qw{  agtaaa     156    16  5.9  }],
-[qw{  tataaa     180    18  7.8  }],
-[qw{  cataaa      76    17  5.9  }],
-[qw{  gataaa      72    18  6.9  }],
-[qw{  aatata      96    18  6.9  }],
-[qw{  aataca      70    18  8.7  }],
-[qw{  aataga      43    18  6.3  }],
-[qw{  aaaaag      49    18  8.9  }],
-[qw{  actaaa      36    17  8.1  }],
