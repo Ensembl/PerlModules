@@ -67,6 +67,7 @@ $cgp_path{'EF'}="$ext_path/EF";
         'Zebrafish'     => [ 'zebrafish'               ],
         'Drosophila'    => [ 'drosophila/sequences'    ],
         'Arabidopsis'   => [ 'arabidopsis'             ],
+        'B.floridae'    => [ 'b_floridae'              ],
         },
 
     HUMACE_DIR    => "/nfs/humace/humpub/humace",
