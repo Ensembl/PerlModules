@@ -18,14 +18,16 @@ my $checkobj = Hum::Checker->new ($db, @clonelist);
 
 =head1 DESCRIPTION
 An object which takes a handle to an acedb database and a list of clones.
-Various checks can then be run on the clones.
+Various checks can then be run on the clones. The results are written to two
+output handles set through output() and ace_output().
 
 =head1 PUBLIC METHODS
 new()
 cloneidlist(@clonelist)
 checkclones(@checks)
-output()
-ace_output();
+output($filehandle)
+ace_output($filehandle)
+ 
 
 =head1 CONTACT
 M.A.Qureshi
@@ -42,7 +44,6 @@ use Bio::Root::Object;
 use Spangle::Clone;
 use Hum::Tracking;
 use Spangle::Ace; # is this needed? 
-#use Ace;          # Import the AcePerl library
 use Data::Dumper;
 use Hum::Tracking qw( ref_from_query );
 use Bio::SeqIO;
@@ -52,9 +53,8 @@ use Bio::PrimarySeq;
 
 sub _initialize {
     my ($self,@args) = @_;
-    my $make = $self->SUPER::_initialize;        
+    my $make = $self->SUPER::_initialize;            
     
-    #my( $dbhandle, @clones ) = $self->_rearrange(['db', 'clones'], @args);
     my( $dbhandle, @clones ) = @args;
     $self->throw("Database handle required") unless ($dbhandle) ;
     
@@ -64,6 +64,8 @@ sub _initialize {
     $self->{'_aceedit'}=[];             # To store any ace corrections
     $self->{'_checklist'} =[];          # Methods to be run on object
     $self->{'_clone'} = undef;          # A stored clone object
+    $self->{'_outfile'} = undef;        # Filehandle for output
+    $self->{'_aceoutfile'} = undef;     # Filehandle for ace output 
 
     #set db handle
     $self->db($dbhandle) if ($dbhandle);
@@ -153,36 +155,48 @@ sub checklist {
 #precondition: cloneid must exist in humace    
 sub checkclones {
     my ($self, @checks) = @_;
-    
+          
+    $self->throw("filehandles must be provided through output() and ace_output")
+                unless ($self->output() && $self->ace_output());
     #set check list
     if (@checks)
         {$self->checklist( @checks);}
     else 
         {$self->throw("Check list required");}
-    
-    
+        
     #test list of clone ids is present
     $self->throw("List of clone IDs required") unless $self->cloneidlist();
     
-    foreach my $cloneid ($self->cloneidlist())
+    CLONE: foreach my $cloneid ($self->cloneidlist())
     {
-        $self->{_clone} = Spangle::Clone->new( $cloneid, $self->db);
-        $self->throw("Clone object not created!") unless ($self->{_clone});
-        #eval
+        my $counter = 1;
+        eval 
         {
-            foreach my $check ($self->checklist())
-            {         
-               my $method = $self->_translatecheck($check);
-               $self->throw("Method not found") unless ($method);
-               my $out = $self->$method();             
+           print "Processing $cloneid ...\n";
+           $self->{_clone} = Spangle::Clone->new( $cloneid, $self->db);
+           $self->throw("Clone object not created!") unless ($self->{_clone});
+        };
+        if ($@)
+        {
+            print "Failed to create $cloneid object. Retrying...\n"; 
+            print "$@\n";
+            $counter ++;
+            if ($counter < 3)   #three tries and you're out
+            {
+                $self->add_output(" CLONE $cloneid not tested: FAILED TO LOAD");
+                next CLONE;
             }
-        }
-        #if eval catches error print
-        #$self->warn("Check $check failed for ".$self->{clone}->id) if ($@);            
-    }
-                                 
+            redo; 
+        }   
+                                
+        foreach my $check ($self->checklist())
+        {
+           my $method = $self->_translatecheck($check);
+           $self->throw("Method not found") unless ($method);
+           $self->$method();
+        }       
+    }                            
 }
-
 
 #############################
 # Check functions 
@@ -198,18 +212,25 @@ sub _accession_check {
     #exclude links
     if ($self->{_clone}->link())
     {
-        $self->add_output(" FAIL: Check cannot run on LINK");
+        $self->add_output(" ABORT: Check cannot run on LINK");
         return;
     }      
     #exclude not sanger clones
-    unless ($self->{_clone}->sequenced_by() =~ /(^sanger|^sc$)/i)
+    my $seq_by = $self->{_clone}->sequenced_by();
+    if ((!$seq_by) || ($seq_by !~ /(^sanger|^sc$)/i))
     {
-        $self->add_output(" FAIL: not sequenced by sanger");
+        $self->add_output(" ABORT: not sequenced by sanger");
         return;
     }
     #get accession and embl id from gull using ace project number tag
     my $ace_suffix;
     my $ace_proj_name = $self->{_clone}->project_name();
+    unless ($ace_proj_name)
+    {
+        $self->add_output(" FAIL: Can't find accession without project tag");
+        return;
+    }
+    
     $ace_suffix = "NULL" unless $ace_suffix = $self->{_clone}->suffix();
  
     my $accession_query = "select accession
@@ -229,14 +250,17 @@ sub _accession_check {
         substr ($id_query, -15, 15) = "suffix is NULL"
     }
  
-    my ($gull_accession) = @{pop @{ref_from_query($accession_query)}};
-    my ($gull_id) = @{pop @{ ref_from_query($id_query)}};
- 
-    unless ($gull_accession && $gull_id)
+    my @arr_accession = @{ref_from_query($accession_query)};
+    my @arr_id = @{ref_from_query($id_query)};
+    #test return from queries 
+    unless (@arr_accession == 1 && @arr_id == 1)
     {
-        $self->add_output(" FAIL: couldn't locate accession and/or id");
+        $self->add_output(" FAIL: non existent or non unique accession and/or id in Gull");
         return;
     }
+    my ($gull_accession) = @{pop @{@arr_accession}};
+    my ($gull_id) = @{pop @{@arr_id}};
+
     #1.check if the clone has a database tag
     my @db_name = $self->{_clone}->database();
     if (@db_name)
@@ -275,7 +299,7 @@ sub _accession_check {
         unless ($embl)
         {
             $self->add_output (" FAIL: EMBL database entry not found");
-            $self->add_ace('del', "DB_info Database \"EMBL\"",
+            $self->add_ace_reptag("DB_info Database \"EMBL\"",
                                          ("\"".$gull_id."\""),
                                          ("\"".$gull_accession."\""));
         }
@@ -283,11 +307,10 @@ sub _accession_check {
     else # No entries under DB.info tag (Failed 1.)
     {
         $self->add_output(" FAIL: No database entries found");
-        $self->add_ace('del', "DB_info Database \"EMBL\"",
+        $self->add_ace_reptag("DB_info Database \"EMBL\"",
                                          ("\"".$gull_id."\""),
                                          ("\"".$gull_accession."\""));
     }
-        
 }
 
 #pre: correctly set sequenced by
@@ -299,13 +322,14 @@ sub _analysis_directory_check {
     #exclude links
     if ($self->{_clone}->link())
     {
-        $self->add_output(" FAIL: Check cannot run on LINK");
+        $self->add_output(" ABORT: Check cannot run on LINK");
         return;
     }
     #exclude not sanger clones
-    unless ($self->{_clone}->sequenced_by() =~ /(^sanger|^sc$)/i)
+    my $seq_by = $self->{_clone}->sequenced_by();
+    if ((!$seq_by) || ($seq_by !~ /(^sanger|^sc$)/i))
     {
-        $self->add_output(" FAIL: not sequenced by sanger");
+        $self->add_output(" ABORT: not sequenced by sanger");
         return;
     }
     #get directory name - take first entry
@@ -322,9 +346,7 @@ sub _analysis_directory_check {
         {$self->add_output("FAIL: directory not found");}
     }
     else #directory tag doesn't exist in Humace
-    {$self->add_output(" FAIL: directory tag not found");}
-        
-  
+    {$self->add_output(" FAIL: directory tag not found");}  
 }
 
 #precondition: correctly set project and sequenced_by tags
@@ -337,36 +359,50 @@ sub _chromosome_check {
     #exclude links
     if ($self->{_clone}->link())
     {
-        $self->add_output(" FAIL: Check cannot run on LINK");
+        $self->add_output(" ABORT: Check cannot run on LINK");
         return;
     }
     #exclude not sanger clones
-    unless ($self->{_clone}->sequenced_by() =~ /(^sanger|^sc$)/i)
+    my $seq_by = $self->{_clone}->sequenced_by();
+    if ((!$seq_by) || ($seq_by !~ /(^sanger|^sc$)/i))
     {
-        $self->add_output(" FAIL: not sequenced by sanger");
+        $self->add_output(" ABORT: not sequenced by sanger");
         return;
     }
     
     # get the ace chromosome tag value
     my $chromosome = $self->{_clone}->chromosome();
+    $chromosome = '' unless ($chromosome); #to prevent undef warning
     $chromosome =~ s/Chr_//i; #regex deletes Chr_ from chromosome value
     
     #query gull for matching chromosome number
     my $project_name = $self->{_clone}->project_name();
+    unless ($project_name)
+    {
+        $self->add_output(" FAIL: Can't find chromosome without project tag");
+        return;
+    }
  
-    my ($gull_chromosome) =  @{pop @{ ref_from_query(qq(
+    my @arr_chromosome = @{ ref_from_query(qq(
                                 select d.chromosome
                                 from project p, clone_project cp,
                                 clone c, chromosomedict d
                                 where p.projectname = '$project_name'
                                 and cp.projectname = p.projectname
                                 and cp.clonename = c.clonename
-                                and c.chromosome = d.ID_dict))}};
+                                and c.chromosome = d.ID_dict))};
+    #test query result
+    unless (@arr_chromosome == 1)
+    {
+        $self->add_output(" FAIL: non-existent or non-unique chromosome value in gull");
+        return;
+    }
+    my ($gull_chromosome) =  @{pop @{@arr_chromosome}};
  
-    if ($chromosome != $gull_chromosome)
+    if ($chromosome ne $gull_chromosome)
     {
         $self->add_output(" FAIL: $chromosome doesn't match $gull_chromosome");
-        $self->add_ace ('del', "Origin Chromosome",
+        $self->add_ace_reptag ("Origin Chromosome",
                                 ("\"Chr_".$gull_chromosome."\""));
     }
     else #chromosomes match
@@ -383,28 +419,53 @@ sub _sequence_check {
     #exclude links
     if ($self->{_clone}->link())
     {
-        $self->add_output(" FAIL: Check cannot run on LINK");
+        $self->add_output(" ABORT: Check cannot run on LINK");
         return;
     }
     #exclude not sanger clones
-    unless ($self->{_clone}->sequenced_by() =~ /(^sanger|^sc$)/i)
+    my $seq_by = $self->{_clone}->sequenced_by();
+    if ((!$seq_by) || ($seq_by !~ /(^sanger|^sc$)/i))
     {
-        $self->add_output(" FAIL: not sequenced by sanger");
+        $self->add_output(" ABORT: not sequenced by sanger");
         return;
     }
     
     #get directory name - take first entry
     my $analysis_dir = $self->{_clone}->analysis_Directory();
- 
+    #get ace suffix
+    my $ace_suffix = $self->{_clone}->suffix();
+    $ace_suffix = '' unless ($ace_suffix);
+    #get project tag and use it to get gull name
+    my $ace_project = $self->{_clone}->project_name();
+    unless ($ace_project)
+    {
+        $self->add_output(" FAIL: project tag required for sequence check"); 
+        return;        
+    }
+    my @arr_name = @{ ref_from_query(qq(
+                                     select clonename
+                                     from clone_project
+                                     where projectname = '$ace_project'))};
+    unless (@arr_name == 1)
+    {
+        $self->add_output(" FAIL: non existent or non-unique project in Gull");
+        return;
+    }
+    my ($gull_name) = @{pop @{@arr_name}}; 
+    my $gull_fullname = $gull_name.$ace_suffix;
+    
     #set the sequence name and path
-    my $seqfile = $analysis_dir.'/'.$self->{_clone}->id().'.seq';
- 
+    #my $seqfile = $analysis_dir.'/'.$self->{_clone}->id().'.seq';
+    my $seqfile = $analysis_dir.'/'.$gull_fullname.'.seq';
+    
     if (-e $seqfile) #check file exists
     {
-        #get length from ace
+        #get length from ace or set it to false
         my $ace_length = $self->{_clone}->seqlength();
+        $ace_length = 0 unless ($ace_length);
+        
         #load file into Bio::SeqIO object to check the size
-        my $seqio = Bio::SeqIO->new(-file => "<$seqfile" , '-format' => 'Fasta')
+        my $seqio = Bio::SeqIO->new(-file => $seqfile , '-format' => 'Fasta')
             or $self->throw("Can't create new Bio::SeqIO from $seqfile '$' : $!");
         my $seq = $seqio->next_seq();
         #get seq lengths from file
@@ -421,8 +482,7 @@ sub _sequence_check {
         }
     }
     else
-    {$self->add_output(" FAIL: $seqfile not found in $analysis_dir");}
- 
+    {$self->add_output(" FAIL: $seqfile not found");}
 }
 
 #pre: correctly set analysis directory
@@ -433,31 +493,60 @@ sub _masked_check {
     #exclude links
     if ($self->{_clone}->link())
     {
-        $self->add_output(" FAIL: Check cannot run on LINK");
+        $self->add_output(" ABORT: Check cannot run on LINK");
         return;
     }
     #exclude not sanger clones
-    unless ($self->{_clone}->sequenced_by() =~ /(^sanger|^sc$)/i)
+    my $seq_by = $self->{_clone}->sequenced_by();
+    if ((!$seq_by) || ($seq_by !~ /(^sanger|^sc$)/i))
     {
-        $self->add_output(" FAIL: not sequenced by sanger");
+        $self->add_output(" ABORT: not sequenced by sanger");
         return;
     }
-    my $analysis_dir = $self->{_clone}->analysis_Directory();
-    my $seqfile = $analysis_dir.'/'.$self->{_clone}->id().'.seq';
-    my $seqpfile = $analysis_dir.'/'.$self->{_clone}->id().'.seq.p';
-    my $seqio = Bio::SeqIO->new(-file => "<$seqfile" , '-format' => 'Fasta')
-       or $self->throw("Can't create new Bio::SeqIO from $seqfile '$' : $!");
-    my $seq = $seqio->next_seq();
-    my $seqpio = Bio::SeqIO->new(-file => "<$seqpfile" , '-format' => 'Fasta')
-       or $self->throw("Can't create new Bio::SeqIO from $seqpfile '$' : $!");
-        #get seq lengths from files
-    my $seqp = $seqpio->next_seq();
-    my $seq_length = $seq->length();
-    my $seqp_length = $seqp->length();
-    if ($seq_length == $seqp_length)
-    {$self->add_output(" PASS: Sequence Check");}
-    else
-    {$self->add_output(" FAIL: $seqfile doesn't match $seqpfile length");}
+  
+    my $analysis_dir = $self->{_clone}->analysis_Directory();    
+    #get ace suffix
+    my $ace_suffix = $self->{_clone}->suffix();
+    $ace_suffix = '' unless ($ace_suffix);
+    #get project tag and use it to get gull name
+    my $ace_project = $self->{_clone}->project_name();
+    unless ($ace_project)
+    {
+        $self->add_output(" FAIL: project tag required for masked sequence check"); 
+        return;        
+    }
+    my @arr_name = @{ ref_from_query(qq(
+                                     select clonename
+                                     from clone_project
+                                     where projectname = '$ace_project'))};
+    unless (@arr_name == 1)
+    {
+        $self->add_output(" FAIL: non existent or non-unique project in Gull");
+        return;
+    }
+    my ($gull_name) = @{pop @{@arr_name}}; 
+    my $gull_fullname = $gull_name.$ace_suffix;
+    my $seqfile = $analysis_dir.'/'.$gull_fullname.'.seq';
+    my $seqpfile = $analysis_dir.'/'.$gull_fullname.'.seq.p';
+    
+    if (-e $seqfile && -e $seqpfile)
+    {
+         my $seqio = Bio::SeqIO->new(-file => "<$seqfile" , '-format' => 'Fasta')
+            or $self->throw("Can't create new Bio::SeqIO from $seqfile '$' : $!");
+         my $seq = $seqio->next_seq();
+         my $seqpio = Bio::SeqIO->new(-file => "<$seqpfile" , '-format' => 'Fasta')
+            or $self->throw("Can't create new Bio::SeqIO from $seqpfile '$' : $!");
+             #get seq lengths from files
+         my $seqp = $seqpio->next_seq();
+         my $seq_length = $seq->length();
+         my $seqp_length = $seqp->length();
+         if ($seq_length == $seqp_length)
+         {$self->add_output(" PASS: Sequence Check");}
+         else
+         {$self->add_output(" FAIL: $seqfile doesn't match $seqpfile length");}
+     }
+     else
+     {$self->add_output(" FAIL: $seqfile or $seqpfile doesn't exist");}
 } 
 
 #pre: correct sequenced_by and clonename
@@ -468,27 +557,36 @@ sub _project_check {
     #exclude links
     if ($self->{_clone}->link())
     {
-        $self->add_output(" FAIL: Check cannot run on LINK");
+        $self->add_output(" ABORT: Check cannot run on LINK");
         return;
     }
     #exclude not sanger clones
-    unless ($self->{_clone}->sequenced_by() =~ /(^sanger|^sc$)/i)
+    #my $seq_by = '' unless (my $seq_by = $self->{_clone}->sequenced_by());
+    my $seq_by = $self->{_clone}->sequenced_by();   
+    if ((!$seq_by) || ($seq_by !~ /(^sanger|^sc$)/i))
     {
-        $self->add_output(" FAIL: not sequenced by sanger");
+        $self->add_output(" ABORT: not sequenced by sanger");
         return;
     }
     #get project tag
-    my $ace_project = $self->{_clone}->project_name();
-
+    my $ace_project = "" unless (my $ace_project = 
+                                    $self->{_clone}->project_name());
+    
     #remove any suffix from the clone name = clone->id
     my $clone_name = $self->{_clone}->id();
     #only a-f are suffixes
     $clone_name =~ s/[a-f]$//i;
     #extract gull projectname
-    my ($gull_project) = @{ pop @{ ref_from_query(qq(
+    my @arr_project = @{ ref_from_query(qq(
                                     select projectname
                                     from clone_project
-                                    where clonename = '$clone_name'))}};
+                                    where clonename = '$clone_name'))};
+    unless (@arr_project == 1)
+    {
+        $self->add_output(" FAIL: non existent or non-unique chromosome in Gull");
+        return;
+    }
+    my ($gull_project) = @{ pop @{@arr_project}};
     if ($ace_project eq $gull_project)
     {
         $self->add_output(" PASS: Project Check");
@@ -496,8 +594,7 @@ sub _project_check {
     else
     {
         $self->add_output("  FAIL: ace $ace_project doesn't match $gull_project");
-        $self->add_ace ('del', "Project Project_name",
-                                            ("\"".$gull_project."\""));
+        $self->add_ace_reptag ("Project Project_name", ("\"".$gull_project."\""));
     }
 }
 
@@ -509,13 +606,14 @@ sub _clonename_check {
     #exclude links
     if ($self->{_clone}->link())
     {
-        $self->add_output(" FAIL: Check cannot run on LINK");
+        $self->add_output(" ABORT: Check cannot run on LINK");
         return;
     }
     #exclude not sanger clones
-    unless ($self->{_clone}->sequenced_by() =~ /(^sanger|^sc$)/i)
+    my $seq_by = $self->{_clone}->sequenced_by();   
+    if ((!$seq_by) || ($seq_by !~ /(^sanger|^sc$)/i))
     {
-        $self->add_output(" FAIL: not sequenced by sanger");
+        $self->add_output(" ABORT: not sequenced by sanger");
         return;
     }
    
@@ -526,10 +624,21 @@ sub _clonename_check {
     $ace_suffix = '' unless ($ace_suffix);
  
     my $ace_project = $self->{_clone}->project_name();
-    my ($gull_name) = @{pop @{ ref_from_query(qq(
+    unless ($ace_project)
+    {
+        $self->add_output(" FAIL: project tag required for name check");
+        return;
+    }
+    my @arr_name = @{ ref_from_query(qq(
                                      select clonename
                                      from clone_project
-                                     where projectname = '$ace_project'))}};
+                                     where projectname = '$ace_project'))};
+    unless (@arr_name == 1)
+    {
+        $self->add_output(" FAIL: non existent or non-unique project in Gull");
+        return;
+    }
+    my ($gull_name) = @{pop @{@arr_name}};
  
     my $gull_fullname = $gull_name.$ace_suffix;
  
@@ -540,11 +649,13 @@ sub _clonename_check {
      else
      {
          $self->add_output(" FAIL: ace $ace_name doesn't match $gull_fullname");
-         $self->add_ace ('ren', ("\"".$gull_fullname."\""));
+         $self->add_ace_renobj ('Genomic Sequence', 
+                                            ("\"".$ace_name."\""),
+                                            ("\"".$gull_fullname."\""));
      }
 }
 
-#start block for _seq_by_check
+#start block for _seq_by_check creates locally-scoped static variables
 {
 #valid sequenced_by values
     my %valid_lab = ( 'agct'            , 'ACGT at the University of Oklahoma',
@@ -587,11 +698,17 @@ sub _clonename_check {
         #exclude links
         if ($self->{_clone}->link())
         {
-            $self->add_output(" FAIL: Check cannot run on LINK");
+            $self->add_output(" ABORT: Check cannot run on LINK");
             return;
         }
         my $labfound = undef;   #flag for succesful identification of lab
-        my $ace_lab = $self->{_clone}->sequenced_by();        
+        my $ace_lab = $self->{_clone}->sequenced_by();
+        unless ($ace_lab)
+        {
+            $self->add_output (" FAIL: Sequenced_by tag not set");
+            return;
+        }
+                
         #check against valid labs
         foreach my $lab (values(%valid_lab))
         {
@@ -605,7 +722,7 @@ sub _clonename_check {
             {
                 $labfound = 'True';
                 $self->add_output(" FAIL: $ace_lab invalid format");
-                $self->add_ace('del', "Origin Sequenced_by", ("\"".$lab."\""));
+                $self->add_ace_reptag("Origin Sequenced_by", ("\"".$lab."\""));
                 last;
             }
         }
@@ -617,16 +734,14 @@ sub _clonename_check {
                 if ($ace_lab =~ /$entry/i)
                 {
                     $labfound = 'True';
-                    $self->add_output(" FAIL: $ace_lab is abbreviation");
- 
-                    $self->add_ace('del', "Origin Sequenced_by",
+                    $self->add_output(" FAIL: $ace_lab is abbreviation"); 
+                    $self->add_ace_reptag("Origin Sequenced_by",
                                                 ("\"".$abbreviations{$entry}."\""));
                 }
             }
         }
         #if lab entry still not found then output failure
-        $self->add_output (" FAIL: $ace_lab not found in valid entries")
-                                                            unless ($labfound);
+        $self->add_output (" FAIL: $ace_lab is not a valid value") unless ($labfound);
     }#end function
 }#end block
 
@@ -637,7 +752,7 @@ sub _subsequence_check {
     #exclude links
     if ($self->{_clone}->link())
     {
-        $self->add_output(" FAIL: Check cannot run on LINK");
+        $self->add_output(" ABORT: Check cannot run on LINK");
         return;
     }
         
@@ -646,14 +761,32 @@ sub _subsequence_check {
                                                 unless (@subsequence_list);  
     foreach my $subseq (@subsequence_list)
     {
-        #length of subsequence in clone        
+        ##length of subsequence in clone        
         my @sub_coordinates = $self->{_clone}->subseq_clone_coordinates($subseq);
-        #remove
-        #print Dumper (@sub_coordinates);
+        unless (@sub_coordinates == 2)
+        {
+            $self->add_output(" FAIL: $subseq coordinates in bad format in $self->id ("
+                                                                        .@sub_coordinates.")");
+            next;
+        }
         my ($sub_start, $sub_end) = $self->_minmax (@sub_coordinates);
         my $sub_length = abs ($sub_end - $sub_start) +1;
-        #length of subsequence as object
+        
+        ##length of subsequence as object
         my @coordinates = $self->{_clone}->subseq_internal_coordinates($subseq);
+        if (@coordinates == 0)
+        {
+            $self->add_output(" FAIL: $subseq coordinates not found");
+            $self->add_ace_delobj ('Sequence', $subseq);   #delete sequence object
+            $self->add_ace_deltag ('Structure Subsequence', '"'.$subseq.'"'); #delete reference ot sequence
+            next;
+        }
+        
+        if (@coordinates%2 != 0)
+        {      
+            $self->add_output(" FAIL: $subseq odd number coordinates (".@coordinates.")");
+             next;
+        }
         my ($start, $end) = $self->_minmax(@coordinates);
         my $length = abs ($end - $start) +1;
         
@@ -698,7 +831,7 @@ sub _link_check {
         } 
     }
     else 
-    {$self->add_output(" FAIL: Sequence isn't link");}
+    {$self->add_output(" ABORT: Sequence isn't link");}
 }
 
 #############################
@@ -707,63 +840,94 @@ sub _link_check {
 =head2 output
 
     Title   :   output
-    Usage   :   $self->output()
-    Function:   Returns output of checkclones()
-    Returns :   List of strings
-    Args    :   none
+    Usage   :   $self->output($handle, $filename)
+    Function:   get/set method for output of checkclones()
+    Returns :   contents of file pointed to by handle
+    Args    :   filehandle
 
 =cut
 sub output {
-    my ($self) = @_;
-    return @{$self->{_output}};
+    my ($self, $handle) = @_;
+    if ($handle)
+    {
+        $self->{_outfile} = $handle;
+    }
+    return \*{$self->{_outfile}};
 }
 
 =head2 ace_output
 
     Title   :   ace_output
-    Usage   :   $self->ace_output()
-    Function:   Returns corrections based on checks run by 
+    Usage   :   $self->ace_output($filename)
+    Function:   get/set method for corrections based on checks run by 
                 checkclones() in .ace format
-    Returns :   List of strings
-    Args    :   none
+    Returns :   contents of file pointed to by handle
+    Args    :   filehandle
 
 =cut
 sub ace_output {
-    my ($self) = @_;
-    return @{$self->{_aceedit}};
+    my ($self, $handle) = @_;
+    if ($handle)
+    {   
+        $self->{_aceoutfile} = $handle;        
+    }
+    return \*{$self->{_aceoutfile}};
 }
 
 sub add_output {
     my ($self, $str) = @_;
     if ($str)
     {
-        push ((@{$self->{'_output'}}), $self->{_clone}->id.$str."\n");
+        print {$self->{_outfile}} $self->{_clone}->id.$str."\n";
     }
-    return @{$self->{'_output'}};
 }
 
-#function can be 'del' for delete and replace or 'ren' for rename an object
-# the tag determines the branch deleted and replaced by value (if 'del') 
-# or the new name (if 'ren').
-#value tags and values must be supplied double quoted where appropriate
-sub add_ace {
-    my ($self, $function, $tag, @value) = @_;
-    my $class = "genomic_sequence";
+sub add_ace_deltag {
+    my ($self, $tag) = @_;
+    my $class = 'Genomic Sequence';
     my $object = $self->{_clone}->id;
-    if ($function =~ /del/i)
-    {
-        my $setobject = "$class \"$object\"\n";   #define the object
-        my $deleteline = "-D $tag\n";           #delete the tag (if it exists)
-        my $edit = "$tag @value\n\n";           #replace it with new value(s)
-        push (@{$self->{_aceedit}}, $setobject);
-        push (@{$self->{_aceedit}}, $deleteline);
-        push (@{$self->{_aceedit}}, $edit);
-    }
-    elsif ($function =~ /ren/i)
-    {
-        my $renameobject = "-R $class \"$object\" \"$tag\"\n\n";
-        push (@{$self->{_aceedit}}, $renameobject);
-    } 
+    
+    my $setobject = "$class \"$object\"\n";   #define the object
+    my $deleteline = "-D $tag\n";           #delete the tag (if it exists)
+    print {$self->{_aceoutfile}} $setobject;
+    print {$self->{_aceoutfile}} $deleteline;
+    print {$self->{_aceoutfile}} "\n";
+}
+
+sub add_ace_delobj {
+    my ($self, $type, $name) = @_;
+    my $class = $type;
+    my $object = $name;
+    
+    my $deleteline = "-D $class \"$object\"\n";
+    print {$self->{_aceoutfile}} $deleteline;
+    print {$self->{_aceoutfile}} "\n";
+}
+
+sub add_ace_reptag {
+    my ($self, $tag, @value) = @_;
+    my $class = 'Genomic Sequence';
+    my $object = $self->{_clone}->id;
+    
+    my $setobject = "$class \"$object\"\n";   #define the object
+    my $deleteline = "-D $tag\n";           #delete the tag (if it exists)
+    my $edit = "$tag @value\n"; #replace it with new value(s)
+    print {$self->{_aceoutfile}} $setobject;
+    print {$self->{_aceoutfile}} $deleteline;
+    print {$self->{_aceoutfile}} $edit;
+    print {$self->{_aceoutfile}} "\n"; 
+
+}
+
+sub add_ace_renobj {
+    my ($self, $type, $name, $rename) = @_;
+    my $class = $type;
+    my $object = $name;
+    my $newobj = $rename;
+    
+    my $renameobject = "-R $class \"$object\" \"$newobj\"\n";
+    print  {$self->{_aceoutfile}} $renameobject;
+    print {$self->{_aceoutfile}} "\n";
 }
 
 ##########################
