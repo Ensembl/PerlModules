@@ -150,11 +150,11 @@ use Carp;
 sub compose {
     my( $entry ) = @_;
     
-    my( @formatted );
+    my( @compose );
     foreach my $line ($entry->lines()) {
-        push( @formatted, $line->toString() );
+        push( @compose, $line->toString() );
     }
-    return @formatted;
+    return @compose;
 }
 
 
@@ -189,10 +189,10 @@ sub handler {
         my %packages = map {$_, 1} values %$handler;
         foreach my $class (keys %packages) {
             my ($name) = $class =~ /([^:]+)$/;
-            my $func = "${entry_pack}::$name";
             
             # Don't redefine existing subroutines
             ### IS THIS THE CORRECT BEHAVIOUR? ###
+            my $func = "${entry_pack}::$name";
             unless (defined( &$func )) {
                 no strict 'refs';
                 *$func = sub {
@@ -206,6 +206,16 @@ sub handler {
                     } else {
                         return $lines[0];
                     }
+                }
+            }
+            
+            # Define functions so can say $entry->newCC
+            my $newFunc = "${entry_pack}::new$name";
+            unless (defined( &$newFunc )) {
+                no strict 'refs';
+                *$newFunc = sub {
+                    my $pkg = shift;
+                    return $class->new(@_);
                 }
             }
         }
@@ -263,9 +273,9 @@ sub makeFieldAccessFuncs {
     my( $pkg, @names ) = @_;
     
     foreach my $field (@names) {
-        my $func = "$pkg\:\:$field";
-    
         no strict 'refs';
+    
+        my $func = "${pkg}::$field";
         *$func = sub {
             my( $line, $data ) = @_;
 
@@ -273,6 +283,29 @@ sub makeFieldAccessFuncs {
                 $line->data->{$field} = $data;
             } else {
                 return $line->data->{$field};
+            }
+        }
+    }
+}
+
+sub makeListAccessFuncs {
+    my( $pkg, @names ) = @_;
+    
+    foreach my $field (@names) {
+        no strict 'refs';
+    
+        my $func = "${pkg}::$field";
+        *$func = sub {
+            my $line = shift;
+
+            if (@_) {
+                $line->data->{$field} = [@_];
+            } else {
+                if ($line->data->{$field}) {
+                    return @{$line->data->{$field}};
+                } else {
+                    return;
+                }
             }
         }
     }
@@ -361,6 +394,21 @@ sub wrap {
     return @lines;
 }
 
+sub commaWrap {
+    my( $line, $prefix, $text ) = @_;
+
+    my $margin = $line->wrapMargin() - 1;
+    
+    # Pad prefix to 5 characters
+    $prefix = $prefix . ( ' ' x (5 - length($prefix)) );
+    
+    my( @lines );
+    while ($text =~ /(.{1,$margin}(,|$))/g) {
+        push( @lines, $prefix . $1 . "\n" );
+    }
+    return @lines;
+}
+
 sub wrapMargin {
     my( $line, $margin ) = @_;
     
@@ -392,11 +440,11 @@ sub parse {
 sub compose {
     my( $line ) = @_;
     
-    my( @formatted );
+    my( @compose );
     foreach my $txt ($line->list()) {
-        push( @formatted, $line->wrap('CC', $txt) );
+        push( @compose, $line->wrap('CC', $txt) );
     }
-    return @formatted;
+    return @compose;
 }
 
 ###############################################################################
@@ -452,7 +500,12 @@ package Hum::EMBL::AC;
 use strict;
 use Carp;
 use vars qw( @ISA );
-@ISA = qw( Hum::EMBL::Line );
+
+BEGIN {
+    @ISA = qw( Hum::EMBL::Line );
+    Hum::EMBL::AC->makeFieldAccessFuncs(qw( primary     ));
+    Hum::EMBL::AC->makeListAccessFuncs (qw( secondaries ));
+}
 
 sub parse {
     my( $line ) = @_;
@@ -463,36 +516,15 @@ sub parse {
     foreach (@lines) {
         push( @ac, split /;\s*/ );
     }
-    $line->list(@ac);
-}
-
-sub primary {
-    my( $line, $prim ) = @_;
-    
-    my @ac = $line->list();
-    if ($prim) {
-        $ac[0] = $prim;
-        $line->list( @ac );
-    } else {
-        return $ac[0];
-    }
-}
-
-sub secondaries {
-    my( $line, @secs ) = @_;
-    
-    my @ac = $line->list();
-    if (@secs) {
-        $line->list( $ac[0], @secs );
-    } else {
-        return @ac[1..$#ac];
-    }
+    my $primary = shift( @ac );
+    $line->primary    ( $primary );
+    $line->secondaries( @ac );
 }
 
 sub compose {
     my( $line ) = @_;
     
-    my $ac = join(' ', map "$_;", $line->list());
+    my $ac = join( '', map "$_;", ($line->primary(), $line->secondaries()) );
     
     return $line->wrap('AC', $ac);
 }
@@ -540,7 +572,7 @@ use vars qw( @ISA );
 BEGIN {
 
     @ISA = qw( Hum::EMBL::Line );
-    Hum::EMBL::ID->makeFieldAccessFuncs(qw(
+    Hum::EMBL::DT->makeFieldAccessFuncs(qw(
                                            createdDate
                                            createdRelease
                                            date
@@ -647,11 +679,11 @@ sub parse {
 sub compose {
     my( $line ) = @_;
     
-    my( @formatted );
+    my( @compose );
     foreach my $txt ($line->list()) {
-        push( @formatted, $line->wrap('DE', $txt) );
+        push( @compose, $line->wrap('DE', $txt) );
     }
-    return @formatted;
+    return @compose;
 }
 
 ###############################################################################
@@ -693,13 +725,7 @@ use vars qw( @ISA );
 
 BEGIN {
     @ISA = qw( Hum::EMBL::Line );
-    Hum::EMBL::ID->makeFieldAccessFuncs(qw( version ));
-}
-
-
-sub new {
-    my( $pkg ) = @_;
-    return bless {}, $pkg;
+    Hum::EMBL::SV->makeFieldAccessFuncs(qw( version ));
 }
 
 sub parse {
@@ -731,13 +757,7 @@ use vars qw( @ISA );
 
 BEGIN {
     @ISA = qw( Hum::EMBL::Line );
-    Hum::EMBL::ID->makeFieldAccessFuncs(qw( nucleotide ));
-}
-
-
-sub new {
-    my( $pkg ) = @_;
-    return bless {}, $pkg;
+    Hum::EMBL::NI->makeFieldAccessFuncs(qw( identifier ));
 }
 
 sub parse {
@@ -746,13 +766,13 @@ sub parse {
     my $string = $line->pullString();
     my( $version ) = $string =~ /^NI   (\S+)/
         or die "Can't parse NI line: $string";
-    $line->nucleotide( $version );
+    $line->identifier( $version );
 }
 
 sub compose {
     my( $line ) = @_;
     
-    my $nuc = $line->nucleotide();
+    my $nuc = $line->identifier();
     return "NI   $nuc\n";
 }
 
@@ -788,23 +808,155 @@ sub compose {
 
 ###############################################################################
 
-package Hum::EMBL::Sequence;
-
-use strict;
-use Carp;
-use vars qw( @ISA );
-@ISA = qw( Hum::EMBL::Line );
-
-
-###############################################################################
-
 package Hum::EMBL::Reference;
 
 use strict;
 use Carp;
 use vars qw( @ISA );
-@ISA = qw( Hum::EMBL::Line );
 
+BEGIN {
+    @ISA = qw( Hum::EMBL::Line );
+    Hum::EMBL::Reference->makeFieldAccessFuncs(qw(
+                                                  number
+                                                  title
+                                                  ));
+    Hum::EMBL::Reference->makeListAccessFuncs(qw(
+                                                 authors
+                                                 locations
+                                                 comments
+                                                 positions
+                                                 crossrefs
+                                                 xrefs
+                                                 ));
+}
+
+sub parse {
+    my( $line ) = @_;
+    
+    my $string = $line->pullString();
+    
+    # The number of this reference
+    my ($number) = $string =~ /^RN   \[(\d+)/m
+        or die "Can't parse reference number from:\n$string";
+    $line->number( $number );
+    
+    # Comments about this reference
+    my( @comments );
+    while ($string =~ /^RC   (.+)$/mg) {
+        push( @comments, $1 );
+    }
+    $line->comments( join(' ', @comments) );
+    
+    # Positions in the nucleotide sequence associated with
+    # this reference.  Could store as Location objects.
+    my( @positions );
+    while ($string =~ /^RP   (.+)$/mg) {
+        push( @positions, split( /,\s*/, $1) );
+    }
+    $line->positions( @positions );
+    
+    # Database cross-references (Only MEDLINE at the time
+    # of writing).  Stored as a list of mini-objects.
+    my( @xrefs );
+    while ($string =~ /^RX   (\S+);\s+(.+)\.$/mg) {
+        my $xr = Hum::EMBL::XRef->new();
+        $xr->db( $1 );
+        $xr->id( $2 );
+        push( @xrefs, $xr );
+    }
+    $line->xrefs( @xrefs );
+    
+    # The authors of the reference
+    my( @authors );
+    while ($string =~ /^RA   (.+)$/mg) {
+        push( @authors, split(/,\s+|;/, $1) );
+    }
+    $line->authors( @authors );
+    
+    # The title of the reference
+    my @title = $string =~ /^RT   (.*?);?$/mg;
+    my $title = join ' ', @title;
+    $title =~ s/^"|"$//g;
+    $line->title( $title );
+    
+    # Locations are actually quite complex, and may refer
+    # to papers, books, patents, or the addresses of the 
+    # authors.  I decided to just store them verbatim,
+    # until it is deemed necessary to do something more
+    # sophisticated.
+    my @locations = $string =~ /^RL   (.+)$/mg;
+    $line->locations( @locations );
+}
+
+sub compose {
+    my( $line ) = @_;
+    
+    my( @compose );
+    
+    my $num = $line->number();
+    push( @compose, "RN   [$num]\n" );
+    
+    foreach my $comment ($line->comments) {
+        push( @compose, $line->wrap('RC', $comment) );
+    }
+    
+    my $pos_line = join(',', $line->positions);
+    push( @compose, $line->commaWrap('RP', $pos_line) );
+    
+    foreach my $xr ($line->xrefs) {
+        my $db = $xr->db();
+        my $id = $xr->id();
+        push( @compose, "RX   $db; $id.\n" );
+    }
+    
+    my $au_line = join(', ', $line->authors) . ';';
+    push( @compose, $line->commaWrap('RA', $au_line) );
+    
+    if (my $title = $line->title) {
+        push( @compose, $line->wrap('RT', qq("$title";)) );
+    } else {
+        push( @compose, "RT   ;\n" );
+    }
+    
+    foreach my $loc ($line->locations) {
+        push( @compose, $line->wrap('RL', $loc) );
+    }
+    
+    return( @compose );
+}
+
+###############################################################################
+
+package Hum::EMBL::XRef;
+
+use strict;
+use Carp;
+
+sub new {
+    my( $pkg ) = @_;
+    
+    return bless [], $pkg;
+}
+
+sub db {
+    my( $line, $db ) = @_;
+    
+    if ($db) {
+        $line->[0] = $db;
+    } else {
+        return $line->[0];
+    }
+}
+
+sub id {
+    my( $line, $id ) = @_;
+    
+    if ($id) {
+        $line->[1] = $id;
+    } else {
+        return $line->[1];
+    }
+}
 
 ###############################################################################
 
@@ -813,8 +965,49 @@ package Hum::EMBL::DR;
 use strict;
 use Carp;
 use vars qw( @ISA );
-@ISA = qw( Hum::EMBL::Line );
 
+BEGIN {
+    @ISA = qw( Hum::EMBL::Line );
+    Hum::EMBL::Reference->makeFieldAccessFuncs(qw(
+                                                  db
+                                                  primary
+                                                  secondary
+                                                  ));
+}
+
+sub store {
+    my $pkg = shift;
+    
+    my( @db_xrefs );
+    foreach my $line (@_) {
+        my $dr = $pkg->new();
+        $dr->string( $line );
+        push( @db_xrefs, $dr );
+    }
+    return( @db_xrefs );
+}
+
+sub parse {
+    my( $line ) = @_;
+    
+    my $string = $line->pullString();
+    
+    my( $db, $prim, $sec ) = $string =~ /DR   (\S+); (\S+); (\S+)\.$/
+        or confess "Can't parse DR line: $string";
+    $line->db       ( $db   );
+    $line->primary  ( $prim );
+    $line->secondary( $sec  );
+}
+
+sub compose {
+    my( $line ) = @_;
+    
+    my $db   = $line->db();
+    my $prim = $line->primary();
+    my $sec  = $line->secondary();
+    
+    return "DR   $db; $prim; $sec.\n";
+}
 
 ###############################################################################
 
@@ -823,8 +1016,55 @@ package Hum::EMBL::Organism;
 use strict;
 use Carp;
 use vars qw( @ISA );
-@ISA = qw( Hum::EMBL::Line );
 
+BEGIN {
+    @ISA = qw( Hum::EMBL::Line );
+    Hum::EMBL::Organism->makeFieldAccessFuncs(qw(
+                                                 species
+                                                 genus
+                                                 common
+                                                 ));
+    Hum::EMBL::Organism->makeListAccessFuncs(qw(
+                                                classification
+                                                ));
+}
+
+sub parse {
+    my( $line ) = @_;
+    
+    my $string = $line->pullString();
+        
+    my ($genus, $species, $common) = 
+        $string =~ /^OS   (\S+)\s+(.+?)?(?:\s+\((\s+)\))?/m
+        or confess "Can't parse OS line from:\n$string";
+    
+    my( @class );
+    foreach my $line ($string =~ /^OC   (.+)$/mg) {
+        push(@class, split /[\s\.;]+/, $line);
+    }
+    confess "No classification lines in:\n$string" unless @class;
+    
+    $line->species( $species );
+    $line->genus  ( $genus   );
+    $line->common ( $common  );
+    $line->classification(@class);
+}
+
+sub compose {
+    my( $line ) = @_;
+    
+    my $species = $line->species();
+    my $genus   = $line->genus();
+    my $common  = $line->common();
+    
+    my $os = "OS   $genus";
+    $os .= " $species"  if $species;
+    $os .= " ($common)" if $common;
+    $os .= "\n";
+    
+    my $class_string = join('; ', $line->classification()) . '.';
+    return( $os, $line->wrap('OC', $class_string ) );
+}
 
 ###############################################################################
 
@@ -836,9 +1076,59 @@ use vars qw( @ISA );
 @ISA = qw( Hum::EMBL::Line );
 
 
+BEGIN {
+    @ISA = qw( Hum::EMBL::Line );
+    Hum::EMBL::NI->makeFieldAccessFuncs(qw( organelle ));
+}
+
+sub parse {
+    my( $line ) = @_;
+    
+    my $string = $line->pullString();
+    my( $organelle ) = $string =~ /^OG   (.+)/
+        or die "Can't parse OG line: $string";
+    $line->organelle( $organelle );
+}
+
+sub compose {
+    my( $line ) = @_;
+    
+    my $organelle = $line->organelle();
+    return "OG   $organelle\n";
+}
+
 ###############################################################################
 
 package Hum::EMBL::FeatureTable;
+
+use strict;
+use Carp;
+use vars qw( @ISA );
+@ISA = qw( Hum::EMBL::Line );
+
+sub store {
+    my $pkg = shift;
+    
+    my( @features );
+    my $string = shift;
+    foreach (@_) {
+        if (/FT   \S/) {
+            my $feat = $pkg->new();
+            $feat->string( $string );
+            push( @features, $feat );
+            $string = $_;
+        } else {
+            $string .= $_;
+        }
+    }
+    my $last = $pkg->new();
+    $last->string( $string );
+    return( @features, $last );    
+}
+
+###############################################################################
+
+package Hum::EMBL::Sequence;
 
 use strict;
 use Carp;
