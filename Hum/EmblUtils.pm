@@ -161,6 +161,12 @@ BEGIN {
             Metatheria Diprotodontia Macropodidae Macropus
             )],
 
+        opossum =>
+        [qw(Didelphis virginiana), 'North American oppossum', qw(
+            Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia
+            Metatheria Didelphimorphia Didelphidae Didelphis
+            )],
+
         carp =>
         [qw(Cyprinus carpio), 'carp', qw(
             Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Actinopterygii

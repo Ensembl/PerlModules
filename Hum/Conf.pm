@@ -69,6 +69,7 @@ my $ftp_structure = {
     'Zebrafish'     => [ 'zebrafish'                ],
     'M.truncatula'  => [ 'm_truncatula'             ],
     'Wallaby'       => [ 'wallaby'                  ],
+    'Opossum'       => [ 'opossum'                  ],
     };
 
 my $humace_queue = "$humpub/humace/queue";
