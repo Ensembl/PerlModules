@@ -256,6 +256,12 @@ sub list_positive_SubSeq_names {
     return @{$self->{'_positive_SubSeq_name_list'}};
 }
 
+sub drop_positive_SubSeq_names {
+    my( $self ) = @_;
+    
+    $self->{'_positive_SubSeq_name_list'} = undef;
+}
+
 sub get_all_SubSeqs {
     my( $self ) = @_;
     

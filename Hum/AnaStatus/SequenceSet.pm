@@ -22,8 +22,15 @@ sub new_from_set_name {
     if ($set_name =~ /=/) {
         return $pkg->_new_from_soft_set_name($set_name);
     } else {
-        return $pkg->_new_from_hard_set_name($set_name);
+        return $pkg->_new_from_hard_set_name($set_name, " and a.is_current = 'Y' ");
     }
+}
+
+# Also inclues the non-current seuqences
+sub new_archival_from_set_name {
+    my( $pkg, $set_name ) = @_;
+    
+    return $pkg->_new_from_hard_set_name($set_name, "");
 }
 
 {
@@ -78,7 +85,7 @@ sub new_from_set_name {
 }
 
 sub _new_from_hard_set_name {
-    my( $pkg, $set_name ) = @_;
+    my( $pkg, $set_name, $clause ) = @_;
 
     my $sth = prepare_statement(qq{
         SELECT aset.set_id
@@ -91,7 +98,7 @@ sub _new_from_hard_set_name {
         WHERE aset.set_id = ss.set_id
           AND ss.ana_seq_id = a.ana_seq_id
           AND a.seq_id = s.seq_id
-          AND a.is_current = 'Y'
+          $clause
           AND aset.set_name = '$set_name'
         ORDER BY ss.rank ASC
         });

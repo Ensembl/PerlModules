@@ -428,10 +428,10 @@ sub express_data_fetch {
             # Is there a Locus attached?
             if (my $locus_tag = $t_seq->at('Visible.Locus[1]')) {
                 my $locus_name = $locus_tag->name;
-                my $locus = $name_method{$locus_name};
+                my $locus = $name_locus{$locus_name};
                 unless ($locus) {
                     $locus = Hum::Ace::Locus->new_from_ace_tag($locus_tag);
-                    $name_method{$locus_name} = $locus;
+                    $name_locus{$locus_name} = $locus;
                 }
                 $sub->Locus($locus);
             }
