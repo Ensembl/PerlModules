@@ -8,16 +8,22 @@ use Carp;
 use Hum::Submission 'prepare_statement';
 use Hum::AnaStatus::EnsAnalysisDB;
 
-sub fetch_all_for_ana_seq_id {
-    my( $pkg, $ana_seq_id ) = @_;
+sub fetch_all_for_ensembl_db_id {
+    my( $pkg, $id ) = @_;
     
-    return $pkg->_fetch_all_where(qq{ ana_seq_id = $ana_seq_id });
+    return $pkg->_fetch_all_where(qq{ ensembl_db_id = $id });
+}
+
+sub fetch_all_for_ana_seq_id {
+    my( $pkg, $id ) = @_;
+    
+    return $pkg->_fetch_all_where(qq{ ana_seq_id = $id });
 }
 
 sub fetch_all_complete_for_ana_seq_id {
-    my( $pkg, $ana_seq_id ) = @_;
+    my( $pkg, $id ) = @_;
     
-    return $pkg->_fetch_all_where(qq{ ana_seq_id = $ana_seq_id AND is_complete = 'Y' });
+    return $pkg->_fetch_all_where(qq{ ana_seq_id = $id AND is_complete = 'Y' });
 }
 
 sub _fetch_all_where {
@@ -93,14 +99,19 @@ sub get_EnsAnalysisDB {
     my $db_id = $self->ensembl_db_id
         or confess "ensembl_db_id not set";
     return Hum::AnaStatus::EnsAnalysisDB
-        ->get_cached_from_ensembl_db_id($db_id);
+        ->get_cached_by_ensembl_db_id($db_id);
 }
 
-sub get_EnsEMBL_contig {
+sub get_EnsEMBL_VirtualContig_of_contig {
     my( $self ) = @_;
     
-    my $dba = $self->get_EnsAnalysisDB->db_adaptor;
-    
+    my $contig_id = $self->ensembl_contig_id
+        or confess "ensembl_contig_id not set";
+    return $self
+        ->get_EnsAnalysisDB
+        ->db_adaptor
+        ->get_StaticGoldenPathAdaptor
+        ->fetch_VirtualContig_of_contig($contig_id, 0);
 }
 
 sub store {

@@ -7,11 +7,12 @@ use strict;
 use Carp;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Hum::Submission 'prepare_statement';
+use Hum::AnaStatus::EnsAnalysis;
 
 {
     my( %ens_db_cache );
     
-    sub get_cached_from_ensembl_db_id {
+    sub get_cached_by_ensembl_db_id {
         my( $pkg, $db_id ) = @_;
         
         my( $db );
@@ -23,29 +24,60 @@ use Hum::Submission 'prepare_statement';
     }
 }
 
+sub fetch_all_EnsAnalysis {
+    my( $self ) = @_;
+    
+    my $ens_db_id = $self->ensembl_db_id
+        or confess "ensembl_db_id not set";
+    return Hum::AnaStatus::EnsAnalysis
+        ->fetch_all_for_ensembl_db_id($ens_db_id);
+}
+
 sub new {
     my( $pkg ) = @_;
 
     return bless {}, $pkg;
 }
 
+# Not sure if this method is needed.
+sub new_from_EnsEMBL_DBAdaptor {
+    my( $pkg, $dba ) = @_;
+    
+    my $db_name = $dba->dbname   or confess   "dbname not set in DBAdaptor";
+    my $host    = $dba->host     or confess     "host not set in DBAdaptor";
+    my $user    = $dba->username or confess "username not set in DBAdaptor";
+    confess "'localhost' isn't good enough for a hostname"
+        if $host eq 'localhost';
+    
+    return $pkg->_fetch_where(qq{ db_name = '$dbname' AND host = '$host' AND user = '$user' });
+}
+
 sub new_from_ensembl_db_id {
     my( $pkg, $db_id ) = @_;
-    
+
+    return $pkg->_fetch_where(qq{ ensembl_db_id = $db_id });
+}
+
+sub _fetch_where {
+    my( $pkg, $where ) = @_;
+
     my $sth = prepare_statement(qq{
-        SELECT db_name
+        SELECT ensembl_db_id
+          , db_name
           , host
           , user
           , golden_path_type
         FROM ana_ensembl_db
-        WHERE ensembl_db_id = $db_id
+        WHERE $where
         });
     $sth->execute;
     
-    my ($db_name, $host, $user, $type) = $sth->fetchrow;
-    confess "No EnsAnalysisDB found with ensembl_db_id = '$db_id'"
-        unless $db_name;
+    my ($ensembl_db_id, $db_name, $host, $user, $type) = $sth->fetchrow;
+    confess "No EnsAnalysisDB found with '$where'"
+        unless $ensembl_db_id;
+    
     my $self = $pkg->new;
+    $self->ensembl_db_id($ensembl_db_id);
     $self->db_name($db_name);
     $self->host($host);
     $self->user($user);
