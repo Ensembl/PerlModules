@@ -5,7 +5,11 @@ package Hum::AnaStatus::Job;
 
 use strict;
 use Carp;
-use Hum::Submission 'prepare_statement';
+use Hum::Submission qw{
+    create_lock
+    destroy_lock
+    prepare_statement
+    };
 use Hum::AnaStatus::Sequence;
 
 sub new {
@@ -286,6 +290,28 @@ sub remove {
         });
     $update->execute($ana_job_id);
     $self = undef;
+}
+
+sub lock_name {
+    my( $self ) = @_;
+    
+    my $task_name = $self->task_name
+        or die "missing task_name";
+    my $ana_seq_id = $self->ana_seq_id
+        or die "missing ana_seq_id";
+    return "$task_name-$ana_seq_id";
+}
+
+sub lock {
+    my( $self ) = @_;
+    
+    create_lock($self->lock_name);
+}
+
+sub unlock {
+    my( $self ) = @_;
+
+    destroy_lock($self->lock_name);
 }
 
 1;
