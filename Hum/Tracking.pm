@@ -106,6 +106,10 @@ Sanger project names, and the values the
 internationally approved convention for naming
 clones.
 
+If the list only contains one element, then the
+single external clone name is returned; not a 
+reference to a hash.
+
 =cut
 
 sub external_clone_name {
@@ -135,7 +139,13 @@ sub external_clone_name {
         $proj{$p} = "$ext-$clone";
     }
     
-    return \%proj;
+    # Just give back the clone name if
+    # we were only asked for one project
+    if (@projects == 1) {
+        return $proj{$projects[0]};
+    } else {
+        return \%proj;
+    }
 }
 
 =pod

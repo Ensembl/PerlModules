@@ -53,6 +53,59 @@ sub exons {
     }
 }
 
+sub start_not_found {
+    my( $loc ) = @_;
+    
+    if ($loc->strand eq 'W') {
+        $loc->missing_5_prime(1);
+    } elsif ($loc->strand eq 'C') {
+        $loc->missing_3_prime(1);
+    } else {
+        confess "Direction not specified";
+    }
+}
+sub end_not_found {
+    my( $loc ) = @_;
+    
+    if ($loc->strand eq 'W') {
+        $loc->missing_3_prime(1);
+    } elsif ($loc->strand eq 'C') {
+        $loc->missing_5_prime(1);
+    } else {
+        confess "Direction not specified";
+    }
+}
+
+sub start {
+    my( $loc ) = @_;
+    
+    return $loc->strand eq 'W' ? $loc->five_prime : $loc->three_prime;
+}
+sub end {
+    my( $loc ) = @_;
+    
+    return $loc->strand eq 'W' ? $loc->three_prime : $loc->five_prime;
+}
+
+sub five_prime {
+    my( $loc ) = @_;
+    
+    if (my $x = $loc->{'exons'}[0]) {
+        return ref($x) ? $x->[0] : $x;
+    } else {
+        confess "No start position";
+    }
+}
+sub three_prime {
+    my( $loc ) = @_;
+    
+    if (my $x = $loc->{'exons'}[-1]) {
+        return ref($x) ? $x->[1] : $x;
+    } else {
+        confess "No end position";
+    }
+}
+
 sub parse {
     my( $loc, $s ) = @_;
     
@@ -97,7 +150,12 @@ BEGIN {
                 my $i = $exons[$#exons][1];
                 $exons[$#exons][1] = ">$i";
             }
-            $text = 'join('. join(',', map "$_->[0]..$_->[1]", @exons) .')';
+            
+            if (@exons == 1) {
+                $text = "$exons[0][0]..$exons[0][1]";
+            } else {
+                $text = 'join('. join(',', map "$_->[0]..$_->[1]", @exons) .')';
+            }
         } else {
             $text = $exons[0];
             if ($loc->missing_5_prime) {
@@ -107,8 +165,12 @@ BEGIN {
             }
         }
 
-        if ($loc->strand eq 'C') {
+        my $strand = $loc->strand;
+        if ($strand eq 'C') {
             $text = "complement($text)";
+        } else {
+            confess "Strand='$strand'"
+                unless $strand eq 'W';
         }
 
         my( @lines );

@@ -7,7 +7,9 @@ use Exporter;
 use vars qw( @ISA @EXPORT_OK );
 use Hum::EMBL::Location;
 @ISA = qw( Exporter );
-@EXPORT_OK = qw( simple_location locationFromHomolBlock );
+@EXPORT_OK = qw( simple_location
+                 location_from_homol_block
+                 location_from_subsequence );
 
 sub numeric_ascend {
     $a->[1] <=> $b->[1];
@@ -17,7 +19,28 @@ sub numeric_descend {
     $b->[1] <=> $a->[1];
 }
 
-sub locationFromHomolBlock {
+sub simple_location {
+    my( $start, $end ) = @_;
+    
+    foreach ($start, $end) {
+        confess "Non-integer argument" unless /^\d+$/;
+    }
+    
+    my $loc = Hum::EMBL::Location->new;
+    if ($start < $end) {
+        $loc->strand('W');
+        $loc->exons([$start,$end]);
+    } elsif ($start > $end) {
+        $loc->strand('C');
+        $loc->exons([$end,$start]);
+    } elsif ($start == $end) {
+        $loc->strand('C');
+        $loc->exons($start);
+    }
+    return $loc;
+}
+
+sub location_from_homol_block {
     my( $block, $score, $merge ) = @_;
     $score ||= 200;
         
@@ -106,13 +129,10 @@ sub locationFromHomolBlock {
         # Make a location string
         my @exons = map [ $_->[1], $_->[2] ], @data;
         @exons = merge_ranges($merge, @exons);
-        my $loc = Hum::EMBL::Location->new($strand, map "$_->[0]..$_->[1]", @exons);
-        my $str = $loc->format_location();
-        
-        # Get the start and end of the feature
-        my $start = @data[0]->[1];
-        my $end   = @data[$#data]->[2];
-        push( @result, [$start, $end, $str] );
+        my $loc = Hum::EMBL::Location->new;
+        $loc->strand($strand);
+        $loc->exons(@exons);
+        push( @result, $loc );
     }
     return @result;
 }
@@ -140,106 +160,35 @@ sub merge_ranges {
     return(@fused, [$start, $end]);
 }
 
-sub simple_location {
-    my( $start, $end ) = @_;
+sub location_from_subsequence {
+    my( $start, $end, @exons ) = @_;
     
-    foreach ($start, $end) {
-        confess "Non-integer argument" unless /^\d+$/;
-    }
+    my $loc = Hum::EMBL::Location->new;
     
     if ($start < $end) {
-        return "$start..$end";
-    } elsif ($start > $end) {
-        return "complement($end..$start)";
-    } elsif ($start == $end) {
-        return $start;
-    }
-}
-
-sub newFromFeature {
-    my( $pkg, $start, $end ) = @_;
-    
-    if ($start < $end) {
-        return( bless [ 'W', "$start..$end" ], $pkg );
-    } elsif ($start > $end) {
-        return( bless [ 'C', "$end..$start" ], $pkg );
-    } else {
-        confess("Can't get order from $start - $end");
-    }
-}
-
-sub newFromSubsequence {
-    my( $pkg, $start, $end, @exons ) = @_;
-    my( @location, $direction );
-    
-    if ($start < $end) {
-        $direction = 'W';
+        $loc->strand('W');
         # Sort exons ascending by their starts
         @exons = sort { $a->[0] <=> $b->[0] } @exons;
         foreach my $e (@exons) {
-            my( $x, $y ) = @$e;
-            $x = $start - 1 + $x;
-            $y = $start - 1 + $y;
-            push( @location, "$x..$y" );
+            foreach (@$e) {
+                $_ = $start - 1 + $_;
+            }
         }
     } elsif ($start > $end) {
-        $direction = 'C';
+        $loc->strand('C');
         # Sort exons descending by their ends
         @exons = sort { $b->[1] <=> $a->[1] } @exons;
         foreach my $e (@exons) {
-            my( $y, $x ) = @$e;
-            $x = $start + 1 - $x;
-            $y = $start + 1 - $y;
-            push( @location, "$x..$y" );
+            foreach (@$e) {
+                $_ = $start + 1 - $_;
+            }
         }
     } else {
         confess("Can't get order from $start - $end");
     }
-    return( bless [ $direction, @location ], $pkg );
-}
-
-sub start_not_found {
-    my( $loc ) = @_;
-    if ($loc->[0] eq 'W') {
-        $loc->_five_prime_arrow();
-    } else {
-        $loc->_three_prime_arrow();
-    }
-}
-
-sub end_not_found {
-    my( $loc ) = @_;
-    if ($loc->[0] eq 'W') {
-        $loc->_three_prime_arrow();
-    } else {
-        $loc->_five_prime_arrow();
-    }
-}
-
-sub _five_prime_arrow {
-    my( $loc ) = @_;
-    $loc->[1] = "<$loc->[1]";
-}
-
-sub _three_prime_arrow {
-    my( $loc ) = @_;
-    $loc->[$#$loc] =~ s/(\d+)\.\.(\d+)/$1\.\.>$2/;
-}
-
-sub format_location {
-    my( $location ) = @_;
-    my( $direction, @exons ) = @$location;
-    my $loc_string;
-    if (@exons > 1) {
-        $loc_string = 'join('. join( ',', @exons) .')';
-    } else {
-        $loc_string = $exons[0];
-    }
-    if ($direction eq 'W') {
-        return $loc_string;
-    } else {
-        return 'complement('. $loc_string .')';
-    }
+    
+    $loc->exons(@exons);
+    return $loc;
 }
 
 1;

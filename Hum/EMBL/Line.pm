@@ -126,16 +126,6 @@ sub data {
     return $line->{'_data'};
 }
 
-sub list {
-    my( $line, @list ) = @_;
-    
-    if (@list) {
-        $line->data->{'list'} = [@list];
-    } else {
-        return @{$line->data->{'list'}};
-    }
-}
-
 BEGIN {
     my $max   = 75;         # Maximum length for a line
     my $limit = $max - 1;
@@ -253,7 +243,11 @@ package Hum::EMBL::CC;
 use strict;
 use Carp;
 use vars qw( @ISA );
-@ISA = qw( Hum::EMBL::Line );
+
+BEGIN {
+    @ISA = qw( Hum::EMBL::Line );
+    Hum::EMBL::CC->makeListAccessFuncs( 'list' );
+}
 
 sub parse {
     my( $line, $s ) = @_;
@@ -280,7 +274,11 @@ package Hum::EMBL::KW;
 use strict;
 use Carp;
 use vars qw( @ISA );
-@ISA = qw( Hum::EMBL::Line );
+
+BEGIN {
+    @ISA = qw( Hum::EMBL::Line );
+    Hum::EMBL::KW->makeListAccessFuncs( 'list' );
+}
 
 sub parse {
     my( $line, $s ) = @_;
@@ -407,7 +405,11 @@ package Hum::EMBL::DE;
 use strict;
 use Carp;
 use vars qw( @ISA );
-@ISA = qw( Hum::EMBL::Line );
+
+BEGIN {
+    @ISA = qw( Hum::EMBL::Line );
+    Hum::EMBL::DE->makeListAccessFuncs( 'list' );
+}
 
 sub parse {
     my( $line, $s ) = @_;
@@ -556,7 +558,8 @@ sub parse {
     $line->comments( join(' ', @comments) );
     
     # Positions in the nucleotide sequence associated with
-    # this reference.  Could store as Location objects.
+    # this reference.  Could store as Location objects, but
+    # they have a different format to FT location lines.
     my( @positions );
     while ($$s =~ /^RP   (.+)$/mg) {
         push( @positions, split( /,\s*/, $1) );
@@ -820,6 +823,38 @@ BEGIN {
     Hum::EMBL::FT->makeListAccessFuncs(qw( qualifiers ));
 }
 
+sub newLocation {
+    my( $line ) = @_;
+    
+    my $l = Hum::EMBL::Location->new;
+    $line->location( $l );
+    return $l;
+}
+
+sub newQualifier {
+    my( $line ) = @_;
+    
+    my $q = Hum::EMBL::Qualifier->new;
+    $line->addQualifier( $q );
+    return $q;
+}
+
+sub addQualifier {
+    my( $line, $qual ) = @_;
+
+    push( @{$line->data->{'qualifiers'}}, $qual );
+}
+sub addQualifierStrings {
+    my( $line, $name, $value ) = @_;
+    
+    my $q = Hum::EMBL::Qualifier->new;
+    $q->name($name);
+    $q->value($value) if defined $value;
+    
+    $line->addQualifier($q);
+}
+
+
 sub parse {
     my( $feat, $s ) = @_;
     
@@ -929,13 +964,6 @@ BEGIN {
         my $seq = $line->seq();
         my $length = length($seq);
         confess "Sequence length '$length' too long for EMBL format" if length($length) > 9;
-
-#        # Set the sequence length in the ID line, if the
-#        # entry contains it
-#        eval{
-#            $line->entry->ID->seqlength($length);
-#        };
-#        warn $@ if $@;
 
         # Count the number of each nucleotide in the sequence
         my $a_count = $seq =~ tr/a/a/;
