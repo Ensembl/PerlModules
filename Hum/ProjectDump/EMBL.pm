@@ -372,9 +372,8 @@ sub add_FT_entries {
     sub seq_center_lines {
         my( $pdmp ) = @_;
         
-        my $genome_center_lines = $sequencing_center{
-            $pdmp->funded_by || $pdmp->sequenced_by || 5
-            };
+        my $center_num = $pdmp->funded_by || $pdmp->sequenced_by || 5;
+        my $genome_center_lines = $sequencing_center{$center_num};
         my @seq_center = (
             '-------------- Genome Center',
             @$genome_center_lines,

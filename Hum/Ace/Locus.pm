@@ -456,6 +456,9 @@ sub make_transcript_sets_for_complex_locus {
         @name_hashes = $self->make_name_hashes_from_continue_tags;
     }
     confess "Can't get name sets" unless @name_hashes;
+    
+    use Data::Dumper;
+    print STDERR Dumper(\@name_hashes);
 
     my( @sets );
     foreach my $names (@name_hashes) {
