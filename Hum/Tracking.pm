@@ -322,7 +322,7 @@ block, to ensure a graceful exit.
               AutoCommit  => 0,
             });
         
-        return $dbh;
+        return $dbh || confess "Can't connect as user '$user'";
     }
 
     sub track_db_commit {
@@ -1145,14 +1145,16 @@ sub record_accession_data {
 
         # Do we have an entry for this accession?
         $sub_get ||= prepare_track_statement(q{
-            SELECT name
+            SELECT 1
+              , name
               , length_bp
             FROM embl_submission
             WHERE accession = ?
             });
         $sub_get->execute($acc);
-        my( $db_name, $db_length ) = $sub_get->fetchrow;
-        if ($db_name and $db_length) {
+        my( $exists, $db_name, $db_length ) = $sub_get->fetchrow;
+        if ($exists) {
+            local $^W = 0;
             # Update the entry if the embl id or length are different
             if ($length ne $db_length or $embl_name ne $db_name) {
                 warn "Updating entry for accession $acc\n";
