@@ -119,7 +119,7 @@ sub get_all_SubSeqs {
     my %locus_subseq = map {$_, 1} $self->list_positive_SubSeq_names;
     my( @subs );
     foreach my $clone ($self->get_all_CloneSeqs) {
-        foreach my $sub ($self->get_all_SubSeqs) {
+        foreach my $sub ($clone->get_all_SubSeqs) {
             my $name = $sub->name;
             if ($locus_subseq{$name}) {
                 push(@subs, $sub);
@@ -191,17 +191,17 @@ sub is_new_format {
     
     foreach my $sub ($self->get_all_SubSeqs) {
         my $meth_name = $sub->GeneMethod->name;
-        if ($meth_name =~ /supported_CDS/i) {
+        if ($meth_name =~ /supported_CDS/) {
             $old_format = 1;
         }
-        elsif ($meth_name =~ /supported/i) {
+        elsif ($meth_name =~ /supported$/) {
             $new_format = 1;
         }
         
         unless ($new_format) {
             if ($sub->upstream_subseq_name
                 or $sub->downstream_subseq_name) {
-            
+                $new_format = 1;
             }
         }
     }
@@ -211,11 +211,12 @@ sub is_new_format {
             confess "Locus '", $self->name,
                 "' has both old and new format SubSequences\n";
         } else {
-            
+            # Default to new_format - this happens
+            # when the Locus doesn't contain a CDS.
+            $new_format = 1;
         }
-    } else {
-        return $new_format ? 1 : 0;
     }
+    return $new_format ? 1 : 0;
 }
 
 sub make_EnsEMBL_Gene {
@@ -247,6 +248,7 @@ sub make_transcript_sets {
     my( $self ) = @_;
     
     my $gene_type = $self->gene_type;
+    my $is_new_format = $self->is_new_format;
     my %is_locus_seq = map {$_, 1} $self->list_positive_SubSeq_names;
     
     my( @clone_sets );
@@ -265,6 +267,11 @@ sub make_transcript_sets {
             next unless $is_locus_seq{$t_name};
             
             my( $pair_name, $is_mRNA ) = $t_name =~ /^(.+?)(\.mRNA)?$/;
+            unless ($is_mRNA) {
+                if ($t->GeneMethod->name =~ /mRNA$/) {
+                    $is_mRNA = 1;
+                }
+            }
             if ($is_mRNA) {
                 $t_pair{$pair_name}{'mRNA'} = $t;
             } else {
@@ -280,7 +287,9 @@ sub make_transcript_sets {
             
             # Try to get a CDS from the other clone_sets if
             # we have an mRNA object, but not a CDS.
-            if ($mrna and ! $cds) {
+            # (But not if it is a new format Locus, where
+            # the mRNA CDS pairs are kept together).
+            if ($mrna and ! $cds and ! $is_new_format) {
                 print STDERR "Trying to find a CDS for the mRNA '$pair_name'\n";
                 my( @other_cds_list );
                 foreach my $other_pair (grep $_ ne $pair_name, keys %t_pair) {
@@ -307,7 +316,8 @@ sub make_transcript_sets {
             #$mrna = $cds if $cds;
             
             # Check that all the CDS exons are in the mRNA exons
-            if ($cds) {
+            # (Unless it is the same object.)
+            if ($cds and $cds != $mrna) {
                 my $cds_name  = $cds->name;
                 my $mrna_name = $mrna->name;
                 
@@ -344,7 +354,7 @@ sub make_transcript_sets {
             }
 
             # Remove mRNA == CDS pairs if we have the
-            # CDS paired with an mRNA
+            # CDS paired with another mRNA
             for (my $i = 0; $i < @$pairs;) {
                 my( $name, $mrna, $cds ) = @{$pairs->[$i]};
                 if ($cds and $cds->name eq $mrna->name) {
@@ -432,12 +442,11 @@ sub make_name_hashes_from_continue_tags {
 sub make_transcript_sets_for_complex_locus {
     my( $self, @clone_sets ) = @_;
 
-    # If we have more than isoform spanning more than
-    # one clone, then we need to rely on a hand-made
-    # list of names which make the isoform.
-
     my( @name_hashes );
     if (my $lister = $self->set_names_lister) {
+        # If we have more than isoform spanning more than
+        # one clone, then we need to rely on a hand-made
+        # list of names which make the isoform.
         @name_hashes = &$lister($self);
     }
     unless (@name_hashes) {
@@ -583,14 +592,13 @@ sub make_transcript {
 	}
         
         # Make the EnsEMBL exons
-        my @cds_exons = $cds->get_all_Exons if $cds;
+        my @cds_exons = $cds->get_all_CDS_Exons if $cds;
         print STDERR "mRNA: ", $mrna->name;
         print STDERR " CDS ", $cds->name if $cds;
         print STDERR " strand $pair_strand\n";
         my( @clone_exons );
         my $in_translated_zone = 0;
         foreach my $m_ex ($mrna->get_all_Exons) {
-            
             
             my $translation_zone_entry_flag = 0;
             my( $c_ex );

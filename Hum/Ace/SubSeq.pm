@@ -134,22 +134,6 @@ sub process_ace_start_end_transcript_seq {
             $start_phase = $codon_start;
         }
     }
-    # Add the phase to the first exon
-    if (defined $start_phase) {
-        my( $start_exon );
-        if ($strand == 1) {
-            $start_exon = $exons[0];
-        } else {
-            $start_exon = $exons[$#exons];
-        }
-        $start_exon->phase($start_phase);
-        #warn "Setting exon phase=$start_phase ", join(' ',
-        #    $self->name,
-        #    $start_exon->start,
-        #    $start_exon->end,
-        #    $strand,
-        #    ), "\n";
-    }
 
     $self->validate;
 }
@@ -429,6 +413,7 @@ sub get_all_CDS_Exons {
 
     my ($t_start, $t_end)   = $self->translation_region;
     my $strand              = $self->strand;
+    my $phase               = $self->start_phase;
 
     my( @cds_exons );
     foreach my $exon ($self->get_all_Exons) {
@@ -452,6 +437,17 @@ sub get_all_CDS_Exons {
         $cds->end($end);
         push(@cds_exons, $cds);
     }
+    
+    # Add the phase to the first exon
+    my $start_exon = $strand == 1 ? $cds_exons[0] : $cds_exons[$#cds_exons];
+    $start_exon->phase($phase);
+    #warn "Setting exon phase=$phase ", join(' ',
+    #    $self->name,
+    #    $start_exon->start,
+    #    $start_exon->end,
+    #    $strand,
+    #    ), "\n";
+    
     return @cds_exons;
 }
 
