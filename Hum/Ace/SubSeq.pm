@@ -321,9 +321,13 @@ sub cds_coords {
         }
     }
     
-    unless ($cds_coords[0] and $cds_coords[1]) {
-        confess("Failed to find translation region coords in exons");
+    my $err = "";
+    for (my $i = 0; $i < @t_region; $i++) {
+        unless ($cds_coords[$i]) {
+            $err .= qq{Translation coord '$t_region[$i]' does not lie within any Exon\n};
+        }
     }
+    confess $err if $err;
     
     return @cds_coords;
 }
@@ -337,7 +341,13 @@ sub subseq_length {
 sub validate {
     my( $self ) = @_;
     
-    my( $t_start, $t_end ) = $self->translation_region;
+    $self->valid_exon_coordinates;
+    $self->cds_coords;
+}
+
+sub valid_exon_coordinates {
+    my( $self ) = @_;
+    
     my( $last_end );
     foreach my $ex ($self->get_all_Exons) {
         my $start = $ex->start;
@@ -349,22 +359,8 @@ sub validate {
                 if $start <= $last_end;
         }
         $last_end = $end;
-        
-        if ($t_start and $t_start >= $start and $t_start <= $end) {
-            $t_start = 0;
-        }
-        if ($t_end and $t_end >= $start and $t_end <= $end) {
-            $t_end = 0;
-        }
     }
-    my $err = "";
-    if ($t_start) {
-        $err .= "Translation start '$t_start' doesn't overlap any Exon\n";
-    }
-    if ($t_end) {
-        $err .= "Translation end '$t_end' doesn't overlap any Exon\n";
-    }
-    confess $err if $err;
+    return 1;
 }
 
 sub contains_all_exons {
