@@ -148,8 +148,34 @@ sub rename_build_to_path {
     }
 }
 
-sub read_db_details {
-    confess "Can't call read_db_details on Multi\n",
+sub check_file_size {
+    my( $self ) = @_;
+    
+    foreach my $sub_db ($self->db_list) {
+        $sub_db->check_file_size;
+    }
+}
+
+sub check_md5_digest {
+    my( $self ) = @_;
+    
+    foreach my $sub_db ($self->db_list) {
+        $sub_db->check_md5_digest;
+    }
+}
+
+sub size {
+    my( $self ) = @_;
+    
+    my $size = 0;
+    foreach my $sub_db ($self->db_list) {
+        $size += $sub_db->size;
+    }
+    return $size;
+}
+
+sub _read_db_details {
+    confess "Can't call _read_db_details on Multi\n",
         "You can get individual DB objects with the db_list() method";
 }
 
@@ -158,6 +184,45 @@ sub read_db_details {
 __END__
 
 =head1 NAME - Hum::Blast::DB::Multi
+
+=head1 DESCRIPTION
+
+Used for indexing blast databases which are in
+multiple pieces.  It its methods from
+L<Hum::Blast::DB>, but the following four
+methods behave differently:
+
+=over 4
+
+=item B<date>
+
+Produces a fatal error if called.
+
+=item B<part>
+
+Produces a fatal error if called.
+
+=item B<size>
+
+Returns the total size of all its sub databases.
+
+=item B<check_file_size>
+
+Checks the file size of each of its sub databases
+in turn.
+
+=back
+
+And it adds this mehod:
+
+=over 4
+
+=item B<db_list>
+
+Returns a list of its sub databases as
+B<Hum::Blast::DB> objects.
+
+=back
 
 =head1 AUTHOR
 

@@ -5,6 +5,7 @@ package Hum::Blast::DB;
 
 use strict;
 use Carp;
+use Digest::MD5;
 
 sub new {
     my( $pkg, $path ) = @_;
@@ -37,9 +38,9 @@ sub write_access {
         if ($flag) {
             $self->{'_READ_FROM_DISK_'} = 1;
         }
-        $self->{'_flag'} = $flag ? 1 : 0;
+        $self->{'_write_flag'} = $flag ? 1 : 0;
     }
-    return $self->{'_flag'};
+    return $self->{'_write_flag'};
 }
 
 sub path {
@@ -130,7 +131,7 @@ sub _dir_name {
     
     my ($dir) = $path =~ m{^(.*)/};
     $dir = '.' unless defined $dir;
-    warn "Returning dir='$dir'\n";
+    #warn "Returning dir='$dir'\n";
     return $dir;
 }
 
@@ -253,6 +254,9 @@ sub _make_db_title {
         push(@title, "part=$part_def");
     }
     
+    my $md5 = $self->actual_build_md5;
+    push(@title, "md5=$md5");
+    
     return join('|', @title);
 }
 
@@ -274,7 +278,7 @@ sub actual_build_file_size {
 sub date {
     my( $self, $date ) = @_;
     
-    $self->read_db_details;
+    $self->_read_db_details;
     if ($date) {
         $self->{'_date'} = $date;
     }
@@ -284,17 +288,55 @@ sub date {
 sub version {
     my( $self, $version ) = @_;
     
-    $self->read_db_details;
+    $self->_read_db_details;
     if ($version) {
         $self->{'_version'} = $version;
     }
     return $self->{'_version'};
 }
 
+sub md5 {
+    my( $self, $md5 ) = @_;
+    
+    $self->_read_db_details;
+    if ($md5) {
+        $self->{'_md5'} = $md5;
+    }
+    return $self->{'_md5'};
+}
+
+sub actual_md5 {
+    my( $self ) = @_;
+    
+    my $file = $self->path;
+    return $self->_calculate_md5_digest($file);
+}
+
+sub actual_build_md5 {
+    my( $self ) = @_;
+    
+    my $file = $self->build_path;
+    return $self->_calculate_md5_digest($file);
+}
+
+sub _calculate_md5_digest {
+    my( $self, $file ) = @_;
+    
+    local *FASTA_FILE;
+    open FASTA_FILE, $file
+        or confess "Can't read '$file' : $!";
+    my $md5 = Digest::MD5->new;
+    $md5->addfile(\*FASTA_FILE);
+    my $hex = $md5->hexdigest
+        or confess "Failed to genereate hexdigest";
+    close FASTA_FILE;
+    return $hex;
+}
+
 sub size {
     my( $self, $size ) = @_;
     
-    $self->read_db_details;
+    $self->_read_db_details;
     if ($size) {
         $self->{'_size'} = $size;
     }
@@ -304,7 +346,7 @@ sub size {
 sub part {
     my( $self, $i, $n ) = @_;
     
-    $self->read_db_details;
+    $self->_read_db_details;
 
     if ($i and my ($j,$k) = $i =~ /^(\d+)of(\d+)$/) {
         ($i,$n) = ($j,$k);
@@ -327,7 +369,7 @@ sub part {
     }
 }
 
-sub read_db_details {
+sub _read_db_details {
     my( $self ) = @_;
     
     return if $self->{'_READ_FROM_DISK_'};
@@ -345,10 +387,20 @@ sub read_db_details {
 sub check_file_size {
     my( $self ) = @_;
     
-    my $size = $self->size;
+    my $size   = $self->size;
     my $actual = $self->actual_file_size;
     unless ($size == $actual) {
         confess "Database file should be '$size' bytes, but is actually '$actual' bytes";
+    }
+}
+
+sub check_md5_digest {
+    my( $self ) = @_;
+    
+    my $digest = $self->md5;
+    my $actual = $self->actual_md5;
+    unless ($digest eq $actual) {
+        confess "md5 digest from file '$actual' doesn't match md5 stored in index '$digest'";
     }
 }
 
@@ -432,21 +484,19 @@ __END__
 
     ### Indexing a blast database ###
     my $blast_db = Hum::Blast::DB->new;
-    $blast_db->db_name('dbEST');
+    $blast_db->db_name('human_finished');
     $blast_db->write_access(1); # To allow indexing
-    $blast_db->part(2,6);      # File 2 of 6
     $blast_db->type('NUCLEOTIDE');
     
     # Set the name of the database file on success:
-    $blast_db->path('/nfs/disk100/pubseq/dbEST-2');
+    $blast_db->path('/nfs/disk100/humpub/blastdb/finished');
     
     # Set the name of the new fasta file
-    $blast_db->build_path('/nfs/disk100/pubseq/build/dbEST-2');
+    $blast_db->build_path('/nfs/disk100/humpub/blastdb/finished.build');
     
-    # Index for both 1.4/wublast and NCBI Blast 2
+    # Index for both Blast 1.4/wublast and NCBI Blast 2
     # (This is fatal on failure.)
     $blast_db->do_indexing;
-    
     
     ### Read info from an existing blast db ###
     my $blast_db = Hum::Blast::DB->new;
@@ -455,18 +505,19 @@ __END__
     # Get the date this was
     my $date = $blast_db->date;
     
-    # This is fatal if the 
+    # This is fatal if the size stored in the index doesn't
+    # match the actual size of the fasta DB file
     $blast_db->check_file_sizes;
 
 =head1 DESCRIPTION
 
 A Hum::Blast::DB object represents a single blast
-database (multiple fasta files plus indexes for
-Blast 1, wublast and NCBI blast).  It has methods
-for creating the indexes, putting standard
-information into the database title, and
-retrieving this information from an existing
-index.
+database (a fasta file containing multiple
+sequences, plus indexes for Blast 1, wublast and
+NCBI blast).  It has methods for creating the
+indexes, putting standard information into the
+database title, and retrieving this information
+from an existing index.
 
 =head1 METHODS
 
@@ -495,7 +546,7 @@ blast database.
 
 =item B<path>
 
-    $blast_db->path('/data/blastdb/dbEST-1');
+    $blast_db->path('/data/blastdb/finished');
 
 Must be set.  This is the path of the
 existing indexed database, or the path of the
@@ -503,7 +554,7 @@ database once indexing is complete.
 
 =item B<build_path>
 
-    $blast_db->build_path('/data/blastdb/dbEST-1.build');
+    $blast_db->build_path('/data/blastdb/finished.build');
 
 The name of the file to be indexed.  If indexing
 is successful, it (and its index files) are
@@ -512,30 +563,85 @@ must be on the same device as B<path>.
 
 =item B<db_name>
 
-    $blast_db->db_name('dbEST');
+    $blast_db->db_name('human_finished');
+
+The name to use for the database.  If not set, it
+uses the last element of the path.
 
 =item B<do_indexing>
 
+Indexes the fasta file pointed to by
+B<build_path>, producing indexes for all flavours
+of Blast.  Any errors encountered are fatal.
+
 =item B<rename_build_to_path>
+
+Renames the blast databasefiles to the root given
+in B<path>.
 
 =item B<actual_file_size>
 
+Returns the actual size of the database fasta
+file.
+
 =item B<actual_build_file_size>
+
+Returns the actual size of the build database
+fasta file.
+
+=item B<actual_md5>
+
+Returns the md5 digest of the database fasta
+file.  This is a hexadecimal string, and is
+calculated by the B<Digest::MD5> module.
+
+=item B<actual_build_md5>
+
+Returns the md5 digest of the build database
+fasta file.  This is a hexadecimal string, and is
+calculated by the B<Digest::MD5> module.
 
 =item B<date>
 
+Returns the current date with write_access, or
+the date the db was built on without
+write_access.
+
 =item B<version>
+
+Returns the versin of the databse (if set).
 
 =item B<size>
 
+Returns the stored file size.
+
+=item B<md5>
+
+Returns the stored md5 digest for the file.
+
 =item B<part>
 
-=item B<read_db_details>
+Returns two integers, the first is the current
+part, and the second the total number of parts,
+if the DB is part of a mulit-part database.
 
 =item B<check_file_size>
 
+Checks that the size of the fasta DB file stored
+in the index file matches the acutal DB file. 
+Fatal if they don't match.
+
+=item B<check_md5_digest>
+
+Checks that the md5 digest of the file matches
+the value stored in the index.  Fatal if they
+don't match.
 
 =back
+
+=head1 SEE ALSO
+
+The L<Hum::Blast::DB::Multi> module.
 
 =head1 AUTHOR
 
