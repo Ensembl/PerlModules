@@ -183,6 +183,7 @@ sub _process_contig {
         # head to head or tail to tail join.
         $strand *= $pa->is_3prime == $pb->is_3prime ? -1 : 1;
         
+        # Move $cl pointer to next clone
         $cl = $self->new_Clone_from_tpf_Clone($contig->[$i]);
         if ($pb->is_3prime) {
             $was_3prime = 1;

@@ -58,8 +58,14 @@ sub make_embl {
 
     # AC line
     my $ac = $embl->newAC;
-    $ac->primary($acc);
-    $ac->secondaries(@sec) if @sec;
+    if (@sec) {
+        $ac->secondaries(@sec);
+        # We need the placeholder "ACCESSION"
+        # if we don't have an accession
+        $ac->primary($acc || 'ACCESSION');
+    } else {
+        $ac->primary($acc);
+    }
     $embl->newXX;
 
     # AC * line
