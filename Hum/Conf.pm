@@ -65,7 +65,7 @@ $cgp_path{'EF'}="$ext_path/EF";
         'Chicken'       => [ 'chicken'                 ],
         'Fugu'          => [ 'fugu'                    ],
         'Zebrafish'     => [ 'zebrafish'               ],
-        'Drosophila'    => [ 'drosophila'              ],
+        'Drosophila'    => [ 'drosophila/sequences'    ],
         'Arabidopsis'   => [ 'arabidopsis'             ],
         },
 
