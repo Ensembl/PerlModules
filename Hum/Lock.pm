@@ -66,29 +66,20 @@ sub new {
     
     # Check for existing lockfile
     if (-e $lockFile) {
-    	# Read host and process ID from lockfile
-    	open LOCK, "< $lockFile" or croak("Can't open lockfile [ $lockFile ] : $!");
-	my ($hostName, $processID) = split / /, <LOCK>, 2;
-	close LOCK;
-	
-	# Check for hostname and valid process ID
-	if ($hostName and ($processID =~ /^\d+$/)) {
-	
-	    # Is the process still running?
-	    my $status = processExists( $hostName, $processID );
-	    
-	    if ($status eq 'RUN') {
-	    	croak("Process still running [ $hostName - $processID ]\n");
-	    }
-	    elsif ($status eq 'DEAD') {
-	    	unlink( $lockFile ) == 1
-		    or croak("Can't unlink old lock [ $lockFile ] : $!");
-	    }
-	    else {
-	    	croak("Error from processExists: $status");
-	    }
-	} else {
-	    croak("Can't parse lockfile [ $lockFile ]");
+        my( $hostName, $processID ) = readLock( $lockFile );
+
+	# Is the process still running?
+	my $status = processExists( $hostName, $processID );
+
+	if ($status eq 'RUN') {
+	    croak("Process still running [ $hostName - $processID ]\n");
+	}
+	elsif ($status eq 'DEAD') {
+	    unlink( $lockFile ) == 1
+		or croak("Can't unlink old lock [ $lockFile ] : $!");
+	}
+	else {
+	    croak("Error from processExists: $status");
 	}
     }
     
@@ -103,6 +94,22 @@ sub new {
     	    	  'file' => $lockFile,
      		  'home' => cwd()
 		  }, $pkg;
+}
+
+sub readLock {
+    my $file = shift;
+    
+    # Read host and process ID from lockfile
+    open LOCK, "< $file" or croak("Can't open lockfile [ $file ] : $!");
+    my ($host, $pid) = split / /, <LOCK>, 2;
+    close LOCK;
+
+    # Check for hostname and valid process ID
+    if ($host and ($pid =~ /^\d+$/)) {
+        return( $host, $pid );
+    } else {
+	croak("Can't parse lockfile [ $file ]");
+    }
 }
 
 # Uses LSF command "lsrun" to see if a process is
@@ -144,17 +151,22 @@ sub processExists {
 sub DESTROY {
     my $lock = shift;
     
-    my $file = $lock->file();
+    my $file    = $lock->file();
     my $homeDir = $lock->home();
     
     # Save the current directory
     my $saveDir = cwd();
     
     # chdir to directory where lock file was created
-    chdir( $homeDir ) or warn "Can't find $homeDir"
-    	and return;
+    chdir( $homeDir )    or warn "Can't find $homeDir" and return;
+
+    my( $host, $pid ) = readLock( $file );
+    
+    # It's rude to remove other people's locks
+    return unless $pid == $$ and $host eq hostname();
+
     unlink( $file ) == 1 or warn "Couldn't delete $file";
-    chdir( $saveDir ) or warn "Couldn't chdir back to $saveDir";
+    chdir( $saveDir )    or warn "Couldn't chdir back to $saveDir";
 }
 
 __END__
