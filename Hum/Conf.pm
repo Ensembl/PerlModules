@@ -52,6 +52,7 @@ my $ftp_structure = {
     'Human'         => [ 'human/sequences', 'Chr_' ],
     'Mouse'         => [ 'mouse',           'Chr_' ],
     'Fugu'          => [ 'fugu'                    ],
+    'Tetraodon'     => [ 'tetraodon'               ],
     'Zebrafish'     => [ 'zebrafish'               ],
     'B.floridae'    => [ 'b_floridae'              ],
     'Gibbon'        => [ 'gibbon'                  ],

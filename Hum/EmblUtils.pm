@@ -103,6 +103,13 @@ BEGIN {
             Tetraodontiformes Tetraodontoidei Tetraodontidae Fugu
             )],
 
+        tetrodon =>
+        [qw(Tetraodon nigroviridis), undef, qw(
+            Eukaryota Metazoa Chordata Craniata Vertebrata Actinopterygii
+            Neopterygii Teleostei Euteleostei Acanthopterygii Percomorpha
+            Tetraodontiformes Tetraodontoidei Tetraodontidae Tetraodon
+            )],
+
         arabidopsis =>
         [qw(Arabidopsis thaliana), 'thale cress', qw(
             Eukaryota Viridiplantae Streptophyta Embryophyta Tracheophyta
