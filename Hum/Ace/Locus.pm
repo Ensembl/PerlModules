@@ -46,6 +46,23 @@ sub new_from_ace_tag {
     return $self;
 }
 
+sub new_from_Locus {
+    my( $old ) = @_;
+    
+    my $new = ref($old)->new;
+    foreach my $method (qw{
+        name
+        description
+        gene_type
+        }) {
+        $new->$method($old->$method());
+    }
+    $new->set_aliases($old->list_aliases);
+    $new->set_remarks($old->list_remarks);
+    
+    return $new;
+}
+
 sub name {
     my( $self, $name ) = @_;
     
