@@ -31,7 +31,11 @@ sub find_Exon_sets {
     my( $self, $exon_seqs ) = @_;
     
     my $features = $self->find_Features($exon_seqs);
-    
+    for (my $i = 0; $i < @$exon_seqs; $i++) {
+        my $exon = $exon_seqs->[$i];
+        my $feat = $features->[$i];
+        @$feat = sort {$b->hit_length <=> $a->hit_length} @$feat;
+    }
 }
 
 sub find_Features {

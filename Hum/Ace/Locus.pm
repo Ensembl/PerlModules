@@ -21,7 +21,6 @@ use Bio::Otter::TranscriptRemark;
 use Bio::Otter::TranscriptClass;
 use Bio::Otter::GeneSynonym;
 use Data::Dumper;
-use Storable qw(dclone);
 
 sub new {
     my( $pkg ) = shift;
@@ -1376,25 +1375,13 @@ sub is_known_string{
     return $ace ;   
 }
 
-sub clone{
+sub clone {
     my ($self) = @_ ;
+    require Storable;
     my $new = Storable::dclone($self);
     $new->name($self->name.'_clone') ;
     return $new;
 }
-
-#   Locus: textfield
-#   Type:  chooser
-#   Positive sequences:
-#   
-#   
-#   
-#   
-#   
-#   
-#   
-#   
-#   
 
 #sub DESTROY {
 #    my( $self ) = @_;

@@ -9,7 +9,7 @@ use Exporter;
 use vars qw( @EXPORT_OK @ISA );
 @ISA       = qw( Exporter );
 @EXPORT_OK = qw( extCloneName projectAndSuffix
-                 add_source_FT add_Organism
+                 add_source_FT add_Organism get_Organism
                  species_binomial
                  );
 
@@ -168,20 +168,33 @@ BEGIN {
             )],
     );
 
+    my( %organism_cache );
+
     sub add_Organism {
         my( $embl, $speciesname ) = @_;
-        $speciesname = lc $speciesname;
 
-        confess "I don't know about '$speciesname'" unless $class{$speciesname};
+        my $og = get_Organism($speciesname);
 
-        my( $genus, $species, $common, @classification ) = @{$class{$speciesname}};
-
-        my $og = $embl->newOrganism;
-        $og->genus($genus);
-        $og->species($species);
-        $og->common($common) if $common;
-        $og->classification(@classification);
+        $embl->addLine($og);
+    }
+    
+    sub get_Organism {
+        my $speciesname = lc shift;
         
+        my( $og );
+        unless ($og = $organism_cache{$speciesname}) {
+            if (my $data = $class{$speciesname}) {
+                my( $genus, $species, $common, @classification ) = @$data;
+
+                $og = Hum::EMBL::Line::Organism->new;
+                $og->genus($genus);
+                $og->species($species);
+                $og->common($common) if $common;
+                $og->classification(@classification);
+            } else {
+                confess "I don't know about '$speciesname'";
+            }
+        }
         return $og;
     }
     
