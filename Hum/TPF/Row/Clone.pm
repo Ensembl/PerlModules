@@ -312,7 +312,9 @@ sub store_SequenceInfo_and_link {
     }
     
     my( $seq_id );
-    unless ($seq_id = $seq->db_id) {
+    if ($seq_id = $seq->db_id) {
+        $seq->update_htgs_phase;
+    } else {
         $seq->store;
         $seq_id = $seq->db_id;
     }

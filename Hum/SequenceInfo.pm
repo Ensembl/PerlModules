@@ -62,25 +62,25 @@ sub _embl_sequence_get {
         $self = $pkg->new;
         $self->accession($acc);
         $self->sequence_version($sv);
-
-        my( $htgs_phase );
-        foreach my $word ($embl->KW->list) {
-            #warn "KW: $word\n";
-            if ($word =~ /HTGS_PHASE(\d)/) {
-                $htgs_phase = $1;
-                last;
-            }
-        }
-        unless ($htgs_phase) {
-            if ($embl->ID->division eq 'HTG') {
-                $htgs_phase = 1;
-            } else {
-                $htgs_phase = 3;
-            }
-        }
-
-        $self->htgs_phase($htgs_phase);
     }
+    
+    my( $htgs_phase );
+    foreach my $word ($embl->KW->list) {
+        #warn "KW: $word\n";
+        if ($word =~ /HTGS_PHASE(\d)/) {
+            $htgs_phase = $1;
+            last;
+        }
+    }
+    unless ($htgs_phase) {
+        if ($embl->ID->division eq 'HTG') {
+            $htgs_phase = 1;
+        } else {
+            $htgs_phase = 3;
+        }
+    }
+    $self->htgs_phase($htgs_phase);
+
     $seq->name("$acc.$sv");
     $self->Sequence($seq);
     return $self;
@@ -135,9 +135,9 @@ sub _embl_sequence_get {
                 $self = $pkg->new;
                 $self->accession($acc);
                 $self->sequence_version($sv);
-                $self->htgs_phase($htgs_phase);
                 $self->projectname($proj);
             }
+            $self->htgs_phase($htgs_phase);
             
             $seq->name("$acc.$sv");
             $self->Sequence($seq);
@@ -300,6 +300,17 @@ sub store {
         $self->embl_checksum,
         $self->projectname,
         );
+}
+
+sub update_htgs_phase {
+    my( $self ) = @_;
+    
+    my $db_id = $self->db_id      or confess "object already has a db_id";
+    my $phase = $self->htgs_phase or confess "htgs_phase not set";
+    my $sth = track_db->prepare_cached(q{
+        UPDATE sequence SET htgs_phase = ? WHERE id_sequence = ?
+        });
+    $sth->execute($phase, $db_id);
 }
 
 sub get_next_id {
