@@ -430,7 +430,7 @@ sub project_finisher {
     if (@$ans) {
         ( $forename, $surname ) = @{$ans->[0]};
     } else {
-        die "No finsher for project";
+        die "No finisher for project '$project'";
     }
     
     # Abbreviate forename
@@ -441,7 +441,7 @@ sub project_finisher {
 
 =pod
 
-=head2 get_team_leader( PROJECT );
+=head2 project_team_leader( PROJECT );
 
 Returns the team leader for a project in EMBL author
 format (eg: "J. Smith").
@@ -466,7 +466,7 @@ sub project_team_leader {
     if (@$ans) {
         ( $forename, $surname ) = @{$ans->[0]};
     } else {
-        die "No team leader for project";
+        die "No team leader for project '$project'";
     }
     
     # Abbreviate forename
