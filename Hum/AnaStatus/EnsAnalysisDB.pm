@@ -51,7 +51,9 @@ use Hum::AnaStatus::EnsAnalysis;
         # Explicitly destroy data structure, to try
         # and work around memory cycle in DBAdaptor
         foreach my $db (values %ens_db_cache) {
-            $db->db_adaptor->_db_handle->disconnect;
+            if (my $aptr = $db->get_cached_db_adaptor) {
+                $aptr->_db_handle->disconnect;
+            }
             foreach my $key (keys %$db) {
                 $db->{$key} = undef;
             }
@@ -104,12 +106,14 @@ sub _fetch_where {
           , user
           , golden_path_type
           , port
+          , dna_ensembl_db_id
         FROM ana_ensembl_db
         WHERE $where
         });
     $sth->execute;
     
-    my ($ensembl_db_id, $db_name, $host, $user, $type, $port) = $sth->fetchrow;
+    my ($ensembl_db_id, $db_name, $host, $user,
+        $type, $port, $dna_ensembl_db_id) = $sth->fetchrow;
     confess "No EnsAnalysisDB found with '$where'"
         unless $ensembl_db_id;
     
@@ -120,6 +124,7 @@ sub _fetch_where {
     $self->user($user);
     $self->golden_path_type($type);
     $self->port($port);
+    $self->dna_ensembl_db_id($dna_ensembl_db_id);
     
     return $self;
 }
@@ -178,6 +183,15 @@ sub ensembl_db_id {
     return $self->{'_ensembl_db_id'};
 }
 
+sub dna_ensembl_db_id {
+    my( $self, $dna_ensembl_db_id ) = @_;
+    
+    if ($dna_ensembl_db_id) {
+        $self->{'_dna_ensembl_db_id'} = $dna_ensembl_db_id;
+    }
+    return $self->{'_dna_ensembl_db_id'};
+}
+
 sub golden_path_type {
     my( $self, $golden_path_type ) = @_;
     
@@ -224,6 +238,12 @@ sub ace_data_factory {
         }
     }
     
+    sub get_cached_db_adaptor {
+        my( $self ) = @_;
+        
+        return $self->{'_db_adaptor'};
+    }
+    
     sub db_adaptor {
         my( $self ) = @_;
 
@@ -248,6 +268,14 @@ sub ace_data_factory {
                     );
             $db_adaptor->static_golden_path_type($type);
         }
+        
+        if (my $dna_db = $self->dna_ensembl_db_id) {
+            # Hmm ... maybe someone could create an
+            # infinite loop in the data?
+            my $ens_db = ref($self)->get_cached_by_ensembl_db_id($dna_db);
+            $db_adaptor->dnadb($ens_db->db_adaptor);
+        }
+        
         return $db_adaptor;
     }
 }
