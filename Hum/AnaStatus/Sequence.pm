@@ -470,7 +470,6 @@ sub parse_filename {
     }
 }
 
-
 1;
 
 __END__
@@ -553,7 +552,8 @@ This method returns the status number currently held.
 
 =item status_date
 
-The date when the current status was assigned.
+The date when the current status was assigned, as
+a UNIX time int.
 
 =item analysis_directory
 

@@ -80,7 +80,7 @@ statuses.
         $sth ||= prepare_track_statement(q{
             SELECT status
             FROM project_status
-            WHERE projectname = '$project'
+            WHERE projectname = ?
               AND status IN(20,34,35,32,21,22,23)
               AND iscurrent = 1
             });
