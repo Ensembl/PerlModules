@@ -6,6 +6,7 @@ package Hum::AnaStatus::Sequence;
 use strict;
 use Carp;
 use Hum::Submission qw( prepare_statement timeace );
+use Hum::AnaStatus qw( annotator_full_name );
 use Hum::AnaStatus::AceFile;
 use Hum::AnaStatus::AceDatabase;
 
@@ -139,13 +140,18 @@ sub ace_database {
     my( $set_not_current, $new_status );
 
     sub set_status {
-        my ( $self, $status ) = @_;
+        my ( $self, $status, $time ) = @_;
         
-        my $time = time;
+        # Time will not normally be supplied, so the
+        # current time is recorded.  This is for
+        # filling in historic records.
+        $time ||= time;
         
         confess "status id not defined" unless $status;
+        
         # Just return TRUE if we already have this status
         return 1 if $status == $self->status_id;
+        
         confess "Unknown status_id '$status'"
             unless $self->_is_valid_status_id($status);
 
@@ -195,15 +201,15 @@ sub ace_database {
             or confess "No ana_seq_id in object";
         
         $set_annotator_uname ||= prepare_statement(q{            
-
             INSERT ana_sequence_person (annotator_uname
                   , ana_seq_id)
             VALUES(?,?)
-            
             });
-            
+        
+        confess "Invalid annotator_uname '$annotator_uname'"
+            unless annotator_full_name($annotator_uname);
+        
         $set_annotator_uname->execute($annotator_uname, $ana_seq_id);
-                
     }
 }
 

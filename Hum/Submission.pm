@@ -20,8 +20,11 @@ use vars qw( @ISA @EXPORT_OK );
                  acetime
                  timeace
                  ghost_path
+                 MySQLdate
                  dateMySQL
-                 MySQLdatetime );
+                 MySQLdatetime
+                 datetimeMySQL
+                 );
 
 =pod
 
@@ -234,32 +237,56 @@ a time string as input, or defaulting to current time.
 
         return "$year-$mon-${mday}_$hour:$min:$sec";
     }
-    
-    # Convert MySQL date to unix time int
-    sub dateMySQL {
-        my( $my_date ) = @_;
-        my( $year, $mon, $mday ) = split /-/, $my_date;
-        $year -= 1900;
-        return timelocal( 0, 0, 0, $mday, $mon, $year );
-    }
 
     # Convert unix time int to MySQL date
     sub MySQLdate {
-        my $time = shift || time;
-        my ($sec, $min, $hour, $mday, $mon, $year) = localtime($time);
+        my( $time ) = @_;
+
+        unless (defined $time) {
+            $time = time;
+        }
+        my ($mday, $mon, $year) = (localtime($time))[3,4,5];
         $year += 1900;
-        ($mon, $mday) = @two_figure[$mon + 1, $mday];
-        return "$year-$mon-$mday";
+        $mon  += 1;
+        return sprintf("%04d-%02d-%02d", $year, $mon, $mday);
+    }
+    
+    # Convert MySQL date to unix time int
+    sub dateMySQL {
+        my( $mydate ) = @_;
+        
+        my ($year, $mon, $mday) =
+            $mydate =~ /(\d{4})-(\d\d)-(\d\d)/
+            or confess "Can't parse '$mydate'";
+        $year -= 1900;
+        $mon  -= 1;
+        return timelocal( 0, 0, 0, $mday, $mon, $year );
     }
     
     # Convert unix time int to MySQL datetime
     sub MySQLdatetime {
-        my $time = shift || time;
+        my( $time ) = @_;
+
+        unless (defined $time) {
+            $time = time;
+        }
         my ($sec, $min, $hour, $mday, $mon, $year) = localtime($time);
         $year += 1900;
-        ($sec, $min, $hour, $mon, $mday) =
-            @two_figure[$sec, $min, $hour, $mon + 1, $mday];
-        return "$year-$mon-$mday $hour:$min:$sec";
+        $mon  += 1;
+        return sprintf("%04d-%02d-%02d %02d:%02d:%02d",
+            $year, $mon, $mday, $hour, $min, $sec);
+    }
+    
+    # Convert MySQL datetime to unix time int
+    sub datetimeMySQL {
+        my( $mydatetime ) = @_;
+
+        my ($year, $mon, $mday, $hour, $min, $sec) =
+            $mydatetime =~ /(\d{4})-(\d\d)-(\d\d) (\d\d):(\d\d):(\d\d)/
+            or confess "Can't parse '$mydatetime'";
+        $year -= 1900;
+        $mon  -= 1;
+        return timelocal($sec, $min, $hour, $mday, $mon, $year);
     }
     
     my( %months );

@@ -14,6 +14,7 @@ use Hum::Submission 'prepare_statement';
     add_seq_id_dir 
     add_new_sequence_entry
     set_ana_sequence_not_current
+    annotator_full_name
     };
 
 {
@@ -111,6 +112,27 @@ use Hum::Submission 'prepare_statement';
     }
 }
 
+
+{
+    my( %annotator );
+    
+    sub annotator_full_name {
+        my( $uid ) = @_;
+        
+        unless (%annotator) {
+            my $sth = prepare_statement(q{
+                SELECT annotator_uname, full_name
+                FROM ana_person
+                });
+            $sth->execute;
+            while (my ($uid, $name) = $sth->fetchrow) {
+                $annotator{$uid} = $name;
+            }
+        }
+        
+        return $annotator{$uid};
+    }
+}
 
 
 1;
