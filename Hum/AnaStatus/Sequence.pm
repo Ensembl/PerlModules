@@ -203,6 +203,27 @@ sub new_from_accession {
     return $pkg->new_from_sequence_name($seq_name);
 }
 
+sub new_from_seqname_sv {
+    my( $pkg, $name, $sv ) = @_;
+
+    my $sth = prepare_statement(q{
+        SELECT a.ana_seq_id
+        FROM sequence s
+          , ana_sequence a
+        WHERE s.seq_id = a.seq_id
+          AND s.sequence_name = ?
+          AND s.sequence_version = ?
+        ORDER BY s.seq_id DESC
+        LIMIT 1
+        });
+    $sth->execute($name, $sv);
+    my ($ana_seq_id) = $sth->fetchrow;
+
+    confess "Can't get ana_seq_id for '$name' with SV '$sv'" unless $ana_seq_id;
+
+    return $pkg->fetch_old_by_ana_seq_id($ana_seq_id);
+}
+
 sub fetch_old_by_ana_seq_id {
     my( $pkg, $asid ) = @_;
     
