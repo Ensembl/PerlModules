@@ -85,7 +85,7 @@ use vars qw{ @ISA };
 }
 
 sub add_Description {
-    my( $pdmp, $embl ) = @_;
+    my( $pdmp, $embl, $ft_factory ) = @_;
     
     my $species   = $pdmp->species;
     my $ext_clone = $pdmp->external_clone_name;
@@ -103,8 +103,8 @@ sub add_Description {
     
     my @desc = ($species_chr_desc);
     if (my $ds = $pdmp->DataSet) {
-        warn "Adding Descriptions from otter db not implemented";
-        #push( @desc, ... );
+        push(@desc, $ft_factory->get_description($pdmp->accession, $embl
+            , $pdmp->sequence_version));
     }
     
     my $de = $embl->newDE;
@@ -113,12 +113,12 @@ sub add_Description {
 }
 
 sub add_Keywords {
-    my( $pdmp, $embl ) = @_;
+    my( $pdmp, $embl, $ft_factory ) = @_;
 
     my @key_words = ('HTG');
     if (my $ds = $pdmp->DataSet) {
-        warn "Adding Keywords from otter db not implemented";
-        #push(@key_words, ...);
+        push(@key_words, $ft_factory->get_keywords($pdmp->accession, $embl
+            , $pdmp->sequence_version));
     }
     
     my $kw = $embl->newKW;
@@ -140,8 +140,8 @@ sub add_Headers {
     $pdmp->add_extra_headers($embl, 'comment');
 }
 
-sub add_FT_entries {
-    my( $pdmp, $embl ) = @_;
+sub make_ft_factory {
+    my( $pdmp ) = @_;
     
     # Can't do this without an attached Otter database
     my $ds  = $pdmp->DataSet   or return;
@@ -149,7 +149,18 @@ sub add_FT_entries {
     
     my $ft_factory = Bio::Otter::EMBL::Factory->new;
     $ft_factory->DataSet($ds);
-    $ft_factory->make_embl($acc, $embl);
+    return $ft_factory;
+
+}
+
+sub add_FT_entries {
+    my( $pdmp, $embl, $ft_factory ) = @_;
+    
+    # Can't do this without an attached Otter database
+    my $ds  = $pdmp->DataSet   or return;
+    my $acc = $pdmp->accession or return;
+    
+    $ft_factory->make_embl($acc, $embl, $pdmp->sequence_version);
 }
 
 sub DataSet {

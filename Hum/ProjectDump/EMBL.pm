@@ -76,11 +76,15 @@ sub make_embl {
     $ac_star->identifier($pdmp->sanger_id);
     $embl->newXX;
 
+    # Making Bio::Otter::EMBL::Factory object
+    # As required to be able to get DE and KW information for for clone
+    my $ft_factory = $pdmp->make_ft_factory();
+    
     # DE line
-    $pdmp->add_Description($embl);
-
+    $pdmp->add_Description($embl, $ft_factory);
+    
     # KW line
-    $pdmp->add_Keywords($embl);
+    $pdmp->add_Keywords($embl, $ft_factory);
 
     # Organism
     add_Organism($embl, $species);
@@ -102,7 +106,7 @@ sub make_embl {
                    $chr, $map, $libraryname );
 
     # Feature table assembly fragments
-    $pdmp->add_FT_entries($embl, $contig_map);
+    $pdmp->add_FT_entries($embl, $ft_factory);
     $embl->newXX;
 
     # Sequence
