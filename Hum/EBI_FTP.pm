@@ -32,8 +32,10 @@ sub put_project {
     my( $ftp, $project_name, $embl_file_name ) = @_;
     
     my $remote = $ftp->make_file_name($project_name);
-    $ftp->put($embl_file_name, $remote)
-        or confess "put('$embl_file_name', '$remote') failed";
+    unless ($ftp->put($embl_file_name, $remote)) {
+        $ftp->delete($remote) or warn "Couldn't delete '$remote'";
+        confess "put('$embl_file_name', '$remote') failed : $@";
+    }
     return $remote;
 }
 
