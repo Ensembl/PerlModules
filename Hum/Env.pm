@@ -18,6 +18,9 @@ correctly.
 
     use Hum::Env;
 
+You need to put this line B<BEFORE> you "use" any
+other modules.
+
 Remember that you need to "use lib <path>", where
 B<path> contains Hum::Env.
 
