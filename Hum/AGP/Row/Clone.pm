@@ -54,6 +54,16 @@ sub accession_sv {
     return $self->{'_accession_sv'};
 }
 
+sub is_finished {
+    my( $self, $is_finished ) = @_;
+    
+    if (defined $is_finished) {
+        $self->{'_is_finished'} = $is_finished ? 1 : 0;
+    }
+    return $self->{'_is_finished'};
+}
+
+
 sub elements {
     my( $self ) = @_;
     
@@ -62,7 +72,7 @@ sub elements {
     }
     
     return (
-        'F',
+        $self->is_finished ? 'F' : 'U',     ### Is "U" correct?
         $self->accession_sv,
         $self->seq_start,
         $self->seq_end,

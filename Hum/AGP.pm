@@ -53,7 +53,11 @@ sub new_Clone_from_tpf_Clone {
     my $cl = $self->new_Clone;
     $cl->seq_start(1);
     $cl->seq_end($inf->sequence_length);
+    if ($inf->htgs_phase == 3) {
+        $cl->is_finished(1);
+    }
     $cl->accession_sv("$acc.$sv");
+    $cl->remark($tpf_cl->remark);
     return $cl;
 }
 
@@ -91,7 +95,9 @@ sub process_TPF {
         if ($row->is_gap) {
             $self->_process_contig($contig) if @$contig;
             $contig = [];
-            $self->new_Gap->chr_length($row->gap_length || $self->unknown_gap_length);
+            my $gap = $self->new_Gap;
+            $gap->chr_length($row->gap_length || $self->unknown_gap_length);
+            $gap->remark($row->remark);
         } else {
             push(@$contig, $row);
         }

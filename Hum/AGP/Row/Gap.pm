@@ -21,7 +21,11 @@ sub chr_length {
 sub elements {
     my( $self ) = @_;
     
-    return('N', $self->chr_length);
+    my @ele = ('N', $self->chr_length);
+    if (my $rem = $self->remark) {
+        push(@ele, $rem);
+    }
+    return @ele;
 }
 
 1;

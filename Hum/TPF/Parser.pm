@@ -61,10 +61,10 @@ sub parse {
         } else {
             my( $acc, $intl, $contig_name ) = @line;
             if ($acc eq '?' and $acc eq $intl) {
-                die "Bad TPF line (accession and clone are both blank): $_";
+                die "Bad TPF line (accession and clone are both blank): $_\n";
             }
             elsif ($intl =~ /type/i) {
-                die "Bad TPF gap line: $_";
+                die "Bad TPF gap line: $_\nGap lines must begin with 'GAP'\n";
             }
             $row = Hum::TPF::Row::Clone->new;
             $row->accession($acc);

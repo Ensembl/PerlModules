@@ -18,6 +18,15 @@ sub is_gap {
     return ref($self) =~ /gap/i ? 1 : 0;
 }
 
+sub remark {
+    my( $self, $remark ) = @_;
+    
+    if ($remark) {
+        $self->{'_remark'} = $remark;
+    }
+    return $self->{'_remark'};
+}
+
 sub check_positive_integer {
     my( $self, $int ) = @_;
     
