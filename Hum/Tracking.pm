@@ -55,6 +55,7 @@ use vars qw( @ISA @EXPORT_OK );
                 project_from_clone
                 project_finisher
                 project_team_leader
+                record_accession_data
                 record_finished_length
                 ref_from_query
                 sanger_id_to_project
@@ -66,7 +67,6 @@ use vars qw( @ISA @EXPORT_OK );
                 unfinished_accession
                 iso2time
                 time2iso
-                store_accession_data
                 );
 
 =head2 current_project_status_number( PROJECT )
@@ -1013,6 +1013,25 @@ more than one match in the project table.
     }
 }
 
+sub time2iso {
+    my $time = shift || time;
+    
+    my ($sec,$min,$hour,$mday,$mon,$year) = localtime($time);
+    return sprintf("%04d-%02d-%02d %02d:%02d:%02d",
+        $year+1900, $mon+1, $mday, $hour, $min, $sec);
+}
+
+sub iso2time {
+    my $iso = shift || die "No iso time given";
+    
+    my ($year, $mon, $mday, $hour, $min, $sec) = $iso
+        =~ /(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/
+        or confess "Can't parse ISO time string '$iso'";
+    $year -= 1900;
+    $mon--;
+    return timelocal($sec,$min,$hour,$mday,$mon,$year);
+}
+
 {
     my( $lock, $record );
 
@@ -1055,32 +1074,129 @@ more than one match in the project table.
     }
 }
 
-sub time2iso {
-    my $time = shift || time;
-    
-    my ($sec,$min,$hour,$mday,$mon,$year) = localtime($time);
-    return sprintf("%04d-%02d-%02d %02d:%02d:%02d",
-        $year+1900, $mon+1, $mday, $hour, $min, $sec);
-}
+sub record_accession_data {
+    my( $project, $suffix, $phase, $acc, $embl_name, $length ) = @_;
 
-sub iso2time {
-    my $iso = shift || die "No iso time given";
-    
-    my ($year, $mon, $mday, $hour, $min, $sec) = $iso
-        =~ /(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/
-        or confess "Can't parse ISO time string '$iso'";
-    $year -= 1900;
-    $mon--;
-    return timelocal($sec,$min,$hour,$mday,$mon,$year);
+    die "unknown htgs_phase '$phase'" unless $phase =~ /^[13]$/;
+    unless ($project and $acc and $embl_name and $length) {
+        confess "Missing argument";
+    }
+
+    eval {
+        _store_embl_submission($acc, $embl_name, $length);
+
+        if ($phase == 1) {
+            _store_unfinished_submission($project, $acc);
+        }
+        elsif ($phase == 3) {
+            _store_finished_submission($project, $acc, $suffix);
+        }
+    };
+    if ($@) {
+        track_db_rollback();
+        confess $@;
+    } else {
+        track_db_commit();
+    }
 }
 
 {
-    my( );
+    my( $sub_get, $sub_ins, $sub_upd );
+    
+    sub _store_embl_submission {
+        my( $acc, $embl_name, $length ) = @_;
 
-    sub store_accession_data {
-        my( $project, $suffix, $phase, $acc, $embl_name) = @_;
+        # Do we have an entry for this accession?
+        $sub_get ||= prepare_track_statement(q{
+            SELECT name
+              , length_bp
+            FROM embl_submission
+            WHERE accession = ?
+            });
+        $sub_get->execute($acc);
+        my( $db_name, $db_length ) = $sub_get->fetchrow;
+        if ($db_name and $db_length) {
+            # Update the entry if the embl id or length are different
+            if ($embl_name ne $db_name or $length ne $db_length) {
+                $sub_upd ||= prepare_track_statement(q{
+                    UPDATE embl_submission
+                    SET name = ?
+                      , length_bp = ?
+                    WHERE accession = ?
+                    });
+                $sub_upd->execute($embl_name, $length, $acc);
+            }
+        } else {
+            # Insert a new entry
+            $sub_ins ||= prepare_track_statement(q{
+                INSERT embl_submission( accession
+                      , name
+                      , length_bp )
+                VALUES (?,?,?)
+                });
+            $sub_ins->execute($acc, $embl_name, $length);
+        }
+    }
+}
 
-        
+{
+    my( $unf_count, $unf_ins );
+    
+    sub _store_unfinished_submisson {
+        my( $project, $acc ) = @_;
+
+        # Update unfinished_submission
+        $unf_count ||= prepare_track_statement(q{
+            SELECT count(*)
+            FROM unfinished_submission
+            WHERE projectname = ?
+            AND accession = ?
+            });
+        $unf_count->execute($project, $acc);
+        my ($count) = $unf_count->fetchrow;
+        unless ($count) {
+            $unf_ins ||= prepare_track_statement(q{
+                INSERT INTO unfinished_submission( projectname
+                      , accession )
+                VALUES(?,?)
+                });
+            $unf_ins->execute($project, $acc);
+        }
+    }
+}
+
+{
+    my( $fin_get, $fin_ins, $fin_upd );
+    
+    sub _store_finished_submisson {
+        my( $project, $acc, $suffix ) = @_;
+
+        $fin_get ||= prepare_track_statement(q{
+            SELECT count(*), suffix
+            FROM finished_submission
+            WHERE projectname = ?
+            AND accession = ?
+            });
+        $fin_get->execute($project, $acc, $suffix);
+        my ($count, $db_suffix) = $fin_get->fetchrow;
+        unless ($count) {
+            $fin_ins ||= prepare_track_statement(q{
+                INSERT INTO finished_submission( projectname
+                      , accession
+                      , suffix )
+                VALUES(?,?,?)
+                });
+            $fin_ins->execute($project, $acc, $suffix);
+        }
+        elsif ($suffix ne $db_suffix) {
+            $fin_upd ||= prepare_track_statement(q{
+                UPDATE finished_submission
+                SET suffix = ?
+                WHERE projectname = ?
+                  AND accession = ?
+                });
+            $fin_upd->execute($suffix, $project, $acc);
+        }
     }
 }
 
