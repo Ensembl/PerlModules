@@ -52,8 +52,17 @@ $ENV{PERL5LIB} = join ':', @libs;
 my $staden_home = '/usr/local/badger/staden';
 
 # For Staden programs
-if ($^O eq 'dec_osf') {
-    $ENV{LD_LIBRARY_PATH} = "$ENV{LD_LIBRARY_PATH}:$staden_home/lib/alpha-binaries";
+{
+    my $staden_lib = "$staden_home/lib/alpha-binaries";
+    if ($^O) {
+        if ($^O eq 'dec_osf') {
+            $ENV{LD_LIBRARY_PATH} = $ENV{LD_LIBRARY_PATH}
+                ? "$ENV{LD_LIBRARY_PATH}:$staden_lib"
+                : $staden_lib;
+        }
+    } else {
+        warn "Perl operating system variable (\$^O) not set";
+    }
 }
 
 # List of dirs for PATH
