@@ -16,6 +16,7 @@ sub new_from_sequence_name {
           , a.analysis_priority
           , a.seq_id
           , a.ana_seq_id
+          , a.db_prefix
           , status.status_id
           , UNIX_TIMESTAMP(status.status_date)
           , s.embl_checksum
@@ -45,6 +46,7 @@ sub new_from_sequence_name {
             $analysis_priority,
             $seq_id,
             $ana_seq_id,
+            $db_prefix,
             $status_id,
             $status_date,
             $embl_checksum,
@@ -58,6 +60,7 @@ sub new_from_sequence_name {
         $self->analysis_priority($analysis_priority);
         $self->seq_id($seq_id);
         $self->ana_seq_id($ana_seq_id);
+        $self->db_prefix($db_prefix);
         $self->status_id($status_id || 0);
         $self->status_date($status_date || 0);
         $self->embl_checksum($embl_checksum);
@@ -148,8 +151,6 @@ sub new_from_sequence_name {
                 
     }
 }
- 
- 
 
 sub status_id {
     my ( $self, $status_id ) = @_;
@@ -225,7 +226,6 @@ sub seq_id {
     return $self->{'_seq_id'};
 }
 
-
 sub ana_seq_id {
     my ( $self, $ana_seq_id ) = @_;
     
@@ -237,6 +237,22 @@ sub ana_seq_id {
     return $self->{'_ana_seq_id'};
 }
 
+sub db_prefix {
+    my ( $self, $db_prefix ) = @_;
+    
+    if ($db_prefix) {
+        confess "Can't modify db_prefix"
+            if $self->{'_db_prefix'};
+        $self->{'_db_prefix'} = $db_prefix;
+    }
+    return $self->{'_db_prefix'} || '';
+}
+
+sub full_sequence_name {
+    my ( $self ) = @_;
+    
+    return $self->db_prefix . $self->sequence_name;
+}
 
 sub status_date {
     my ( $self, $status_date ) = @_;
