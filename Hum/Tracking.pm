@@ -343,9 +343,8 @@ sub external_clone_name {
     foreach my $p (keys %proj) {
         my( $clone, $int, $ext ) = @{$proj{$p}};
         
-        if ($int) {
-            $clone =~ s/^$int// or confess "Can't remove '$int' from '$clone'";
-        } else {
+        # Attempt to remove internal prefixes from the name
+        unless ($int and $clone =~ s/^$int//) {
             $clone = uc $clone;
         }
         
