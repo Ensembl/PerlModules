@@ -265,7 +265,7 @@ sub ace_data_factory {
                     -PASS   => $pass,
                     -PORT   => $port,
                     );
-            $db_adaptor->static_golden_path_type($type);
+            $db_adaptor->assembly_type($type);
         }
         
         if (my $dna_db = $self->dna_ensembl_db_id) {

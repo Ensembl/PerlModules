@@ -96,6 +96,7 @@ sub fetch_by_db_id {
         });
     $sth->execute($id);
     my( $length, $source, $sub, $ins, $del ) = $sth->fetchrow;
+    $sth->finish;
     confess "No overlap with id '$id'" unless $length;
     my $self = $pkg->new;
     $self->db_id($id);
@@ -147,7 +148,7 @@ sub overlap_length {
 sub percent_substitution {
     my( $self, $percent_substitution ) = @_;
     
-    if ($percent_substitution) {
+    if (defined $percent_substitution) {
         $self->{'_percent_substitution'} = $percent_substitution;
     }
     return $self->{'_percent_substitution'};
@@ -156,7 +157,7 @@ sub percent_substitution {
 sub percent_insertion {
     my( $self, $percent_insertion ) = @_;
     
-    if ($percent_insertion) {
+    if (defined $percent_insertion) {
         $self->{'_percent_insertion'} = $percent_insertion;
     }
     return $self->{'_percent_insertion'};
@@ -165,7 +166,7 @@ sub percent_insertion {
 sub percent_deletion {
     my( $self, $percent_deletion ) = @_;
     
-    if ($percent_deletion) {
+    if (defined $percent_deletion) {
         $self->{'_percent_deletion'} = $percent_deletion;
     }
     return $self->{'_percent_deletion'};

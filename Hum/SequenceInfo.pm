@@ -5,10 +5,14 @@ package Hum::SequenceInfo;
 
 use strict;
 use Carp;
+use Hum::Submission 'prepare_statement';
 use Hum::Tracking qw{
     track_db
     prepare_cached_track_statement
     };
+use Hum::Pfetch 'get_EMBL_entries';
+use Hum::FastaFileIO;
+
 
 sub new {
     my( $pkg ) = @_;
@@ -33,6 +37,127 @@ sub fetch_latest_by_accession {
     
     return $pkg->_fetch_generic(q{ accession = ? ORDER BY sv DESC }, $acc);
 }
+
+sub fetch_latest_with_Sequence {
+    my( $pkg, $acc ) = @_;
+    
+    confess "Missing accession argument" unless $acc;
+    
+    return $pkg->_sanger_sequence_get($acc)
+        || $pkg->_embl_sequence_get($acc);
+}
+
+
+sub _embl_sequence_get {
+    my( $pkg, $acc ) = @_;
+    
+    my ($embl) = get_EMBL_entries($acc);
+    return unless $embl;
+
+    my $seq = $embl->hum_sequence;
+    my $sv  = $embl->SV->version;
+    
+    my( $self );
+    unless ($self = $pkg->fetch_by_accession_sv($acc, $sv)) {
+        $self = $pkg->new;
+        $self->accession($acc);
+        $self->sequence_version($sv);
+
+        my( $htgs_phase );
+        foreach my $word ($embl->KW->list) {
+            #warn "KW: $word\n";
+            if ($word =~ /HTGS_PHASE(\d)/) {
+                $htgs_phase = $1;
+                last;
+            }
+        }
+        unless ($htgs_phase) {
+            if ($embl->ID->division eq 'HTG') {
+                $htgs_phase = 1;
+            } else {
+                $htgs_phase = 3;
+            }
+        }
+
+        $self->htgs_phase($htgs_phase);
+    }
+    $seq->name("$acc.$sv");
+    $self->Sequence($seq);
+    return $self;
+}
+
+{
+    my( $sth );
+
+    sub _sanger_sequence_get {
+        my( $pkg, $acc ) = @_;
+
+        my $sth ||= prepare_statement(q{
+            SELECT s.sequence_name
+              , s.sequence_version
+              , s.embl_checksum
+              , s.file_path
+              , d.htgs_phase
+              , a.project_name
+            FROM project_acc a
+              , project_dump d
+              , sequence s
+            WHERE a.sanger_id = d.sanger_id
+              AND d.seq_id = s.seq_id
+              AND d.is_current = 'Y'
+              AND a.accession = ?
+            });
+        $sth->execute($acc);
+
+        my( @seq );
+        while (my ($name, $sv, $cksum, $path, $htgs_phase, $proj) = $sth->fetchrow) {
+            unless ($sv) {
+                warn "sv not set for '$acc' ($name)\n";
+                return;
+            }
+
+            my( $seq );
+            if ($htgs_phase == 3) {
+                # Finished sequences may not have an EMBL file
+                my $fasta = Hum::FastaFileIO->new_DNA_IO("$path/$name");
+                $seq = $fasta->read_one_sequence;
+            } else {
+                # Unfinished sequences may be in multiple pieces
+                # so we need the sequence from the EMBL file where
+                # it is in one piece.
+                my $embl = Hum::EMBL->new;
+                my $entry = $embl->parse("$path/$name.embl");
+                $seq = $entry->hum_sequence;
+            }
+
+            my( $self );
+            unless ($self = $pkg->fetch_by_accession_sv($acc, $sv)) {
+                $self = $pkg->new;
+                $self->accession($acc);
+                $self->sequence_version($sv);
+                $self->htgs_phase($htgs_phase);
+                $self->projectname($proj);
+            }
+            
+            $seq->name("$acc.$sv");
+            $self->Sequence($seq);
+
+            push(@seq, $self);
+        }
+
+        if (@seq == 1) {
+            return $seq[0];
+        }
+        elsif (@seq) {
+            confess "got ", scalar(@seq), " sequences for accession '$acc'\n";
+        }
+        else {
+            return;
+        }
+    }
+}
+
+
 
 sub _fetch_generic {
     my( $pkg, $where_clause, @data ) = @_;

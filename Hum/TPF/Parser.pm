@@ -32,6 +32,8 @@ sub file {
 sub parse {
     my( $self ) = @_;
     
+    my( %uniq_clone, %uniq_accession );
+
     local $/ = "\n";
     my $fh = $self->file or confess "file not set";
     my $tpf = Hum::TPF->new;
@@ -66,6 +68,9 @@ sub parse {
             elsif ($intl =~ /type/i) {
                 die "Bad TPF gap line: $_\nGap lines must begin with 'GAP'\n";
             }
+            if ($acc ne '?' and $uniq_accession{$acc}) {
+                die "Accession '$acc' appears twice in TPF";
+            }
             $row = Hum::TPF::Row::Clone->new;
             $row->accession($acc);
             if ($intl =~ /MULTIPLE/i) {
@@ -73,8 +78,13 @@ sub parse {
                 $row->sanger_clone_name($acc);
             } else {
                 $row->intl_clone_name($intl);
+                if ($intl ne '?' and $uniq_clone{$intl}) {
+                    die "Clone name '$intl' appears twice in TPF";
+                }
             }
             $row->contig_name($contig_name);
+            $uniq_clone{$intl}++;
+            $uniq_accession{$acc}++;
         }
         $row->remark($line[3]);
         $tpf->add_Row($row);
