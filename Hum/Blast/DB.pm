@@ -14,6 +14,22 @@ sub new {
     return $self;
 }
 
+sub type {
+    my( $self, $type ) = @_;
+    
+    if ($type) {
+        $self->{'_type'} = $type;
+    } else {
+        $type = $self->{'_type'} or confess "type not set";
+    }
+    
+    if ($type eq 'NUCLEOTIDE' or $type eq 'PROTEIN') {
+        return $type;
+    } else {
+        confess "type must be 'NUCLEOTIDE' or 'PROTEIN' : '$type' is invalid";
+    }
+}
+
 sub write_access {
     my( $self, $flag ) = @_;
     
@@ -36,26 +52,15 @@ sub filename {
     }
 }
 
-# Could use this if we start building indices for
-# NCBI Blast 2 only.
-#sub blast_version {
-#    my( $self, $blast_version ) = @_;
-#    
-#    if ($blast_version) {
-#        $self->{'_blast_version'} = $blast_version;
-#    } else {
-#        $blast_version = $self->{'_blast_version'};
-#    }
-#    if ($blast_version == 1) {
-#        return $blast_version;
-#    }
-#    elsif ($blast_version == 2 or ! defined $blast_version) {
-#        return 2;   # Blast version 2 is the default
-#    }
-#    else {
-#        confess "Illegal blast_version '$blast_version'";
-#    }
-#}
+sub build_filename {
+    my( $self, $build_filename ) = @_;
+    
+    if ($build_filename) {
+        $self->{'_build_filename'} = $build_filename;
+    } else {
+        return $self->{'_build_filename'} || confess "build_filename not set";
+    }
+}
 
 sub db_name {
     my( $self, $db_name ) = @_;
@@ -78,31 +83,26 @@ sub db_name {
     return $db_name;
 }
 
-sub build_filename {
-    my( $self, $build_filename ) = @_;
-    
-    if ($build_filename) {
-        $self->{'_build_filename'} = $build_filename;
-    } else {
-        return $self->{'_build_filename'} || confess "build_filename not set";
-    }
-}
-
-sub type {
-    my( $self, $type ) = @_;
-    
-    if ($type) {
-        $self->{'_type'} = $type;
-    } else {
-        $type = $self->{'_type'} or confess "type not set";
-    }
-    
-    if ($type eq 'NUCLEOTIDE' or $type eq 'PROTEIN') {
-        return $type;
-    } else {
-        confess "type must be 'NUCLEOTIDE' or 'PROTEIN' : '$type' is invalid";
-    }
-}
+# Could use this if we start building indices for
+# NCBI Blast 2 only.
+#sub blast_version {
+#    my( $self, $blast_version ) = @_;
+#    
+#    if ($blast_version) {
+#        $self->{'_blast_version'} = $blast_version;
+#    } else {
+#        $blast_version = $self->{'_blast_version'};
+#    }
+#    if ($blast_version == 1) {
+#        return $blast_version;
+#    }
+#    elsif ($blast_version == 2 or ! defined $blast_version) {
+#        return 2;   # Blast version 2 is the default
+#    }
+#    else {
+#        confess "Illegal blast_version '$blast_version'";
+#    }
+#}
 
 {
     my( @two_digit ) = ('00'..'31');
@@ -149,20 +149,20 @@ sub do_indexing {
     # Make a title for the blast database
     my $title = $self->_make_db_title;
     
-    my( @extn,              # List of blast db extensions
+    my( 
         $blast_1_indexer,   # "pressdb" or "setdb"
         $is_protein,        # -p argument to "formatdb" : ("T" or "F")
         );
-
     if ($type eq 'NUCLEOTIDE') {
-        @extn = ('', qw( .nhd .ntb .csq .nhr .nin .nsq ));
         $blast_1_indexer = 'pressdb';
         $is_protein = 'F';
     }
     elsif ($type eq 'PROTEIN') {
-        @extn = ('', qw( .ahd .atb .bsq .phr .pin .psq ));
         $blast_1_indexer = 'setdb';
         $is_protein = 'T';
+    }
+    else {
+        confess "bad blast db type '$type'";
     }
     
     # Check new database exists
@@ -184,22 +184,37 @@ sub do_indexing {
         close PIPE or $error_flag++;
     }
     
-    my $bad_db = "$filename.BAD";
     if ($error_flag) {
-        # Save BAD file for debugging
-        rename( $build, $bad_db  );
-        unlink( map "$build$_", @extn );
-        die "Creation of blast database '$filename' from '$build' failed:\n",
-            @outLines,
-            "Bad database file saved as '$bad_db'\n";
-    } else {
-        # Rename new files to blast_db name
-        foreach (@extn) {
-            rename("$build$_", "$filename$_");
-        }
-        unlink($bad_db);
-        return 1;
-    }    
+        confess "Creation of blast database '$filename' from '$build' failed:\n",
+            @outLines;
+    } 
+}
+
+sub rename_build_to_filename {
+    my( $self ) = @_;
+    
+    my $type     = $self->type;
+    my $build    = $self->build_filename;
+    my $filename = $self->filename;
+
+    my( @extn );
+    if ($type eq 'NUCLEOTIDE') {
+        @extn = ('', qw{ .nhd .ntb .csq .nhr .nin .nsq });
+    }
+    elsif ($type eq 'PROTEIN') {
+        @extn = ('', qw{ .ahd .atb .bsq .phr .pin .psq });
+    }
+    else {
+        confess "bad blast db type '$type'";
+    }
+    
+    # Rename new files to blast_db name
+    foreach my $ex (@extn) {
+        my( $from, $to ) = ("$build$ex", "$filename$ex");
+        rename($from, $to)
+            or confess "Error renaming '$from' to '$to' : $!";
+    }
+    return 1;
 }
 
 sub _make_db_title {
@@ -295,16 +310,6 @@ sub parts {
     }
 }
 
-sub check_file_size {
-    my( $self ) = @_;
-    
-    my $size = $self->size;
-    my $actual = $self->actual_file_size;
-    unless ($size == $actual) {
-        confess "Database file should be '$size' bytes, but is actually '$actual' bytes";
-    }
-}
-
 sub read_db_details {
     my( $self ) = @_;
     
@@ -317,6 +322,16 @@ sub read_db_details {
     foreach my $ex (@extras) {
         my ($field, $value) = split /=/, $ex, 2;
         $self->$field($value);
+    }
+}
+
+sub check_file_size {
+    my( $self ) = @_;
+    
+    my $size = $self->size;
+    my $actual = $self->actual_file_size;
+    unless ($size == $actual) {
+        confess "Database file should be '$size' bytes, but is actually '$actual' bytes";
     }
 }
 
@@ -425,7 +440,85 @@ __END__
     
     # This is fatal if the 
     $blast_db->check_file_sizes;
-    
+
+=head1 DESCRIPTION
+
+A Hum::Blast::DB object represents a single blast
+database (multiple fasta files plus indexes for
+Blast 1, wublast and NCBI blast).  It has methods
+for creating the indexes, putting standard
+information into the database title, and
+retrieving this information from an existing
+index.
+
+=head1 METHODS
+
+=over4
+
+=item B<new>
+
+Returns a new Hum::Blast::DB object.
+
+=item B<type>
+
+    $blast_db->type('NUCLEOTIDE');
+    my $type = $blast_db->type;
+
+Must be set, so that the object knows which blast
+indexing commands to use, and the names of the
+index files.  Allowed values are B<NUCLEOTIDE>
+and B<PROTEIN>.
+
+=item B<write_access>
+
+    $blast_db->write_access(1);
+
+Set write_access to TRUE if you want to index a
+blast database.
+
+=item B<filename>
+
+    $blast_db->filename('/data/blastdb/dbEST-1');
+
+Must be set.  This is the filename of the
+existing indexed database, or the filename of the
+database once indexing is complete.
+
+=item B<build_filename>
+
+    $blast_db->build_filename('/data/blastdb/dbEST-1.build');
+
+The name of the file to be indexed.  If indexing
+is successful, it (and its index files) are
+renamed to the value of B<filename>.  This file
+must be on the same device as B<filename>.
+
+=item B<db_name>
+
+    $blast_db->db_name('dbEST');
+
+=item B<do_indexing>
+
+=item B<rename_build_to_filename>
+
+=item B<actual_file_size>
+
+=item B<actual_build_file_size>
+
+=item B<date>
+
+=item B<version>
+
+=item B<size>
+
+=item B<parts>
+
+=item B<read_db_details>
+
+=item B<check_file_size>
+
+
+=back
 
 =head1 AUTHOR
 
