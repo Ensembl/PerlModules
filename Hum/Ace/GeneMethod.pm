@@ -110,6 +110,15 @@ sub is_coding {
     }
 }
 
+sub has_parent{
+    my ($self , $flag) = @_ ;
+    if (defined $flag){
+        $self->{'_has_parent'} = $flag ;
+    }
+    return  $self->{'_has_parent'};
+    
+}
+
 1;
 
 __END__
