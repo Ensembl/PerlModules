@@ -33,15 +33,8 @@ sub port {
     
     my( $port );
     unless ($port = $self->{'_port'}) {
-        if ($self->server_type eq 'RPC') {
-            # Max rpc port number is 2 ** 32
-            # Take a bit off this (just in case anything
-            # else is using the same tactic), and then
-            # remove the process id (2 ** 16 max).
-            $port = (2 ** 32) - ((2 ** 16) * 12) - $$;
-        } else {
-            $port = 55000;
-        }
+        ### FIXME -- need smart way to select random port
+        $port = 55000;
         $self->{'_port'} = $port;
     }
     return $port;
@@ -92,7 +85,6 @@ sub ace_handle {
 sub connect_parameters {
     my( $self ) = @_;
     
-    my $stype = $self->server_type;
     my $host = $self->host;
     my $port = $self->port;
     return (
@@ -100,23 +92,6 @@ sub connect_parameters {
         -PORT       => $port,
         -TIMEOUT    => 60,
         );
-}
-
-sub server_type {
-    my( $self, $type ) = @_;
-    
-    if ($type) {
-        my @allowed = qw{ SOCKET RPC };
-        foreach my $a (@allowed) {
-            if ($type eq $a) {
-                $self->{'_server_type'} = $type;
-                return $type;
-            }
-        }
-        confess "Unknown server type '$type' (allowed values are (@allowed))";
-    } else {
-        return $self->{'_server_type'} || 'RPC';
-    }
 }
 
 sub disconnect_client {
@@ -131,22 +106,16 @@ sub server_executable {
     if ($exe) {
         $self->{'_server_executable'} = $exe;
     }
-    return $self->{'_server_executable'} || $self->default_server_executable;
+    return $self->{'_server_executable'}
+        || $self->default_server_executable;
 }
 
 sub default_server_executable {
-    my( $self ) = @_;
-    
-    my $stype = $self->server_type;
-    if ($stype eq 'RPC') {
-        return 'aceserver';
-    }
-    elsif ($stype eq 'SOCKET') {
-        return 'saceserver';
-    }
-    else {
-        confess "Unknown server type '$stype'";
-    }
+    return 'saceserver';
+}
+
+sub timeout_string {
+    return '0:1:0';
 }
 
 sub server_pid {
@@ -168,14 +137,11 @@ sub restart_server {
 
 sub kill_server {
     my( $self ) = @_;
-    
-    my $pid = $self->server_pid or return;
-    if (kill "TERM", $pid) {
-        return 1;
-    } else {
-        warn "Failed to kill server; pid = '$pid' : $!";
-        return 0;
-    }
+
+    my $ace = $self->ace_handle;
+    $ace->raw_query('shutdown');
+    $ace = undef;
+    $self->disconnect_client;
 }
 
 sub start_server {
@@ -193,7 +159,8 @@ sub start_server {
     }
     elsif (defined $pid) {
         my $exe = $self->server_executable;
-        my @exec_list = ($exe, $path, $port, '0:0:0');
+        my $tim = $self->timeout_string;
+        my @exec_list = ($exe, $path, $port, $tim);
         warn "Trying (@exec_list)";
         exec(@exec_list)
             or confess("exec(",
@@ -201,46 +168,11 @@ sub start_server {
                 ") failed : $!");
     }
     else {
-        confess "Can't fork : $!";
+        confess "Can't fork server : $!";
     }
 }
 
 sub make_server_wrm {
-    my( $self ) = @_;
-    
-    my $stype = $self->server_type;
-    if ($stype eq 'RPC') {
-        $self->make_rpc_server_wrm;
-    }
-    elsif ($stype eq 'SOCKET') {
-        $self->make_socket_server_wrm;
-    }
-    else {
-        confess "Unknown server type '$stype'";
-    }
-}
-
-sub make_rpc_server_wrm {
-    my( $self ) = @_;
-    
-    local *WRM;
-    
-    my $path = $self->path
-        or confess "path not set";
-    my $wspec = "$path/wspec";
-    confess "No wspec directory"
-        unless -d $wspec;
-    my $server_wrm = "$wspec/server.wrm";
-    return if -e $server_wrm;
-    
-    open WRM, "> $server_wrm"
-        or die "Can't create '$server_wrm' : $!";
-    print WRM "\nWRITE_ACCESS_DIRECTORY  $wspec\n",
-        "\nREAD_ACCESS_DIRECTORY  PUBLIC\n\n";
-    close WRM;
-}
-
-sub make_socket_server_wrm {
     my( $self ) = @_;
     
     local *WRM;
@@ -256,7 +188,6 @@ sub make_socket_server_wrm {
     open WRM, "> $server_wrm"
         or die "Can't create '$server_wrm' : $!";
     print WRM map "\n$_\n", 
-        'NO_RESTART',
         'WRITE NONE',
         'READ WORLD';
     close WRM;
