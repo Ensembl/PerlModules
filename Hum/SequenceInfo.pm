@@ -25,6 +25,12 @@ sub fetch_by_accession_sv {
     return $pkg->_fetch_generic(q{ accession = ? AND sv = ? }, $acc, $sv);
 }
 
+sub fetch_latest_by_accession {
+    my( $pkg, $acc, $sv ) = @_;
+    
+    return $pkg->_fetch_generic(q{ accession = ? ORDER BY sv DESC }, $acc, $sv);
+}
+
 sub _fetch_generic {
     my( $pkg, $where_clause, @data ) = @_;
     
@@ -41,6 +47,7 @@ sub _fetch_generic {
         });
     $sth->execute(@data);
     my ($db_id, $acc, $sv, $htgs_phase, $length, $cksum, $proj) = $sth->fetchrow;
+    $sth->finish;
     
     my $self = $pkg->new;
     $self->db_id($db_id);

@@ -94,9 +94,22 @@ sub new_current_from_species_chromsome {
         $species, $chromsome);
 }
 
+sub new_current_from_species_chromsome_subregion {
+    my( $pkg, $species, $chromsome, $subregion ) = @_;
+    
+    return $pkg->_fetch_generic(q{
+          AND t.iscurrent = 1
+          AND c.speciesname = ?
+          AND c.chromosome = ?
+          AND g.subregion = ?
+        },
+        $species, $chromsome, $subregion);
+}
+
 sub _fetch_generic {
     my( $pkg, $where_clause, @data ) = @_;
 
+    ### Need to convert Oracle date to unix time int
     my $sth = prepare_cached_track_statement(qq{
         SELECT t.id_tpf
           , t.entry_date
@@ -124,17 +137,18 @@ sub _fetch_generic {
     $self->species($species);
     $self->chromosome($chr);
     
-    $self->_express_fetch_Rows;
+    # Get all the row data
+    $self->_express_fetch_TPF_Rows;
     
     return $self;
 }
 
-sub _express_fetch_Rows {
+sub _express_fetch_TPF_Rows {
     my( $self ) = @_;
 
     my $db_id = $self->db_id;
 
-    my $rank_gap = $self->_express_fetch_Gaps;
+    my $rank_gap = $self->_express_fetch_TPF_Gaps_rank_hash;
 
     my $sth = prepare_cached_track_statement(q{
         SELECT r.id_tpfrow
@@ -190,7 +204,7 @@ sub _express_fetch_Rows {
     return $self;
 }
 
-sub _express_fetch_Gaps {
+sub _express_fetch_TPF_Gaps_rank_hash {
     my( $self ) = @_;
     
     my $sth = prepare_cached_track_statement(q{
@@ -248,6 +262,135 @@ sub string {
         $str .= $row->string;
     }
     return $str;
+}
+
+sub store {
+    my( $self ) = @_;
+    
+    return if $self->db_id;
+    
+    my ($chr_id, $id_tpftarget) = $self->get_store_chr_tpftarget_ids;
+    my $db_id = $self->get_next_id_tpf;
+    
+    # Set any existing to not_current
+    my $not_current = prepare_cached_track_statement(q{
+        UPDATE tpf
+        SET iscurrent = 0
+        WHERE id_tpftarget = ?
+        });
+    $not_current->execute($id_tpftarget);
+    
+    my $sth = prepare_cached_track_statement(q{
+        INSERT INTO tpf(id_tpf
+              , id_tpftarget
+              , entry_date
+              , iscurrent
+              , program
+              , operator)
+        VALUES(?,?,sysdate,1,?,?)
+        });
+    $sth->execute($db_id,
+        $id_tpftarget,
+        $self->program,
+        $self->operator,
+        );
+    
+    $self->db_id($db_id);
+}
+
+sub get_store_chr_tpftarget_ids {
+    my( $self ) = @_;
+    
+    my $species = $self->species
+        or confess "species not set";
+    my $chr = $self->chromosome
+        or confess "chromosome not set";
+    my $subregion = $self->subregion;
+    my( $chr_id, $id_tpftarget );
+    if ($subregion) {
+        my $sth = prepare_track_statement(q{
+            SELECT c.id_dict
+              , g.id_tpftarget
+            FROM chromosomedict c
+              , subregion s
+              , tpf_target g
+            WHERE c.id_dict = s.chromosome
+              AND s.chromosome = g.chromosome
+              AND s.subregion = g.subregion
+              AND c.speciesname = ?
+              AND c.chromosome = ?
+              AND s.subregion = ?
+            });
+        $sth->execute($species, $chr, $subregion);
+        ($chr_id, $id_tpftarget) = $sth->fetchrow;
+        
+        # Can't use the left join trick we do below
+        # Have to do an extra select
+        unless ($chr_id) {
+            my $sth = prepare_track_statement(q{
+                SELECT c.id_dict
+                FROM chromosomedict c
+                  , subregion s
+                WHERE c.id_dict = s.chromosome
+                  AND c.speciesname = ?
+                  AND c.chromosome = ?
+                  AND s.subregion = ?
+                });
+            $sth->execute($species, $chr, $subregion);
+            ($chr_id) = $sth->fetchrow;
+        }
+    } else {
+        my $sth = prepare_track_statement(q{
+            SELECT c.id_dict
+              , g.id_tpftarget
+            FROM chromosomedict c
+              , tpf_target g
+            WHERE c.id_dict = g.chromosome (+)
+              AND c.speciesname = ?
+              AND c.chromosome = ?
+              AND g.subregion IS NULL
+            });
+        $sth->execute($species, $chr);
+        ($chr_id, $id_tpftarget) = $sth->fetchrow;
+    }
+
+    unless ($chr_id) {
+        my $err = "No id_dict for species '$species' and chromosome '$chr'";
+        if ($subregion) {
+            $err .= " and subregion '$subregion'";
+        }
+        confess $err;
+    }
+    unless ($id_tpftarget) {
+        $id_tpftarget = $self->get_next_id_tpftarget;
+        my $sth = prepare_track_statement(q{
+            INSERT INTO tpf_target(id_tpftarget
+                  , chromosome
+                  , subregion)
+            VALUES (?,?,?)
+            });
+        $sth->execute($id_tpftarget, $chr_id, $subregion);
+    }
+    
+    return( $chr_id, $id_tpftarget );
+}
+
+sub get_next_id_tpftarget {
+    my( $self ) = @_;
+    
+    my $sth = prepare_track_statement(q{SELECT tpft_seq.nextval FROM dual});
+    $sth->execute;
+    my ($id) = $sth->fetchrow;
+    return $id;
+}
+
+sub get_next_id_tpf {
+    my( $self ) = @_;
+    
+    my $sth = prepare_track_statement(q{SELECT tpf_seq.nextval FROM dual});
+    $sth->execute;
+    my ($id) = $sth->fetchrow;
+    return $id;
 }
 
 1;
