@@ -99,7 +99,7 @@ sub ref_from_query {
     
     sub prepare_statement {
         my( $text ) = @_;
-        
+               
         my $sth = sub_db()->prepare($text);
         push(@active_statement_handles, $sth);
         return $sth;

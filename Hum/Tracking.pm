@@ -109,7 +109,7 @@ statuses.
 
     sub is_finished {
         my( $project ) = @_;
-
+        print "!!";
         $sth ||= prepare_track_statement(q{
             SELECT status
             FROM project_status
