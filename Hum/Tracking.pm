@@ -241,8 +241,10 @@ the library and the name of the library vector
         my( $project ) = @_;
 
         $sth ||= prepare_track_statement(q{
-            SELECT l.libraryname
+            SELECT nvl(l.external_libraryname
+                  , l.libraryname)
               , l.vectorname
+              , l.description
             FROM clone_project cp
               , clone c
               , library l
@@ -251,13 +253,13 @@ the library and the name of the library vector
               AND cp.projectname = ?
             });
         $sth->execute($project);
-        my( $lib, $vec ) = $sth->fetchrow;
+        my( $lib, $vec, $desc ) = $sth->fetchrow;
         
         # Catch bad vector and library names
         if ($lib =~ /(^NONE$|UNKNOWN)/i) {
-            ($lib,$vec) = (undef, undef);
+            ($lib, $vec, $desc) = (undef, undef, undef);
         }
-        return ($lib, $vec);
+        return ($lib, $vec, $desc);
     }
 }
 

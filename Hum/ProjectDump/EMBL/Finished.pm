@@ -465,20 +465,13 @@ For further details see http://www.chori.org/bacpac/home.htm"
         my( $pdmp, $embl ) = @_;
         
         my $project = $pdmp->project_name;
-        my ($lib, $vector) = library_and_vector($project);
+        my ($lib, $vector, $des) = library_and_vector($project);
         
         return unless $lib;
         
         my $comment = $lib_comments{$lib};
         unless ($comment) {
-            $sth ||= prepare_track_statement(q{
-                SELECT description
-                FROM library
-                WHERE libraryname = ?
-                });
-            $sth->execute($lib);
-            my ($des) = $sth->fetchrow;
-            if ($des =~ /\S/) {
+            if ($des and $des =~ /\S/) {
                 if ($des =~ /library\s*(.*)/i) {
                     if ($1) {
                         $comment = "is from the $des";
