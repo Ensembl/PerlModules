@@ -3,6 +3,9 @@ package Hum::ProjectDump::EMBL;
 
 use strict;
 use Carp;
+use vars qw( @ISA );
+
+@ISA = 'Hum::ProjectDump';
 
 use Hum::Tracking qw( ref_from_query
                       external_clone_name
@@ -40,9 +43,9 @@ use Hum::EMBL (
     );
 use Hum::EMBL::Utils qw( EMBLdate );
 
-BEGIN {
+{
     my $number_Ns = 800;
-    my $eight_hundred_Ns = 'n' x $number_Ns;
+    my $padding_Ns = 'n' x $number_Ns;
 
     sub make_embl {
         my( $pdmp ) = @_;
@@ -69,23 +72,21 @@ BEGIN {
         my $dna = "";
 	my %contig_lengths;
 	my $pos = 0;
-	my @contig_order; # [contig name, start pos, end pos]
 
-	# $pdmp->get_contig_order();
-
+	my @contig_pos; # [contig name, start pos, end pos]
         foreach my $contig ($pdmp->contig_list) {
             my $con = $pdmp->DNA($contig);
 	    my $contig_length = length($$con);
             $contig_lengths{$contig} = $contig_length;
             if ($dna) {
-		$dna .= $eight_hundred_Ns;
+		$dna .= $padding_Ns;
 		$pos += $number_Ns;
 	    }
 	    my $contig_start = $pos + 1;
             $dna .= $$con;
 	    $pos += $contig_length;
 	    my $contig_end = $pos;
-	    push(@contig_order, [$contig, $contig_start, $contig_end]);
+	    push(@contig_pos, [$contig, $contig_start, $contig_end]);
         }
         my $seqlength = length($dna);
 
@@ -138,12 +139,49 @@ BEGIN {
                         'E-mail enquiries: humquery@sanger.ac.uk',
                         'Clone requests: clonerequest@sanger.ac.uk');
         $embl->newXX;
-        
+        # CC   -------------- Genome Center
+        # CC   Center: Whitehead Institute/ MIT Center for Genome Research
+        # CC   Center code: WIBR
+        # CC   Web site: http://www-seq.wi.mit.edu
+        # CC   Contact: sequence_submissions@genome.wi.mit.edu
+        # CC   -------------- Project Information
+        # CC   Center project name: L651
+        # CC   Center clone name: 82_A_1
+        # CC   -------------- Summary Statistics
+        # CC   Sequencing vector: M13; M77815; 100% of reads
+        # CC   Chemistry: Dye-primer-amersham; 44% of reads
+        # CC   Chemistry: Dye-terminator Big Dye; 56% of reads
+        # CC   Assembly program: Phrap; version 0.960731
+        # CC   Consensus quality: 166043 bases at least Q40
+        # CC   Consensus quality: 166573 bases at least Q30
+        # CC   Consensus quality: 166744 bases at least Q20
+        # CC   Insert size: 168000; agarose-fp
+        # CC   Insert size: 166889; sum-of-contigs
+        # CC   Quality coverage: 8.9 in Q20 bases; agarose-fp
+        # CC   Quality coverage: 8.9 in Q20 bases.
+        # CC   * NOTE: This is a 'working draft' sequence. It currently
+        # CC   * consists of 5 contigs. The true order of the pieces
+        # CC   * is not known and their order in this sequence record is
+        # CC   * arbitrary. Gaps between the contigs are represented as
+        # CC   * runs of N, but the exact sizes of the gaps are unknown.
+        # CC   * This record will be updated with the finished sequence
+        # CC   * as soon as it is available and the accession number will
+        # CC   * be preserved.
+        # CC   *        1     9545: contig of 9545 bp in length
+        # CC   *     9546 9645: gap of      100 bp
+        # CC   *     9646    20744: contig of 11099 bp in length
+        # CC   *    20745 20844: gap of      100 bp
+
+
         # Comments
 	my $reads_cc = $embl->newCC;
 	$reads_cc->list($pdmp->make_read_comments());
+        
+        # This is a lie:
 	$embl->newCC->list("Assembly program: XGAP4; version 4.5");
-	$embl->newCC->list($pdmp->make_consensus_q_summary(),
+        
+        # Quality reports
+	$embl->newCC->list($pdmp->make_consensus_quality_summary(),
 			   $pdmp->make_consensus_length_report());
 	$embl->newCC->list($pdmp->make_q20_depth_report());
 	$embl->newXX;
@@ -166,25 +204,50 @@ foreign sequence from E.coli, yeast, vector, phage etc.");
         # Feature table source feature
         my( $libraryname ) = library_and_vector( $project );
         add_source_FT( $embl, $seqlength, $binomial, $ext_clone,
-                       $chr, $map, $libraryname );	
-	my $vec_ends = $pdmp->find_vector_ends();
-	foreach my $cpos (@contig_order) {
-	    my ($contig, $start, $end) = @$cpos;
-	    my $fragment = $embl->newFT;
-	    $fragment->key('misc_feature');
-	    my $loc = $fragment->newLocation;
-	    $loc->exons([$start, $end]);
-	    $loc->strand('W');
-	    $fragment->addQualifierStrings('note', "assembly_fragment:$contig");
-	    if (exists($vec_ends->{'Left'}->{$contig})) {
-		$fragment->addQualifierStrings('note', "clone_end:SP6");
-		$fragment->addQualifierStrings('note', "vector_side:$vec_ends->{'Left'}->{$contig}");
+                       $chr, $map, $libraryname );
+        
+        # Feature table assembly fragments
+        {
+            my %embl_end = (
+                Left  => 'SP6',
+                Right => 'T7',
+            );
+            
+	    for (my $i = 0; $i < @contig_pos; $i++) {
+	        my ($contig, $start, $end) = @{$contig_pos[$i]};
+	        my $fragment = $embl->newFT;
+	        $fragment->key('misc_feature');
+	        my $loc = $fragment->newLocation;
+	        $loc->exons([$start, $end]);
+	        $loc->strand('W');
+	        $fragment->addQualifierStrings('note', "assembly_fragment:$contig");
+                
+                # Add note if this is part of a group ordered by read-pairs
+                if (my $group = $pdmp->contig_chain($contig)) {
+                    $fragment->addQualifierStrings('note', "group:$group");
+                }
+                
+                # Mark the left and right end contigs
+                if (my $vec_end = $pdmp->vector_ends($contig)) {
+                    foreach my $end ('Left', 'Right') {
+                        if (my $side = $vec_end->{$end}) {
+                            $fragment->addQualifierStrings('note', "clone_end:$embl_end{$end}");
+                            $fragment->addQualifierStrings('note', "vector_side:$side");
+                        }
+                    }
+                }
+                
+                # Add gap features
+                unless ($i == $#contig_pos) {
+                    my $spacer = $embl->newFT;
+                    $spacer->key('misc_feature');
+                    my $loc = $spacer->newLocation;
+	            $loc->exons([$end + 1, $end + $number_Ns]);
+	            $loc->strand('W');
+                    $spacer->addQualifierStrings('note', 'gap of unknown length');
+                }
 	    }
-	    if (exists($vec_ends->{'Right'}->{$contig})) {
-		$fragment->addQualifierStrings('note', "clone_end:T7");
-		$fragment->addQualifierStrings('note', "vector_side:$vec_ends->{'Right'}->{$contig}");
-	    }
-	}
+        }
         $embl->newXX;
     
         # Sequence
@@ -195,6 +258,125 @@ foreign sequence from E.coli, yeast, vector, phage etc.");
         
         return $embl;
     }
+}
+
+
+sub make_read_comments {
+    my ($pdmp) = @_;
+    
+    my @comments;
+
+    my $vec_total = 0;
+    while (my ($seq_vec, $count) = each %{$pdmp->{_vector_count}}) {
+	$vec_total += $count;
+    }
+    unless ($vec_total) { $vec_total++; }
+
+    while (my ($seq_vec, $count) = each %{$pdmp->{_vector_count}}) {
+	my $percent = $count * 100 / $vec_total;
+	push(@comments,
+	     sprintf("Sequencing vector: %s %d%% of reads",
+		     $seq_vec, $percent));
+	
+    }
+    my $chem_total = 0;
+    while (my ($chem, $count) = each %{$pdmp->{_chem_count}}) {
+	$chem_total += $count;
+    }
+    unless ($chem_total) { $chem_total++; }
+
+    while (my ($chem, $count) = each %{$pdmp->{_chem_count}}) {
+	my $percent = $count * 100 / $chem_total;
+	push(@comments,
+	     sprintf("Chemistry: %s; %d%% of reads", $chem, $percent));
+    }
+
+    return @comments;
+}
+
+sub make_consensus_quality_summary {
+    my ($pdmp) = @_;
+
+    my @qual_hist;
+
+    foreach my $contig ($pdmp->contig_list) {
+	my $qual = $pdmp->BaseQuality($contig);
+
+        my $length = length($$qual);
+
+        my @values = unpack("C$length", $$qual);
+        
+        my $v_len = @values;
+        
+        die "Wrong number of elements ($v_len) for string of length $length"
+            unless $v_len == $length;
+
+	foreach my $q (@values) {
+	    $qual_hist[$q]++;
+	}
+    }
+
+    my $total = 0;
+    for (my $q = $#qual_hist; $q >= 0; $q--) {
+	$total += $qual_hist[$q] || 0;
+	$qual_hist[$q] = $total;
+    }
+
+    return ("Consensus quality: $qual_hist[40] bases at least Q40",
+	    "Consensus quality: $qual_hist[30] bases at least Q30",
+	    "Consensus quality: $qual_hist[20] bases at least Q20");
+}
+
+sub make_consensus_length_report {
+    my ($pdmp) = @_;
+
+    my @report;
+    my $len = 0;
+
+    foreach my $contig ($pdmp->contig_list) {
+	$len += $pdmp->contig_length($contig);
+    }
+
+    push(@report, "Insert size: $len; sum-of-contigs");
+
+    if (my $ag_len = $pdmp->agarose_length()) {
+	if (my $ag_err = $pdmp->agarose_error()) {
+	    push(@report,
+		 sprintf("Insert size: %d; %.1f%% error; agarose-fp",
+			 $ag_len,
+			 $ag_err * 100 / $ag_len));
+	} else {
+	    push(@report,
+		 sprintf("Insert size: %d; agarose-fp", $ag_len));
+	}
+    }
+
+    return @report;
+}
+
+sub make_q20_depth_report {
+    my ($pdmp) = @_;
+
+    my $est_len   = 0;
+    my $q20_bases = 0;
+
+    foreach my $contig ($pdmp->contig_list) {
+	$est_len += $pdmp->contig_length($contig);
+	$q20_bases += $pdmp->count_q20_for_contig($contig);
+    }
+    unless ($est_len) { $est_len = 1; }
+    my @report;
+    push(@report,
+	 sprintf("Quality coverage: %.2fx in Q20 bases; sum-of-contigs",
+		 $q20_bases / $est_len));
+    
+    if (my $ag_len = $pdmp->agarose_length()) {
+    push(@report,
+	 sprintf("Quality coverage: %.2fx in Q20 bases; agarose-fp",
+		 $q20_bases / $ag_len));
+    }
+
+    return @report;
 }
 
 

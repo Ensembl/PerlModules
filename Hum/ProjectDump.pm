@@ -185,9 +185,13 @@ BEGIN {
     sub contig_list {
         my( $pdmp ) = @_;
 
-        if ($pdmp->{'_DNA'}) {
+        if (my $order = $pdmp->{'_contig_order'}) {
+            return @$order;
+        }
+        elsif ($pdmp->{'_DNA'}) {
             return sort keys %{$pdmp->{'_DNA'}};
-        } else {
+        }
+        else {
             confess "No contigs";
         }
     }
@@ -205,31 +209,43 @@ BEGIN {
         }
     }
 
-    sub new_dna_ref {
-        my( $pdmp, $contig ) = @_;
-
-        confess "Can't call new_dna_ref() without contig name"
-            unless $contig;
-        my $dna = '';
-        $pdmp->{'_DNA'}{$contig} = \$dna;
-        return $pdmp->{'_DNA'}{$contig};
-    }
-
     sub delete_contig {
         my( $pdmp, $contig ) = @_;
 
         confess "Can't call delete_contig() without contig name"
-            unless $contig;
+            unless defined $contig;
         delete( $pdmp->{'_DNA'}{$contig} )
             or confess "No such DNA '$contig'";
         delete( $pdmp->{'_BaseQuality'}{$contig} )
-            or confess "No such BaseQuality '$contig'";;
+            or confess "No such BaseQuality '$contig'";
+        
+        # Remove entry from contig_order array
+        if (my $order = $pdmp->{'_contig_order'}) {
+            for (my $i = 0; $i < @$order;) {
+                if ($order->[$i] eq $contig) {
+                    splice(@$order, $i, 1);
+                } else {
+                    $i++;
+                }
+            }
+        }
+    }
+
+    sub new_dna_ref {
+        my( $pdmp, $contig ) = @_;
+
+        confess "Can't call new_dna_ref() without contig name"
+            unless defined $contig;
+        my $dna = '';
+        $pdmp->{'_DNA'}{$contig} = \$dna;
+        return $pdmp->{'_DNA'}{$contig};
     }
     
     sub contig_length {
         my( $pdmp, $contig ) = @_;
         
-        confess "Contig name not specified" unless defined $contig;
+        confess "Can't call contig_length() without contig name"
+            unless defined $contig;
         my $dna = $pdmp->{'_DNA'}{$contig}
             or confess "No such contig '$contig'";
         return length($$dna);
@@ -250,132 +266,113 @@ BEGIN {
             return $pdmp->{'_unpadded_length'};
         }
     }
+}
+
+sub contig_chain {
+    my( $pdmp, $contig, $i ) = @_;
     
-    sub cleanup_contigs {
-        my( $pdmp, $cutoff ) = @_;
-        
-        $cutoff = 1000 unless defined $cutoff;
-        
-        foreach my $contig ($pdmp->contig_list) {
-            my $dna = $pdmp->DNA($contig);
-            my $qual = $pdmp->BaseQuality($contig);
-            
-            # Depad BaseQuality array
-            my $pos = length($$dna);
-            while (($pos = rindex($$dna, '-', $pos)) >= 0) {
-	        splice(@$qual, $pos, 1);
-	        $pos--;
+    if (defined $i) {
+        $pdmp->{'_contig_chain'}{$contig} = $i;
+    }
+    return $pdmp->{'_contig_chain'}{$contig};
+}
+
+sub revcomp_contig {
+    my( $pdmp, $contig ) = @_;
+
+    confess "Can't call revcomp_contig() without contig name"
+        unless defined $contig;
+    my $dna = $pdmp->DNA($contig)
+        or confess "No such DNA '$contig'";
+    $$dna = reverse($$dna);
+    $$dna =~ tr{acgtrymkswhbvdnACGTRYMKSWHBVDN}
+               {tgcayrkmswdvbhnTGCAYRKMSWDVBHN};
+    my $qual = $pdmp->BaseQuality
+        or confess "No such BaseQuality '$contig'";
+    $$qual = reverse($$qual);
+    
+    if (my $v_end = $pdmp->vector_ends($contig)) {
+        while (my($end, $side) = each %$v_end) {
+            if ($side eq 'left') {
+                $v_end->{$end} = 'right';
             }
-            # Depad DNA
-            $$dna =~ s/\-//g;
-            
-            # Report traling n's
-            {
-                my $n = 0;
-                for (my $i = (length($$dna) - 1);
-                     substr($$dna, $i, 1) eq 'n';
-                     $i--) {
-                    print STDERR '.';
-                    $n++;
-                }
-                if ($n) {
-                    warn "\nIn project '", $pdmp->project_name,
-                        "' contig '$contig' has $n trailing n's\n";
-                }
+            elsif ($side eq 'right') {
+                $v_end->{$end} = 'left';
             }
-            # Trim trailing n's from the contig
-            #if ($$dna =~ s/(n+)$//) {
-            #    my $n_len = length($&);
-            #    my $n_pre = length($`);
-            #    splice(@$qual, $n_pre, $n_len);
-            #    print "Stripped $n_len n's from contig $n\n";
-            #}
-            
-            # Filter out contigs shorter than minimum contig length
-	    if (length($$dna) < $cutoff) {
-                $pdmp->delete_contig($contig);
+            else {
+                confess "Unknown side '$side'";
             }
         }
-        $pdmp->validate_contig_lengths;
     }
-    
-    sub validate_contig_lengths {
-        my( $pdmp ) = @_;
-        
-        foreach my $contig ($pdmp->contig_list) {
-            my $dna = $pdmp->DNA($contig);
-            my $qual = $pdmp->BaseQuality($contig);
-            confess "Differing DNA and BaseQuality lengths detected in contig '$contig'"
-                unless length($$dna) == @$qual;
+}
+
+sub cleanup_contigs {
+    my( $pdmp, $cutoff ) = @_;
+
+    $cutoff = 1000 unless defined $cutoff;
+
+    foreach my $contig ($pdmp->contig_list) {
+        my $dna  = $pdmp->DNA($contig);
+        my $qual = $pdmp->BaseQuality($contig);
+
+        # Depad BaseQuality array
+        my $pos = length($$dna);
+        while (($pos = rindex($$dna, '-', $pos)) >= 0) {
+	    #splice(@$qual, $pos, 1);
+	    substr($qual, $pos, 1) = '';
+	    $pos--;
+        }
+        # Depad DNA
+        $$dna =~ s/\-//g;
+
+        # Report traling n's
+        {
+            my $n = 0;
+            for (my $i = (length($$dna) - 1);
+                 substr($$dna, $i, 1) eq 'n';
+                 $i--) {
+                print STDERR '.';
+                $n++;
+            }
+            if ($n) {
+                warn "\nIn project '", $pdmp->project_name,
+                    "' contig '$contig' has $n trailing n's\n";
+            }
+        }
+        ## Trim trailing n's from the contig
+        #if ($$dna =~ s/(n+)$//) {
+        #    my $n_len = length($&);
+        #    my $n_pre = length($`);
+        #    splice(@$qual, $n_pre, $n_len);
+        #    print "Stripped $n_len n's from contig $n\n";
+        #}
+
+        # Filter out contigs shorter than minimum contig length
+	if (length($$dna) < $cutoff) {
+            $pdmp->delete_contig($contig);
         }
     }
+    $pdmp->validate_contig_lengths;
 }
 
-sub parse_read_sequence {
-    my ($pdmp, $name, $seq) = @_;
+sub validate_contig_lengths {
+    my( $pdmp ) = @_;
 
-    my ($seq_vec) = $$seq =~ /Sequencing_vector\s+\"(\S+)\"/;
-    $pdmp->count_vector($seq_vec);
-    $pdmp->count_chemistry($name);
-    if (/Clone_vec\s+CVEC/) {
-	$pdmp->record_clone_vec($name, $seq);
+    foreach my $contig ($pdmp->contig_list) {
+        my $dna  = $pdmp->DNA($contig);
+        my $qual = $pdmp->BaseQuality($contig);
+        my $dna_len  = length($dna);
+        my $qual_len = length($qual);
+        confess "Differing DNA ($dna_len) and BaseQuality ($qual_len) lengths detected in contig '$contig'"
+            unless $qual_len == $dna_len;
     }
-    my $template;
-    if (/Template\s+(\S+)/) {
-	$template = $1;
-    } else {
-	$template = $name;
-	$template =~ s/\..*//;
-    }
-    $pdmp->{_read_templates}->{$name} = $template;
-
-    if (/Insert_size\s+\d+\s+(\d+)/) {
-	$pdmp->{_template_max_insert}->{$template} = $1;
-    }
-    
 }
 
-sub parse_assembled_from {
-    my ($pdmp, $name, $seq) = @_;
+sub add_contig_chain {
+    my( $pdmp, $chain ) = @_;
 
-    my @af;
-    my $read_extents = $pdmp->{_read_extents} || {};
-
-    foreach my $line (split(/\n/, $$seq)) {
-	my ($af, $read, $cs, $ce, $rs, $re) = split(" ", $line);
-	if ($af eq "Assembled_from") {
-	    push(@af, [$read, $cs, $ce, $rs, $re]);
-	    my $dirn = ($cs > $ce);
-	    if ($dirn) { ($cs, $ce) = ($ce, $cs); }
-	    if (exists($read_extents->{$read})) {
-
-		my ($contig, $ecs, $ece, $ers, $ere)
-		    = @{$read_extents->{$read}};
-
-		if ($cs > $ecs) { $cs = $ecs; }
-		if ($ce < $ece) { $ce = $ece; }
-		if ($rs > $ers) { $rs = $ers; }
-		if ($re < $ere) { $re = $ere; }
-	    }
-
-	    $read_extents->{$read} = [$name, $cs, $ce, $rs, $re, $dirn];
-	}
-    }
-
-    @af = sort { $a->[0] cmp $b->[0] || $a->[3] <=> $b->[3] || $a cmp $b } @af;
-
-    $pdmp->{_assembled_from}->{$name} = \@af;
-    $pdmp->{_read_extents} = $read_extents;
-}
-
-sub read_quality {
-    my ($pdmp, $name, $qual) = @_;
-
-    if (defined($qual)) {
-	$pdmp->{_read_quality}->{$name} = $qual;
-    }
-
-    return $pdmp->{_read_quality}->{$name};
+    confess "No chain supplied" unless $chain;
+    push(@{$pdmp->{'_contig_chain'}}, $chain);
 }
 
 sub read_gap_contigs {
@@ -388,70 +385,185 @@ sub read_gap_contigs {
 
     my $contig_prefix = "Contig_prefix_ezelthrib";
 
+    $pdmp->dump_time(time); # Record the time of the dump
     open(GAP2CAF, "cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $contig_prefix 2> /dev/null | caf_depad |")
 	|| die "COULDN'T OPEN PIPE FROM GAP2CAF : $!\n";
     
     while (<GAP2CAF>) {
 	my ($object, $value) = split("\n", $_, 2);
 	
-	# Only read contig DNA and BaseQuality objects.
+	# Read contig DNA BaseQuality and Sequence objects.
 	# We know which ones the contigs are without looking for Is_contig
 	# tags as gap2caf was told to put $contig_prefix in front of the
 	# contig staden id.
 	
-	if (my ($class, $name)
-	    = $object =~ /(DNA|BaseQuality|Sequence)\s+\:\s+(\S+)/) {
+	if (my ($class, $name) = $object =~ /(DNA|BaseQuality|Sequence)\s+\:\s+(\S+)/) {
 
 	    if (my ($contig) = $name =~ /$contig_prefix(\d+)/o) {
-		# Contig object
+		# It's a Contig object
 		if ($class eq 'DNA') {
-		    
 		    $value =~ s/\s+//g;
 		    $value = lc $value;
 		    $pdmp->DNA($contig, \$value);
-		    
-		} elsif ($class eq 'BaseQuality') {
-		    
-		    $pdmp->BaseQuality($contig, [split(/\s+/, $value)]);
-		    
-		} elsif ($class eq 'Sequence') {
-		    
+		}
+                elsif ($class eq 'BaseQuality') {
+                    my $qual = pack('C*', split(/\s+/, $value));
+		    $pdmp->BaseQuality($contig, \$qual);
+		}
+                elsif ($class eq 'Sequence') {
 		    $pdmp->parse_assembled_from($contig, \$value);
-		    
 		}
 	    } else {
-		# Read object
-		
+		# It's a Read object
 		if ($class eq 'Sequence' && $value =~ /Is_read/) {
-		    
 		    $pdmp->parse_read_sequence($name, \$value);
-
-		} elsif ($class eq 'BaseQuality') {
-		    
-		    $pdmp->read_quality($name, pack("C*",
-						    split(/\s+/, $value)));
+		}
+                elsif ($class eq 'BaseQuality') {
+		    $pdmp->read_quality($name, pack('C*', split(/\s+/, $value)));
 		}
 	    }
 	}
     }
     close(GAP2CAF) || confess $! ? "ERROR RUNNING GAP2CAF : exit status $?\n"
                                  : "ERROR RUNNING GAP2CAF : $!\n";
-    $pdmp->dump_time(time); # Record the time of the dump
+    $pdmp->order_contigs;
 }
 
-sub count_vector {
-    my ($pdmp, $vector) = @_;
+sub parse_read_sequence {
+    my ($pdmp, $name, $seq) = @_;
+    
+    # Accumulate statistics for the sequencing vectors used
+    my ($seq_vec) = $$seq =~ /Sequencing_vector\s+\"(\S+)\"/;
+    $pdmp->count_vector($seq_vec);
+    
+    # The suffix of the read name shows what chemistry was used
+    $pdmp->count_chemistry($name);
+    
+    # Record wether this read includes the vector end
+    $pdmp->record_vector_end_reads($name, $seq);
+    
+    # The template is the name of the subclone
+    # which the read is from.
+    my $template;
+    if (/Template\s+(\S+)/) {
+	$template = $1;
+    } else {
+	$template = $name;
+	$template =~ s/\..*//;
+    }
+    $pdmp->read_template($name, $template);
 
-    unless (defined($vector)) { return; }
+    if (/Insert_size\s+\d+\s+(\d+)/) {
+	#$pdmp->{_template_max_insert}->{$template} = $1;
+        $pdmp->insert_size($template, $1);
+    }
+}
 
-    my $ncbi_vec = {
-	m13mp18 => 'M13; M77815;',
+sub insert_size {
+    my( $pdmp, $template, $value ) = @_;
+    
+    if (defined $value) {
+        $pdmp->{'_template_max_insert'}{$template} = $value;
+    }
+    return $pdmp->{'_template_max_insert'}{$template};
+}
+
+sub read_list {
+    my( $pdmp ) = @_;
+    
+    return keys %{$pdmp->{'_read_templates'}};
+}
+
+sub read_template {
+    my( $pdmp, $name, $value ) = @_;
+    
+    if (defined $value) {
+        $pdmp->{'_read_templates'}{$name} = $value;
+    }
+    return $pdmp->{'_read_templates'}{$name};
+}
+
+sub read_extent {
+    my( $pdmp, $name, $value ) = @_;
+    
+    if ($value) {
+        $pdmp->{'_read_extents'}{$name} = $value;
+    }
+    return $pdmp->{'_read_extents'}{$name};
+}
+
+sub read_extents_ref {
+    my( $pdmp ) = @_;
+    
+    return $pdmp->{'_read_extents'};
+}
+
+sub read_quality {
+    my ($pdmp, $name, $qual) = @_;
+
+    if (defined $qual) {
+	$pdmp->{'_read_quality'}{$name} = $qual;
+    }
+
+    return $pdmp->{'_read_quality'}{$name};
+}
+
+sub assembled_from {
+    my( $pdmp, $name, $from_array ) = @_;
+    
+    if ($from_array) {
+        $pdmp->{'_assembled_from'}{$name} = $from_array;
+    }
+    return $pdmp->{'_assembled_from'}{$name};
+}
+
+sub parse_assembled_from {
+    my ($pdmp, $name, $seq) = @_;
+
+    my @af;
+    #my $read_extents = $pdmp->read_extents;
+
+    foreach my $line (split(/\n/, $$seq)) {
+	my ($af, $read, $cs, $ce, $rs, $re) = split(" ", $line);
+	if ($af eq "Assembled_from") {
+	    push(@af, [$read, $cs, $ce, $rs, $re]);
+	    my $dirn = ($cs > $ce);
+	    if ($dirn) { ($cs, $ce) = ($ce, $cs); }
+	    #if (exists($read_extents->{$read})) {
+	    if (my $extent = $pdmp->read_extent($read)) {
+
+		my ($contig, $ecs, $ece, $ers, $ere) = @{$extent};
+
+		if ($cs > $ecs) { $cs = $ecs; }
+		if ($ce < $ece) { $ce = $ece; }
+		if ($rs > $ers) { $rs = $ers; }
+		if ($re < $ere) { $re = $ere; }
+	    }
+
+	    #$read_extents->{$read} = [$name, $cs, $ce, $rs, $re, $dirn];
+            $pdmp->read_extent($read, [$name, $cs, $ce, $rs, $re, $dirn]);
+	}
+    }
+
+    @af = sort { $a->[0] cmp $b->[0] || $a->[3] <=> $b->[3] || $a cmp $b } @af;
+
+    #$pdmp->{_assembled_from}->{$name} = \@af;
+    $pdmp->assembled_from($name, \@af);
+}
+
+{
+    my %vector_string = (
+        m13mp18 => 'M13; M77815;',
 	puc18   => 'plasmid; L08752;',
-    }->{lc($vector)};
+    );
 
-    unless (defined($ncbi_vec)) { return; }
+    sub count_vector {
+        my ($pdmp, $vector) = @_;
 
-    $pdmp->{_vector_count}->{$ncbi_vec}++;
+        my $ncbi_vec = $vector_string{lc $vector} or return;
+
+        $pdmp->{_vector_count}->{$ncbi_vec}++;
+    }
 }
 
 sub count_chemistry {
@@ -462,126 +574,6 @@ sub count_chemistry {
 	    $pdmp->{_chem_count}->{$pdmp->{suffix_chemistry}->{$suffix}}++;
 	}
     }
-}
-
-sub record_clone_vec {
-    my ($pdmp, $name, $seq) = @_;
-
-    my ($start, $end, $vec_end)
-	= $$seq =~ /Clone_vec\s+CVEC\s+(\d+)\s+(\d+)\s+\"CAF\:End\=(Left|Right)/;
-
-    return unless ($vec_end);
-
-    push(@{$pdmp->{_found_vector}->{$vec_end}}, [$name, $start, $end]);
-}
-
-sub make_read_comments {
-    my ($pdmp) = @_;
-    
-    my @comments;
-
-    my $vec_total = 0;
-    while (my ($seq_vec, $count) = each %{$pdmp->{_vector_count}}) {
-	$vec_total += $count;
-    }
-    unless ($vec_total) { $vec_total++; }
-
-    while (my ($seq_vec, $count) = each %{$pdmp->{_vector_count}}) {
-	my $percent = $count * 100 / $vec_total;
-	push(@comments,
-	     sprintf("Sequencing vector: %s %d%% of reads",
-		     $seq_vec, $percent));
-	
-    }
-    my $chem_total = 0;
-    while (my ($chem, $count) = each %{$pdmp->{_chem_count}}) {
-	$chem_total += $count;
-    }
-    unless ($chem_total) { $chem_total++; }
-
-    while (my ($chem, $count) = each %{$pdmp->{_chem_count}}) {
-	my $percent = $count * 100 / $chem_total;
-	push(@comments,
-	     sprintf("Chemistry: %s; %d%% of reads", $chem, $percent));
-    }
-
-    return @comments;
-}
-
-sub make_consensus_q_summary {
-    my ($pdmp) = @_;
-
-    my @qual_hist;
-
-    foreach my $contig ($pdmp->contig_list) {
-	my $qual = $pdmp->BaseQuality($contig);
-
-	foreach my $q (@$qual) {
-	    $qual_hist[$q]++;
-	}
-    }
-
-    my $total = 0;
-    for (my $q = $#qual_hist; $q >= 0; $q--) {
-	$total += $qual_hist[$q] || 0;
-	$qual_hist[$q] = $total;
-    }
-
-    return ("Consensus quality: $qual_hist[40] bases at least Q40",
-	    "Consensus quality: $qual_hist[30] bases at least Q30",
-	    "Consensus quality: $qual_hist[20] bases at least Q20");
-}
-
-sub make_consensus_length_report {
-    my ($pdmp) = @_;
-
-    my @report;
-    my $len = 0;
-
-    foreach my $contig ($pdmp->contig_list) {
-	$len += $pdmp->contig_length($contig);
-    }
-
-    push(@report, "Insert size: $len; sum-of-contigs");
-
-    if (my $ag_len = $pdmp->agarose_length()) {
-	if (my $ag_err = $pdmp->agarose_error()) {
-	    push(@report,
-		 sprintf("Insert size: %d; %.1f%% error; agarose-fp",
-			 $ag_len,
-			 $ag_err * 100 / $ag_len));
-	} else {
-	    push(@report,
-		 sprintf("Insert size: %d; agarose-fp", $ag_len));
-	}
-    }
-
-    return @report;
-}
-
-sub make_q20_depth_report {
-    my ($pdmp) = @_;
-
-    my $est_len   = 0;
-    my $q20_bases = 0;
-
-    foreach my $contig ($pdmp->contig_list) {
-	$est_len += $pdmp->contig_length($contig);
-	$q20_bases += $pdmp->count_q20_for_contig($contig);
-    }
-    unless ($est_len) { $est_len = 1; }
-    my @report;
-    push(@report,
-	 sprintf("Quality coverage: %.2fx in Q20 bases; sum-of-contigs",
-		 $q20_bases / $est_len));
-    
-    if (my $ag_len = $pdmp->agarose_length()) {
-    push(@report,
-	 sprintf("Quality coverage: %.2fx in Q20 bases; agarose-fp",
-		 $q20_bases / $ag_len));
-    }
-
-    return @report;
 }
 
 sub count_q20_for_contig {
@@ -602,76 +594,122 @@ sub count_q20_for_contig {
 	my ($start, $end) = ($af->[3], $af->[4]);
 	if ($start > $end) { ($start, $end) = ($end, $start); }
 	my $part = substr($quals, $start - 1, $end - $start + 1);
+        
+        # ascii 023 = decimal 19
+        # This counts the number of characters which are not
+        # in the range 0-19
 	$q20_count += $part =~ tr/\000-\023//c;
     }
 
     return $q20_count;
 }
 
-sub find_vector_ends {
-    my ($pdmp) = @_;
+sub record_vector_end_reads {
+    my ($pdmp, $name, $read) = @_;
 
-    my %ends;
-    my $read_extents = $pdmp->{_read_extents} || {};
+    my ($start, $end, $vec_end)
+	= $$read =~ /Clone_vec\s+CVEC\s+(\d+)\s+(\d+)\s+\"CAF\:End\=(Left|Right)/;
 
-    foreach my $vec_end ('Left', 'Right') {
+    return unless ($vec_end);
 
-	next unless (exists($pdmp->{_found_vector}->{$vec_end}));
-
-	my $contig;
-	my $contig_end;
-
-	foreach my $found_vec (@{$pdmp->{_found_vector}->{$vec_end}}) {
-	    my ($read, $start, $end) = @$found_vec;
-	    next unless (exists($read_extents->{$read}));
-
-	    my ($name, $cs, $ce, $rs, $re, $dirn)
-		= @{$read_extents->{$read}};
-
-	    unless ($contig) { $contig = $name; }
-	    if ($contig ne $name) {
-		$contig = "";
-		last;
-	    }
-
-	    my $rcontig_end;
-
-	    if ($dirn) {
-		# Reverse read
-		if ($end < $rs)      { $rcontig_end = "right"; }
-		elsif ($start > $re) { $rcontig_end = "left";  }
-	    } else {
-		# Forward read
-		if ($end < $rs)      { $rcontig_end = "left";  }
-		elsif ($start > $re) { $rcontig_end = "right"; }
-	    }
-	    unless ($rcontig_end) { next; }
-
-	    unless ($contig_end) { $contig_end = $rcontig_end; }
-	    if ($contig_end ne $rcontig_end) {
-		$contig = "";
-		last;
-	    }
-	}
-
-	if ($contig) {
-	    $ends{$vec_end}->{$contig} = $contig_end;
-	}
-    }
-
-    return \%ends;
+    push(@{$pdmp->{'_vector_end_reads'}{$vec_end}}, [$name, $start, $end]);
 }
 
-sub get_contig_order {
+sub get_vector_end_reads {
+    my( $pdmp, $vec_end ) = @_;
+    
+    if (my $end_list = $pdmp->{'_vector_end_reads'}{$vec_end}) {
+        return @$end_list;
+    } else {
+        return;
+    }
+}
+
+sub vector_ends {
+    my( $pdmp, $contig ) = @_;
+
+    #my %ends;
+    #my $read_extents = $pdmp->read_extents;
+
+    unless (exists $pdmp->{'_vector_ends'}) {
+        $pdmp->{'_vector_ends'} = undef;
+        
+        foreach my $vec_end ('Left', 'Right') {
+
+            my @ends = $pdmp->get_vector_end_reads($vec_end) or next;
+
+	    #next unless (exists($pdmp->{_vector_end}->{$vec_end}));
+
+	    my $contig;
+	    my $contig_end;
+
+	    #foreach my $found_vec (@{$pdmp->{_vector_end}->{$vec_end}}) {
+	    foreach my $found_vec (@ends) {
+	        my ($read, $start, $end) = @$found_vec;
+
+	        #next unless (exists($read_extents->{$read}));
+                my $extent = $pdmp->read_extent($read) or next;
+
+                #my ($name, $cs, $ce, $rs, $re, $dirn)
+                #= @{$read_extents->{$read}};
+                my ($name, $cs, $ce, $rs, $re, $dirn) = @$extent;
+
+	        unless ($contig) { $contig = $name; }
+	        if ($contig ne $name) {
+		    $contig = "";
+		    last;
+	        }
+
+	        my $rcontig_end;
+
+	        if ($dirn) {
+		    # Reverse read
+		    if    ($end   < $rs) { $rcontig_end = "right"; }
+		    elsif ($start > $re) { $rcontig_end = "left";  }
+	        } else {
+		    # Forward read
+		    if    ($end   < $rs) { $rcontig_end = "left";  }
+		    elsif ($start > $re) { $rcontig_end = "right"; }
+	        }
+	        #unless ($rcontig_end) { next; }
+                next unless $rcontig_end;
+
+	        #unless ($contig_end) { $contig_end = $rcontig_end; }
+                $contig_end ||= $rcontig_end;
+	        if ($contig_end ne $rcontig_end) {
+		    $contig = "";
+		    last;
+	        }
+	    }
+
+	    if ($contig) {
+	        #$ends{$vec_end}->{$contig} = $contig_end;
+                $pdmp->{'_vector_ends'}{$contig}{$vec_end} = $contig_end;
+	    }
+        }
+    }
+
+    if (defined($contig)) {
+        return $pdmp->{'_vector_ends'}{$contig};
+    } else {
+        # Just return a ref to the whole damn thing.
+        return $pdmp->{'_vector_ends'};
+    }
+}
+
+sub order_contigs {
     my ($pdmp) = @_;
 
-    return unless (exists($pdmp->{_read_templates}));
-    return unless (exists($pdmp->{_template_max_insert}));
-    return unless (exists($pdmp->{_read_extents}));
+    #return unless (exists($pdmp->{_read_templates}));
+    #return unless (exists($pdmp->{_template_max_insert}));
+    #return unless (exists($pdmp->{_read_extents}));
 
-    my $read_templates = $pdmp->{_read_templates};
-    my $insert_sizes = $pdmp->{_template_max_insert};
-    my $extents = $pdmp->{_read_extents};
+    # Do we have read information?
+    my @read_names = $pdmp->read_list or return;
+
+    #my $read_templates = $pdmp->{_read_templates};
+    #my $insert_sizes = $pdmp->{_template_max_insert};
+    #my $extents = $pdmp->read_extents_ref;
     
     my %contig_lengths = map {$_, $pdmp->contig_length($_)} $pdmp->contig_list;
 
@@ -679,9 +717,13 @@ sub get_contig_order {
 
     # First find reads which point out from the ends of the contigs.
 
-    while (my ($read, $extent) = each %$extents) {
-	my $template = $read_templates->{$read};
-	my $insert_size = $insert_sizes->{$template};
+    #while (my ($read, $extent) = each %$extents) {
+        #my $template = $read_templates->{$read};
+        #my $insert_size = $insert_sizes->{$template};
+    foreach my $read (@read_names) {
+        my $extent      = $pdmp->read_extent($read);
+	my $template    = $pdmp->read_template($read);
+	my $insert_size = $pdmp->insert_size($template);
 
 	my ($contig, $cs, $ce, $rs, $re, $dirn) = @$extent;
 	next unless (exists($contig_lengths{$contig}));
@@ -706,7 +748,7 @@ sub get_contig_order {
     my @anomalies;
 
     while (my ($template, $contigs) = each %overhanging_templates) {
-	my @c = %$contigs;
+	#my @c = %$contigs;
 	my $count = scalar(keys %$contigs);
 
 	next unless ($count == 2);
@@ -776,8 +818,7 @@ sub get_contig_order {
 
     # Make chains of contigs based on the remaining read pair links
 
-    my %visited;
-    my @chains;
+    my( %visited, @group );
     foreach my $contig ($pdmp->contig_list()) {
 	next if ($visited{$contig});
 	if (exists($joined_contigs{$contig})) {
@@ -789,8 +830,14 @@ sub get_contig_order {
 	    my $c_contig = $contig;
 	    while ($c_contig) {
 		last if (exists $visited{$c_contig});
-		my $fwd = ($c_dirn eq 'L') ? "F" : "R";
-		unshift(@chain, "$c_contig.$fwd");
+                
+		#my $fwd = ($c_dirn eq 'L') ? "F" : "R";
+		#unshift(@chain, "$c_contig.$fwd");
+                unless ($c_dirn eq 'L') {
+                    $pdmp->revcomp_contig($c_contig);
+                }
+                unshift(@chain, $c_contig);
+                
 		$visited{$c_contig} = 1;
 		last unless (exists($joined_contigs{$c_contig}->{$c_dirn}));
 		my ($n_contig) = keys %{$joined_contigs{$c_contig}->{$c_dirn}};
@@ -810,8 +857,14 @@ sub get_contig_order {
 	    delete($visited{$contig});
 	    while ($c_contig) {
 		last if (exists $visited{$c_contig});
-		my $fwd = ($c_dirn eq 'R') ? "F" : "R";
-		push(@chain, "$c_contig.$fwd");
+                
+		#my $fwd = ($c_dirn eq 'R') ? "F" : "R";
+		#push(@chain, "$c_contig.$fwd");
+                unless ($c_dirn eq 'R') {
+                    $pdmp->revcomp_contig($c_contig);
+                }
+                push(@chain, $c_contig);
+                
 		$visited{$c_contig} = 1;
 		last unless (exists($joined_contigs{$c_contig}->{$c_dirn}));
 		my ($n_contig) = keys %{$joined_contigs{$c_contig}->{$c_dirn}};
@@ -822,18 +875,115 @@ sub get_contig_order {
 		$c_contig = $n_contig;
 		$c_dirn = ($n_dirn eq 'R') ? 'L' : 'R';
 	    }
-	    push(@chains, \@chain);
+	    push(@group, \@chain);
+            #$pdmp->add_contig_chain(\@chain);
 	} else {
-	    push(@chains, ["$contig.F"]);
+	    #push(@group, ["$contig.F"]);
+	    push(@group, [$contig]);
 	    $visited{$contig} = 1;
 	}
     }
-
-    foreach my $chain (sort {scalar(@$b) <=> scalar(@$a)} @chains) {
-	print STDERR "@$chain\n";
+    
+    # Find contigs which are at left and right, because
+    # they're at the SP6 or T7 primer sites.
+    my( $left_contig, $right_contig );
+    $left_contig = $right_contig = '__NOT_FOUND__';
+    if (my $ends = $pdmp->vector_ends) {
+        # Structure of $ends can be:
+        #
+        #   ends = {
+        #       contig1 => {
+        #           Left => 'left',
+        #       },
+        #       contig2 => {
+        #           Right => 'right',
+        #       },
+        #   };
+        #
+        # or:
+        #   ends = {
+        #       contig1 => {
+        #           Left => 'right',
+        #           Right => 'left',
+        #       },
+        #   };
+        #
+        # etc...
+        foreach my $contig (keys %$ends) {
+            foreach my $v_end (keys %{$ends->{$contig}}) {
+                my $side = $ends->{$contig}{$v_end};
+                if ($side eq 'left') {
+                    $left_contig = $contig;
+                }
+                elsif ($side eq 'right') {
+                    $right_contig = $contig;
+                }
+            }
+        }
     }
 
-    return \@chains;
+    # Remove the left and right chains from @group if we
+    # can find them
+    my( $left_chain, $right_chain );
+    CHAIN: for (my $i = 0; $i < @group;) {
+        my $chain = $group[$i];
+        foreach my $contig (@$chain) {
+            if ($contig eq $left_contig) {
+                $left_chain = $chain;
+                splice(@group, $i, 1);
+                next CHAIN;
+            }
+            elsif ($contig eq $right_contig) {
+                $right_chain = $chain;
+                splice(@group, $i, 1);
+                next CHAIN;
+            }
+        }
+        $i++;
+    }
+
+    # Sort the chains by longest first, or the name
+    # of the first contig in the chain.
+    @group = sort {scalar(@$b) <=> scalar(@$a)
+        || $a->[0] cmp $b->[0]} @group;
+
+    my( @contig_order );
+    my $c_num = 0;
+    
+    # Add the left hand chain if we know what it is
+    if ($left_chain) {
+        @contig_order = @$left_chain;
+        $pdmp->record_contig_chains(\$c_num, $left_chain);
+    }
+    
+    # Add the rest of the chains
+    foreach my $chain (@group) {
+        push(@contig_order, @$chain);
+        $pdmp->record_contig_chains(\$c_num, $chain);
+    }
+
+    # Add the right hand chain if we know what it is
+    if ($right_chain) {
+        push(@contig_order, @$right_chain);
+        $pdmp->record_contig_chains(\$c_num, $right_chain);
+    }
+    
+    # Record the order of the contigs
+    $pdmp->{'_contig_order'} = \@contig_order;
+}
+
+sub record_contig_chains {
+    my( $pdmp, $i, $chain ) = @_;
+    
+    # A chain of length one isn't a chain.
+    return unless @$chain > 1;
+    
+    # Increment counter
+    $$i++;
+    
+    foreach my $contig (@$chain) {
+        $pdmp->contig_chain($contig, $$i);
+    }
 }
 
 sub read_fasta_file {
@@ -910,7 +1060,7 @@ sub write_quality_file {
     open QUAL, "> $file" or confess "Can't write to '$file' : $!";
     foreach my $contig ($pdmp->contig_list) {
         my $qual = $pdmp->BaseQuality($contig);
-        my $len = @$qual;
+        my $len = length($$qual);
         my $c_name = "$seq_name.$contig";
         my $header = join('  ', $c_name,
                                "Unfinished sequence: $seq_name",
@@ -918,21 +1068,20 @@ sub write_quality_file {
                                "acc=$accno",
                                "Length: $len bp");
 	print QUAL ">$header\n" or confess "Can't print to '$file' : $!";
-        my $lines = int( @$qual / $N );
-        my( $x, $y );
-        for (my $l = 0; $l < $lines; $l++) {
-            $x = $l * $N;
-            $y = $x + $N - 1;
+        my $whole_lines = int( $len / $N );
+
+        for (my $l = 0; $l < $whole_lines; $l++) {
+            
+            my $offset = $l * $N;
             # Print a slice of the array on one line
-            print QUAL pack($pat, @{$qual}[$x..$y]), "\n"
+            print QUAL pack($pat, unpack('C*', substr($$qual, $offset, $N))), "\n"
                 or confess "Can't print to '$file' : $!";
         }
-        # Print out the last line
-        if (my $r = @$qual % $N) {
+        
+        if (my $r = $len % $N) {
             my $pat = 'A3' x $r;
-            $x = $y + 1;
-            $y += $r;
-            print QUAL pack($pat, @{$qual}[$x..$y]), "\n"
+            my $offset = $whole_lines * $N;
+            print QUAL pack($pat, unpack('C*', substr($$qual, $offset))), "\n"
                 or confess "Can't print to '$file' : $!";
         }
 
@@ -956,17 +1105,16 @@ sub write_embl_file {
 }
 
 sub embl_file {
-    my( $pdmp, $embl ) = @_;
+    my( $pdmp ) = @_;
     
-    if ($embl) {
-        $pdmp->{'_embl_file'} = $embl;
-    }
-    unless ($embl = $pdmp->{'_embl_file'}) {
+    unless ($pdmp->{'_embl_file'}) {
+        # Add EMBL dumping capability
         require Hum::ProjectDump::EMBL;
-        $embl = Hum::ProjectDump::EMBL::make_embl($pdmp);
-        $pdmp->{'_embl_file'} = $embl;
+        bless $pdmp, 'Hum::ProjectDump::EMBL';
+        
+        $pdmp->{'_embl_file'} = $pdmp->make_embl($pdmp);
     }
-    return $embl;
+    return $pdmp->{'_embl_file'}
 }
 
 sub embl_checksum {
@@ -1028,24 +1176,64 @@ sub read_tracking_details {
     }
 }
 
+{
+    my %chem_name = (
+        'ABI'         => ' ABI',
+	'DYEnamic_ET' => ' ET',
+	'BigDye'      => ' Big Dye',
+	'MegaBace_ET' => ' ET',
+    );
+
+    sub get_suffix_chemistries {
+        my ($pdmp) = @_;
+
+        my $dbh = track_db();
+
+        my $query = qq{
+            SELECT seqchem.suffix
+              , seqchem.is_primer
+              , dyeset.name
+            FROM seqchemistry seqchem
+              , dyeset
+            WHERE dyeset.id_dyeset = seqchem.id_dyeset};
+        my $get_chem = $dbh->prepare($query);
+        $get_chem->execute();
+
+        while (my ($suffix, $is_primer, $dyeset) = $get_chem->fetchrow_array()) {
+	    $suffix =~ s/^\.//;
+
+	    unless (exists($pdmp->{suffix_chemistry}->{$suffix})) {
+	        my $chem = ($is_primer ? "Dye-primer" : "Dye-terminator");
+	        my $chem2 = $chem_name{$dyeset} || "";
+	        if ($chem2 eq ' ET') {
+		    $chem2 = ($is_primer ? "-amersham" : " ET-amersham");
+	        }
+	        $pdmp->{suffix_chemistry}->{$suffix} = "$chem$chem2";
+	    }
+        }
+        $get_chem->finish();
+    }
+}
+
 sub get_agarose_est_length {
     my ($pdmp) = @_;
 
     my $dbh = track_db();
 
-    my $query = qq[select COUNT(image.insert_size_bp),
-		          AVG(image.insert_size_bp),
-		          STDDEV(image.insert_size_bp)
-		   from   rdrequest        request,
-		          rdgel_lane       lane,
-		          rdgel_lane_image image,
-		          rdrequest_enzyme enzyme
-		   where  request.id_rdrequest  = lane.id_rdrequest
-		   and    lane.id_rdgel         = image.id_rdgel
-		   and    lane.lane             = image.lane
-		   and    request.id_rdrequest  = enzyme.id_rdrequest
-		   and    image.isgood = 1
-		   and    request.clonename     = ?];
+    my $query = qq{
+        SELECT COUNT(image.insert_size_bp)
+          , AVG(image.insert_size_bp)
+          , STDDEV(image.insert_size_bp)
+        FROM rdrequest request
+          , rdgel_lane lane
+          , rdgel_lane_image image
+          , rdrequest_enzyme enzyme
+        WHERE request.id_rdrequest = lane.id_rdrequest
+          AND lane.id_rdgel = image.id_rdgel
+          AND lane.lane = image.lane
+          AND request.id_rdrequest = enzyme.id_rdrequest
+          AND image.isgood = 1
+          AND request.clonename = ?};
 
     my $get_lengths = $dbh->prepare($query);
     $get_lengths->execute($pdmp->sequence_name());
@@ -1054,38 +1242,6 @@ sub get_agarose_est_length {
 
     if ($count > 0) { $pdmp->agarose_length($avg);   }
     if ($count > 2) { $pdmp->agarose_error($stddev); }
-}
-
-sub get_suffix_chemistries {
-    my ($pdmp) = @_;
-
-    my $dbh = track_db();
-
-    my $query = qq[select seqchem.suffix, seqchem.is_primer, dyeset.name
-		   from   seqchemistry seqchem,
-		          dyeset
-		   where  dyeset.id_dyeset = seqchem.id_dyeset];
-    my $get_chem = $dbh->prepare($query);
-    $get_chem->execute();
-    
-    while (my ($suffix, $is_primer, $dyeset) = $get_chem->fetchrow_array()) {
-	$suffix =~ s/^\.//;
-
-	unless (exists($pdmp->{suffix_chemistry}->{$suffix})) {
-	    my $chem = ($is_primer ? "Dye-primer" : "Dye-terminator");
-	    my $chem2 = {
-		'ABI'         => ' ABI',
-		'DYEnamic_ET' => ' ET',
-		'BigDye'      => ' Big Dye',
-		'MegaBace_ET' => ' ET'
-	    }->{$dyeset} || "";
-	    if ($chem2 eq 'ET') {
-		$chem2 = ($is_primer ? "-amersham" : " ET-amersham");
-	    }
-	    $pdmp->{suffix_chemistry}->{$suffix} = "$chem$chem2";
-	}
-    }
-    $get_chem->finish();
 }
 
 BEGIN {
