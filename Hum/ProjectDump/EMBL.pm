@@ -16,32 +16,13 @@ use Hum::EmblUtils qw( add_source_FT
                        add_Organism
                        species_binomial
                        );
-use Hum::EMBL (
-         ID => 'Hum::EMBL::Line::ID',
-         AC => 'Hum::EMBL::Line::AC',
-     'AC *' => 'Hum::EMBL::Line::AC_star',
-         DT => 'Hum::EMBL::Line::DT',
-         DE => 'Hum::EMBL::Line::DE',
-         KW => 'Hum::EMBL::Line::KW',
-         OS => 'Hum::EMBL::Line::Organism',
-         OC => 'Hum::EMBL::Line::Organism',
-         RN => 'Hum::EMBL::Line::Reference',
-         RC => 'Hum::EMBL::Line::Reference',
-         RP => 'Hum::EMBL::Line::Reference',
-         RX => 'Hum::EMBL::Line::Reference',
-         RA => 'Hum::EMBL::Line::Reference',
-         RT => 'Hum::EMBL::Line::Reference',
-         RL => 'Hum::EMBL::Line::Reference',
-         FH => 'Hum::EMBL::Line::FH',
-         FT => 'Hum::EMBL::Line::FT',
-         CC => 'Hum::EMBL::Line::CC',
-         XX => 'Hum::EMBL::Line::XX',
-         SQ => 'Hum::EMBL::Line::Sequence',
-       '  ' => 'Hum::EMBL::Line::Sequence',
-     'BQ *' => 'Hum::EMBL::Line::BQ_star',
-       '//' => 'Hum::EMBL::Line::End',
-    );
+use Hum::EMBL;
 use Hum::EMBL::Utils qw( EMBLdate );
+
+Hum::EMBL->import(
+    'AC *' => 'Hum::EMBL::Line::AC_star',
+    'BQ *' => 'Hum::EMBL::Line::BQ_star',
+    );
 
 # Overrides method in Hum::ProjectDump
 sub embl_checksum {
@@ -137,19 +118,7 @@ sub embl_checksum {
         $embl->newXX;
         
         # KW line
-        my $kw = $embl->newKW;
-        my @kw_list = ('HTG', 'HTGS_PHASE1');
-        
-        if ($pdmp->is_htgs_draft) {
-            my ($contig_depth) = $pdmp->contig_and_agarose_depth_estimate;
-            
-            # Check that the project really is draft quality
-            if ($contig_depth >= 3) {
-                push( @kw_list, 'HTGS_DRAFT' );
-            }
-        }
-        $kw->list(@kw_list);
-        $embl->newXX;
+        add_keywords($embl, $pdmp);
     
         # Organism
         add_Organism($embl, $species);
@@ -211,7 +180,7 @@ sub embl_checksum {
             '-------------- Project Information',
             "Center project name: $project",
             '-------------- Summary Statistics',
-            'Assembly program: XGAP4; version 4.5',     # This is a lie
+            'Assembly program: XGAP4; version 4.5',
             $pdmp->make_read_comments(),
             $pdmp->make_consensus_quality_summary(),
             $pdmp->make_consensus_length_report(),
@@ -342,6 +311,33 @@ sub embl_checksum {
         
         return $embl;
     }
+}
+
+sub add_keywords {
+    my( $embl, $pdmp ) = @_;
+    
+    my $kw = $embl->newKW;
+    my @kw_list = ('HTG', 'HTGS_PHASE1');
+
+    if ($pdmp->is_htgs_draft) {
+        my ($contig_depth) = $pdmp->contig_and_agarose_depth_estimate;
+
+        # Check that the project really is draft quality
+        if ($contig_depth >= 3) {
+            push( @kw_list, 'HTGS_DRAFT' );
+        }
+    }
+    
+    # New finishing keywords
+    if ($pdmp->is_htgs_fulltop) {
+        push( @kw_list, 'HTGS_FULLTOP' );
+    }
+    if ($pdmp->is_htgs_activefin) {
+        push( @kw_list, 'HTGS_ACTIVEFIN' );
+    }
+
+    $kw->list(@kw_list);
+    $embl->newXX;
 }
 
 sub send_warning_email {

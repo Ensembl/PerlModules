@@ -138,7 +138,7 @@ BEGIN {
                 %handler = %_handler;
             }
         }
-
+        
         return bless {
             handler => \%handler,
             _lines  => [],
@@ -191,6 +191,10 @@ sub parse {
             }
 
         }
+        #else {
+        #    warn "Ignoring : $_";
+        #}
+
         # Break at end of entries
         last if $prefix eq '//';
     }

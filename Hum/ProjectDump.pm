@@ -4,7 +4,12 @@ package Hum::ProjectDump;
 use strict;
 use Carp;
 use Hum::Submission qw( sub_db acc_data prepare_statement );
-use Hum::Tracking qw( track_db is_shotgun_complete );
+use Hum::Tracking qw(
+    track_db
+    is_full_shotgun_complete
+    is_assigned_to_finisher
+    is_shotgun_complete
+    );
 use Hum::ProjectDump::EMBL;
 use Hum::EMBL;
 use Hum::EBI_FTP;
@@ -18,6 +23,19 @@ sub new {
 }
 
 sub get_all_dumps_for_project {
+    my( $pkg, $project ) = @_;
+    
+    my @dumps = $pkg->get_all_existing_dumps_for_project($project);
+    
+    if (@dumps) {
+        return @dumps;
+    } else {
+        my $pdmp = $pkg->create_new_dump_object($project);
+        return($pdmp);
+    }
+}
+
+sub get_all_existing_dumps_for_project {
     my( $pkg, $project ) = @_;
     
     my $sub_db = sub_db();
@@ -37,12 +55,7 @@ sub get_all_dumps_for_project {
         push(@dumps, $pdmp);
     }
     
-    if (@dumps) {
-        return @dumps;
-    } else {
-        my $pdmp = $pkg->create_new_dump_object($project);
-        return($pdmp);
-    }
+    return @dumps;
 }
 
 sub create_new_dump_object {
@@ -1758,7 +1771,21 @@ sub is_htgs_draft {
     my( $pdmp ) = @_;
     
     my $project = $pdmp->project_name;
-    is_shotgun_complete($project);
+    return is_shotgun_complete($project);
+}
+
+sub is_htgs_fulltop {
+    my( $pdmp ) = @_;
+    
+    my $project = $pdmp->project_name;
+    return is_full_shotgun_complete($project);
+}
+
+sub is_htgs_activefin {
+    my( $pdmp ) = @_;
+    
+    my $project = $pdmp->project_name;
+    return is_assigned_to_finisher($project);
 }
 
 {

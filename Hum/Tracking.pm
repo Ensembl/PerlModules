@@ -39,7 +39,10 @@ use vars qw( @ISA @EXPORT_OK );
                 find_project_directories
                 finished_accession
                 fishData
+                has_current_project_link
+                is_assigned_to_finisher
                 is_finished
+                is_full_shotgun_complete
                 is_shotgun_complete
                 library_and_vector
                 localisation_data
@@ -105,6 +108,87 @@ of Shotgun_complete or Half_shotgun_complete.
         $count_shotgun->execute($project);
 
         return $count_shotgun->fetchrow_arrayref->[0];
+    }
+}
+
+=pod
+
+=head2 is_full_shotgun_complete
+
+Returns TRUE if the project has ever had a status
+of Shotgun_complete.
+
+=cut
+
+{
+    my( $count_full_shotgun );
+    
+    sub is_full_shotgun_complete {
+        my( $project ) = @_;
+
+        $count_full_shotgun ||= prepare_track_statement(qq{
+            SELECT COUNT(*)
+            FROM project_status 
+            WHERE status = 15
+            AND projectname = ?
+            });
+        $count_full_shotgun->execute($project);
+
+        return $count_full_shotgun->fetchrow_arrayref->[0];
+    }
+}
+
+=pod
+
+=head2 is_assigned_to_finisher
+
+Returns TRUE if the project has ever had a status
+of "Assigned to finisher" or "Assigned to prefinisher".
+
+=cut
+
+{
+    my( $count_assigned );
+    
+    sub is_assigned_to_finisher {
+        my( $project ) = @_;
+
+        $count_assigned ||= prepare_track_statement(qq{
+            SELECT COUNT(*)
+            FROM project_status 
+            WHERE status IN(17,18)
+            AND projectname = ?
+            });
+        $count_assigned->execute($project);
+
+        return $count_assigned->fetchrow_arrayref->[0];
+    }
+}
+
+=pod
+
+=head2 has_current_project_link
+
+Returns TRUE if the project has a current entry
+in the project_link table.
+
+=cut
+
+{
+    my( $count_links );
+    
+    sub has_current_project_link {
+        my( $project ) = @_;
+
+        $count_links ||= prepare_track_statement(q{
+            SELECT COUNT(*)
+            FROM project_link
+            WHERE projectname = ?
+              AND is_current = 1
+            });
+        $count_links->execute($project);
+
+        return $count_links->fetchrow_arrayref->[0];
     }
 }
 

@@ -38,7 +38,7 @@ sub _make_blast_indices {
     
     # Make a title for the blast database
     my ($title) = $blast =~ m{([^/]+)$};
-    $title = "$title.". ace_date();
+    $title = "$title|". ace_date();
     
     my( @extn,              # List of blast db extensions
         $blast_1_indexer,   # "pressdb" or "setdb"
@@ -151,7 +151,7 @@ sub _get_db_version_extn {
     
     my ($db_name) = $db_file =~ m{([^/]+)$};
     my $title = _get_db_title_extn($db_file, @extn);
-    my ($version) = $title =~ /^$db_name\.(.+)/;
+    my ($version) = $title =~ /^([^\|]+)\|([^\|]+)/;
     if ($version) {
         return $version;
     } else {

@@ -11,6 +11,7 @@ use vars qw( @ISA @EXPORT_OK );
 
 @ISA = ('Exporter');
 @EXPORT_OK = qw(
+    delete_blast_db
     mirror_copy_dir
     mirror_copy_file
     copy_and_check_file
@@ -175,53 +176,63 @@ sub file_checksum {
     return defined($sum) ? $sum : -1;
 }
 
-sub run_pressdb {
-    my( $build,     # The name of the new fasta database file
-        $blast,     # The name for the blast database
-        ) = @_;
-    
-    my ($name) = $blast =~ m{([^/]+)$};
-    $name = "$name.". ace_date();
-    
-    die "Names for new and old databases are both '$blast'"
-        if $blast eq $build;
-    
-    # Check new database exists
-    unless (-e $build) {
-        die "No such fasta database '$build'\n";
-    }
-    
+{
     # List of extensions for blast files
     my @extn = ('', qw( .csq .nhd .ntb .nhr .nin .nsq ));
-    
-    my $pressdb  = "pressdb -t $name $build 2>&1 |";
-    my $formatdb = "formatdb -t $name -p F -i $build -l /dev/null 2>&1 |";
-    my( @outLines );
-    my $error_flag = 0;
-    foreach my $pipe ($pressdb, $formatdb) {
-        local *PIPE;
-        open PIPE, $pipe or confess "Can't open pipe ('$pipe') : $!";
-        while (<PIPE>) {
-            push(@outLines, $_);
+
+    sub run_pressdb {
+        my( $build,     # The name of the new fasta database file
+            $blast,     # The name for the blast database
+            ) = @_;
+
+        my ($name) = $blast =~ m{([^/]+)$};
+        $name = "$name.". ace_date();
+
+        die "Names for new and old databases are both '$blast'"
+            if $blast eq $build;
+
+        # Check new database exists
+        unless (-e $build) {
+            die "No such fasta database '$build'\n";
         }
-        close PIPE or $error_flag++;
+
+        my @extn = ('', qw( .csq .nhd .ntb .nhr .nin .nsq ));
+
+        my $pressdb  = "pressdb -t $name $build 2>&1 |";
+        my $formatdb = "formatdb -t $name -p F -i $build -l /dev/null 2>&1 |";
+        my( @outLines );
+        my $error_flag = 0;
+        foreach my $pipe ($pressdb, $formatdb) {
+            local *PIPE;
+            open PIPE, $pipe or confess "Can't open pipe ('$pipe') : $!";
+            while (<PIPE>) {
+                push(@outLines, $_);
+            }
+            close PIPE or $error_flag++;
+        }
+
+        my $bad_db = "$blast.BAD";
+        if ($error_flag) {
+            # Save BAD file for debugging
+            rename( $build, $bad_db  );
+            unlink( map "$build$_", @extn );
+            die "Creation of blast database '$blast' from '$build' failed:\n",
+                @outLines,
+                "Bad database file saved as '$blast.BAD'\n";
+        } else {
+            # Rename new files to blast_db name
+            foreach (@extn) {
+                rename("$build$_", "$blast$_");
+            }
+            unlink($bad_db);
+            return 1;
+        }
     }
-    
-    my $bad_db = "$blast.BAD";
-    if ($error_flag) {
-        # Save BAD file for debugging
-        rename( $build, $bad_db  );
-        unlink( map "$build$_", @extn );
-        die "Creation of blast database '$blast' from '$build' failed:\n",
-            @outLines,
-            "Bad database file saved as '$blast.BAD'\n";
-    } else {
-        # Rename new files to blast_db name
-        foreach (@extn) {
-            rename("$build$_", "$blast$_");
-        }
-        unlink($bad_db);
-        return 1;
+
+    sub delete_blast_db {
+        my( $db_file ) = @_;
+        
+        return unlink( map "$db_file$_", @extn );
     }
 }
 
