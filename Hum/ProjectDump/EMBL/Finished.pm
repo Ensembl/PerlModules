@@ -191,6 +191,79 @@ sub add_overlap_CC {
     
     return unless my $ace = $pdmp->ace_Sequence_object;
     
+    my $name            = $pdmp->sequence_name;
+    my $external_clone  = $pdmp->external_clone_name;
+    
+    my $length = $embl->ID->seqlength
+        or confess "length not yet set in embl object";
+
+    # Determine if we have the entire insert of the clone
+    # in this sequence, and if not, then report any ends
+    # which we do have.
+    my( $cle, $cre );
+    eval{ $cle = $ace->at("Structure.Clone_left_end.\Q$name\E[1]") ->name };
+    eval{ $cre = $ace->at("Structure.Clone_right_end.\Q$name\E[1]")->name };
+
+    my(@lines);
+    if (($cle and $cre) and ($cle == 1 and $cre == $length)) {
+        push(@lines, "This sequence is the entire insert of clone $external_clone");
+    } else {
+        push(@lines,
+"IMPORTANT: This sequence is not the entire insert of clone $external_clone
+It may be shorter because we sequence overlapping sections only once,
+except for a short overlap.");
+        push(@lines, "The true left end of clone $external_clone is at $cle in this sequence.") if $cle;
+        push(@lines, "The true right end of clone $external_clone is at $cre in this sequence.") if $cre;
+    }
+    
+    # List left and right ends of other clones in this sequence
+    foreach my $end (qw( left right )) {
+        #warn "Looking for $end\n";
+        # Each clone tag which isn't the sequence we are dumping itself
+        foreach my $c_tag (grep $_ ne $name, $ace->at("Structure.Clone_${end}_end[1]")) {
+            warn "clone tag: $c_tag\n";
+            if (my $c_pos = $c_tag->at) {
+                my $cl = $c_tag->fetch;
+                my( $project ) = projectAndSuffix( $cl );
+                
+                # Project may not be finished yet
+                $project ||= project_from_clone("$cl");
+                
+                my $ext_name = extCloneName( $project );
+                if ($ext_name) {
+                    push(@lines, "The true $end end of clone $ext_name is at $c_pos in this sequence.");
+                } else {
+                    warn "Can't make external name for '$cl'\n";
+                }
+            }
+        }
+    }
+    
+    # Add sequence overlap data
+    my @overlap = qw( left start right end );
+    for (my $i = 0; $i < @overlap; $i += 2) {
+        my( $end, $piece ) = @overlap[$i,$i+1];
+        foreach my $c_tag ($ace->at("Structure.Overlap_$end".'[1]')) {
+            my $cl = $c_tag->fetch;
+            my $cl_name = $cl->name;
+            my( $acc );
+            if ($cl_name =~ s/^em://i) {
+                $acc = $cl_name;
+            } else {
+                my( $project, $suffix ) = projectAndSuffix( $cl );
+                $project ||= "$cl"; # Project may not be finished yet
+                $acc = (accession_list($project, $suffix))[0];
+            }
+            if ($acc) {
+                push(@lines, "The $piece of this sequence overlaps with sequence $acc");
+            } else {
+                warn "Can't get accession number for '$cl'\n";
+            }
+        }
+    }
+    
+    my $cc = $embl->newCC;
+    $cc->list(@lines);    
 }
 
 {
@@ -218,6 +291,12 @@ Em:, EMBL; Sw:, SWISSPROT; Tr:, TREMBL; Wp:, WORMPEP;
 Information on the WORMPEP database can be found at
 http://www.sanger.ac.uk/Projects/C_elegans/wormpep');
     
+    my $zeb_repeat =
+'Repeat names beginning "Dr" were identified by the Recon repeat discovery
+system (Zhirong Bao and Sean Eddy, submitted), and those beginning "drr"
+were identified by Rick Waterman.  For further information see
+http://www/Projects/D_rerio/';
+
     sub add_standard_CC {
         my( $pdmp, $embl ) = @_;
 
@@ -225,6 +304,12 @@ http://www.sanger.ac.uk/Projects/C_elegans/wormpep');
         foreach my $t (@std) {
             my $cc = $embl->newCC;
             $cc->list($t);
+            $embl->newXX;
+        }
+        
+        if ($pdmp->species eq 'Zebrafish') {
+            my $cc = $embl->newCC;
+            $cc->list($zeb_repeat);
             $embl->newXX;
         }
     }
@@ -407,6 +492,7 @@ For further details see http://www.chori.org/bacpac/home.htm"
         
         my $cc = $embl->newCC;
         $cc->list(@list);
+        $embl->newXX;
     }
 }
 
@@ -737,7 +823,7 @@ sub addHomolFeatures_toSet {
             foreach my $homol ($ace->at("Homol.\Q$match_type\E[1]")) {
 
                 # Skip names containing question marks!
-                warn "Skipping bad name '$homol'\n" and next if $homol =~ /\?/;
+                #warn "Skipping bad name '$homol'\n" and next if $homol =~ /\?/;
 
                 my( @block );
                 foreach my $coords ($homol->at("\Q$homol_tag\E[1]")) {
