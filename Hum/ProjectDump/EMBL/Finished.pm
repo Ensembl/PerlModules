@@ -211,12 +211,20 @@ numbers given in the feature table with their source databases:
 Em:, EMBL; Sw:, SWISSPROT; Tr:, TREMBL; Wp:, WORMPEP;
 Information on the WORMPEP database can be found at
 http://www.sanger.ac.uk/Projects/C_elegans/wormpep');
-    
+
     my @zfish_specific = (
 'Clone-derived Zebrafish pUC subclones occasionally display inconsistency
-over the length of mononucleotide A/T runs and conserved TA repeats. 
-Where this is found the longest good quality representation will be 
-submitted.');
+over the length of mononucleotide A/T runs and conserved TA repeats.
+Where this is found the longest good quality representation will be
+submitted.',
+
+'Any regions longer than 1kb tagged as misc-feature "unsure" are part of
+a tandem repeat of more than 10kb in length where it has not been possible
+to anchor the base differences between repeat copies.  The region has been
+built up based on the repeat element to match the total size of repeat
+indicated by restriction digest, but repeat copies may not be in the
+correct order and the usual finishing criteria may not apply.');
+
 
 #'Repeat names beginning "Dr" were identified by the Recon repeat discovery
 #system (Zhirong Bao and Sean Eddy, submitted), and those beginning "drr"
