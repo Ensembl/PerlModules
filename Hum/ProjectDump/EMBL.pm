@@ -293,7 +293,7 @@ sub add_FT_assembly_fragments {
         # bin at http://ray.nlm.nih.gov/genome/cloneserver/
         my $genome_center_lines =
                $sequencing_center{$pdmp->funded_by}
-            || $sequencing_center{$pdmp->sequenced}
+            || $sequencing_center{$pdmp->sequenced_by}
             || $sequencing_center{5};
 
         $embl->newCC->list(
