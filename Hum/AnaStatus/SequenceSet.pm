@@ -41,7 +41,7 @@ sub new {
         
         my( $set_id, $set_description, @seq_name );
         while (my ($id, $desc, $name) = $sth->fetchrow) {
-            $set_id = $id;
+            $set_id          = $id;
             $set_description = $desc;
             push(@seq_name, $name);
         }
