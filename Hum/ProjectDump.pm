@@ -955,7 +955,7 @@ sub order_contigs {
     CHAIN: for (my $i = 0; $i < @group;) {
         my $chain = $group[$i];
         foreach my $contig (@$chain) {
-            if ($contig eq $left_contig) {
+            if ($left_contig and $contig eq $left_contig) {
                 $left_chain = $chain;
                 splice(@group, $i, 1);
                 
@@ -972,7 +972,7 @@ sub order_contigs {
                 }
                 next CHAIN;
             }
-            elsif ($contig eq $right_contig) {
+            elsif ($right_contig and $contig eq $right_contig) {
                 $right_chain = $chain;
                 splice(@group, $i, 1);
                 

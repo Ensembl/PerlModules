@@ -213,9 +213,11 @@ sub embl_checksum {
             "* NOTE: This is a '$draft_or_unfinished' sequence. It currently",
             "* consists of ". scalar(@contig_pos) ." contigs. The true order of the pieces is",
             "* not known and their order in this sequence record is",
-            "* arbitrary.  Some order and orientation information can",
-            "* tentatively be deduced from paired sequencing reads which",
-            "* have been identified to span the gap between two",
+            "* arbitrary.  Where the contigs adjacent to the vector can",
+            "* be identified, they are labelled with 'clone_end' in the",
+            "* feature table.  Some order and orientation information",
+            "* can tentatively be deduced from paired sequencing reads",
+            "* which have been identified to span the gap between two",
             "* contigs.  These are labelled as part of the same",
             "* 'fragment_chain', and the order and relative orientation",
             "* of the pieces within a fragment_chain is reflected in",
@@ -224,7 +226,6 @@ sub embl_checksum {
             "* This record will be updated with the finished sequence as",
             "* soon as it is available and the accession number will be",
             "* preserved.",
-
 
             # Old comment was:
             #'* is not known and their order in this sequence record is',
@@ -243,9 +244,11 @@ sub embl_checksum {
   NOTE: This is a 'working draft' sequence. It currently
   consists of 10 contigs.  The true order of the pieces is
   not known and their order in this sequence record is
-  arbitrary.  Some order and orientation information can
-  tentatively be deduced from paired sequencing reads which
-  have been identified to span the gap between two
+  arbitrary.  Where the contigs adjacent to the vector can
+  be identified, they are labelled with 'clone_end' in the
+  feature table.  Some order and orientation information
+  can tentatively be deduced from paired sequencing reads
+  which have been identified to span the gap between two
   contigs.  These are labelled as part of the same
   'fragment_chain', and the order and relative orientation
   of the pieces within a fragment_chain is reflected in
