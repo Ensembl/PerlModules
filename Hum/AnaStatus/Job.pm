@@ -314,6 +314,23 @@ sub unlock {
     destroy_lock($self->lock_name);
 }
 
+{
+    my( $sth );
+
+    sub is_locked {
+        my( $self ) = @_;
+
+        $sth ||= prepare_statement(q{
+            SELECT count(*)
+            FROM general_lock
+            WHERE lock_name = ?
+            });
+        $sth->execute($self->lock_name);
+        my ($c) = $sth->fetchrow;
+        return $c;
+    }
+}
+
 1;
 
 __END__
