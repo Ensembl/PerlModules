@@ -6,9 +6,6 @@ package Hum::Ace::Locus;
 use strict;
 use Carp qw{ confess cluck };
 
-#use Hum::Fox::AceData::Locus;
-#use Hum::Fox::AceData::SubSequence;
-
 use Bio::EnsEMBL::Exon;
 use Bio::EnsEMBL::Translation;
 
@@ -343,6 +340,9 @@ sub is_new_format {
 sub make_Otter_Gene {
     my( $self ) = @_;
     
+    require Hum::Fox::AceData::Locus;
+    require Hum::Fox::AceData::SubSequence;
+
     my $gene_name = $self->name;
     
     # Make a new Otter Gene object

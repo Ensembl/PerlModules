@@ -6,8 +6,6 @@ package Hum::Ace::CloneSeq;
 use strict;
 use Carp;
 
-#use Hum::Fox::AceData::GenomeSequence;
-
 use Hum::Sequence::DNA;
 use Hum::Ace::Locus;
 use Hum::Ace::GeneMethod;
@@ -140,6 +138,8 @@ sub get_all_SubSeqs {
 
 sub make_Otter_CloneInfo {
     my ($self) = @_; 
+
+    require Hum::Fox::AceData::GenomeSequence;
 
     my @clone_remarks;
     foreach my $remark ($self->get_all_Remarks) {
