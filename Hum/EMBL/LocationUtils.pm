@@ -189,9 +189,18 @@ sub locations_from_subsequence {
     my( @cds_exons );
     if (@cds_coords == 2) {
         @cds_exons = CDS_exons_from_mRNA_exons(@cds_coords, @exons);
+        
+        # Check for CDS with no UTR (in which case we
+        # don't make an mRNA Location).
+        if (@cds_exons == @exons
+            and $cds_exons[0][0]           == $exons[0][0]
+            and $cds_exons[$#cds_exons][1] == $exons[$#exons][1])
+        {
+            @cds_exons = ();
+        }
     }
     elsif (@cds_coords) {
-        confess("Expecting 2 CDS coordinates, got: (",
+        confess("In '$sub_tag' expecting 2 CDS coordinates, got: (",
             join(', ', map "'$_'", @cds_coords),
             ")");
     }
@@ -279,7 +288,7 @@ sub CDS_exons_from_mRNA_exons {
     my $cds_start = shift;
     my $cds_end   = shift;
     
-    # Make a copy of all the given
+    # Make a copy of all the coordinate pairs given
     my @mrna_exons = map [@$_], @_
         or confess "No mrna_exons given";
     
