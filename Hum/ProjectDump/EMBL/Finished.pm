@@ -445,7 +445,7 @@ http://www.chori.org/bacpac/home.htm"
 
     # RPCI-21 is PAC
     $lib_comments{'RPCI-21'} =
-"is from the $_ Mouse PAC Library
+"is from the RPCI-21 Mouse PAC Library
 constructed by the group of Pieter de Jong.
 For further details see http://www.chori.org/bacpac/home.htm";
 
