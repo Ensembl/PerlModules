@@ -52,6 +52,7 @@ use vars qw( @ISA @EXPORT_OK );
                 sanger_id_to_project
                 species_from_project
                 track_db
+                track_db_user
                 unfinished_accession
                 );
 
@@ -181,12 +182,21 @@ block, to ensure a graceful exit.
 
 
 {
-    my( $dbh, @active_statements );
+    my( $dbh, $user, @active_statements );
 
     sub track_db {
-        $dbh ||= WrapDBI->connect('reports', {RaiseError => 1});
+        $dbh ||= WrapDBI->connect(track_db_user(), {RaiseError => 1});
         
         return $dbh;
+    }
+
+    sub track_db_user {
+        my( $arg ) = @_;
+        
+        if ($arg) {
+            $user = $arg;
+        }
+        return $user || 'reports';
     }
 
     sub prepare_track_statement {
