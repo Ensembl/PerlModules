@@ -142,7 +142,7 @@ sub get_AnaSequence {
 {
     my( %_task_command );
     
-    sub task_command {
+    sub run_command {
         my( $self ) = @_;
         
         unless (%_task_command) {
@@ -158,8 +158,8 @@ sub get_AnaSequence {
         }
         my $name = $self->task_name
             or confess "No task_name";
-        retrun $_task_command{$name}
-            || confess "No run_command for task '$task_name'";
+        return $_task_command{$name}
+            || confess "No run_command for task '$name'";
     }
 }
 
@@ -209,20 +209,18 @@ sub submit {
 sub store {
     my( $self ) = @_;
     
+    my $ana_seq_id = $self->ana_seq_id
+        or confess "ana_seq_id not set";
+    my $task_name = $self->task_name
+        or confess "task_name not set";
     my $insert = prepare_statement(q{
         INSERT ana_job( ana_job_id
               , ana_seq_id
               , task_name
               , submit_time )
-        VALUES (NULL
-              , ?
-              , ?
-              , NOW())
+        VALUES (NULL, ?, ?, NOW())
         });
-    $insert->execute(
-        $self->ana_seq_id,
-        $self->task_name,
-        );
+    $insert->execute( $ana_seq_id, $task_name );
     my $ana_job_id = $insert->{'insertid'}
         or confess "No insertid from statement handle";
     $self->ana_job_id($ana_job_id);
@@ -243,6 +241,23 @@ sub store_lsf_job_id {
         WHERE ana_job_id = ?
         });
     $update->execute($lsf_job_id, $ana_job_id);
+    my $rows_affected = $update->rows;
+    confess "Error: '$rows_affected' rows updated"
+        unless $rows_affected == 1;
+}
+
+sub save_command_output {
+    my( $self, $output ) = @_;
+    
+    my $ana_job_id = $self->ana_job_id
+        or confess "No ana_job_id.  'store' not called?";
+    
+    my $update = prepare_statement(q{
+        UPDATE ana_job
+        SET lsf_error = ?
+        WHERE ana_job_id = ?
+        });
+    $update->execute($output, $ana_job_id);
     my $rows_affected = $update->rows;
     confess "Error: '$rows_affected' rows updated"
         unless $rows_affected == 1;
