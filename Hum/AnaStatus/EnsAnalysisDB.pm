@@ -23,6 +23,18 @@ use Hum::AnaStatus::EnsAnalysis;
         
         return $db;
     }
+        
+    sub get_cached_by_species_name {
+        my( $pkg, $species_name ) = @_;
+        
+        my( $db );
+        unless ($db = $ens_db_cache{$species_name}) {
+            $db = $ens_db_cache{$species_name}
+                = $pkg->new_from_species_name($species_name);
+        }
+        
+        return $db;
+    }
     
     sub disconnect_all_ensembl_dbs {
         # Explicitly destroy data structure, to try
@@ -69,6 +81,44 @@ sub new_from_ensembl_db_id {
     my( $pkg, $db_id ) = @_;
 
     return $pkg->_fetch_where(qq{ ensembl_db_id = $db_id });
+}
+
+sub new_from_species_name {
+    my( $pkg, $species_name ) = @_;
+    
+    return $pkg->_fetch_genebuild_db_where(qq{ sed.species_name = '$species_name' });
+    
+}
+
+sub _fetch_genebuild_db_where {
+    my( $pkg, $where_clause ) = @_;
+    
+    my $sth = prepare_statement(qq{
+        SELECT aed.db_name
+          , aed.host
+          , aed.user
+          , aed.ensembl_db_id
+          , aed.golden_path_type
+        FROM species_ensembl_db sed
+          , ana_ensembl_db aed
+        WHERE sed.ensembl_db_id = aed.ensembl_db_id
+          AND $where_clause
+        });
+    $sth->execute;
+    
+    my ( $db_name, $host, $user, $ensembl_db_id, $type) = $sth->fetchrow;
+    confess "No EnsAnalysisDB found with '$where_clause'"
+        unless $ensembl_db_id;
+    
+    my $self = $pkg->new;
+    $self->ensembl_db_id($ensembl_db_id);
+    $self->db_name($db_name);
+    $self->host($host);
+    $self->user($user);
+    $self->golden_path_type($type);
+    
+    return $self;
+    
 }
 
 sub _fetch_where {
@@ -233,7 +283,6 @@ sub store {
 }
 
 1;
-
 
 __END__
 

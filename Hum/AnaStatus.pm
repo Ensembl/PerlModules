@@ -61,22 +61,24 @@ sub make_status_entered {
 }
 
 sub add_new_sequence_entry {
-    my( $seq_name, $cksum, $length, $dir, $chr_id ) = @_;
+    my( $seq_name, $seq_version, $cksum, $length, $dir, $chr_id ) = @_;
 
     $chr_id ||= 0;
 
     my $sth = prepare_statement(q{
         INSERT sequence( seq_id
               , sequence_name
+              , sequence_version
               , embl_checksum
               , unpadded_length
               , contig_count
               , file_path
               , chromosome_id )
-        VALUES (NULL,?,?,?,?,?,?)
+        VALUES (NULL,?,?,?,?,?,?,?)
         });
     $sth->execute(
         $seq_name,
+        $seq_version,
         $cksum,
         $length,
         1,

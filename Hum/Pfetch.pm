@@ -14,6 +14,7 @@ use vars qw{@ISA @EXPORT_OK};
 @EXPORT_OK = qw{
     get_Sequences
     get_descriptions
+    get_lengths
     };
 
 sub get_server {
@@ -72,6 +73,25 @@ sub get_descriptions {
         }
     }
     return @desc_list;
+}
+
+sub get_lengths {
+    my( @id_list ) = @_;
+    
+    confess "No names provided" unless @id_list;
+    
+    my $server = get_server();
+    print $server "-l @id_list\n";
+    my( @length_list );
+    for (my $i = 0; $i < @id_list; $i++) {
+        chomp( my $length = <$server> );
+        if ($length eq 'no match') {
+            $length_list[$i] = undef;
+        } else {
+            $length_list[$i] = $length;
+        }
+    }
+    return @length_list;
 }
 
 1;
