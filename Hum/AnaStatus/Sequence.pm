@@ -5,6 +5,7 @@ package Hum::AnaStatus::Sequence;
 
 use strict;
 use Carp;
+use Hum::FastaFileIO;
 use Hum::Submission qw( prepare_statement timeace );
 use Hum::AnaStatus qw{
     annotator_full_name
@@ -741,6 +742,16 @@ sub bio_seq {
     return $seq;
 }
 
+sub hum_Sequence {
+    my( $self ) = @_;
+    
+    my $seq_file = $self->ana_dir_seq_file;
+    my $seq_in = Hum::FastaFileIO->new_DNA_IO($seq_file);
+    my $seq = $seq_in->read_one_sequence
+        or confess "No sequence from '$seq_file'";
+    return $seq;
+}
+
 sub ana_dir_seq_file {
     my( $self ) = @_;
     
@@ -755,13 +766,6 @@ sub seq_file {
     
     my $s_name  = $self->sequence_name;
     return "$s_name.seq";
-}
-
-sub get_dna_seq {
-    my $self = shift;
-
-    warn "'get_dna_seq' is deprecated; use 'bio_seq' instead";
-    return $self->bio_seq(@_);
 }
 
 sub get_all_Jobs {
