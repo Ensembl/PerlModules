@@ -16,10 +16,8 @@ sub new {
     return bless {}, $pkg;
 }
 
-sub new_from_sequence_name {
-    my ($pkg, $seq_name) = @_;
-
-    my $sth = prepare_statement(q{
+{
+    my $_std_query = q{
         SELECT a.analysis_directory
           , a.analysis_priority
           , a.seq_id
@@ -27,6 +25,7 @@ sub new_from_sequence_name {
           , a.db_prefix
           , status.status_id
           , UNIX_TIMESTAMP(status.status_date)
+          , s.sequence_name
           , s.embl_checksum
           , s.sequence_version
           , person.annotator_uname
@@ -43,59 +42,83 @@ sub new_from_sequence_name {
           AND s.chromosome_id = sc.chromosome_id
           AND status.is_current = 'Y'
           AND a.is_current = 'Y'
-          AND s.sequence_name = ?
-        });
+        };
 
-    $sth->execute($seq_name);
-    
-    # in $ans the reference of the first array refers to the row, and the second 
-    # array refers to the value of each attribute in the row.
-    # values are in the same order than in the SELECT statement
-    my $ans = $sth->fetchall_arrayref;
-    
-    if (@$ans == 1) {                             
-       my (
-            $analysis_directory,
-            $analysis_priority,
-            $seq_id,
-            $ana_seq_id,
-            $db_prefix,
-            $status_id,
-            $status_date,
-            $embl_checksum,
-            $sequence_version,
-            $annotator_uname,
-            $chr_name,
-            $species_name
-           ) = @{$ans->[0]};
+    sub new_from_ana_seq_id {
+        my ($pkg, $ana_seq_id) = @_;
+
+        my $sth = prepare_statement($_std_query 
+            . qq{\n AND a.ana_seq_id = ?\n});
+        $sth->execute($ana_seq_id);
         
-        my $self = $pkg->new;
-        
-        $self->sequence_name($seq_name);
-        $self->analysis_directory($analysis_directory);
-        $self->analysis_priority($analysis_priority);
-        $self->seq_id($seq_id);
-        $self->ana_seq_id($ana_seq_id);
-        $self->db_prefix($db_prefix);
-        $self->status_id($status_id || 0);
-        $self->status_date($status_date || 0);
-        $self->embl_checksum($embl_checksum);
-        $self->sequence_version($sequence_version);
-        $self->annotator_uname($annotator_uname);
-        $self->chr_name($chr_name);
-        $self->species_name($species_name);
-        return $self;
+        return $pkg->_new_from_statement_handle($sth, "ana_seq_id '$ana_seq_id'");
     }
-    elsif (@$ans > 1) {
-        my $rows = @$ans;
-        my $error = "Got $rows entries for '$seq_name':\n";
-        foreach my $r (@$ans) {
-            $error .= "[" . join (", ", map "'$_'", @$r) . "]\n";
+
+    sub new_from_sequence_name {
+        my ($pkg, $seq_name) = @_;
+
+        my $sth = prepare_statement($_std_query 
+            . qq{\n AND s.sequence_name = ?\n});
+        $sth->execute($seq_name);
+        
+        return $pkg->_new_from_statement_handle($sth, "sequence_name '$seq_name'");
+    }
+    
+    sub _new_from_statement_handle {
+        my( $pkg, $sth, $parameter ) = @_;
+
+        # in $ans the reference of the first array refers to the row, and the second 
+        # array refers to the value of each attribute in the row.
+        # values are in the same order than in the SELECT statement
+        my $ans = $sth->fetchall_arrayref;
+
+        if (@$ans == 1) {                             
+            my (
+                $analysis_directory,
+                $analysis_priority,
+                $seq_id,
+                $ana_seq_id,
+                $db_prefix,
+                $status_id,
+                $status_date,
+                $sequence_name,
+                $embl_checksum,
+                $sequence_version,
+                $annotator_uname,
+                $chr_name,
+                $species_name
+                ) = @{$ans->[0]};
+
+            my $self = $pkg->new;
+
+            $self->sequence_name($sequence_name);
+            $self->analysis_directory($analysis_directory);
+            $self->analysis_priority($analysis_priority);
+            $self->seq_id($seq_id);
+            $self->ana_seq_id($ana_seq_id);
+            $self->db_prefix($db_prefix);
+            $self->status_id($status_id || 0);
+            $self->status_date($status_date || 0);
+            $self->embl_checksum($embl_checksum);
+            $self->sequence_version($sequence_version);
+            $self->annotator_uname($annotator_uname);
+            $self->chr_name($chr_name);
+            $self->species_name($species_name);
+            
+            # Return a new Hum::AnaStatus::Sequence object
+            return $self;
         }
-        confess $error;
-    }
-    else {
-        confess "No entries found for '$seq_name'";
+        elsif (@$ans > 1) {
+            my $rows = @$ans;
+            my $error = "Got $rows entries for $parameter:\n";
+            foreach my $r (@$ans) {
+                $error .= "[" . join (", ", map "'$_'", @$r) . "]\n";
+            }
+            confess $error;
+        }
+        else {
+            confess "No entries found for $parameter";
+        }
     }
 }
 
