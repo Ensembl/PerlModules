@@ -174,16 +174,16 @@ sub is_three_prime_hit {
             },
 
             # This is better at finding short overlaps containing
-            # an insertion in one sequence.
+            # an insertion in one sequence in one piece.
             {
                 'bandwidth'             => 14,
-                'gap_extension_penalty' => -2,
+                'gap_extension_penalty' => -1,
             },
 
             # This is better at finding very long overlaps in one piece.
             {
-                'bandwidth'             => 120,
-                'gap_extension_penalty' => -3,
+                'bandwidth'             => 60,
+                'gap_extension_penalty' => -1,
             },
         );
 
