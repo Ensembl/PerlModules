@@ -211,6 +211,14 @@ sub add_Exon {
     $self->is_sorted(0);
 }
 
+sub new_Exon {
+    my( $self ) = @_;
+    
+    my $exon = Hum::Ace::Exon->new;
+    $self->add_Exon($exon);
+    return $exon;
+}
+
 sub is_sorted {
     my( $self, $flag ) = @_;
     
@@ -471,7 +479,72 @@ sub contains_all_exons {
     return $all_contained;
 }
 
-sub as_ace_file_format_text {
+sub ace_string {
+    my( $self ) = @_;
+        
+    my $name        = $self->name
+        or confess "name not set";
+    my $clone_seq   = $self->clone_Sequence
+        or confess "no clone_Sequence";
+    my @exons       = $self->get_all_Exons;
+    my $method      = $self->GeneMethod;
+    
+    my $clone = $clone_seq->name
+        or confess "No sequence name in clone_Sequence";
+    
+    # Position in parent sequence
+    my $out = qq{\nSequence "$clone"\n}
+        . qq{-D SubSequence "$name"\n};
+    
+    my( $start, $end, $strand );
+    if (@exons) {
+        $start  = $self->start;
+        $end    = $self->end;
+        $strand = $self->strand;
+        if ($strand == 1) {
+            $out .= qq{SubSequence "$name"  $start $end\n};
+        } else {
+            $out .= qq{SubSequence "$name"  $end $start\n};
+        }
+    }
+    
+    $out .= qq{\nSequence "$name"\n}
+        . qq{-D Source\n}
+        . qq{-D Method\n}
+        . qq{-D CDS\n}
+        . qq{-D Source_Exons\n}
+        . qq{Source "$clone"\n}
+        ;
+    
+    
+    if ($method) {
+        my $mn = $method->name;
+        $out .= qq{Method "$mn"\n};
+        if ($method->is_coding) {
+            my( $cds_start, $cds_end ) = $self->cds_coords;
+            $out .= qq{CDS  $cds_start $cds_end\n};
+        }
+    }
+    
+    if ($strand == 1) {
+        foreach my $ex (@exons) {
+            my $x = $ex->start - $start + 1;
+            my $y = $ex->end   - $start + 1;
+            $out .= qq{Source_Exons  $x $y\n};
+        }
+    } else {
+        foreach my $ex (reverse @exons) {
+            my $x = $end - $ex->end   + 1;
+            my $y = $end - $ex->start + 1;
+            $out .= qq{Source_Exons  $x $y\n};
+        }
+    }
+    
+    return $out;
+}
+
+
+sub OLD_ace_string {
     my( $self ) = @_;
         
     my $name        = $self->name
