@@ -146,6 +146,14 @@ sub process_ace_start_end_transcript_seq {
     }
 
     $self->validate;
+
+    #  Feature  "polyA_signal" 36228 36233 0.500000 "polyA_signal"
+    #  Feature  "polyA_signal" 36239 36244 0.500000 "polyA_signal"
+    #  Feature  "polyA_signal" 79853 79848 0.500000 "polyA_signal"
+    #  Feature  "polyA_site" 36257 36258 0.500000 "polyA_site"
+    #  Feature  "polyA_site" 79831 79830 0.500000 "polyA_site"
+    # Is the PolyA signal marked?
+    
 }
 
 sub clone {
@@ -233,6 +241,29 @@ sub downstream_subseq_name {
         $self->{'_downstream_subseq_name'} = $name;
     }
     return $self->{'_downstream_subseq_name'};
+}
+
+sub add_PolyA {
+    my( $self, $polyA ) = @_;
+    
+    my $pa = $self->{'_PolyA'} ||= [];
+    push(@$pa, $polyA);
+}
+
+sub get_all_PolyA {
+    my( $self );
+    
+    if (my $pa = $self->{'_PolyA'}) {
+        return @$pa;
+    } else {
+        return;
+    }
+}
+
+sub delete_all_PolyA {
+    my( $self );
+    
+    $self->{'_PolyA'} = undef;
 }
 
 sub clone_Sequence {
