@@ -15,7 +15,7 @@ sub new {
 }
 
 {
-    my( %species_table, %species_dbh );
+    my( %species_table, %species_AceDatabase );
 
     sub new_from_species_name {
         my( $pkg, $species ) = @_;
@@ -38,7 +38,7 @@ sub new {
             }
         }
         
-        if (my $ace = $species_dbh{$species}) {
+        if (my $ace = $species_AceDatabase{$species}) {
             return $ace;
         } else {
             my $data = $species_table{$species}
@@ -50,7 +50,9 @@ sub new {
             $ace->port($port);
             $ace->path($path);
             $ace->queue($queue);
-            $species_dbh{$species} = $ace;
+            
+            # Only make 1 object per species
+            $species_AceDatabase{$species} = $ace;
             
             return $ace;
         }

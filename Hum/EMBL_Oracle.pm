@@ -80,7 +80,7 @@ We can SELECT data from the following tables:
 
 =over 4
 
-=head2 v_gp_projects
+=head2 v_projects
 
 Codes for the large scale sequencing projects in
 EMBL.

@@ -52,6 +52,7 @@ sub make_embl {
     my $map         = $pdmp->fish_map;
     my $ext_clone   = $pdmp->external_clone_name;
     my $binomial    = $pdmp->species_binomial;
+    my $division    = $pdmp->EMBL_division;
 
     # Get the DNA, base quality string,
     # and map of contig positions.
@@ -62,11 +63,12 @@ sub make_embl {
     my $embl = Hum::EMBL->new();
 
     # ID line
+    $pdmp->add_ID;
     my $id = $embl->newID;
     $id->entryname($embl_id);
     $id->dataclass('standard');
     $id->molecule('DNA');
-    $id->division('HTG'); ### I assume this is the same for other organisms
+    $id->division($division);
     $id->seqlength($seqlength);
     $embl->newXX;
 
@@ -86,7 +88,7 @@ sub make_embl {
     $pdmp->add_Description($embl);
 
     # KW line
-    $pdmp->add_keywords($embl, scalar @$contig_map);
+    $pdmp->add_Keywords($embl, scalar @$contig_map);
 
     # Organism
     add_Organism($embl, $species);
@@ -105,7 +107,7 @@ sub make_embl {
                    $chr, $map, $libraryname );
 
     # Feature table assembly fragments
-    $pdmp->add_FT_assembly_fragments($embl, $contig_map);
+    $pdmp->add_FT_entries($embl, $contig_map);
     $embl->newXX;
 
     # Sequence
@@ -117,6 +119,13 @@ sub make_embl {
     $embl->newEnd;
 
     return $embl;
+}
+
+sub EMBL_division {
+    my( $pdmp ) = @_;
+    
+    ### I assume this is the same for other organisms
+    return 'HTG';
 }
 
 sub species_binomial {
@@ -222,7 +231,7 @@ sub make_fragment_summary {
     return @list;
 }
 
-sub add_FT_assembly_fragments {
+sub add_FT_entries {
     my( $pdmp, $embl, $contig_map ) = @_;
 
     my %embl_end = (
@@ -416,7 +425,7 @@ sub add_FT_assembly_fragments {
         # CC   *     9646    20744: contig of 11099 bp in length
         # CC   *    20745 20844: gap of      100 bp
 
-sub add_keywords {
+sub add_Keywords {
     my( $pdmp, $embl, $contig_count ) = @_;
     
     my $kw = $embl->newKW;

@@ -580,7 +580,7 @@ sub contains_all_exons {
     
     confess "No other" unless $other;
     
-    my @self_exons  =  $self->get_all_Exons;
+    my  @self_exons =  $self->get_all_Exons;
     my @other_exons = $other->get_all_Exons;
     
     # Find the index of the first overlapping

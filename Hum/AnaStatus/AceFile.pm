@@ -208,6 +208,17 @@ sub task_name {
     return $task_name;
 }
 
+sub file_name {
+    my( $self, $seq_name ) = @_;
+    
+    confess "Missing sequence_name argument"
+        unless $seq_name;
+    my $name = $self->acefile_name;
+    my $gz   = $self->acefile_status_id == 5 ? '.gz' : '';
+    my $extn = $name eq 'ace' ? '' : '.ace';
+    return "$seq_name.$name$extn$gz";
+}
+
 {
     my( $time, $day_sec );
 

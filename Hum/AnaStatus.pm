@@ -21,6 +21,10 @@ use Hum::Submission 'prepare_statement';
     make_ana_dir_from_species_chr_seqname_time
     set_annotator_uname
     get_annotator_uname
+    
+    is_active_task
+    list_active_tasks
+    active_task_count
     };
 
 sub add_seq_id_dir {
@@ -164,6 +168,39 @@ sub date_dir {
     $year += 1900;
 
     return "$year$mon$mday";
+}
+
+{
+    my( %active_task );
+    
+    sub _init_active_task {
+        my $sth = prepare_statement(q{
+            SELECT task_name
+            FROM ana_task
+            WHERE is_active = 'Y'
+            });
+        $sth->execute;
+        while (my ($task_name) = $sth->fetchrow) {
+            $active_task{$task_name} = 1;
+        }
+    }
+
+    sub is_active_task {
+        my( $task_name ) = @_;
+        
+        _init_active_task() unless %active_task;
+        return $active_task{$task_name} ? 1 : 0;
+    }
+    
+    sub list_active_tasks {
+        _init_active_task() unless %active_task;
+        return        keys %active_task;
+    }
+    
+    sub active_task_count {
+        _init_active_task() unless %active_task;
+        return scalar keys %active_task;
+    }
 }
 
 

@@ -6,10 +6,22 @@ package Hum::AnaStatus::Sequence;
 use strict;
 use Carp;
 use Hum::Submission qw( prepare_statement timeace );
-use Hum::AnaStatus qw( annotator_full_name get_annotator_uname );
+use Hum::AnaStatus qw{
+    annotator_full_name
+    get_annotator_uname
+    is_active_task
+    };
 use Hum::AnaStatus::AceFile;
 use Hum::AnaStatus::Job;
 use Hum::AnaStatus::AceDatabase;
+
+# These two methods are for compatability with the Hum::Fox system
+sub moniker {
+    return 'ana_seq';
+}
+
+# Alias db_id method to ana_seq_id
+*db_id = \&ana_seq_id;
 
 sub new {
     my( $pkg ) = @_;
@@ -564,6 +576,30 @@ sub add_AceFile {
     }
     
     $self->AceFile_hash->{$acefile_name} = $acefile;
+}
+
+{
+    # The names in this hash are just comments.
+    # There are not, and should not be, used.
+    my %is_complete = (
+        2   => 'Complete',
+        3   => 'Loaded',
+        5   => 'Compressed',
+        );
+
+    sub get_all_current_completed_AceFiles {
+        my ($self) = @_;
+
+        my( @complete );
+        foreach my $af ($self->get_all_AceFiles) {
+            my $task    = $af->task_name;
+            my $status  = $af->acefile_status_id;
+            if (is_active_task($task) and $is_complete{$status}) {
+                push(@complete, $af);
+            }
+        }
+        return @complete;
+    }
 }
 
 sub get_AceFile_by_filename {
