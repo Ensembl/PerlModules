@@ -102,7 +102,7 @@ sub acc_data {
         FROM project_acc a
         LEFT JOIN secondary_acc s
           ON a.accession = s.accession
-        WHERE a.sanger_id = $sid
+        WHERE a.sanger_id = '$sid'
         });
     $get_acc_data->execute;
 
