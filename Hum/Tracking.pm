@@ -47,11 +47,13 @@ use vars qw( @ISA @EXPORT_OK );
                 project_finisher
                 project_team_leader
                 ref_from_query
+                sanger_id_to_project
                 species_from_project
                 track_db
                 unfinished_accession
                 );
 
+my( @active_statements );   # A list of open statements
 
 =pod
 
@@ -173,6 +175,11 @@ Returns a B<DBI> handle to the Tracking database.
     }
 
     END {
+        # Close statements gracefully
+        foreach my $s (@active_statements) {
+            $s->finish if $s;
+        }
+        # Then disconnect
         $dbh->disconnect() if $dbh;
     }
 }
@@ -227,6 +234,7 @@ given project name if there is only one, or undef.
                 FROM clone_project
                 WHERE projectname = ?
                 });
+            push(@active_statements, $get_clone);
         }   
         $get_clone->execute($project);
         
@@ -521,6 +529,7 @@ sub localisation_data {
                   AND c.clonename = cp.clonename
                   AND cp.projectname = ?
                 });
+            push(@active_statements, $get_chr);
         }
         $get_chr->execute($project);
 
@@ -548,6 +557,7 @@ sub localisation_data {
                   AND projectname = ?
                 ORDER BY statusdate DESC
                 });
+            push(@active_statements, $get_fish);
         }
         $get_fish->execute($project);
         
@@ -596,7 +606,8 @@ sub fishParse {
                   , clone_project cp
                  WHERE c.clonename = cp.clonename
                   AND cp.projectname = ?
-            });
+                });
+            push(@active_statements, $get_species);
         }
         $get_species->execute($project);
         
@@ -639,6 +650,7 @@ format (eg: "J. Smith").
                   AND tpr.roletype = 'Finishing'
                 ORDER BY pr.assigned_from DESC        
                 });
+            push(@active_statements, $get_finisher);
         }
         $get_finisher->execute($project);
 
@@ -682,6 +694,7 @@ format (eg: "J. Smith").
                   AND o.projectname = ?
                 ORDER BY o.owned_from DESC
                 });
+            push(@active_statements, $get_team_leader);
         }
         $get_team_leader->execute($project);
 
@@ -705,6 +718,53 @@ format (eg: "J. Smith").
         } else {
             confess "No team leader for project '$project'";
         }
+    }
+}
+
+=head2 sanger_id_to_project
+
+    ($proj, $suffix) = sanger_id_to_project($sanger_id);
+
+Takes a sanger ID (eg: '') and attempts to get
+the project name for it by consulting the project
+table in oracle.  B<$suffix> is undef if
+$sanger_id doesn't have a suffix.  Method is
+fatal if project name isn't found, or if there is
+more than one match in the project table.
+
+=cut
+
+{
+    my( $get_project_name );
+
+    sub sanger_id_to_project {
+        my( $sid ) = @_;
+
+        my( $PROJ, $suffix ) = $sid =~ /^_(.+?)(?:__([A-Z]))?$/;
+
+        unless ($get_project_name) {
+            $get_project_name = track_db()->prepare(q{
+                SELECT projectname
+                FROM project
+                WHERE UPPER(projectname) = ?
+                });
+            push(@active_statements, $get_project_name);
+        }
+        $get_project_name->execute($PROJ);
+        
+        my $ans = $get_project_name->fetchall_arrayref;
+        
+        my( $proj );
+        if (@$ans) {
+            if (@$ans > 1) {
+                die "Ambiguous matches to '$sid' ('$PROJ') : ", join(', ', map "'$_->[0]'", @$ans), "\n";
+            }
+            $proj = $ans->[0][0];
+        } else {
+            die "Can't get project name for '$sid' ('$PROJ')";
+        }
+        
+        return($proj, $suffix);
     }
 }
 
