@@ -228,26 +228,45 @@ sub status_id {
 
 
 {
-   my %valid_status_id;
+    my( @status_id_name, %name_status_id );
+    
+    sub _init_status_id_name {
+        return 1 if @status_id_name;
+    
+        my $sth = prepare_statement(q{
+            SELECT status_id, status_name
+            FROM ana_status_dict
+            });
+        $sth->execute;
+            
+        while (my ($id, $name) = $sth->fetchrow) {
+            $status_id_name[$id]    = $name;
+            $name_status_id{$name}  = $id;
+        }
+    }
     
     sub _is_valid_status_id {
         my ($self, $status_id) = @_;
-        
-        my @valid_status_id;
                 
-        unless (%valid_status_id){
-            my $sth = prepare_statement (q{
-            SELECT status_id
-            FROM ana_status_dict });
-            
-            $sth->execute;
-            
-            while (my $valid_status_id = $sth->fetchrow) {
-                push (@valid_status_id, $valid_status_id);
-            }                        
-            %valid_status_id = map {$_, 1} @valid_status_id;
-        }
-        return $valid_status_id{$status_id};
+        _init_status_id_name();
+        return $status_id_name[$status_id] ? 1 : 0;
+    }
+    
+    sub status_name {
+        my( $self, $id ) = @_;
+        
+        _init_status_id_name();
+        $id = $self->status_id;
+        return $status_id_name[$id]
+            || confess "No name for status '$id'";
+    }
+    
+    sub status_id_from_name {
+        my( $self, $name ) = @_;
+        
+        _init_status_id_name();
+        return $name_status_id{$name}
+            || confess "No status_id for name '$name'";
     }
 }
 
@@ -648,8 +667,8 @@ __END__
 
 =item new_from_sequence_name
 
-my $ana_seq = 
-    Hum::AnaStatus::Sequence->new_from_sequence_name ('dJ354B12');
+  my $ana_seq = Hum::AnaStatus::Sequence
+    ->new_from_sequence_name('dJ354B12');
 
 Given a humace sequence name, returns a new
 object, or throws an exception if it isn't found
@@ -713,6 +732,11 @@ This reports the sequence id.
 =item status_id
 
 This method returns the status number currently held.
+
+=item status_name
+
+This method returns the descriptive name
+associated with the current status_id.
 
 =item status_date
 
