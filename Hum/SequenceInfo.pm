@@ -291,6 +291,7 @@ sub store {
           , projectname )
         VALUES(?,?,?,?,?,?,?)
         });
+    
     $sth->execute(
         $self->db_id,
         $self->accession,

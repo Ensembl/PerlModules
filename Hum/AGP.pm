@@ -111,6 +111,8 @@ sub process_TPF {
             if ($unfin_flag or ($inf and ($inf->htgs_phase == 3 or $inf->htgs_phase == 2))) {
                 push(@$contig, $row);
             } else {
+                printf STDERR "Skipping unifinished sequence '%s'\n",
+                    $row->sanger_clone_name;
                 $self->_process_contig($contig) if @$contig;
                 $contig = [];
                 my $gap = $self->new_Gap;
