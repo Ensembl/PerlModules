@@ -64,6 +64,12 @@ sub gif {
     $img->filledRectangle(@rect_a, $grey);
     $self->draw_top_label($self->a_Position, @rect_a);
     
+    # Draw overlap region
+
+    # Calculate right hand dovetail of first, and left hand
+    # of second - can then draw overlap region and real
+    # relative positions
+    
     # Move origin to draw second sequence
     $x += ($len_a - $over) / $rpp;
     $y += $pad;
