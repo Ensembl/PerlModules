@@ -22,28 +22,19 @@ my $NetServ = 'netserv\@ebi.ac.uk';
 my $EMBL_emails_dir = "$HUMPUB_ROOT/data/EMBL_netserv_email";
 
 BEGIN {
-    my $embl_simple_url = 'http://www.ebi.ac.uk/cgi-bin/emblfetch';
+    my $embl_simple_url = 'http://www.ebi.ac.uk/cgi-bin/emblfetch?style=raw&format=embl&id=';
     
     sub wwwfetch {
         my( $ac ) = @_;
-        my $result = get("$embl_simple_url?$ac")
-            or die "No response from '$embl_simple_url'";
-        die "Entry for '$ac' not found by server '$embl_simple_url'"
-            if $result =~ /no entries found/i;
-        
-        my( $embl );
-        while ($result =~ m{<pre>\s*(ID.*?//\n)\s*</pre>}gsi) {
-            my $l = length($1);
-            warn "Got match of length $l";
-            $embl .= $1;
-        }
-        
-        # Remove html markup
-        $embl =~ s{<A HREF=.+?>([^<]+)</A>}{$1}g;
-        
+        my $get = "$embl_simple_url$ac";
+        my $embl = get($get)
+            or die "No response from '$get'";
+        die "Entry for '$ac' not found by request '$get'"
+            if $embl =~ /no entries found/i;
         return $embl;
     }
 }
+
 sub netfetch {
     my( $list, $TIMEOUT ) = @_;
 
