@@ -318,7 +318,7 @@ sub clone {
         })
     {
         if ( $meth eq 'translation_region' && (! $old->translation_region_is_set)  ) {
-            ## if values are not set this method returns defaults - which are the start and end
+            # If values are not set this method returns defaults - which are the start and end
             next ;
         }
         $new->$meth($old->$meth());
@@ -458,9 +458,9 @@ sub exon_Sequence {
     foreach my $exon ($self->get_all_Exons) {
 	my $start = $exon->start;
 	my $end   = $exon->end;
-	    $seq_str .= $clone_seq
-		->sub_sequence($start, $end)
-		->sequence_string;
+	$seq_str .= $clone_seq
+	    ->sub_sequence($start, $end)
+	    ->sequence_string;
     }
     $seq->sequence_string($seq_str);
     
@@ -478,13 +478,19 @@ sub exon_Sequence_array {
         or confess "No clone_Sequence";
     
     my $exon_seqs = [];
+    my $i = 0;
+    my $name = $self->name;
     foreach my $exon ($self->get_all_Exons) {
+        $i++;
 	my $start = $exon->start;
 	my $end   = $exon->end;
 	my $seq = $clone_seq->sub_sequence($start, $end);
-	 if ($self->strand == -1) {
+	if ($self->strand == -1) {
             $seq = $seq->reverse_complement;
         }
+        # Give it a name so that we don't have an anonymous sequence
+        $seq->name("${name}_exon_$i");
+        push(@$exon_seqs, $seq);
     }
     if ($self->strand == -1) {
         @$exon_seqs = reverse @$exon_seqs;

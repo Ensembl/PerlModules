@@ -34,6 +34,27 @@ sub check_positive_integer {
         unless $int =~ /^[1-9]\d*$/;
 }
 
+sub chr_start {
+    my( $self, $chr_start ) = @_;
+    
+    if (defined $chr_start) {
+        $self->check_positive_integer($chr_start);
+        $self->{'_chr_start'} = $chr_start;
+    }
+    return $self->{'_chr_start'};
+}
+
+sub chr_end {
+    my( $self, $chr_end ) = @_;
+    
+    if (defined $chr_end) {
+        $self->check_positive_integer($chr_end);
+        $self->{'_chr_end'} = $chr_end;
+    }
+    return $self->{'_chr_end'};
+}
+
+
 1;
 
 __END__

@@ -61,7 +61,7 @@ sub parse {
         } else {
             my( $acc_sv,
                 $seq_start, $seq_end,
-                $strand ) = split /\s+/, $rest, 4;
+                $strand, $remark ) = split /\s+/, $rest, 5;
             $row = $agp->new_Clone;
             $row->accession_sv($acc_sv);
             $row->seq_start($seq_start);
@@ -70,7 +70,10 @@ sub parse {
             my $phase = $type_phase{$type}
                 or confess "No phase number for type '$type'";
             $row->htgs_phase($phase);
+            $row->remark($remark);
         }
+        $row->chr_start($chr_start);
+        $row->chr_end($chr_end);
     }
     $self->{'_file'} = undef;
     

@@ -988,7 +988,7 @@ sub embl_checksum {
         my $o_count = $length - ($a_count + $c_count + $g_count + $t_count);
 
         # Make the first line
-        my $embl = "SQ   $length BP; $a_count A; $c_count C; $g_count G; $t_count T; $o_count other;\n";
+        my $embl = "SQ   Sequence $length BP; $a_count A; $c_count C; $g_count G; $t_count T; $o_count other;\n";
         
         # Calculate the number of nucleotides which fit on whole lines
         my $whole = int($length / $nuc) * $nuc;

@@ -39,6 +39,8 @@ sub find_Feature_sets {
     my( $self, $exon_seqs ) = @_;
     
     my $features = $self->find_Features($exon_seqs);
+    my ($fwd, $rev) = $self->split_Features_by_strand($features);
+    $features = $self->best_occupied_set($fwd, $rev);
     my $ex_list = [];
     for (my $i = 0; $i < @$exon_seqs; $i++) {
         #my $exon = $exon_seqs->[$i];
@@ -48,10 +50,55 @@ sub find_Feature_sets {
     }
     
     # Check that features are colinear - no use when we are finding $gene->get_all_Exons
+    # Could check splice sites
 
     # May return several sets in future when, for example
     # there are tandemly duplicated genes.
     return [$ex_list];
+}
+
+sub best_occupied_set {
+    my( $self, @all_set ) = @_;
+    
+    my $max_set = undef;
+    my $max = 0;
+    for (my $i = 0; $i < @all_set; $i++) {
+        my $set = $all_set[$i];
+        my $score = 0;
+        for (my $j = 0; $j < @$set; $j++) {
+            if (my $feat_list = $set->[$j]) {
+                # Increment score if we found features at this position
+                $score++ if @$feat_list;
+            }
+        }
+        if ($score > $max) {
+            $max = $score;
+            $max_set = $set;
+        }
+    }
+    # $max_set will be undef if there are no features
+    return $max_set;
+}
+
+sub split_Features_by_strand {
+    my( $self, $feat_list ) = @_;
+    
+    my $fwd_set = [];
+    my $rev_set = [];
+    for (my $i = 0; $i < @$feat_list; $i++) {
+        my $fwd = $fwd_set->[$i] = [];
+        my $rev = $rev_set->[$i] = [];
+        my $this = $feat_list->[$i];
+        foreach my $feat (@$this) {
+            if ($feat->seq_strand == 1) {
+                push(@$fwd, $feat);
+            }
+            else {
+                push(@$rev, $feat);
+            }
+        }
+    }
+    return ($fwd_set, $rev_set);
 }
 
 sub find_Features {

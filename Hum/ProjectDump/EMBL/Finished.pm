@@ -142,8 +142,7 @@ sub make_ft_factory {
     my( $pdmp ) = @_;
     
     # Can't do this without an attached Otter database
-    my $ds  = $pdmp->DataSet   or return;
-    my $acc = $pdmp->accession or return;
+    my $ds  = $pdmp->DataSet or return;
     
     my $ft_factory = Bio::Otter::EMBL::Factory->new;
     $ft_factory->DataSet($ds);
