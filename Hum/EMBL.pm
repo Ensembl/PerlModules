@@ -261,7 +261,8 @@ sub bio_primary_seq {
     
     my $acc = $embl->AC->primary;
     
-    $type = 'DNA' if $type =~ /DNA/i;
+    # changes from 'genomic DNA' to 'dna' for bioperl Bio::PrimarySeq
+    $type = 'dna' if $type =~ /DNA/i;
     
     return Bio::PrimarySeq->new(
         -id        => $name,
@@ -275,7 +276,7 @@ sub bio_seq {
     my( $embl ) = @_;
     
     require Bio::Seq;
-    
+
     my $id_line = $embl->ID;
     my $name =    $id_line->entryname;
     my $type = lc $id_line->molecule;
@@ -283,7 +284,8 @@ sub bio_seq {
     
     my $acc = $embl->AC->primary;
     
-    $type = 'DNA' if $type =~ /DNA/i;
+    # changes from 'genomic DNA' to 'dna' for bioperl Bio::Seq
+    $type = 'dna' if $type =~ /DNA/i;
     
     return Bio::Seq->new(
         -id        => $name,
