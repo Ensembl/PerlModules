@@ -92,9 +92,11 @@ sub gene_type_prefix {
                 last;
             }
         }
-        confess("No Gene type for locus '$ace_locus':", $ace_locus->asString)
-            unless $gene_type;
-        $self->gene_type($gene_type);
+        if ($gene_type) {
+            $self->gene_type($gene_type);
+        } else {
+            warn("No Gene type for locus '$ace_locus' :\n", $ace_locus->asString);
+        }        
     }
 }
 

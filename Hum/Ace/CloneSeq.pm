@@ -238,7 +238,7 @@ sub express_data_fetch {
         };
         $err .= $@ if $@;
     }
-    confess $err if $err;
+    warn $err if $err;
 }
 
 sub Sequence {
