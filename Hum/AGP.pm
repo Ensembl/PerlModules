@@ -110,7 +110,7 @@ sub process_TPF {
             $gap->remark($row->remark);
         } else {
             my $inf = $row->SequenceInfo;
-            if ($unfin_flag or ($inf and $inf->htgs_phase == 3)) {
+            if ($unfin_flag or ($inf and ($inf->htgs_phase == 3 or $inf->htgs_phase == 2))) {
                 push(@$contig, $row);
             } else {
                 $self->_process_contig($contig) if @$contig;

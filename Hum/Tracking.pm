@@ -1114,7 +1114,7 @@ if no errors are encountered.
 sub record_accession_data {
     my( $project, $suffix, $phase, $acc, $embl_name, $length ) = @_;
 
-    die "unknown htgs_phase '$phase'" unless $phase =~ /^[13]$/;
+    die "unknown htgs_phase '$phase'" unless $phase =~ /^[123]$/;
     unless ($project and $acc and $embl_name and $length) {
         confess "Missing argument";
     }
@@ -1122,11 +1122,10 @@ sub record_accession_data {
     eval {
         _store_embl_submission($acc, $embl_name, $length);
 
-        if ($phase == 1) {
-            _store_unfinished_submission($project, $acc);
-        }
-        elsif ($phase == 3) {
+        if ($phase == 3) {
             _store_finished_submission($project, $acc, $suffix);
+        } else {
+            _store_unfinished_submission($project, $acc);
         }
     };
     if ($@) {

@@ -77,7 +77,7 @@ sub make_embl {
     $pdmp->add_Description($embl);
 
     # KW line
-    $pdmp->add_Keywords($embl, scalar @$contig_map);
+    $pdmp->add_Keywords($embl);
 
     # Organism
     add_Organism($embl, $species);
@@ -523,16 +523,13 @@ sub add_Headers {
         # CC   *    20745 20844: gap of      100 bp
 
 sub add_Keywords {
-    my( $pdmp, $embl, $contig_count ) = @_;
+    my( $pdmp, $embl ) = @_;
     
     my $kw = $embl->newKW;
     my @kw_list = ('HTG');
 
-    if ($contig_count == 1) {
-        push(@kw_list, 'HTGS_PHASE2');
-    } else {
-        push(@kw_list, 'HTGS_PHASE1');
-    }
+    my $phase = $pdmp->htgs_phase or confess 'htgs_phase not set';
+    push(@kw_list, "HTGS_PHASE$phase");
 
     if ($pdmp->is_cancelled) {
         push( @kw_list, 'HTGS_CANCELLED' );

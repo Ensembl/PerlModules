@@ -21,13 +21,13 @@ sub embl_checksum {
 }
 
 # Overrides method in Hum::ProjectDump
-sub htgs_phase {
-    my( $pdmp ) = @_;
-    
-    $pdmp->{'_actual_htgs_phase'} ||=
-        Hum::Tracking::is_finished($pdmp->project_name) ? 3 : 1;
-    return $pdmp->{'_actual_htgs_phase'};
-}
+#sub htgs_phase {
+#    my( $pdmp ) = @_;
+#    
+#    $pdmp->{'_actual_htgs_phase'} ||=
+#        Hum::Tracking::is_finished($pdmp->project_name) ? 3 : 1;
+#    return $pdmp->{'_actual_htgs_phase'};
+#}
 
 sub store_dump {
     my( $pdmp ) = @_;
@@ -117,7 +117,6 @@ sub contig_length_cutoff {
     } else {
         $cutoff = $pdmp->{'_contig_length_cutoff'};
         $cutoff = 2000 unless defined($cutoff);
-        
     }
     return $cutoff;
 }
