@@ -726,7 +726,7 @@ sub parse {
     my( $line, $s ) = @_;
             
     my ($genus, $species, $common) = 
-        $$s =~ /^OS   (\S+)\s+(.+?)?(?:\s+\((\s+)\))?/m
+        $$s =~ /^OS   (\S+)(?:\s+([^\(]\S*))?(?:\s+\(([^\)]+)\))?$/m
         or confess "Can't parse OS line from:\n$$s";
     
     my( @class );
@@ -769,7 +769,7 @@ use vars qw( @ISA );
 
 BEGIN {
     @ISA = qw( Hum::EMBL::Line );
-    Hum::EMBL::Line::NI->makeFieldAccessFuncs(qw( organelle ));
+    Hum::EMBL::Line::OG->makeFieldAccessFuncs(qw( organelle ));
 }
 
 sub parse {
