@@ -3,11 +3,12 @@ package Hum::NetFetch;
 
 use strict;
 use Exporter;
-use vars qw( @EXPORT_OK );
+use vars qw( @EXPORT_OK @ISA );
 use humConf qw( HUMPUB_ROOT );
 use Hum::Lock;
 use Embl;
 
+@ISA = qw( Exporter );
 @EXPORT_OK = qw( netfetch );
 
 # email address of EBI email sequence server
@@ -18,12 +19,17 @@ my $NetServ = 'netserv\@ebi.ac.uk';
 # named "msg.<UNIQUE KEY>".
 my $EMBL_emails_dir = "$HUMPUB_ROOT/data/EMBL_netserv_email";
 
-my $TIMEOUT = 600;  # Kill ourselves after timeout
+
 
 sub netfetch {
-    my( $list ) = @_;
+    my( $list, $TIMEOUT ) = @_;
 
-    my %Request = map { $_, 0 } ('EMAIL_LOG_FILE', @$list);
+    my %Request = ();
+
+    return \%Request unless @$list;
+
+    %Request = map { $_, 0 } ('EMAIL_LOG_FILE', @$list);
+    $TIMEOUT ||= 600;   # Kill ourselves after timeout
 
     $SIG{'ALRM'} = sub {
                         die "Timeout.  Couldn't retrieve the following:\n",
@@ -37,7 +43,7 @@ sub netfetch {
     }
 
     # Send email to retrieve sequences
-    send_nuc_request( $NetServ, @Request_List );
+    send_nuc_request( $NetServ, @$list );
     my $Submit_Time = time;
 
     alarm $TIMEOUT;
@@ -83,7 +89,7 @@ sub netfetch {
                 die "Invalid file ('$msg')" unless $Request{ 'EMAIL_LOG_FILE' };
             }
             if ($msg) {
-                unlink( $msg ) or die "Can't unlink ('$msg')";
+                #unlink( $msg ) or die "Can't unlink ('$msg')";
             }
         }
         last unless missing(\%Request);
