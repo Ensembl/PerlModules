@@ -149,10 +149,6 @@ BEGIN {
 sub parse {
     my( $embl, $arg ) = @_;
     
-    # Make $arg into a reference - (allows $parser->parse(*ARGV)
-    # syntax instead of $parser->parse(\*ARGV)).
-    $arg = \$arg unless ref($arg);
-    
     my $type = ref($arg);
     my( $fh );
     if ($type eq 'GLOB') {
@@ -163,7 +159,8 @@ sub parse {
         $fh = gensym();
         tie( *{$fh}, 'Hum::EMBL::Handle', $arg );
     } else {
-        confess("argument must be ref to 'GLOB' or 'SCALAR', not '$type'");
+        $fh = gensym();
+        open $fh, $arg or confess("Can't open file '$arg' : $!")
     }
     
     my $entry = $embl->new();

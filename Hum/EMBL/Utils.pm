@@ -66,12 +66,13 @@ BEGIN {
     sub crc32 {
         my( $str ) = @_;
 
-        die "Argument to crc32() must be ref to scalar"
+        confess "Argument to crc32() must be ref to scalar"
             unless ref($str) eq 'SCALAR';
 
         generateCRCTable() unless @crcTable;
 
-        my $len = length($$str);
+        my $len = length($$str)
+            or confess "Empty string";
 
         my $crc = 0xFFFFFFFF;
         for (my $i = 0; $i < $len; $i++) {

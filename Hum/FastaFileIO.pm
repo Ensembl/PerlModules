@@ -130,6 +130,8 @@ sub read_all_sequences {
 sub read_one_sequence {
     my( $ffio ) = @_;
     
+    local $/ = "\n";
+    
     my $class = $ffio->sequence_class;
     my $fh = $ffio->file_handle
         or confess "No file handle";
@@ -152,11 +154,13 @@ sub read_one_sequence {
             $seq_string .= $_;
         }
     }
+    
     $seq_obj->sequence_string($seq_string);
     
     # Read quality values if we've got a handle to a quality file
-    $ffio->_add_quality_string($seq_obj)
-        if $ffio->quality_file_handle;
+    if ($ffio->quality_file_handle) {
+        $ffio->_add_quality_string($seq_obj);
+    }
     
     return $seq_obj;
 }
