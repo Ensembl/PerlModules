@@ -111,8 +111,7 @@ sub current_from_species_chromsome_subregion {
 sub _fetch_generic {
     my( $pkg, $where_clause, @data ) = @_;
 
-    ### Need to convert Oracle date to unix time int
-    my $sth = prepare_cached_track_statement(qq{
+    my $sql = qq{
         SELECT t.id_tpf
           , TO_CHAR(t.entry_date, 'YYYY-MM-DD HH24:MI:SS') entry_date
           , t.program
@@ -126,7 +125,9 @@ sub _fetch_generic {
         WHERE t.id_tpftarget = g.id_tpftarget
           AND g.chromosome = c.id_dict
           $where_clause
-        });
+        };
+    #warn $sql;
+    my $sth = prepare_cached_track_statement($sql);
     $sth->execute(@data);
     my ($db_id, $entry_date, $prog, $operator,
         $subregion, $species, $chr) = $sth->fetchrow;
@@ -173,6 +174,7 @@ sub _express_fetch_TPF_Rows {
           AND c.libraryname = l.libraryname (+)
           AND c.clonename = cs.clonename (+)
           AND cs.id_sequence = s.id_sequence (+)
+          AND cs.is_current = 1
           AND r.id_tpf = ?
         ORDER BY r.rank ASC
         });
