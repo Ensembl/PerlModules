@@ -126,6 +126,11 @@ sub db_handle {
         else {
             confess "Need host and port (or path) to connect";
         }
+        
+        # Defaults for database handles
+        $dbh->auto_save(0);
+        $dbh->date_style('ace');
+        
         $self->{'_db_handle'} = $dbh;
         return $dbh;
     }

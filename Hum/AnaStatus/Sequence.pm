@@ -594,9 +594,17 @@ sub bio_seq {
 sub ana_dir_seq_file {
     my( $self ) = @_;
     
-    my $ana_dir = $self->analysis_directory;
+    return join('/',
+        $self->analysis_directory,
+        $self->seq_file
+        );
+}
+
+sub seq_file {
+    my( $self ) = @_;
+    
     my $s_name  = $self->sequence_name;
-    return "$ana_dir/$s_name.seq";
+    return "$s_name.seq";
 }
 
 sub get_dna_seq {
