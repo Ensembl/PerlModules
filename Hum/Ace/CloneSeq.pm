@@ -95,6 +95,21 @@ sub replace_SubSeq {
     confess "No such SubSeq to replace '$name'";
 }
 
+sub delete_SubSeq {
+    my( $self, $name ) = @_;
+    
+    my $ss_list = $self->{'_SubSeq_list'}
+        or confess "No SubSeq list";
+    for (my $i = 0; $i < @$ss_list; $i++) {
+        my $this = $ss_list->[$i];
+        if ($this->name eq $name) {
+            splice(@$ss_list, $i, 1);
+            return 1;
+        }
+    }
+    confess "No such SubSeq to delete '$name'";
+}
+
 sub get_all_SubSeqs {
     my( $self ) = @_;
     
