@@ -28,7 +28,7 @@ sub add_source_FT {
     $ft->addQualifierStrings('chromosome', $chr);
     $ft->addQualifierStrings('map',        $map)             if $map;
     $ft->addQualifierStrings('clone',      $external_clone);
-    $ft->addQualifierStrings('library',    $libraryname)     if $libraryname;
+    $ft->addQualifierStrings('clone_lib',  $libraryname)     if $libraryname;
     
     return $ft;
 }
