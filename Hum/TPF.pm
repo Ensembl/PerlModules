@@ -235,7 +235,7 @@ sub _express_fetch_TPF_Gaps_rank_hash {
     
     my $rank_gap = {};
     while ($sth->fetch) {
-        $gap_length = undef if $gap_length eq '?';
+        $gap_length = undef if defined($gap_length) and $gap_length eq '?';
         my $gap = Hum::TPF::Row::Gap->new;
         $gap->db_id($gap_id);
         $gap->gap_length($gap_length);

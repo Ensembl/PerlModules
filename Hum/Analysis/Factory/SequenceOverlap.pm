@@ -33,8 +33,14 @@ sub new {
 sub find_SequenceOverlap {
     my( $self, $sinf_a, $sinf_b ) = @_;
     
+    my $seq_a = $sinf_a->Sequence;
+    my $seq_b = $sinf_b->Sequence;
+    unless ($seq_a and $seq_b) {
+        confess "Didn't get Sequence for both a ('$seq_a') and b ('$seq_b')";
+    }
+    
     # Run cross_match and find overlap
-    my $feat = $self->find_end_overlap($sinf_a->Sequence, $sinf_b->Sequence);
+    my $feat = $self->find_end_overlap($seq_a, $seq_b);
     
     return unless $feat;
     
