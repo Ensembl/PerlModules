@@ -29,6 +29,15 @@ sub identity {
     return $self->{'_identity'};
 }
 
+sub hsp_length {
+    my( $self, $hsp_length ) = @_;
+    
+    if ($hsp_length) {
+        $self->{'_hsp_length'} = $hsp_length;
+    }
+    return $self->{'_hsp_length'};
+}
+
 sub expect {
     my( $self, $expect ) = @_;
     
@@ -72,6 +81,30 @@ sub subject_end {
         $self->{'_subject_end'} = $subject_end;
     }
     return $self->{'_subject_end'};
+}
+
+sub query_length {
+    my( $self ) = @_;
+    
+    my $start = $self->query_start;
+    my $end   = $self->query_end;
+    if ($start < $end) {
+        return $end - $start + 1;
+    } else {
+        return $start - $end + 1;
+    }
+}
+
+sub subject_length {
+    my( $self ) = @_;
+    
+    my $start = $self->subject_start;
+    my $end   = $self->subject_end;
+    if ($start < $end) {
+        return $end - $start + 1;
+    } else {
+        return $start - $end + 1;
+    }
 }
 
 1;

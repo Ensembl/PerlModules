@@ -72,6 +72,30 @@ sub total_score {
     return $total;
 }
 
+sub total_identity {
+    my( $self ) = @_;
+    
+    my $identity = 0;
+    my $length   = 0;
+    foreach my $hsp ($self->get_all_HSPs) {
+        $identity += $hsp->identity;
+        $length   += $hsp->hsp_length;
+    }
+    return $identity / $length;
+}
+
+sub min_expect {
+    my( $self ) = @_;
+    
+    my( $expect );
+    foreach my $hsp ($self->get_all_HSPs) {
+        my $e = $hsp->expect;
+        $expect = $e unless defined $expect;
+        $expect = $e if $e < $expect;
+    }
+    return $expect;
+}
+
 1;
 
 __END__

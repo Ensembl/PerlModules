@@ -80,10 +80,16 @@ sub _read_dbs_from_disk {
         $db->path($file_path);
         
         # Check the definition of parts
-        my ($stored_part, $stored_part_count) = $db->part;
-        unless ($stored_part == $part
-            and $stored_part_count == $part_count)
-        {
+        my( $stored_part, $stored_part_count );
+        ### This eval can be removed once all the databases
+        ### are indexed using Hum::Blast::DB
+        eval{
+            ($stored_part, $stored_part_count) = $db->part;
+        };
+        if  (! $@
+            and ($stored_part != $part
+                or $stored_part_count != $part_count)
+        ) {
             confess "Stored parts ($stored_part of $stored_part_count)\n",
                 "inconsistent with files ($part of $part_count)";
         }
