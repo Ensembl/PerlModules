@@ -1206,6 +1206,7 @@ sub delete_all_sequence_files {
     $total += $pdmp->delete_fasta_file;
     $total += $pdmp->delete_quality_file;
     $total += $pdmp->delete_embl_file;
+    $pdmp = undef;
     return $total;
 }
 
@@ -1589,20 +1590,6 @@ BEGIN {
     }
 }
 
-sub expire_dump {
-    my( $pdmp ) = @_;
-    
-    my $seq_id = $pdmp->seq_id
-        or confess "No seq_id for dump";
-    my $update = sub_db()->prepare(q{
-        UPDATE project_dump
-        SET is_current = 'N'
-        WHERE seq_id = ?
-        });
-    $update->execute($seq_id);
-    $pdmp = undef;
-}
-
 sub store_dump {
     my( $pdmp ) = @_;
     
@@ -1704,16 +1691,16 @@ BEGIN {
 sub _set_not_current {
     my( $pdmp ) = @_;
     
-    my $sub_db = sub_db();
-    
+    my $seq_id = $pdmp->seq_id
+        or confess "No seq_id for dump";
+
     # Now unset is_current for previous rows
-    my $update = $sub_db->prepare(q{
+    my $update = sub_db()->prepare(q{
         UPDATE project_dump
         SET is_current = 'N'
-        WHERE sanger_id = ?
-          AND seq_id = ?
+        WHERE seq_id = ?
         });
-    $update->execute($pdmp->sanger_id, $pdmp->seq_id);
+    $update->execute($seq_id);
 }
 
 
