@@ -56,7 +56,8 @@ my $ftp_structure = {
     'B.floridae'    => [ 'b_floridae'              ],
     'Gibbon'        => [ 'gibbon'                  ],
     'Dog'           => [ 'dog'                     ],
-    #'Chicken'       => [ 'chicken'                 ],
+    'Sminthopsis'   => [ 'sminthopsis'             ],
+    'Chicken'       => [ 'chicken'                 ],
     #'Drosophila'    => [ 'drosophila/sequences'    ],
     #'Arabidopsis'   => [ 'arabidopsis'             ],
     };
