@@ -68,7 +68,7 @@ my $ftp_structure = {
     'Rhesus'        => [ 'rhesus'                   ],
     'Sminthopsis'   => [ 'sminthopsis'              ],
     'Tetraodon'     => [ 'tetraodon'                ],
-    'Zebrafish'     => [ 'zebrafish'                ],
+    'Zebrafish'     => [ 'zebrafish',        'Chr_' ],
     'M.truncatula'  => [ 'm_truncatula'             ],
     'Wallaby'       => [ 'wallaby'                  ],
     'Opossum'       => [ 'opossum'                  ],
@@ -126,7 +126,7 @@ my $humace_queue = "$humpub/humace/queue";
     HUMACE_CLIENT_TIMEOUT => 1200,
     HUMACE_INCREMENTAL     => "$humpub/data/Humace_Incremental/CURRENT",
     HUMACE_INCREMENTAL_DIR => "$humpub/data/Humace_Incremental",
-    
+
     SPECIES_ANALYSIS_ROOT => {
         'Human'         => "$humpub/analysis/projects",
         'Mouse'         => "$humpub_disk1/analysis/mouse",
@@ -141,7 +141,7 @@ my $humace_queue = "$humpub/humace/queue";
         },
     ANALYSIS_ROOT => "$humpub/analysis/projects",
     LINK_ANALYSIS_ROOT => "$humpub/analysis/links",
-    
+
     EMBL_FILE_DIR => "$humpub/data/EMBL",
     EMBL_SUMMARY_EMAIL => "$humpub/data/EMBL_summary_email",
     CONFIG_DEFAULT => "$humpub/scripts/haceprep.cfg",
