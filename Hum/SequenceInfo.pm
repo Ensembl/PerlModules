@@ -4,6 +4,7 @@
 package Hum::SequenceInfo;
 
 use strict;
+use Carp;
 use Hum::Tracking 'track_db';
 
 sub new {
@@ -15,25 +16,40 @@ sub new {
 sub fetch_by_db_id {
     my( $pkg, $db_id ) = @_;
     
-    my $sth = track_db()->prepare_cached(q{
-        SELECT accession
+    return $pkg->_fetch_generic(q{ id_sequence = ? }, $db_id);
+}
+
+sub fetch_by_accession_sv {
+    my( $pkg, $acc, $sv ) = @_;
+    
+    return $pkg->_fetch_generic(q{ accession = ? AND sv = ? }, $acc, $sv);
+}
+
+sub _fetch_generic {
+    my( $pkg, $where_clause, @data ) = @_;
+    
+    my $sth = track_db()->prepare_cached(qq{
+        SELECT id_sequence
+          , accession
           , sv
           , id_htgsphase
           , length
           , embl_checksum
           , projectname
         FROM sequence
-        WHERE id_sequence = ?
+        WHERE $where_clause
         });
-    $sth->execute($db_id);
-    my ($acc, $sv, $htgs_phase, $length, $cksum, $proj) = $sth->fetchrow;
-}
-
-sub new_from_Sequence {
-    my( $pkg, $seq ) = @_;
+    $sth->execute(@data);
+    my ($db_id, $acc, $sv, $htgs_phase, $length, $cksum, $proj) = $sth->fetchrow;
     
-    my $self = bless {}, $pkg;
-    $self->Sequence($seq);
+    my $self = $pkg->new;
+    $self->db_id($db_id);
+    $self->accession($acc);
+    $self->sequence_version($sv);
+    $self->htgs_phase($htgs_phase);
+    $self->sequence_length($length);
+    $self->embl_checksum($cksum);
+    $self->projectname($proj);
     return $self;
 }
 
@@ -100,15 +116,6 @@ sub projectname {
     return $self->{'_projectname'};
 }
 
-sub clonename {
-    my( $self, $clonename ) = @_;
-    
-    if ($clonename) {
-        $self->{'_clonename'} = $clonename;
-    }
-    return $self->{'_clonename'};
-}
-
 sub Sequence {
     my( $self, $seq ) = @_;
     
@@ -123,10 +130,9 @@ sub Sequence {
 sub store {
     my( $self ) = @_;
     
-    # Warning here?
-    return if $self->db_id;
+    confess "object already has a db_id" if $self->db_id;
     
-    ### Get next value from sequence
+    # Get next value from sequence
     $self->get_next_id;
     
     # Could check if already stored, or use a REPLACE?

@@ -5,6 +5,7 @@ package Hum::Pfetch;
 
 use strict;
 use Carp;
+use Hum::EMBL;
 use Hum::Conf 'PFETCH_SERVER_LIST';
 use IO::Socket;
 use Exporter;
@@ -15,6 +16,7 @@ use vars qw{@ISA @EXPORT_OK};
     get_Sequences
     get_descriptions
     get_lengths
+    get_EMBL_entries
     };
 
 sub get_server {
@@ -92,6 +94,27 @@ sub get_lengths {
         }
     }
     return @length_list;
+}
+
+sub get_EMBL_entries {
+    my( @id_list ) = @_;
+    
+    confess "No names provided" unless @id_list;
+    
+    my $parser = Hum::EMBL->new;
+    
+    my $server = get_server();
+    print $server "-F @id_list\n";
+    my( @entries );
+    for (my $i = 0; $i < @id_list; $i++) {
+        chomp( my $embl = <$server> );
+        if ($embl eq 'no match') {
+            $entries[$i] = undef;
+        } else {
+            $entries[$i] = $parser->parse(\$embl);
+        }
+    }
+    return @entries;
 }
 
 1;

@@ -17,6 +17,23 @@ sub new {
     return bless {}, $pkg;
 }
 
+sub fetch_by_SequenceInfo_pair {
+    my( $pkg, $seq_a, $seq_b ) = @_;
+    
+    my $sth = track_db->prepare_cached(q{
+        select oa.position, os.is_3prime,
+        ob.position, ob.is_3prime,
+        o.length, o.id_source, o.pct_substitutions, o.pct_insertions, o.pct_deletions
+        from sequence_overlap oa
+          , overlap o
+          , sequence_overlap ob
+        where oa.id_overlap = o.id_overlap
+        and o.id_overlap = ob.id_overlap
+        and oa.id_sequence = ?
+        and ob.id_sequence = ?
+        });
+}
+
 sub fetch_by_db_id {
     my( $pkg, $id ) = @_;
     

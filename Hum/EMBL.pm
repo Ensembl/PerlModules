@@ -169,6 +169,7 @@ sub parse {
     
     my $entry = $embl->new();
     
+    local $/ = "\n";
     my( $current, @group, @obj );
     while (<$fh>) {
     
