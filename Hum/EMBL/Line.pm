@@ -105,7 +105,7 @@ sub string {
     return $line->{'_string'};
 }
 
-# Called by compose() in EMBL::Entry on each line
+# Called by compose() in Hum::EMBL::Line on each line
 sub getString {
     my( $line ) = @_;
     
@@ -158,7 +158,7 @@ BEGIN {
 
 ###############################################################################
 
-package Hum::EMBL::ID;
+package Hum::EMBL::Line::ID;
 
 use strict;
 use Carp;
@@ -166,13 +166,13 @@ use vars qw( @ISA );
 
 BEGIN {
     @ISA = qw( Hum::EMBL::Line );
-    Hum::EMBL::ID->makeFieldAccessFuncs(qw(
-                                           entryname
-                                           dataclass
-                                           molecule
-                                           division
-                                           seqlength
-                                           ));
+    Hum::EMBL::Line::ID->makeFieldAccessFuncs(qw(
+                                                 entryname
+                                                 dataclass
+                                                 molecule
+                                                 division
+                                                 seqlength
+                                                 ));
 }
 
 sub parse {
@@ -203,7 +203,7 @@ sub compose {
 
 ###############################################################################
 
-package Hum::EMBL::AC;
+package Hum::EMBL::Line::AC;
 
 use strict;
 use Carp;
@@ -211,8 +211,8 @@ use vars qw( @ISA );
 
 BEGIN {
     @ISA = qw( Hum::EMBL::Line );
-    Hum::EMBL::AC->makeFieldAccessFuncs(qw( primary     ));
-    Hum::EMBL::AC->makeListAccessFuncs (qw( secondaries ));
+    Hum::EMBL::Line::AC->makeFieldAccessFuncs(qw( primary     ));
+    Hum::EMBL::Line::AC->makeListAccessFuncs (qw( secondaries ));
 }
 
 sub parse {
@@ -238,7 +238,7 @@ sub compose {
 
 ###############################################################################
 
-package Hum::EMBL::CC;
+package Hum::EMBL::Line::CC;
 
 use strict;
 use Carp;
@@ -246,7 +246,7 @@ use vars qw( @ISA );
 
 BEGIN {
     @ISA = qw( Hum::EMBL::Line );
-    Hum::EMBL::CC->makeListAccessFuncs( 'list' );
+    Hum::EMBL::Line::CC->makeListAccessFuncs( 'list' );
 }
 
 sub parse {
@@ -269,7 +269,7 @@ sub compose {
 
 ###############################################################################
 
-package Hum::EMBL::KW;
+package Hum::EMBL::Line::KW;
 
 use strict;
 use Carp;
@@ -277,7 +277,7 @@ use vars qw( @ISA );
 
 BEGIN {
     @ISA = qw( Hum::EMBL::Line );
-    Hum::EMBL::KW->makeListAccessFuncs( 'list' );
+    Hum::EMBL::Line::KW->makeListAccessFuncs( 'list' );
 }
 
 sub parse {
@@ -303,51 +303,23 @@ sub compose {
 
 ###############################################################################
 
-package Hum::EMBL::DT;
+package Hum::EMBL::Line::DT;
 
 use strict;
 use Carp;
-use Time::Local qw( timelocal );
+use Hum::EMBL::Utils qw( EMBLdate dateEMBL );
 use vars qw( @ISA );
 
 BEGIN {
 
     @ISA = qw( Hum::EMBL::Line );
-    Hum::EMBL::DT->makeFieldAccessFuncs(qw(
-                                           createdDate
-                                           createdRelease
-                                           date
-                                           release
-                                           version
-                                           ));
-
-    my @months = qw( JAN FEB MAR APR MAY JUN
-                     JUL AUG SEP OCT NOV DEC );
-    my @mDay = ('00'..'31');
-    my( %months );
-    {
-        my $i = 0;
-        %months = map { $_, $i++ } @months;
-    }
-    
-    # Convert EMBL date to unix time int
-    sub dateEMBL {
-        my( $embl ) = @_;
-        my( $mday, $mon, $year ) = split /-/, $embl;
-        $year -= 1900;
-        $mon = $months{ $mon };
-        return timelocal( 0, 0, 0, $mday, $mon, $year );
-    }
-
-    # Convert unix time int to EMBL date
-    sub EMBLdate {
-        my $time = shift || time;
-        my ($sec, $min, $hour, $mday, $mon, $year) = localtime($time);
-        $year += 1900;
-        $mon = $months[$mon];
-        $mday = $mDay[$mday];
-        return "$mday-$mon-$year";
-    }
+    Hum::EMBL::Line::DT->makeFieldAccessFuncs(qw(
+                                                 createdDate
+                                                 createdRelease
+                                                 date
+                                                 release
+                                                 version
+                                                 ));
 }
 
 sub parse {
@@ -400,7 +372,7 @@ sub compose {
 
 ###############################################################################
 
-package Hum::EMBL::DE;
+package Hum::EMBL::Line::DE;
 
 use strict;
 use Carp;
@@ -408,7 +380,7 @@ use vars qw( @ISA );
 
 BEGIN {
     @ISA = qw( Hum::EMBL::Line );
-    Hum::EMBL::DE->makeListAccessFuncs( 'list' );
+    Hum::EMBL::Line::DE->makeListAccessFuncs( 'list' );
 }
 
 sub parse {
@@ -431,7 +403,7 @@ sub compose {
 
 ###############################################################################
 
-package Hum::EMBL::XX;
+package Hum::EMBL::Line::XX;
 
 use strict;
 use Carp;
@@ -460,7 +432,7 @@ sub compose {
 
 ###############################################################################
 
-package Hum::EMBL::SV;
+package Hum::EMBL::Line::SV;
 
 use strict;
 use Carp;
@@ -468,7 +440,7 @@ use vars qw( @ISA );
 
 BEGIN {
     @ISA = qw( Hum::EMBL::Line );
-    Hum::EMBL::SV->makeFieldAccessFuncs(qw( version ));
+    Hum::EMBL::Line::SV->makeFieldAccessFuncs(qw( version ));
 }
 
 sub parse {
@@ -491,7 +463,7 @@ sub compose {
 
 ###############################################################################
 
-package Hum::EMBL::NI;
+package Hum::EMBL::Line::NI;
 
 use strict;
 use Carp;
@@ -499,7 +471,7 @@ use vars qw( @ISA );
 
 BEGIN {
     @ISA = qw( Hum::EMBL::Line );
-    Hum::EMBL::NI->makeFieldAccessFuncs(qw( identifier ));
+    Hum::EMBL::Line::NI->makeFieldAccessFuncs(qw( identifier ));
 }
 
 sub parse {
@@ -520,7 +492,7 @@ sub compose {
 
 ###############################################################################
 
-package Hum::EMBL::Reference;
+package Hum::EMBL::Line::Reference;
 
 use strict;
 use Carp;
@@ -528,18 +500,18 @@ use vars qw( @ISA );
 
 BEGIN {
     @ISA = qw( Hum::EMBL::Line );
-    Hum::EMBL::Reference->makeFieldAccessFuncs(qw(
-                                                  number
-                                                  title
-                                                  ));
-    Hum::EMBL::Reference->makeListAccessFuncs(qw(
-                                                 authors
-                                                 locations
-                                                 comments
-                                                 positions
-                                                 crossrefs
-                                                 xrefs
-                                                 ));
+    Hum::EMBL::Line::Reference->makeFieldAccessFuncs(qw(
+                                                        number
+                                                        title
+                                                        ));
+    Hum::EMBL::Line::Reference->makeListAccessFuncs(qw(
+                                                       authors
+                                                       locations
+                                                       comments
+                                                       positions
+                                                       crossrefs
+                                                       xrefs
+                                                       ));
 }
 
 sub parse {
@@ -570,7 +542,7 @@ sub parse {
     # of writing).  Stored as a list of mini-objects.
     my( @xrefs );
     while ($$s =~ /^RX   (\S+);\s+(.+)\.$/mg) {
-        my $xr = Hum::EMBL::XRef->new();
+        my $xr = Hum::EMBL::Line::XRef->new();
         $xr->db( $1 );
         $xr->id( $2 );
         push( @xrefs, $xr );
@@ -640,12 +612,12 @@ sub compose {
 
 # I was going to use this package for both DR lines and for
 # db_xrefs in Features
-# package Hum::EMBL::XRef;
+# package Hum::EMBL::Line::XRef;
 # 
 # use strict;
 # use Carp;
 
-package Hum::EMBL::DR;
+package Hum::EMBL::Line::DR;
 
 use strict;
 use Carp;
@@ -653,11 +625,11 @@ use vars qw( @ISA );
 
 BEGIN {
     @ISA = qw( Hum::EMBL::Line );
-    Hum::EMBL::DR->makeFieldAccessFuncs(qw(
-                                           db
-                                           id
-                                           secondary
-                                           ));
+    Hum::EMBL::Line::DR->makeFieldAccessFuncs(qw(
+                                                 db
+                                                 id
+                                                 secondary
+                                                 ));
 }
 
 sub store {
@@ -677,7 +649,7 @@ sub parse {
         
     my( $db, $id, $sec ) = $$s =~ /DR   (\S+); (\S+); (\S+)\.$/
         or confess "Can't parse DR line: $$s";
-    my $xref = Hum::EMBL::XRef->new();
+    my $xref = Hum::EMBL::Line::XRef->new();
     $line->db       ( $db  );
     $line->id       ( $id  );
     $line->secondary( $sec );
@@ -695,7 +667,7 @@ sub compose {
 
 ###############################################################################
 
-package Hum::EMBL::Organism;
+package Hum::EMBL::Line::Organism;
 
 use strict;
 use Carp;
@@ -703,14 +675,14 @@ use vars qw( @ISA );
 
 BEGIN {
     @ISA = qw( Hum::EMBL::Line );
-    Hum::EMBL::Organism->makeFieldAccessFuncs(qw(
-                                                 species
-                                                 genus
-                                                 common
-                                                 ));
-    Hum::EMBL::Organism->makeListAccessFuncs(qw(
-                                                classification
-                                                ));
+    Hum::EMBL::Line::Organism->makeFieldAccessFuncs(qw(
+                                                       species
+                                                       genus
+                                                       common
+                                                       ));
+    Hum::EMBL::Line::Organism->makeListAccessFuncs(qw(
+                                                      classification
+                                                      ));
 }
 
 sub parse {
@@ -750,7 +722,7 @@ sub compose {
 
 ###############################################################################
 
-package Hum::EMBL::OG;
+package Hum::EMBL::Line::OG;
 
 use strict;
 use Carp;
@@ -760,7 +732,7 @@ use vars qw( @ISA );
 
 BEGIN {
     @ISA = qw( Hum::EMBL::Line );
-    Hum::EMBL::NI->makeFieldAccessFuncs(qw( organelle ));
+    Hum::EMBL::Line::NI->makeFieldAccessFuncs(qw( organelle ));
 }
 
 sub parse {
@@ -780,7 +752,7 @@ sub compose {
 
 ###############################################################################
 
-package Hum::EMBL::FH;
+package Hum::EMBL::Line::FH;
 
 use strict;
 use Carp;
@@ -809,7 +781,7 @@ sub compose {
 
 ###############################################################################
 
-package Hum::EMBL::FT;
+package Hum::EMBL::Line::FT;
 
 use strict;
 use Carp;
@@ -819,8 +791,8 @@ use Hum::EMBL::Qualifier;
 
 BEGIN {
     @ISA = qw( Hum::EMBL::Line );
-    Hum::EMBL::FT->makeFieldAccessFuncs(qw( key location ));
-    Hum::EMBL::FT->makeListAccessFuncs(qw( qualifiers ));
+    Hum::EMBL::Line::FT->makeFieldAccessFuncs(qw( key location ));
+    Hum::EMBL::Line::FT->makeListAccessFuncs(qw( qualifiers ));
 }
 
 sub newLocation {
@@ -865,7 +837,7 @@ sub parse {
     while ($$s =~ m{^FT {19}(/?)(.+?)\s*$}mg) {
         my $end = $2;
     
-        # A slash (/) marks the start of a new feature
+        # A slash (/) marks the start of a new qualifier
         if ($1) {
             push(@qual, $q);
             $q = $end;
@@ -932,7 +904,7 @@ sub compose {
 
 ###############################################################################
 
-package Hum::EMBL::Sequence;
+package Hum::EMBL::Line::Sequence;
 
 use strict;
 use Carp;
@@ -940,7 +912,7 @@ use vars qw( @ISA );
 
 BEGIN {
     @ISA = qw( Hum::EMBL::Line );
-    Hum::EMBL::Sequence->makeFieldAccessFuncs(qw( seq ));
+    Hum::EMBL::Line::Sequence->makeFieldAccessFuncs(qw( seq ));
 }
 
 sub parse {
@@ -1001,7 +973,7 @@ BEGIN {
 
 ###############################################################################
 
-package Hum::EMBL::End;
+package Hum::EMBL::Line::End;
 
 use strict;
 use Carp;

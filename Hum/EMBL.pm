@@ -5,19 +5,6 @@ use strict;
 use Carp;
 use Hum::EMBL::Line;
 
-sub new {
-    my $pkg = shift;
-    
-    confess "Odd number of agruments" if @_ % 2;
-    
-    if (@_) {
-        my %handler = @_;
-        return bless \%handler, $pkg;
-    } else {
-        return $pkg->defaultHandler;
-    }
-}
-
 =pod
 
      ID - identification             (begins each entry; 1 per entry)
@@ -48,61 +35,125 @@ sub new {
 
 =cut
 
-sub defaultHandler {
-    my( $pkg ) = @_;
+
+BEGIN {
+
+    my %_handler = (
+         ID => 'Hum::EMBL::Line::ID',
+         AC => 'Hum::EMBL::Line::AC',
+         SV => 'Hum::EMBL::Line::SV',
+         NI => 'Hum::EMBL::Line::NI',
+         DT => 'Hum::EMBL::Line::DT',
+         DE => 'Hum::EMBL::Line::DE',
+         KW => 'Hum::EMBL::Line::KW',
+         OS => 'Hum::EMBL::Line::Organism',
+         OC => 'Hum::EMBL::Line::Organism',
+         OG => 'Hum::EMBL::Line::OG',
+         RN => 'Hum::EMBL::Line::Reference',
+         RC => 'Hum::EMBL::Line::Reference',
+         RP => 'Hum::EMBL::Line::Reference',
+         RX => 'Hum::EMBL::Line::Reference',
+         RA => 'Hum::EMBL::Line::Reference',
+         RT => 'Hum::EMBL::Line::Reference',
+         RL => 'Hum::EMBL::Line::Reference',
+         DR => 'Hum::EMBL::Line::DR',
+         FH => 'Hum::EMBL::Line::FH',
+         FT => 'Hum::EMBL::Line::FT',
+         CC => 'Hum::EMBL::Line::CC',
+         XX => 'Hum::EMBL::Line::XX',
+         SQ => 'Hum::EMBL::Line::Sequence',
+       '  ' => 'Hum::EMBL::Line::Sequence',
+       '//' => 'Hum::EMBL::Line::End',
+    );
     
-    return bless {
+    sub import {
+        my $pkg = shift;
 
-             ID => 'Hum::EMBL::ID',
-             AC => 'Hum::EMBL::AC',
-             SV => 'Hum::EMBL::SV',
-             NI => 'Hum::EMBL::NI',
-             DT => 'Hum::EMBL::DT',
-             DE => 'Hum::EMBL::DE',
-             KW => 'Hum::EMBL::KW',
-             OS => 'Hum::EMBL::Organism',
-             OC => 'Hum::EMBL::Organism',
-             OG => 'Hum::EMBL::OG',
-             RN => 'Hum::EMBL::Reference',
-             RC => 'Hum::EMBL::Reference',
-             RP => 'Hum::EMBL::Reference',
-             RX => 'Hum::EMBL::Reference',
-             RA => 'Hum::EMBL::Reference',
-             RT => 'Hum::EMBL::Reference',
-             RL => 'Hum::EMBL::Reference',
-             DR => 'Hum::EMBL::DR',
-             FH => 'Hum::EMBL::FH',
-             FT => 'Hum::EMBL::FT',
-             CC => 'Hum::EMBL::CC',
-             XX => 'Hum::EMBL::XX',
-             SQ => 'Hum::EMBL::Sequence',
-           '  ' => 'Hum::EMBL::Sequence',
-           '//' => 'Hum::EMBL::End',
+        if (@_) {
+            confess "Odd number of agruments" if @_ % 2;
+            %_handler = @_;
+        }
 
-    }, $pkg;
-}
+        # Generate access methods for each line type package,
+        # giving them the same name as the package.
+        my %packages = map {$_, 1} values %_handler;
+        foreach my $class (keys %packages) {
+            my ($name) = $class =~ /([^:]+)$/;
 
-sub class {
-    my( $handler, $prefix ) = @_;
+            # Don't redefine existing subroutines
+            my $func = "${pkg}::$name";
+            warn "Defining '$func'";
+            if (defined( &$func )) {
+                confess "sub '$func' already defined";
+            } else {
+                no strict 'refs';
+                *$func = sub {
+                    my( $embl ) = @_;
+
+                    confess("Not an object '$embl'") unless ref($embl);
+                    my @lines = grep { ref($_) eq $class } $embl->lines();
+
+                    if (wantarray) {
+                        return @lines;
+                    } else {
+                        confess "No line types from '$class' class in entry" unless @lines;
+                        return $lines[0];
+                    }
+                };
+            }
+
+            # Define functions so can say $embl->newCC
+            my $newFunc = "${pkg}::new$name";
+            if (defined( &$newFunc )) {
+                confess "sub '$newFunc' already defined";
+            } else {
+                no strict 'refs';
+                *$newFunc = sub {
+                    my $embl = shift;
+
+                    my $line = $class->new(@_);
+                    $line->entry( $embl );
+                    $embl->addLine( $line );
+                    return $line;
+                };
+            }
+        }
+    }
     
-    return $handler->{$prefix};
+    sub new {
+        my( $proto ) = @_;
+        my($class, $handler);
+
+        if(ref($proto)) {
+            # $proto is an object
+            $class = ref($proto);
+            $handler = $proto->{'handler'};
+        } else {
+            # $proto is a package name
+            $class = $proto;
+            $handler = \%_handler;
+        }
+
+        return bless {
+            handler => $handler,
+            _lines  => [],
+        }, $class;
+    }    
 }
 
 sub parse {
-    my( $handler, $fh ) = @_;
+    my( $embl, $fh ) = @_;
     
     my( $current, @group, @obj );
     while (<$fh>) {
     
         # Get prefix and trim whitespace from the right
-        my ($prefix) = /^(.{2,5})/;
-        $prefix =~ s/(..+?)\s+$/$1/;
+        my ($prefix) = substr($_, 0, 5) =~ /^(..+?)\s*$/;
         
         # This ignores lines which aren't registered in the handler
-        if (my $class = $handler->class( $prefix )) {
-                
+        ### FIXME - this will merge blocks separated by unregistered line types ###
+        if (my $class = $embl->{'handler'}{$prefix}) {
             $current ||= $class; # Needed for first line
-            
             if ($current eq $class) {
                 # Add to the group if belongs to same class
                 push( @group, $_ );
@@ -110,18 +161,17 @@ sub parse {
                 # Make new line object(s) if current line belongs to a
                 # different class, and add to the list of objects.
                 my @line = $current->store(@group);
-                warn $@ if $@;
                 push( @obj, @line ) if @line;
-                
+
                 # Set $current to new class, and save line
                 # in @group
                 $current = $class;
                 @group = ($_);
             }
+
+            # Break at end of entries
+            last if $prefix eq '//';
         }
-        
-        # Break at end of entries
-        last if $prefix eq '//';
     }
 
     # Store the last line group
@@ -132,8 +182,7 @@ sub parse {
     
     # Return an new Entry object if we've got Line objects
     if (@obj) {
-        my $entry = Hum::EMBL::Entry->new();
-        $entry->handler( $handler );
+        my $entry = $embl->new();
         $entry->lines( \@obj );
         return $entry;
     } else {
@@ -141,60 +190,46 @@ sub parse {
     }
 }
 
-###############################################################################
-
-package Hum::EMBL::Entry;
-
-use strict;
-use Carp;
-use Hum::EMBL::Line;
-
 sub compose {
-    my( $entry ) = @_;
+    my( $embl ) = @_;
     
     my( @compose );
-    foreach my $line ($entry->lines()) {
+    foreach my $line ($embl->lines()) {
         push( @compose, $line->getString() );
     }
     return @compose;
 }
 
-
-sub new {
-    my( $pkg ) = @_;
-    
-    my $entry = bless {
-        _handler => undef,
-        _lines    => [],
-    }, $pkg;
-}
-
 sub lines {
-    my( $entry, $lines ) = @_;
+    my( $embl, $lines ) = @_;
     
     if ($lines) {
-        foreach (@$lines) { $_->entry($entry); }
-        $entry->{'_lines'} = $lines;
+        foreach (@$lines) { $_->entry($embl); }
+        $embl->{'_lines'} = $lines;
     } else {
-        return @{$entry->{'_lines'}};
+        return @{$embl->{'_lines'}};
     }
 }
 
 sub addLine {
-    my( $entry, $line ) = @_;
+    my( $embl, $line ) = @_;
     
     if ($line) {
-        push @{$entry->{'_lines'}}, $line;
+        push @{$embl->{'_lines'}}, $line;
     } else {
         confess "No line provided to addLine()";
     }
 }
 
+1;
+
+__END__
+
 {
     my %seen;
 
     sub handler {
-        my( $entry, $handler ) = @_;
+        my( $embl, $handler ) = @_;
 
         if ($handler) {
         
@@ -252,5 +287,3 @@ sub addLine {
         }
     }
 }
-
-1;

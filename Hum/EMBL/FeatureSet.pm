@@ -14,7 +14,7 @@ sub new {
 sub newFeature {
     my( $set ) = @_;
     
-    my $ft = Hum::EMBL::FT->new;
+    my $ft = 'Hum::EMBL::Line::FT'->new;
     
     push(@$set, $ft);
     return $ft;
