@@ -13,21 +13,31 @@ use Getopt::Long 'GetOptions';
         'set=s'  => \$chr_set,
         'list'   => \$list
     );
-    if ( @ARGV || $chr_set ) {
 
-        my %task_status_dict;
-        my $sth = prepare_statement( q{
+    if ( $chr_set && $ARGV[0] ) { die "can't have Sequence with Set" }
+
+    my %task_status_dict;
+    my $sth = prepare_statement( q{
                 SELECT task_name
                 FROM ana_task
 				WHERE is_active = 'Y'
                 }
-        );
+    );
 
-        $sth->execute;
+    $sth->execute;
 
-        while ( my ($task_status_dict) = $sth->fetchrow ) {
-            $task_status_dict{$task_status_dict} = $task_status_dict;
+    while ( my ($task_status_dict) = $sth->fetchrow ) {
+        $task_status_dict{$task_status_dict} = $task_status_dict;
+    }
+
+    if ($list) {
+
+        foreach my $key ( keys %task_status_dict ) {
+            print $key, "\n";
         }
+    }
+
+    if ( @ARGV || $chr_set ) {
 
         my %wanted_task;
 
@@ -51,18 +61,10 @@ use Getopt::Long 'GetOptions';
 
         }
 
-        if ( $chr_set && $ARGV[0] ) { die "can't have Sequence with Set" }
-
-        if ($list) {
-
-            foreach my $key ( keys %task_status_dict ) {
-                print $key, "\n";
-            }
-        }
-
         if ($chr_set) {
             my $set =
-              Hum::AnaStatus::SequenceSet->new_from_set_name($chr_set);    #Sequence Object
+              Hum::AnaStatus::SequenceSet->new_from_set_name($chr_set)
+              ;    #Sequence Object
 
             foreach my $hum_sequence ( $set->sequence_list ) {
 
@@ -76,14 +78,13 @@ use Getopt::Long 'GetOptions';
             foreach my $sequence (@ARGV) {
 
                 my $hum_sequence =
-                  Hum::AnaStatus::Sequence->new_from_sequence_name($sequence);    #SequenceSet Object
+                  Hum::AnaStatus::Sequence->new_from_sequence_name($sequence)
+                  ;    #SequenceSet Object
                 list_acefile_attribs( \%wanted_task, $hum_sequence );
 
             }
         }
     }
-
-    else { die "no set or sequence" }
 
 }
 
