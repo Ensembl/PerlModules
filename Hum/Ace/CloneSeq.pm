@@ -467,7 +467,7 @@ sub new_Sequence_from_ace_handle {
     $seq->name($name);
     my $dna_obj = $ace->fetch(DNA => $name);
     if ($dna_obj) {
-        my $dna_str = $dna_obj->fetch->at;
+        my $dna_str = $dna_obj->fetch->at->name;
         #warn "Got DNA string ", length($dna_str), " long";
         $seq->sequence_string($dna_str);
     } else {
