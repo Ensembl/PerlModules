@@ -1428,6 +1428,7 @@ sub store_dump {
     my( $pdmp ) = @_;
     
     my $sub_db = sub_db();
+    $pdmp->_store_project_acc;
     my $seq_id = $pdmp->_store_sequence
         or confess "Got no seq_id from _store_sequence()";
     $pdmp->seq_id($seq_id);
@@ -1517,6 +1518,30 @@ BEGIN {
               AND seq_id != ?
             });
         $update->execute($pdmp->sanger_id, $pdmp->seq_id);
+    }
+}
+
+
+
+
+BEGIN {
+
+    my @fields = qw(
+        sanger_id
+        project_name
+        project_suffix
+    );
+    
+    sub _store_project_acc {
+        my( $pdmp ) = @_;
+
+        my $sub_db = sub_db();
+        my $replace = $sub_db->prepare(q{
+            REPLACE INTO project_acc(}
+            . join(',', @fields)
+            . q{) VALUES (?,?,?)}
+            );
+        $replace->execute(map $pdmp->$_(), @fields);
     }
 }
 
