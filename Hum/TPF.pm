@@ -91,6 +91,7 @@ sub current_from_species_chromsome {
           AND t.iscurrent = 1
           AND c.speciesname = ?
           AND c.chromosome = ?
+          AND g.subregion IS NULL
         },
         $species, $chromsome);
 }
@@ -125,7 +126,7 @@ sub _fetch_generic {
           AND g.chromosome = c.id_dict
           $where_clause
         };
-    #warn $sql;
+    #warn "$sql (@data)";
     my $sth = prepare_cached_track_statement($sql);
     $sth->execute(@data);
     my ($db_id, $entry_date, $prog, $operator,

@@ -160,6 +160,12 @@ sub is_three_prime_hit {
 }
 
 {
+    ### In the future we this Factory object could contain
+    ### a list of overlap detection factories.  This would
+    ### be more elegant, and we could use search algorithms
+    ### other than cross_match as long a the Factories return
+    ### the same kind of objects.
+
     my @param_sets = (
             # These are the defaults for cross_match, which we try first.
             {
@@ -220,6 +226,8 @@ sub get_end_features {
     while (my $m = $parser->next_Feature) {
         push(@matches, $m);
     }
+    
+    confess "No matches found" unless @matches;
     
     if (my $matches_fh = $self->matches_file) {
         print $matches_fh $self->sequence_length_header($query, $subject);
@@ -294,6 +302,13 @@ sub merge_features {
         my $percent = 100 * (($seq_count + $hit_count) / ($seq->seq_length + $hit->seq_length));
         $new_feat->$perc($percent);
     }
+    
+    # Check that we haven't got a massive difference
+    # in the gaps between the two sequences.
+    my $seqlen = $new_feat->seq_length;
+    my $hitlen = $new_feat->hit_length;
+    warn "Feature seq_length = $seqlen\n";
+    warn "Feature hit_length = $hitlen\n";
     
     # Add the length of the gap or overlap between the
     # two features into the percent_insertion figure.
