@@ -577,7 +577,7 @@ sub add_genes_FT {
     
     # Add the genes and other features into the entry
     $set->sortByPosition;
-    $set->mergeFeatures(1); # Flag discards qualifiers on merge
+    $set->removeDuplicateFeatures;
     $set->addToEntry($embl);
 }
 
@@ -692,7 +692,7 @@ sub addCpG_toSet {
         $ft->key('misc_feature');
         $ft->location( simple_location($x, $y) );
         $ft->addQualifierStrings('note', 'CpG island');
-        not_experimental( $ft );
+        $ft->addQualifierStrings('evidence','NOT_EXPERIMENTAL');
     }
 }
 
@@ -953,7 +953,7 @@ BEGIN {
             eval{
                 die "No prefix\n" unless $prefix and $acc;
                 if ($acc =~ s/(\.\d+)//) {
-                    warn "Removed suffix '$1' from '$acc$1'\n";
+                    #warn "Removed suffix '$1' from '$acc$1'\n";
                 }
                 $prefix = ucfirst lc $prefix;
                 die "Unknown DB prefix '$prefix'\n" unless $DBprefixes{ $prefix };
