@@ -161,7 +161,7 @@ sub data {
         my( $line, $prefix, $text ) = @_;
 
         my( @lines );
-        while ($text =~ /(.{1,$limit}(,|$))/og) {
+        while ($text =~ /\s*(.{1,$limit}(,|$))/og) {
             push( @lines, $prefix . $1 . "\n" );
         }
         return @lines;

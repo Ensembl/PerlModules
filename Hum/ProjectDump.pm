@@ -11,6 +11,7 @@ use Hum::Tracking qw(
     is_shotgun_complete
     );
 use Hum::ProjectDump::EMBL;
+use Hum::ProjectDump::EMBL::HGMP;
 use Hum::EBI_FTP;
 use Hum::Conf qw( FTP_ROOT FTP_GHOST FTP_STRUCTURE );
 use File::Path;
@@ -240,6 +241,19 @@ sub htgs_phase {
         $pdmp->{'_htgs_phase'} = Hum::Tracking::is_finished($pdmp->project_name) ? 3 : 1;
     }
     return $pdmp->{'_htgs_phase'};
+}
+
+sub external_clone_name {
+    my( $pdmp ) = @_;
+    
+    unless ($pdmp->{'_external_clone_name'}) {
+        my $project = $pdmp->project_name;
+        my $e = Hum::Tracking::external_clone_name($project);
+        my $ext_clone = $e->{$project}
+            or die "Can't make external clone name";
+        $pdmp->{'_external_clone_name'} = $ext_clone;
+    }
+    return $pdmp->{'_external_clone_name'};
 }
 
 sub author {
@@ -1558,9 +1572,7 @@ sub write_embl_file {
             $pdmp->{'_embl_file'} = $embl;
         }
         elsif (! $pdmp->{'_embl_file'}) {
-            if ($pdmp->read_list) {
-                # We have read details, so it's a new dump
-                bless $pdmp, 'Hum::ProjectDump::EMBL';
+            if ($pdmp->can('make_embl')) {
                 $embl = $pdmp->make_embl($pdmp);
             } else {
                 # Read the existing file, or make a new

@@ -8,13 +8,11 @@ use vars qw( @ISA );
 @ISA = 'Hum::ProjectDump';
 
 use Hum::Tracking qw( ref_from_query
-                      external_clone_name
                       library_and_vector
                       is_shotgun_complete
                       );
 use Hum::EmblUtils qw( add_source_FT
                        add_Organism
-                       species_binomial
                        );
 use Hum::EMBL;
 use Hum::EMBL::Utils qw( EMBLdate );
@@ -34,23 +32,15 @@ sub embl_checksum {
 sub make_embl {
     my( $pdmp ) = @_;
 
-    my $project = $pdmp->project_name;
-    my $acc     = $pdmp->accession || '';
-    my @sec     = $pdmp->secondary;
-    my $embl_id = $pdmp->embl_name || 'ENTRYNAME';
-    my $author  = $pdmp->author;
-    my $species = $pdmp->species;
-    my $chr     = $pdmp->chromosome;
-    my $map     = $pdmp->fish_map;
-    my( $ext_clone );
-    {
-        my $e = external_clone_name($project);
-        $ext_clone = $e->{$project}
-            or die "Can't make external clone name";
-    }
-    my $date = EMBLdate();
-    my $binomial = species_binomial($species)
-        or die "Can't get latin name for '$species'";
+    my $project     = $pdmp->project_name;
+    my $acc         = $pdmp->accession || '';
+    my @sec         = $pdmp->secondary;
+    my $embl_id     = $pdmp->embl_name || 'ENTRYNAME';
+    my $species     = $pdmp->species;
+    my $chr         = $pdmp->chromosome;
+    my $map         = $pdmp->fish_map;
+    my $ext_clone   = $pdmp->external_clone_name;
+    my $binomial    = $pdmp->species_binomial;
 
     # Get the DNA, base quality string,
     # and map of contig positions.
@@ -82,9 +72,7 @@ sub make_embl {
     $embl->newXX;
 
     # DE line
-    my $de = $embl->newDE;
-    $de->list("$species DNA sequence *** SEQUENCING IN PROGRESS *** from clone $ext_clone");
-    $embl->newXX;
+    $pdmp->add_Description($embl);
 
     # KW line
     $pdmp->add_keywords($embl);
@@ -94,16 +82,9 @@ sub make_embl {
     $embl->newXX;
 
     # Reference
-    my $ref = $embl->newReference;
-    $ref->number(1);
-    $ref->authors($author);
-    $ref->locations("Submitted ($date) to the EMBL/Genbank/DDBJ databases.",
-                    'Sanger Centre, Hinxton, Cambridgeshire, CB10 1SA, UK.',
-                    'E-mail enquiries: humquery@sanger.ac.uk',
-                    'Clone requests: clonerequest@sanger.ac.uk');
-    $embl->newXX;
+    $pdmp->add_Reference($embl, $seqlength);
 
-    $pdmp->add_headers($embl, $contig_map);
+    $pdmp->add_Headers($embl, $contig_map);
     $embl->newXX;
 
     # Feature table source feature
@@ -119,11 +100,52 @@ sub make_embl {
     $embl->newSequence->seq($dna);
 
     # Base Quality
-    $embl->newBQ_star->quality($base_quality);
+    $embl->newBQ_star->quality($base_quality) if $base_quality;
 
     $embl->newEnd;
 
     return $embl;
+}
+
+sub species_binomial {
+    my( $pdmp ) = @_;
+    
+    unless ($pdmp->{'_species_binomial'}) {
+        my $species = $pdmp->species;
+        my $bi = Hum::EmblUtils::species_binomial($species);
+        if ($bi) {
+            $pdmp->{'_species_binomial'} = $bi;
+        } else {
+            confess "Can't make species binomail for '$species'";
+        }
+    }
+    return $pdmp->{'_species_binomial'};
+}
+
+sub add_Reference {
+    my( $pdmp, $embl ) = @_;
+    
+    my $author = $pdmp->author;
+    my $date = EMBLdate();
+
+    my $ref = $embl->newReference;
+    $ref->number(1);
+    $ref->authors($author);
+    $ref->locations("Submitted ($date) to the EMBL/Genbank/DDBJ databases.",
+                    'Sanger Centre, Hinxton, Cambridgeshire, CB10 1SA, UK.',
+                    'E-mail enquiries: humquery@sanger.ac.uk',
+                    'Clone requests: clonerequest@sanger.ac.uk');
+    $embl->newXX;
+}
+
+sub add_Description {
+    my( $pdmp, $embl ) = @_;
+    
+    my $species   = $pdmp->species;
+    my $ext_clone = $pdmp->external_clone_name;
+    my $de = $embl->newDE;
+    $de->list("$species DNA sequence *** SEQUENCING IN PROGRESS *** from clone $ext_clone");
+    $embl->newXX;
 }
 
 {
@@ -149,7 +171,7 @@ sub make_embl {
             # Add padding if we're not at the start
             if ($dna) {
 	        $dna          .= $padding_Ns;
-                $base_quality .= $padding_Zeroes;
+                $base_quality .= $padding_Zeroes if $qual;
 	        $pos          += $number_Ns;
 	    }
 
@@ -218,17 +240,7 @@ sub add_FT_assembly_fragments {
     }
 }
 
-sub add_headers {
-    my( $pdmp, $embl, $contig_map ) = @_;
-}
-
-sub add_custom_header {
-    my( $pdmp, $embl ) = @_;
-    
-    return 0;
-}
-
-sub add_default_header {
+sub add_Headers {
     my( $pdmp, $embl, $contig_map ) = @_;
     
     my $project = $pdmp->project_name;
