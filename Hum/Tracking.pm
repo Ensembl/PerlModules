@@ -117,26 +117,32 @@ the library and the name of the library vector
 
 =cut
 
-sub library_and_vector {
-    my( $project ) = @_;
+{
+    my( $sth );
     
-    my $ans = ref_from_query(qq(                           
-        SELECT l.libraryname
-          , l.vectorname
-        FROM clone_project cp
-          , clone c
-          , library l
-        WHERE cp.clonename = c.clonename
-          AND c.libraryname = l.libraryname
-          AND cp.projectname = '$project'
-        ));
-    if (@$ans) {
-        return(@{$ans->[0]});
-    } else {
-        return;
+    sub library_and_vector {
+        my( $project ) = @_;
+
+        $sth ||= prepare_track_statement(q{
+            SELECT l.libraryname
+              , l.vectorname
+            FROM clone_project cp
+              , clone c
+              , library l
+            WHERE cp.clonename = c.clonename
+              AND c.libraryname = l.libraryname
+              AND cp.projectname = ?
+            });
+        $sth->execute($project);
+        my( $lib, $vec ) = $sth->fetchrow;
+        
+        # Catch bad vector and library names
+        if ($lib =~ /(^NONE$|UNKNOWN)/i) {
+            ($lib,$vec) = (undef, undef);
+        }
+        return ($lib, $vec);
     }
 }
-
 
 
 =pod

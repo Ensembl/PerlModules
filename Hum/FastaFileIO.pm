@@ -23,7 +23,7 @@ sub new_DNA_IO {
     my( $pkg, $file ) = @_;
     
     my $ffio = $pkg->new($file);
-    $ffio->sequence_class('Hum::Seqeunce::DNA');
+    $ffio->sequence_class('Hum::Sequence::DNA');
     return $ffio;
 }
 
