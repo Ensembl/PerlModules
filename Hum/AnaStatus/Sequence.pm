@@ -22,16 +22,16 @@ sub new_from_sequence_name {
           , person.annotator_uname
         FROM sequence s
           , ana_sequence a
-        LEFT JOIN ana_status status
-          ON a.ana_seq_id = status.ana_seq_id
+          , ana_status status
         LEFT JOIN ana_sequence_person person
           ON a.ana_seq_id = person.ana_seq_id                        
         WHERE s.seq_id = a.seq_id
+          AND a.ana_seq_id = status.ana_seq_id
+          AND status.is_current = 'Y'
           AND a.is_current = 'Y'
           AND status.is_current = 'Y'
           AND s.sequence_name = ?
         });
-
 
     $sth->execute($seq_name);
     

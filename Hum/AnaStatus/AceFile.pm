@@ -15,6 +15,18 @@ sub new {
     return $self;
 }
 
+sub new_from_file_and_time {
+    my ($pkg, $file_name, $time) = @_;
+    
+    unless ($time =~ /^\d+$/) {
+        
+    }
+    
+    my ($seq_name, $acefile_name) =
+        $file_name =~ /(.+?)\.([a-zA-Z].*)\.ace$/;
+    
+}
+
 sub creation_time {
     my ( $self, $creation_time ) = @_;
 
@@ -63,19 +75,16 @@ sub acefile_status_id {
 }
 
 sub task_name {
-    my ( $self, $task_name ) = @_;
+    my ( $self ) = @_;
 
-    if ($task_name) {
-        confess "Can't modify task_name"
-            if $self->{'_task_name'};
-            
-            #still no task_names in submissions db
-        #confess "Unknown task_name '$task_name'"
-        #    unless $self->is_valid_task_name($task_name);    
-            
+    if (my $task_name = $self->{'_task_name'}) {
+        return $task_name;
+    } else {
+        $task_name = $self->acefile_name
+            or confess "acefile_name not set";
+        $task_name =~ s/[^a-zA-Z]//g;
         $self->{'_task_name'} = $task_name;
     }
-    return $self->{'_task_name'};
 }
 
 {
@@ -90,8 +99,6 @@ sub task_name {
             or confess "acefile_status_id is empty";
         my $ana_seq_id = $self->ana_seq_id
             or confess "ana_seq_id is empty";
-        my $task_name = $self->task_name
-            or confess "task_name is empty";
         my $creation_time = $self->creation_time;
         unless ($creation_time) {
             $creation_time = time;
@@ -102,7 +109,6 @@ sub task_name {
             INSERT ana_acefile( acefile_name
               , acefile_status_id
               , ana_seq_id
-              , task_name
               , creation_time
             VALUES(?,?,?,?,?,FROM_UNIXTIME(?))
             });
@@ -110,7 +116,6 @@ sub task_name {
             $acefile_name,
             $acefile_status_id,
             $ana_seq_id,
-            $task_name,
             $creation_time);
         
         $self->store_acefile_date_range;
@@ -127,16 +132,18 @@ sub task_name {
     sub store_acefile_date_range {
         my( $self ) = @_;
 
-        my $time = $self->creation_time;
-        my $name = $self->acefile_name;
+        my $time = $self->creation_time
+            or confess "creation_time is empty";
+        my $acefile_name = $self->acefile_name
+            or confess "acefile_name is empty";
         
         $get_acefile_date ||= prepare_statement(q{
             SELECT UNIX_TIMESTAMP(earliest_date)
               , UNIX_TIMESTAMP(latest_date)
-            FROM acefile_name_date
+            FROM ana_task_version
             WHERE acefile_name = ?
             });
-        $get_acefile_date->execute($name);
+        $get_acefile_date->execute($acefile_name);
         my($earliest, $latest) = $get_acefile_date->fetchrow;
 
         # Update the row if we have a later date
@@ -144,31 +151,38 @@ sub task_name {
         if ($earliest) {
             if ($time > $latest) {
                 $update_latest_date ||= prepare_statement(q{
-                    UPDATE acefile_name_date
+                    UPDATE ana_task_version
                     SET latest_date = FROM_UNIXTIME(?)
                     WHERE acefile_name = ?
                     });
-                $update_latest_date->execute($time, $name);
+                $update_latest_date->execute($time, $acefile_name);
             }
             if ($time < $earliest) {
                 $update_earliest_date ||= prepare_statement(q{
-                    UPDATE acefile_name_date
+                    UPDATE ana_task_version
                     SET earliest_date = FROM_UNIXTIME(?)
                     WHERE acefile_name = ?
                     });
-                $update_earliest_date->execute($time, $name);
+                $update_earliest_date->execute($time, $acefile_name);
             }
         } else {
             # Add a new row
-            confess "$name latest date: $latest. Earliest date not defined"
+            confess "$acefile_name latest date: $latest. Earliest date not defined"
                 if $latest;
+            my $task_name = $self->task_name
+                or confess "task_name is empty";
             $add_dates ||= prepare_statement(q{
-                INSERT acefile_name_date( acefile_name
-                      , earliest_date
-                      , latest_date )
-                VALUES (?,FROM_UNIXTIME(?),FROM_UNIXTIME(?))                
+                INSERT ana_task_version( acefile_name
+                  , task_name
+                  , earliest_date
+                  , latest_date )
+                VALUES (?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?))                
                 });
-            $update_latest_date->execute($name, $time, $time);
+            $update_latest_date->execute(
+                $acefile_name,
+                $task_name,
+                $time,
+                $time);
         }
     }
 }
