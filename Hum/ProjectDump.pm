@@ -3,32 +3,76 @@ package Hum::ProjectDump;
 
 use strict;
 use Carp;
-use Hum::Submission qw( sub_db
-                        acc_data
-                        );
-use Hum::Tracking qw( track_db
-                      ref_from_query
-                      is_finished
-                      project_finisher
-                      project_team_leader
-                      fishData
-                      );
+use Hum::Submission qw( sub_db acc_data );
+use Hum::Tracking 'track_db';
 use Hum::ProjectDump::EMBL; # --> uses Hum::EMBL
 use Hum::EBI_FTP;
 use Hum::Conf qw( FTP_ROOT FTP_GHOST );
 use File::Path;
 
-# Object methods
-
 sub new {
     my( $pkg ) = @_;
 
-    my $self = {
-	_vector_count => {},
-	_chem_count   => {},
-    };
+    return bless {}, $pkg;
+}
 
-    return bless $self, $pkg;
+sub get_all_dumps_for_project {
+    my( $pkg, $project ) = @_;
+    
+    my $sub_db = sub_db();
+    my $get_sids = $sub_db->prepare(q{
+        SELECT a.sanger_id
+        FROM project_acc a
+          , project_dump d
+        WHERE a.sanger_id = d.sanger_id
+          AND d.is_current = 'Y'
+          AND a.project_name = ?
+        });
+    $get_sids->execute($project);
+    
+    my(@dumps);
+    while (my($sid) = $get_sids->fetchrow) {
+        my $pdmp = $pkg->new_from_sanger_id($sid);
+        push(@dumps, $pdmp);
+    }
+    
+    if (@dumps) {
+        return @dumps;
+    } else {
+        my $pdmp = $pkg->create_new_dump_object($project);
+        return($pdmp);
+    }
+}
+
+sub create_new_dump_object {
+    my( $pkg, $project ) = @_;
+    
+    my $sub_db = sub_db();
+    my $is_active = $sub_db->selectall_arrayref(q{
+        SELECT count(*)
+        FROM project_check
+        WHERE is_active = 'Y'
+          AND project_name = ?
+        })->[0];
+    if ($is_active) {
+        my $pdmp = $pkg->new;
+        $pdmp->project_name($project);
+        $pdmp->sanger_id("_\U$project");
+        return $pdmp;
+    } else {
+        confess "Project '$project' is not active";
+    }
+}
+
+sub new_from_sanger_id {
+    my( $pkg, $sanger_id ) = @_;
+    
+    my $pdmp = $pkg->new;
+    $pdmp->sanger_id($sanger_id);
+    $pdmp->read_accession_data;
+    $pdmp->read_submission_data;
+    
+    return $pdmp;
 }
 
 # Generate simple data access functions using closures
@@ -37,22 +81,13 @@ BEGIN {
     # List of fields we want scalar access fuctions to
     my @scalar_fields = qw(
         accession
-        agarose_error
-	agarose_length
-        author
         dump_time
-        chromosome
         embl_name
-        htgs_phase
-        online_path
         project_name
         project_suffix
-        fish_map
         sanger_id
         seq_id
-        sequence_name
         sequence_version
-        species
         submission_type
     );
     
@@ -73,6 +108,116 @@ BEGIN {
             return $pdmp->{$field};
         }
     }
+}
+
+# Fills in information found in the oracle Tracking database
+#sub read_tracking_details {
+#    my( $pdmp ) = @_;
+#
+#    my $project = $pdmp->project_name;
+#    my $dbh = track_db();
+#    my $query = qq{
+#        SELECT c.clonename sequence_name
+#          , c.speciesname species
+#          , c_dict.chromosome
+#          , o.online_path
+#        FROM chromosomedict c_dict
+#          , clone c
+#          , clone_project cp
+#          , project p
+#          , online_data o
+#        WHERE c_dict.id_dict = c.chromosome
+#          AND c.clonename = cp.clonename
+#          AND cp.projectname = p.projectname
+#          AND p.id_online = o.id_online (+)
+#          AND p.projectname = '$project'
+#        };
+#    my $project_details = $dbh->prepare($query);
+#    $project_details->execute;
+#    if (my $ans = $project_details->fetchrow_hashref) {
+#        foreach my $field (keys %$ans) {
+#            my $meth = lc $field;
+#            $pdmp->$meth($ans->{$field});
+#        }
+#    } else {
+#        die "Couldn't get project details with query:\n$query"
+#    }
+#}
+
+sub online_path {
+    my( $pdmp ) = @_;
+    
+    unless (exists $pdmp->{'_online_path'}) {
+        $pdmp->{'_online_path'} = Hum::Tracking::online_path_from_project($pdmp->project_name);
+    }
+    return $pdmp->{'_online_path'};
+}
+
+sub species {
+    my( $pdmp ) = @_;
+    
+    unless (exists $pdmp->{'_species'}) {
+        $pdmp->{'_species'} = Hum::Tracking::species_from_project($pdmp->project_name);
+    }
+    return $pdmp->{'_species'};
+}
+
+sub chromosome {
+    my( $pdmp ) = @_;
+    
+    unless (exists $pdmp->{'_chromosome'}) {
+        $pdmp->{'_chromosome'} = Hum::Tracking::chromosome_from_project($pdmp->project_name);
+    }
+    return $pdmp->{'_chromosome'};
+}
+
+sub sequence_name {
+    my( $pdmp, $value ) = @_;
+    
+    if ($value) {
+        $pdmp->{'_sequence_name'} = $value
+    }
+    elsif (! exists $pdmp->{'_sequence_name'}) {
+        $pdmp->{'_sequence_name'} = Hum::Tracking::clone_from_project($pdmp->project_name);
+    }
+    return $pdmp->{'_sequence_name'};
+}
+
+sub htgs_phase {
+    my( $pdmp, $value ) = @_;
+    
+    if (defined $value) {
+        $value =~ /^(1|3)$/
+            or confess "Value of htgs_phase '$value' can only be '1' or '3'";
+        $pdmp->{'_htgs_phase'} = $value;
+        return $value;
+    }
+    elsif (! $pdmp->{'_htgs_phase'}) {
+        $pdmp->{'_htgs_phase'} = Hum::Tracking::is_finished($pdmp->project_name) ? 3 : 1;
+    }
+    return $pdmp->{'_htgs_phase'};
+}
+
+sub author {
+    my( $pdmp ) = @_;
+    
+    my $project = $pdmp->project_name;
+    unless ($pdmp->{'_author'}) {
+        my( $author );
+        eval{ $author = Hum::Tracking::project_finisher($project) };
+        $author ||= Hum::Tracking::project_team_leader($project);
+        $pdmp->{'_author'} = $author;
+    }
+    return $pdmp->{'_author'};
+}
+
+sub fish_map {
+    my( $pdmp ) = @_;
+    
+    unless ($pdmp->{'_fish_map'}) {
+        $pdmp->{'_fish_map'} = Hum::Tracking::fishData( $pdmp->project_name );
+    }
+    return $pdmp->{'_fish_map'};
 }
 
 sub set_ftp_path {
@@ -122,67 +267,6 @@ sub file_path {
         $pdmp->{'_file_path'} = $path;
     }
     return $pdmp->{'_file_path'} || confess "file_path not set";
-}
-
-sub get_all_dumps_for_project {
-    my( $pkg, $project ) = @_;
-    
-    my $sub_db = sub_db();
-    my $get_sids = $sub_db->prepare(q{
-        SELECT a.sanger_id
-        FROM project_acc a
-          , project_dump d
-        WHERE a.sanger_id = d.sanger_id
-          AND d.is_current = 'Y'
-          AND a.project_name = ?
-        });
-    $get_sids->execute($project);
-    
-    my(@dumps);
-    while (my($sid) = $get_sids->fetchrow) {
-        my $pdmp = $pkg->new_from_sanger_id($sid);
-        push(@dumps, $pdmp);
-    }
-    
-    if (@dumps) {
-        return @dumps;
-    } else {
-        my $pdmp = $pkg->create_new_dump_object($project);
-        return($pdmp);
-    }
-}
-
-sub create_new_dump_object {
-    my( $pkg, $project ) = @_;
-    
-    my $sub_db = sub_db();
-    my $is_active = $sub_db->selectall_arrayref(q{
-        SELECT count(*)
-        FROM project_check
-        WHERE is_active = 'Y'
-          AND project_name = ?
-        })->[0];
-    if ($is_active) {
-        my $pdmp = $pkg->new;
-        $pdmp->project_name($project);
-        $pdmp->sanger_id("_\U$project");
-        $pdmp->read_tracking_details;
-        return $pdmp;
-    } else {
-        confess "Project '$project' is not active";
-    }
-}
-
-sub new_from_sanger_id {
-    my( $pkg, $sanger_id ) = @_;
-    
-    my $pdmp = $pkg->new;
-    $pdmp->sanger_id($sanger_id);
-    $pdmp->read_accession_data;
-    $pdmp->read_submission_data;
-    $pdmp->read_tracking_details;
-    
-    return $pdmp;
 }
 
 sub read_submission_data {
@@ -1285,50 +1369,6 @@ sub read_accession_data {
     }
 }
 
-# Fills in information found in the oracle Tracking database
-sub read_tracking_details {
-    my( $pdmp ) = @_;
-
-    my $project = $pdmp->project_name;
-    my $dbh = track_db();
-    my $query = qq{
-        SELECT c.clonename sequence_name
-          , c.speciesname species
-          , c_dict.chromosome
-          , o.online_path
-        FROM chromosomedict c_dict
-          , clone c
-          , clone_project cp
-          , project p
-          , online_data o
-        WHERE c_dict.id_dict = c.chromosome
-          AND c.clonename = cp.clonename
-          AND cp.projectname = p.projectname
-          AND p.id_online = o.id_online (+)
-          AND p.projectname = '$project'
-        };
-    my $project_details = $dbh->prepare($query);
-    $project_details->execute;
-    if (my $ans = $project_details->fetchrow_hashref) {
-        foreach my $field (keys %$ans) {
-            my $meth = lc $field;
-            $pdmp->$meth($ans->{$field});
-        }
-        $pdmp->htgs_phase(is_finished($project) ? 3 : 1);
-        $pdmp->fish_map(fishData( $project ));
-        my( $author );
-        eval{
-            $author = project_finisher($project);
-        };
-        $author ||= project_team_leader($project);
-        $pdmp->author($author);
-	$pdmp->get_agarose_est_length();
-	$pdmp->get_suffix_chemistries();
-    } else {
-        die "Couldn't get project details with query:\n$query"
-    }
-}
-
 {
     my %chem_name = (
         'ABI'         => ' ABI',
@@ -1337,74 +1377,92 @@ sub read_tracking_details {
 	'MegaBace_ET' => ' ET',
     );
 
+    my( %suffix_chem_map );
+
     sub count_chemistry {
         my ($pdmp, $name) = @_;
 
+        unless (%suffix_chem_map) {
+            my $get_chem = track_db()->prepare(q{
+                SELECT seqchem.suffix
+                  , seqchem.is_primer
+                  , dyeset.name
+                FROM seqchemistry seqchem
+                  , dyeset
+                WHERE dyeset.id_dyeset = seqchem.id_dyeset
+                });
+            $get_chem->execute();
+
+            while (my ($suffix, $is_primer, $dyeset) = $get_chem->fetchrow_array()) {
+	        $suffix =~ s/^\.//;
+
+	        unless ($suffix_chem_map{$suffix}) {
+	            my $chem = ($is_primer ? "Dye-primer" : "Dye-terminator");
+	            my $chem2 = $chem_name{$dyeset} || "";
+	            if ($chem2 eq ' ET') {
+		        $chem2 = ($is_primer ? "-amersham" : " ET-amersham");
+	            }
+	            $suffix_chem_map{$suffix} = "$chem$chem2";
+	        }
+            }
+            $get_chem->finish();
+            use Data::Dumper;
+            warn Dumper \%suffix_chem_map;
+        }
+
         if (my ($suffix) = $name =~ /\.(...)/) {
-	    if (exists($pdmp->{suffix_chemistry}->{$suffix})) {
-	        $pdmp->{'_chem_count'}{ $pdmp->{'suffix_chemistry'}{$suffix} }++;
+	    if (my $c = $suffix_chem_map{$suffix}) {
+	        $pdmp->{'_chem_count'}{$c}++;
 	    }
         }
     }
+}
 
-    sub get_suffix_chemistries {
+{
+    sub agarose_length {
+        my( $pdmp ) = @_;
+
+        $pdmp->_get_agarose_estimated_length
+            unless exists($pdmp->{'_agarose_length'});
+        return $pdmp->{'_agarose_length'};
+    }
+
+    sub agarose_error {
+        my( $pdmp ) = @_;
+
+        $pdmp->_get_agarose_estimated_length
+            unless exists($pdmp->{'_agarose_length'});
+        return $pdmp->{'_agarose_error'};
+    }
+
+    sub _get_agarose_est_length {
         my ($pdmp) = @_;
 
         my $dbh = track_db();
 
-        my $query = qq{
-            SELECT seqchem.suffix
-              , seqchem.is_primer
-              , dyeset.name
-            FROM seqchemistry seqchem
-              , dyeset
-            WHERE dyeset.id_dyeset = seqchem.id_dyeset};
-        my $get_chem = $dbh->prepare($query);
-        $get_chem->execute();
+        my $get_lengths = $dbh->prepare(qq{
+            SELECT COUNT(image.insert_size_bp)
+              , AVG(image.insert_size_bp)
+              , STDDEV(image.insert_size_bp)
+            FROM rdrequest request
+              , rdgel_lane lane
+              , rdgel_lane_image image
+              , rdrequest_enzyme enzyme
+            WHERE request.id_rdrequest = lane.id_rdrequest
+              AND lane.id_rdgel = image.id_rdgel
+              AND lane.lane = image.lane
+              AND request.id_rdrequest = enzyme.id_rdrequest
+              AND image.isgood = 1
+              AND request.clonename = ?
+              });
+        $get_lengths->execute($pdmp->project_name);
+        
+        my ($count, $avg, $stddev) = $get_lengths->fetchrow_array();
+        $get_lengths->finish();
 
-        while (my ($suffix, $is_primer, $dyeset) = $get_chem->fetchrow_array()) {
-	    $suffix =~ s/^\.//;
-
-	    unless (exists($pdmp->{suffix_chemistry}->{$suffix})) {
-	        my $chem = ($is_primer ? "Dye-primer" : "Dye-terminator");
-	        my $chem2 = $chem_name{$dyeset} || "";
-	        if ($chem2 eq ' ET') {
-		    $chem2 = ($is_primer ? "-amersham" : " ET-amersham");
-	        }
-	        $pdmp->{suffix_chemistry}->{$suffix} = "$chem$chem2";
-	    }
-        }
-        $get_chem->finish();
+        $pdmp->{'_agarose_length'} = ($count > 0 ? $avg : undef);
+        $pdmp->{'_agarose_error'}  = $stddev if $count > 2;
     }
-}
-
-sub get_agarose_est_length {
-    my ($pdmp) = @_;
-
-    my $dbh = track_db();
-
-    my $query = qq{
-        SELECT COUNT(image.insert_size_bp)
-          , AVG(image.insert_size_bp)
-          , STDDEV(image.insert_size_bp)
-        FROM rdrequest request
-          , rdgel_lane lane
-          , rdgel_lane_image image
-          , rdrequest_enzyme enzyme
-        WHERE request.id_rdrequest = lane.id_rdrequest
-          AND lane.id_rdgel = image.id_rdgel
-          AND lane.lane = image.lane
-          AND request.id_rdrequest = enzyme.id_rdrequest
-          AND image.isgood = 1
-          AND request.clonename = ?};
-
-    my $get_lengths = $dbh->prepare($query);
-    $get_lengths->execute($pdmp->sequence_name());
-    my ($count, $avg, $stddev) = $get_lengths->fetchrow_array();
-    $get_lengths->finish();
-
-    if ($count > 0) { $pdmp->agarose_length($avg);   }
-    if ($count > 2) { $pdmp->agarose_error($stddev); }
 }
 
 BEGIN {

@@ -365,12 +365,13 @@ sub make_read_comments {
     my @comments;
 
     my $vec_total = 0;
-    while (my ($seq_vec, $count) = each %{$pdmp->{_vector_count}}) {
+    $pdmp->{'_vector_count'} ||= {};
+    while (my ($seq_vec, $count) = each %{$pdmp->{'_vector_count'}}) {
 	$vec_total += $count;
     }
     unless ($vec_total) { $vec_total++; }
 
-    while (my ($seq_vec, $count) = each %{$pdmp->{_vector_count}}) {
+    while (my ($seq_vec, $count) = each %{$pdmp->{'_vector_count'}}) {
 	my $percent = $count * 100 / $vec_total;
 	push(@comments,
 	     sprintf("Sequencing vector: %s %d%% of reads",
@@ -378,12 +379,13 @@ sub make_read_comments {
 	
     }
     my $chem_total = 0;
-    while (my ($chem, $count) = each %{$pdmp->{_chem_count}}) {
+    $pdmp->{'_chem_count'} ||= {};
+    while (my ($chem, $count) = each %{$pdmp->{'_chem_count'}}) {
 	$chem_total += $count;
     }
     unless ($chem_total) { $chem_total++; }
 
-    while (my ($chem, $count) = each %{$pdmp->{_chem_count}}) {
+    while (my ($chem, $count) = each %{$pdmp->{'_chem_count'}}) {
 	my $percent = $count * 100 / $chem_total;
 	push(@comments,
 	     sprintf("Chemistry: %s; %d%% of reads", $chem, $percent));

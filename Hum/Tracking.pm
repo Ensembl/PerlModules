@@ -32,6 +32,7 @@ use vars qw( @ISA @EXPORT_OK );
 
 @EXPORT_OK = qw(
                 clone_from_project
+                chromosome_from_project
                 entry_name
                 expand_project_name
                 external_clone_name
@@ -46,6 +47,7 @@ use vars qw( @ISA @EXPORT_OK );
                 project_finisher
                 project_team_leader
                 ref_from_query
+                species_from_project
                 track_db
                 unfinished_accession
                 );
@@ -213,22 +215,28 @@ given project name if there is only one, or undef.
 
 =cut
 
-sub clone_from_project {
-    my( $proj ) = @_;
-    
-    my $ans = ref_from_query(qq(
-        SELECT clonename
-        FROM clone_project
-        WHERE projectname = '$proj'
-        ));
-    
-    if (@$ans == 1) {
-        return $ans->[0][0];
-    } else {
-        return;
+{
+    my( $get_clone );
+
+    sub clone_from_project {
+        my( $project ) = @_;
+
+        unless ($get_clone) {
+            $get_clone = track_db()->prepare(q{
+                SELECT clonename
+                FROM clone_project
+                WHERE projectname = ?
+                });
+        }   
+        $get_clone->execute($project);
+        
+        if (my($clone) = $get_clone->fetchrow) {
+            return $clone;
+        } else {
+            return;
+        }
     }
 }
-
 
 =pod
 
@@ -492,67 +500,68 @@ project named PROJECT.
 sub localisation_data {
     my( $project ) = @_;
     
-    # Get the chromosome from the tracking db
-    my( $chr );
-    {
-        my $ans = ref_from_query(qq(
-                                    SELECT cd.chromosome
-                                    FROM chromosomedict cd
-                                      , clone c
-                                      , clone_project cp
-                                    WHERE cd.id_dict = c.chromosome
-                                      AND c.clonename = cp.clonename
-                                      AND cp.projectname = '$project' ));
-        if (@$ans) {
-	    $chr = $ans->[0][0];
-	} else {
+    return(chromosome_from_project($project), fishData($project));
+}
+
+# A lot of these subroutines should be written this way:
+{
+    my( $get_chr );
+
+    sub chromosome_from_project {
+        my( $project ) = @_;
+
+        unless ($get_chr) {
+            my $track_db = track_db();
+            $get_chr = $track_db->prepare(q{
+                SELECT cd.chromosome
+                FROM chromosomedict cd
+                  , clone c
+                  , clone_project cp
+                WHERE cd.id_dict = c.chromosome
+                  AND c.clonename = cp.clonename
+                  AND cp.projectname = ?
+                });
+        }
+        $get_chr->execute($project);
+
+        if (my($chr) = $get_chr->fetchrow) {
+	    return $chr;
+        } else {
             die "Chromosome unknown for project '$project'";
         }
     }
-
-    # Get most recent fish result from tracking db
-    my( $fish, $map );
-    {
-        my $ans = ref_from_query(qq(
-                                    SELECT remark
-                                    FROM project_status
-                                    WHERE status = 9
-                                      AND projectname = '$project'
-                                    ORDER BY statusdate DESC
-                                    ));
-        eval{ $fish = $ans->[0][0] };
-        if ($fish) {
-            $map = fishParse( $fish )
-		or warn "Can't parse fish tag [ $fish ]\n";
-	}
-    }
-
-    return( $chr, $map );
 }
 
-sub fishData {
-    my( $project ) = @_;
+{
+    my( $get_fish );
     
     # Get most recent fish result from tracking db
-    my $ans = ref_from_query(qq(
-                                SELECT remark
-                                FROM project_status
-                                WHERE status = 9
-                                  AND projectname = '$project'
-                                ORDER BY statusdate DESC
-                                ));
-    my( $map );
-    if (@$ans) {
-        my $tag = $ans->[0][0];
-        if ($tag) {
-            $map = fishParse( $tag ) or warn "Can't parse fish tag ('$tag')\n";
+    sub fishData {
+        my( $project ) = @_;
+
+        unless ($get_fish) {
+            my $track_db = track_db();
+            $get_fish = $track_db->prepare(q{
+                SELECT remark
+                FROM project_status
+                WHERE status = 9
+                  AND projectname = ?
+                ORDER BY statusdate DESC
+                });
         }
-    }
-    
-    if ($map) {
-        return $map;
-    } else {
-        return;
+        $get_fish->execute($project);
+        
+        my( $map );
+        if (my($remark) = $get_fish->fetchrow) {
+            $map = fishParse( $remark )
+                or warn "Can't parse fish tag ('$remark')\n";
+        }
+
+        if ($map) {
+            return $map;
+        } else {
+            return;
+        }
     }
 }
 
@@ -573,6 +582,33 @@ sub fishParse {
     return join '', @catch;
 }
 
+{
+    my( $get_species );
+    
+    sub species_from_project {
+        my( $project ) = @_;
+        
+        unless ($get_species) {
+            my $track_db = track_db();
+            $get_species = $track_db->prepare(q{
+                SELECT c.speciesname
+                FROM clone c
+                  , clone_project cp
+                 WHERE c.clonename = cp.clonename
+                  AND cp.projectname = ?
+            });
+        }
+        $get_species->execute($project);
+        
+        if (my($species) = $get_species->fetchrow) {
+            return $species;
+        } else {
+            return;
+        }
+    }
+}
+
+
 =pod
 
 =head2 project_finisher( PROJECT );
@@ -583,33 +619,37 @@ format (eg: "J. Smith").
 =cut
 
 
-sub project_finisher {
-    my( $project ) = @_;
+{
+    my( $get_finisher );
 
-    my $query = qq(
-                    SELECT p.forename
-                      , p.surname
-                    FROM project_role pr
-                      , team_person_role tpr
-                      , person p
-                    WHERE pr.id_role = tpr.id_role
-                      AND tpr.id_person = p.id_person
-                      AND pr.projectname = '$project'
-                      AND tpr.roletype = 'Finishing'
-                    ORDER BY pr.assigned_from DESC
-                    );
-    my $ans = ref_from_query( $query );
-    
-    my( $forename, $surname );
-    if (@$ans) {
-        ( $forename, $surname ) = @{$ans->[0]};
-    } else {
-        die "No finisher for project '$project'";
+    sub project_finisher {
+        my( $project ) = @_;
+
+        unless ($get_finisher) {
+            my $track_db = track_db();
+            $get_finisher = $track_db->prepare(q{
+                SELECT p.forename
+                  , p.surname
+                FROM project_role pr
+                  , team_person_role tpr
+                  , person p
+                WHERE pr.id_role = tpr.id_role
+                  AND tpr.id_person = p.id_person
+                  AND pr.projectname = ?
+                  AND tpr.roletype = 'Finishing'
+                ORDER BY pr.assigned_from DESC        
+                });
+        }
+        $get_finisher->execute($project);
+
+        if (my( $forename, $surname ) = $get_finisher->fetchrow) {
+            # Abbreviate forename
+            $forename =~ s/^(.).+/$1\./ or return;
+            return( "$surname $forename" );
+        } else {
+            confess "No finisher for project '$project'";
+        }
     }
-    
-    # Abbreviate forename
-    $forename =~ s/^(.).+/$1\./ or return;
-    return( "$surname $forename" );
 }
 
 
@@ -623,34 +663,50 @@ format (eg: "J. Smith").
 =cut
 
 
-sub project_team_leader {
-    my( $project ) = @_;
+{
+    my( $get_team_leader );
 
-    my $query = qq(
-                    SELECT p.forename
-                      , p.surname
-                    FROM project_owner o
-                      , team t
-                      , person p
-                    WHERE o.teamname = t.teamname
-                      AND t.teamleader = p.id_person
-                      AND o.projectname = '$project'
-                    ORDER BY o.owned_from DESC
-                    );
-    my $ans = ref_from_query( $query );
-    
-    my( $forename, $surname );
-    if (@$ans) {
-        ( $forename, $surname ) = @{$ans->[0]};
-    } else {
-        die "No team leader for project '$project'";
+    sub project_team_leader {
+        my( $project ) = @_;
+
+        unless ($get_team_leader) {
+            my $track_db = track_db();
+            $get_team_leader = $track_db->prepare(q{
+                SELECT p.forename
+                  , p.surname
+                FROM project_owner o
+                  , team t
+                  , person p
+                WHERE o.teamname = t.teamname
+                  AND t.teamleader = p.id_person
+                  AND o.projectname = ?
+                ORDER BY o.owned_from DESC
+                });
+        }
+        $get_team_leader->execute($project);
+
+        my $query = qq(
+                        SELECT p.forename
+                          , p.surname
+                        FROM project_owner o
+                          , team t
+                          , person p
+                        WHERE o.teamname = t.teamname
+                          AND t.teamleader = p.id_person
+                          AND o.projectname = '$project'
+                        ORDER BY o.owned_from DESC
+                        );
+        my $ans = ref_from_query( $query );
+
+        if (my( $forename, $surname ) = $get_team_leader->fetchrow) {
+            # Abbreviate forename
+            $forename =~ s/^(.).+/$1\./ or return;
+            return( "$surname $forename" );
+        } else {
+            confess "No team leader for project '$project'";
+        }
     }
-    
-    # Abbreviate forename
-    $forename =~ s/^(.).+/$1\./ or return;
-    return( "$surname $forename" );
 }
-
 
 
 1;
