@@ -208,13 +208,6 @@ sub validate_contig_lengths {
     }
 }
 
-sub add_contig_chain {
-    my( $pdmp, $chain ) = @_;
-
-    confess "No chain supplied" unless $chain;
-    push(@{$pdmp->{'_contig_chain'}}, $chain);
-}
-
 sub parse_read_sequence {
     my ($pdmp, $name, $seq) = @_;
     
@@ -748,6 +741,10 @@ sub order_contigs {
             }
         }
     }
+
+    # If there is only one group (fragment chain), then the
+    # project is ordered and oriented, and is therefore phase 2
+    $pdmp->htgs_phase(2) if @group == 1;
 
     # Remove the left and right chains from @group if we can find them
     my( $left_chain, $right_chain );
