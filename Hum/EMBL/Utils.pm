@@ -67,7 +67,7 @@ BEGIN {
     sub crc32 {
         my( $str ) = @_;
 
-        die "Argument to SwissCRC32() must be ref to scalar"
+        die "Argument to crc32() must be ref to scalar"
             unless ref($str) eq 'SCALAR';
 
         generateCRCTable() unless @crcTable;

@@ -966,6 +966,14 @@ sub parse {
     $line->seq($$s);
 }
 
+sub embl_checksum {
+    my( $line ) = @_;
+    
+    require Hum::EMBL::Utils;
+    my $seq = $line->seq;
+    return Hum::EMBL::Utils::crc32(\$seq);
+}
+
 BEGIN {
     my $nuc = 60;               # Number of nucleotides per line
     my $whole_pat = 'a10' x 6;  # Pattern for unpacking a whole line

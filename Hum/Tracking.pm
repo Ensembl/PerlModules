@@ -31,21 +31,24 @@ use vars qw( @ISA @EXPORT_OK );
 @ISA = qw( Exporter );
 
 @EXPORT_OK = qw(
-                library_and_vector
-                ref_from_query
-                expand_project_name
                 clone_from_project
-                project_from_clone
-                find_project_directories
                 entry_name
-                finished_accession
-                unfinished_accession
-                localisation_data
+                expand_project_name
                 external_clone_name
+                find_project_directories
+                finished_accession
+                fishData
+                is_finished
+                is_htgs_draft
+                is_shotgun_complete
+                library_and_vector
+                localisation_data
+                project_from_clone
                 project_finisher
                 project_team_leader
-                is_htgs_draft
-                is_finished
+                ref_from_query
+                track_db
+                unfinished_accession
                 );
 
 
@@ -53,9 +56,9 @@ use vars qw( @ISA @EXPORT_OK );
 
 =head2 is_finished( PROJECT )
 
-Returns TRUE if the project has had a status of
-'Finished' in the project_status table, and zero
-otherwise.
+Returns the current status (always TRUE) if the
+project currently has one of the finished
+statuses.
 
 =cut
 
@@ -63,39 +66,36 @@ sub is_finished {
     my( $project ) = @_;
     
     my $ans = ref_from_query(qq(
-        select status
-        from project_status
-        where projectname = '$project'
-          and status = 20
+        SELECT status
+        FROM project_status
+        WHERE projectname = '$project'
+          AND status IN(20,21,22,23,27,28,29)
+          AND iscurrent = 1
     ));
     
-    return @$ans ? 1 : 0;
+    return @$ans ? $ans->[0][0] : 0;
 }
 
 =pod
 
-=head2 is_htgs_draft( PROJECT )
+=head2 is_shotgun_complete
 
-Returns 'HTGS_DRAFT' if the PROJECT should have
-the B<HTGS_DRAFT> keyword in its EMBL file, or
-undef if it shouldn't
+Returns TRUE if the project has ever had a status
+of Shotgun_complete or Half_shotgun_complete.
 
 =cut
 
-#'
-
-sub is_htgs_draft {
+sub is_shotgun_complete {
     my( $project ) = @_;
-    
+
     my $ans = ref_from_query(qq(
-        select status
-        from project_status
-        where projectname = '$project'
-          and status = 30
-          and iscurrent = 1
+        SELECT COUNT(*)
+        FROM project_status 
+        WHERE status IN(15,30)
+        AND projectname = '$project'
     ));
-    
-    return @$ans ? 'HTGS_DRAFT' : undef;
+
+    return $ans->[0][0];
 }
 
 =pod
@@ -139,17 +139,33 @@ of B<Tracking.pm>.
 
 =cut
 
+
+sub ref_from_query {
+    my( $query ) = @_;
+
+    my $dbh = track_db();
+
+    my $sth = $dbh->prepare( $query );
+    $sth->execute();
+    return $sth->fetchall_arrayref();
+}
+
+=pod
+
+=head2 track_db
+
+Returns a B<DBI> handle to the Tracking database.
+
+=cut
+
+
 {
     my( $dbh );
 
-    sub ref_from_query {
-        my( $query ) = @_;
-
+    sub track_db {
         $dbh = WrapDBI->connect('reports', {RaiseError => 1}) unless $dbh;
-
-        my $sth = $dbh->prepare( $query );
-        $sth->execute();
-        return $sth->fetchall_arrayref();
+        
+        return $dbh;
     }
 
     END {
@@ -496,12 +512,29 @@ sub localisation_data {
         if ($fish) {
             $map = fishParse( $fish )
 		or warn "Can't parse fish tag [ $fish ]\n";
-	} else {
-            warn "No fish data for project '$project'\n";
-        }
+	}
     }
 
     return( $chr, $map );
+}
+
+sub fishData {
+    my( $project ) = @_;
+    
+    # Get most recent fish result from tracking db
+    my $ans = ref_from_query(qq(
+                                SELECT remark
+                                FROM project_status
+                                WHERE status = 9
+                                AND projectname = '$project'
+                                ORDER BY statusdate DESC ));
+    my( $map );
+    if (@$ans) {
+        $map = fishParse( $ans->[0][0] )
+	    or warn "Can't parse fish tag [ $ans->[0][0] ]\n";
+    }
+
+    return( $map );
 }
 
 sub fishParse {
