@@ -30,6 +30,15 @@ sub acedb_homol_tag {
     return $self->{'_acedb_homol_tag'};
 }
 
+sub db_prefix {
+    my( $self, $prefix ) = @_;
+    
+    if ($prefix) {
+        $self->{'_db_prefix'} = $prefix;
+    }
+    return $self->{'_db_prefix'};
+}
+
 sub query_name {
     my( $self, $query ) = @_;
     
@@ -61,6 +70,8 @@ sub format_Subject {
     # Print the subject
     my $subject_name = $subject->subject_name
         or confess "subject_name not defined";
+    my $prefix = $self->db_prefix;
+    $subject_name = "$prefix$subject_name" if $prefix;
     foreach my $hsp ($subject->get_all_HSPs) {
         my $score = $hsp->score or confess "No score in HSP";
         my(@coords) = map $hsp->$_(), qw{ query_start query_end subject_start subject_end };

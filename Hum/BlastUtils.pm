@@ -9,7 +9,7 @@ use Exporter;
 use vars qw{ @ISA @EXPORT_OK };
 @ISA = 'Exporter';
 @EXPORT_OK = qw{
-    make_nucleotide_blast_indice
+    make_nucleotide_blast_indices
     make_protein_blast_indices
     blast_db_title
     blast_db_version
@@ -20,25 +20,26 @@ use vars qw{ @ISA @EXPORT_OK };
     };
 
 sub make_nucleotide_blast_indices {
-    return _make_blast_indices(@_, 'nucleotide');
+    return _make_blast_indices('nucleotide', @_ );
 }
 
 sub make_protein_blast_indices {
-    return _make_blast_indices(@_, 'protein');
+    return _make_blast_indices('protein', @_ );
 }
 
 sub _make_blast_indices {
-    my( $build,     # The name of the new fasta database file
+    my( $type,      # "nucleotide" or "protein"
         $blast,     # The name for the blast database
-        $type,      # "nucleotide" or "protein"
+        $build,     # The name of the new fasta database file
+        @title_elements,
         ) = @_;
     
     die "Names for new and old databases are both '$blast'"
         if $blast eq $build;
     
     # Make a title for the blast database
-    my ($title) = $blast =~ m{([^/]+)$};
-    $title = "$title|". ace_date();
+    my ($name) = $blast =~ m{([^/]+)$};
+    my $title = join('|', $name, ace_date(), @title_elements);
     
     my( @extn,              # List of blast db extensions
         $blast_1_indexer,   # "pressdb" or "setdb"

@@ -193,9 +193,9 @@ sub parse_Subject {
             # Expect = 5.4e-116
             # Expect(16) = 0.0          -- Blast 2 format
             # Expect = 0.0              -- Blast 1 format
-            my ($expect) = /Expect(?:\(\d+\))?\s*=\s*([\d\.eE-]+)/
+            my ($expect) = /Expect(?:\(\d+\))?\s*=\s*([\d\.eE\-\+]+)/
                 or confess("Can't parse expect value from ('$_')");
-            
+                        
             # expect_cutoff can be set to zero
             # if we want all HSPs
             unless ($expect < $expect_cutoff) {
