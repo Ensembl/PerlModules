@@ -21,19 +21,51 @@ sub fetch_by_SequenceInfo_pair {
     my( $pkg, $seq_a, $seq_b ) = @_;
     
     my $sth = track_db->prepare_cached(q{
-        select oa.position, os.is_3prime,
-        ob.position, ob.is_3prime,
-        o.length, o.id_source, o.pct_substitutions, o.pct_insertions, o.pct_deletions
-        from sequence_overlap oa
+        SELECT oa.position
+          , os.is_3prime
+          , ob.position
+          , ob.is_3prime
+          , o.id_overlap
+          , o.length
+          , o.id_source
+          , o.pct_substitutions
+          , o.pct_insertions
+          , o.pct_deletions
+        FROM sequence_overlap oa
           , overlap o
           , sequence_overlap ob
-        where oa.id_overlap = o.id_overlap
-        and o.id_overlap = ob.id_overlap
-        and oa.id_sequence = ?
-        and ob.id_sequence = ?
+        WHERE oa.id_overlap = o.id_overlap
+          AND o.id_overlap = ob.id_overlap
+          AND oa.id_sequence = ?
+          AND ob.id_sequence = ?
         });
+    $sth->execute($seq_a->db_id, $seq_b->db_id);
+    
+    my( $a_pos, $a_is3prime,
+        $b_pos, $b_is3prime,
+        $overlap_id, $length, $source_id,
+        $sub, $ins, $del) = $sth->fetchrow;
+    
+    my $self = $pkg->new;
+    $self->db_id($overlap_id);
+    $self->overlap_length($length);
+    $self->source_name($self->name_from_source_id($source_id));
+    $self->percent_substitution($sub);
+    $self->percent_insertion($ins);
+    $self->percent_deletion($del);
+    
+    my ($pa, $pb) = $self->make_new_Position_objects;
+    $pa->position($a_pos);
+    $pa->is_3prime($a_is3prime);
+    $pa->SequenceInfo($seq_a);
+    $pb->position($b_pos);
+    $pb->is_3prime($b_is3prime);
+    $pb->SequenceInfo($seq_b);
+    
+    return $self;
 }
 
+# Is this any use, since it doesn't fetch the Overlap::Position objects
 sub fetch_by_db_id {
     my( $pkg, $id ) = @_;
     

@@ -10,7 +10,9 @@ use Hum::TPF::Row::Clone;
 use Hum::TPF::Row::Gap;
 use Hum::Tracking qw{
     prepare_cached_track_statement
-    prepare_track_statement };
+    prepare_track_statement
+    iso2time
+    };
 
 sub new {
     my( $pkg ) = @_;
@@ -51,7 +53,7 @@ sub subregion {
 sub entry_date {
     my( $self, $entry_date ) = @_;
     
-    if ($entry_date) {
+    if (defined $entry_date) {
         $self->{'_entry_date'} = $entry_date;
     }
     return $self->{'_entry_date'};
@@ -112,7 +114,7 @@ sub _fetch_generic {
     ### Need to convert Oracle date to unix time int
     my $sth = prepare_cached_track_statement(qq{
         SELECT t.id_tpf
-          , TO_CHAR(accept_date, 'YYYY-MM-DD HH24:MI:SS') accept_date
+          , TO_CHAR(t.entry_date, 'YYYY-MM-DD HH24:MI:SS') entry_date
           , t.program
           , t.operator
           , g.subregion
@@ -130,7 +132,7 @@ sub _fetch_generic {
         $subregion, $species, $chr) = $sth->fetchrow;
     my $self = $pkg->new;
     $self->db_id($db_id);
-    $self->entry_date($entry_date);
+    $self->entry_date(iso2time($entry_date));
     $self->program($prog);
     $self->operator($operator);
     $self->subregion($subregion);
@@ -257,7 +259,13 @@ sub fetch_all_Rows {
 sub string {
     my( $self ) = @_;
     
-    my $str = '';
+    my $str = "##";
+    foreach my $method (qw{ species chromosome subregion }) {
+        if (my $data = $self->$method()) {
+            $str .= "  $method=$data";
+        }
+    }
+    $str .= "\n";
     foreach my $row ($self->fetch_all_Rows) {
         $str .= $row->string;
     }

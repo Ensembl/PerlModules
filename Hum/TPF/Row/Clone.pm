@@ -4,12 +4,13 @@
 package Hum::TPF::Row::Clone;
 
 use strict;
+use Carp;
 use base 'Hum::TPF::Row';
 use Hum::Tracking qw{
     prepare_track_statement
     prepare_cached_track_statement
     };
-use Carp;
+use Hum::SequenceInfo;
 
 sub accession {
     my( $self, $accession ) = @_;
@@ -40,6 +41,7 @@ sub intl_clone_name {
 sub set_intl_clone_name_from_sanger_int_ext {
     my( $self, $clonename, $int_pre, $ext_pre ) = @_;
 
+    $clonename = uc $clonename;
     $int_pre ||= '';
     $ext_pre ||= 'XX';
     substr($clonename, 0, length($int_pre)) = "$ext_pre-";
@@ -108,6 +110,16 @@ sub contig_name {
     return $self->{'_contig_name'};
 }
 
+sub SequenceInfo {
+    my( $self, $SequenceInfo ) = @_;
+    
+    if ($SequenceInfo) {
+        $self->{'_SequenceInfo'} = $SequenceInfo;
+    }
+    return $self->{'_SequenceInfo'};
+}
+
+
 sub string {
     my( $self ) = @_;
     
@@ -125,6 +137,7 @@ sub store {
         if $self->db_id;
     
     $self->store_clone_if_missing($tpf);
+    $self->store_SequenceInfo_and_link;
     
     my $db_id = $self->get_next_id_tpfrow;
     my $insert = prepare_cached_track_statement(q{
@@ -189,6 +202,52 @@ sub store_clone_if_missing {
         VALUES(?,1)
         });
     $status_insert->execute($self->sanger_clone_name);
+}
+
+sub store_SequenceInfo_and_link {
+    my( $self ) = @_;
+    
+    my $clone     = $self->sanger_clone_name;
+    my $accession = $self->accession;
+    
+    my $seq = $self->SequenceInfo
+        || Hum::SequenceInfo->fetch_latest_by_accession($accession)
+        || confess sprintf("No SequenceInfo for accession '%s'", $accession);
+    
+    my( $seq_id );
+    unless ($seq_id = $seq->db_id) {
+        $seq->store;
+        $seq_id = $seq->db_id;
+    }
+    
+    my $check_link = prepare_cached_track_statement(q{
+        SELECT 1
+        FROM clone_sequence
+        WHERE is_current = 1
+          AND clonename = ?
+          AND id_sequence = ?
+        });
+    $check_link->execute($clone, $seq->db_id);
+    my ($link_ok) = $check_link->fetchrow;
+    $check_link->finish;
+    
+    unless ($link_ok) {
+        my $set_not_current = prepare_cached_track_statement(q{
+            UPDATE clone_sequence
+            SET is_current = 0
+            WHERE clonename = ?
+            });
+        $set_not_current->execute($clone);
+        
+        my $insert = prepare_cached_track_statement(q{
+            INSERT INTO clone_sequence( clonename
+                  , id_sequence
+                  , entry_date
+                  , is_current )
+            VALUES (?,?,sysdate,1)
+            });
+        $insert->execute($clone, $seq_id);
+    }
 }
 
 1;

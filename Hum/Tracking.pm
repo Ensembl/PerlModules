@@ -356,7 +356,7 @@ block, to ensure a graceful exit.
     sub prepare_cached_track_statement {
         my( $query ) = @_;
 
-        #warn $query;
+        warn $query;
 
         my $sth = track_db()->prepare_cached($query);
         push( @active_statements, $sth );
@@ -1230,6 +1230,7 @@ sub record_accession_data {
             $fin_ins->execute($project, $acc, $suffix);
         }
         elsif (($suffix || 'NULL') ne ($db_suffix || 'NULL')) {
+            # This may never happen, so hasn't been tested
             warn "updating suffix for finished $acc for $project\n";
             $fin_upd ||= prepare_track_statement(q{
                 UPDATE finished_submission
