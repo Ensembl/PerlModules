@@ -202,7 +202,7 @@ sub process_ace_start_end_transcript_seq {
 
     # Remarks
     my( @remarks );
-    foreach my $rem ($t_seq->at('Remark[1]')) {
+    foreach my $rem ($t_seq->at('Visible.Remark[1]')) {
         push(@remarks, $rem->name);
     }
     foreach my $title ($t_seq->at('Visible.Title[1]')) {
