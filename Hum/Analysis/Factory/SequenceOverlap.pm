@@ -188,7 +188,7 @@ sub is_three_prime_hit {
         my( $seq_end, $hit_end );
 
         foreach my $param (@param_sets) {
-            print "Running cross_match with:\n";
+            print STDERR "Running cross_match with:\n";
             foreach my $setting (sort keys %$param) {
                 my $value = $param->{$setting};
                 print STDERR "  $setting = $value\n";
