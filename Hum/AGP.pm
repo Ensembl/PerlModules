@@ -125,7 +125,7 @@ sub process_TPF {
             $contig = [];
             my $gap = $self->new_Gap;
             $gap->chr_length($row->gap_length || $self->unknown_gap_length);
-            $gap->remark($row->remark);
+            $gap->set_remark_from_Gap($row);
         } else {
             my $inf = $row->SequenceInfo;
             my $phase = $inf ? $inf->htgs_phase : 0;
@@ -138,7 +138,15 @@ sub process_TPF {
                 $contig = [];
                 my $gap = $self->new_Gap;
                 $gap->chr_length(50_000);
-                $gap->remark("clone\tno\t# Unfinished_sequence");
+                my $is_linked = 'yes';
+                if ($i == 0 or $i == $#rows  # We're the first or last row or
+                    or $rows[$i - 1]->is_gap # the previous row was a gap or
+                    or $rows[$i + 1]->is_gap # the next row is a gap.
+                    )
+                {
+                    $is_linked = 'no';
+                }
+                $gap->remark("clone\t$is_linked");
             }
         }
     }
