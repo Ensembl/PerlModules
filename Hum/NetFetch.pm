@@ -4,7 +4,8 @@ package Hum::NetFetch;
 use strict;
 use Exporter;
 use vars qw( @EXPORT_OK @ISA );
-use LWP::Simple qw( get );
+use LWP::UserAgent;
+
 use Hum::Conf qw( HUMPUB_ROOT );
 use Hum::Lock;
 
@@ -25,7 +26,12 @@ BEGIN {
     sub wwwfetch {
         my( $ac ) = @_;
         my $get = "$embl_simple_url$ac";
-        my $embl = get($get);
+        
+        my $ua = LWP::UserAgent->new;
+        $ua->proxy(http  => 'http://webcache.sanger.ac.uk');
+        my $req = HTTP::Request->new(GET => $get);        
+        my $embl =  $ua->request($req)->content;
+        
         unless (defined $embl) {
             die "No response from '$get'";
         }
