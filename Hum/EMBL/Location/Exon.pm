@@ -58,24 +58,14 @@ sub end {
     return $self->{_hum_embl_location_exon_end};
 }
 
-sub accession {
+sub accession_version {
     my ($self, $value) = @_;
     
     if ($value) {
-        $self->{_hum_embl_location_exon_accession} = $value;
+        $self->{_hum_embl_location_exon_accession_version} = $value;
     }
-    return $self->{_hum_embl_location_exon_accession};
+    return $self->{_hum_embl_location_exon_accession_version};
 }
-
-sub sequence_version {
-    my ($self, $value) = @_;
-    
-    if ($value) {
-        $self->{_hum_embl_location_exon_sequence_version} = $value;
-    }
-    return $self->{_hum_embl_location_exon_sequence_version};
-}
-
 
 __END__
  
