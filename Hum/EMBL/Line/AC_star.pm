@@ -31,7 +31,7 @@ sub compose {
     confess "Identifier '$identifier' too long"
         if length($identifier) > 75;
     
-    return $line->string("AC * $identifier");
+    return $line->string("AC * $identifier\n");
 }
 
 1;
