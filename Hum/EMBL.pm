@@ -291,8 +291,8 @@ sub bio_seq {
 sub hum_sequence {
     my( $embl ) = @_;
     
-    my $id_line = $embl->ID;
-    my $name = $id_line->entryname;
+    #my $id_line = $embl->ID;
+    #my $name = $id_line->entryname;
     
     my $seq = Hum::Sequence::DNA->new;
     $seq->sequence_string( $embl->Sequence->seq );
