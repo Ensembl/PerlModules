@@ -203,7 +203,7 @@ sub _express_fetch_TPF_Rows {
     }
     
     # Add any non-sequence entries onto the end
-    while (my $gap = $rank_clone->{++$rank} || $rank_gap->{$rank}) {
+    while (my $gap = $rank_gap->{$rank++}) {
         $self->add_Row($gap);
     }
     
