@@ -220,7 +220,7 @@ sub start_server {
         if (my @param = $self->additional_server_parameters) {
             push(@exec_list, @param);
         }
-        warn "Trying (@exec_list)";
+        warn "Running (@exec_list)\n";
         exec(@exec_list)
             or confess("exec(",
                 join(', ', map "'$_'", @exec_list),
