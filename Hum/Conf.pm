@@ -109,7 +109,7 @@ my $humace_queue = "$humpub/humace/queue";
     
     SPECIES_ANALYSIS_ROOT => {
         'Human'         => "$humpub/analysis/projects",
-        'Mouse'         => "$humpub/analysis/non-human/mouse",
+        'Mouse'         => "$humpub_disk1/analysis/mouse",
         'Zebrafish'     => "$humpub_disk1/analysis/zebrafish",
         },
     SPECIES_ACE_QUEUE => {
