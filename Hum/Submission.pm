@@ -415,17 +415,17 @@ __END__
 Tables in oracle providing a view into the EMBL
 oracle database:
 
-=head2 embl_v_projects
+=head2 v_gp_projects
 
 Codes for the large scale sequencing projects in
 EMBL.
 
     Name    Description
     ------  --------------------------------
-    CODE    PROJECT# in embl_v_primary
+    CODE    PROJECT# in v_gp_primary
     NAME    Brief description of the project
 
-=head2 embl_v_secondary
+=head2 v_gp_secondary
 
 Mapping of primary to secondary accessions.
 
@@ -434,7 +434,7 @@ Mapping of primary to secondary accessions.
     PRIMARY    Primary accession number
     SECONDARY  Secondary accession number
 
-=head2 embl_v_primary
+=head2 v_gp_primary
 
 Details of primary submissions.
 
