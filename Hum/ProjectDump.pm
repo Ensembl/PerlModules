@@ -442,8 +442,8 @@ sub revcomp_contig {
     $$qual = reverse($$qual);
     
     if (my $v_end = $pdmp->vector_ends($contig)) {
-        use Data::Dumper;
-        warn "$contig=", Dumper($v_end);
+        #use Data::Dumper;
+        #warn "$contig=", Dumper($v_end);
         while (my($end, $side) = each %$v_end) {
             if ($side eq 'left') {
                 $v_end->{$end} = 'right';
@@ -476,6 +476,7 @@ sub cleanup_contigs {
                 # Mask DNA and qual with characters which won't appear
                 # Max score for quality is 99, so shouldn't be any with
                 # score of 255 (which is octal 177)
+                warn "$contig: Removing $length characters at $offset\n";
                 substr($$dna,  $offset, $length) = '#'    x $length;
                 substr($$qual, $offset, $length) = "\177" x $length;
             }
@@ -742,7 +743,7 @@ sub parse_contig_tags {
 
     @af = sort { $a->[0] cmp $b->[0] || $a->[3] <=> $b->[3] || $a cmp $b } @af;
     $pdmp->assembled_from($name, \@af);
-    $pdmp->contamination($name, \@contamination);
+    $pdmp->contamination($name, \@contamination) if @contamination;
 }
 
 {
@@ -838,7 +839,7 @@ sub vector_ends {
 
 	        my $rcontig_end;
 
-                warn "Looking at: $dirn\tvec_end[$start,$end]\tread[$rs,$re]\n";
+                #warn "Looking at: $dirn\tvec_end[$start,$end]\tread[$rs,$re]\n";
 
                 # rmd wrote this, and I don't understand it. -- jgrg
 	        if ($dirn) {
