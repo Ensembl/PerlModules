@@ -325,7 +325,7 @@ sub localisation_data {
         eval{ $fish = $ans->[0][0] };
         if ($fish) {
             $map = fishParse( $fish )
-		or die "Can't parse fish tag [ $fish ]\n";
+		or warn "Can't parse fish tag [ $fish ]\n";
 	} else {
             warn "No fish data for project '$project'\n";
         }

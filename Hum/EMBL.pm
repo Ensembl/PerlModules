@@ -168,9 +168,9 @@ sub parse {
                 @group = ($_);
             }
 
-            # Break at end of entries
-            last if $prefix eq '//';
         }
+        # Break at end of entries
+        last if $prefix eq '//';
     }
 
     # Store the last line group
