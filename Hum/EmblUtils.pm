@@ -154,6 +154,12 @@ BEGIN {
             Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia
             Monotremata Ornithorhynchidae Ornithorhynchus
             )],
+        
+        wallaby =>
+        [qw(Macropus eugenii), 'tammar wallaby', qw(
+            Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia
+            Metatheria Diprotodontia Macropodidae Macropus
+            )],
 
         carp =>
         [qw(Cyprinus carpio), 'carp', qw(
