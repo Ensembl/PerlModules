@@ -208,7 +208,7 @@ sub task_name {
     return $task_name;
 }
 
-sub file_name {
+sub file_path {
     my( $self, $seq_name ) = @_;
     
     confess "Missing sequence_name argument"
