@@ -105,6 +105,7 @@ sub read_latest_fasta {
     
     local *FASTA_PROJ;
     opendir FASTA_PROJ, $path or die "Can't opendir('$path') : $!";
+    warn "Looking in '$path'\n";
     my %fasta = map {$_, (stat($_))[9]}
         map "$path/$_",
         grep /\.fasta$/, readdir FASTA_PROJ;
@@ -127,6 +128,7 @@ sub read_latest_fasta {
     close FASTA;
     
     if (my $count = $pdmp->contig_count) {
+        $pdmp->dump_time(time); # Record the time of the dump
         return $count;
     } else {
         die "Zero contigs read from '$file'";
