@@ -295,9 +295,12 @@ sub hum_sequence {
     #my $name = $id_line->entryname;
     
     my $seq = Hum::Sequence::DNA->new;
+    my $acc = $embl->AC->primary;
+    my $sv  = $embl->SV->version;
+    my $desc = join('  ', "$acc.$sv", $embl->DE->list);
     $seq->sequence_string( $embl->Sequence->seq );
-    $seq->name           ( $embl->AC->primary );
-    
+    $seq->name           ( $acc );
+    $seq->description($desc);
     return $seq;
 }
 

@@ -228,7 +228,7 @@ sub set_status {
               , 'Y'
               , FROM_UNIXTIME($time)
               , $status
-              , '$u_name'))
+              , '$u_name')
         });
 
     $set_not_current->execute;
