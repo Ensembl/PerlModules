@@ -269,13 +269,15 @@ sub make_fragment_summary {
         my ($contig, $start, $end) = @{$contig_map->[$i]};
         my $frag = sprintf("* %8d %8d contig of %d bp in length",
             $start, $end, $end - $start + 1);
-        if (my $group = $pdmp->contig_chain($contig)) {
+        if ($pdmp->can('contig_chain') and my $group = $pdmp->contig_chain($contig)) {
             $frag .= "; fragment_chain $group";
         }
         push(@list, $frag);
     }
     return @list;
 }
+
+
 
 sub add_FT_entries {
     my( $pdmp, $embl, $contig_map ) = @_;
@@ -295,12 +297,12 @@ sub add_FT_entries {
 	$fragment->addQualifierStrings('note', "assembly_fragment:$contig");
 
         # Add note if this is part of a group ordered by read-pairs
-        if (my $group = $pdmp->contig_chain($contig)) {
+        if ($pdmp->can('contig_chain') and my $group = $pdmp->contig_chain($contig)) {
             $fragment->addQualifierStrings('note', "fragment_chain:$group");
         }
 
         # Mark the left and right end contigs
-        if (my $vec_end = $pdmp->vector_ends($contig)) {
+        if ($pdmp->can('vector_ends') and my $vec_end = $pdmp->vector_ends($contig)) {
             foreach my $end ('Left', 'Right') {
                 if (my $side = $vec_end->{$end}) {
                     $fragment->addQualifierStrings('note', "clone_end:$embl_end{$end}");
