@@ -7,10 +7,12 @@ use Exporter;
 use File::Copy 'copy';
 use File::Path 'mkpath', 'rmtree';
 use Programs 'cksum';
+use Sys::Hostname 'hostname';
 use vars qw( @ISA @EXPORT_OK );
 
 @ISA = ('Exporter');
 @EXPORT_OK = qw(
+    paranoid_print
     delete_blast_db
     mirror_copy_dir
     mirror_copy_file
@@ -19,6 +21,29 @@ use vars qw( @ISA @EXPORT_OK );
     file_checksum
     run_pressdb
     );
+
+sub paranoid_print {
+    my( $dest_dir, $file, @data ) = @_;
+    
+    my $host          = hostname();
+    my $tmp_file      = "$file.$$.$host.copy-tmp";
+    my $tmp_path      =      "/tmp/$tmp_file";
+    my $tmp_dest_path = "$dest_dir/$tmp_file";
+    my $dest_path     = "$dest_dir/$file";
+    
+    local *TMP_PATH;
+    open TMP_PATH, "> $tmp_path"
+        or confess "Can't write to '$tmp_path' : $!";
+    print TMP_PATH @data
+        or confess "Error printing to '$tmp_path' : $!";
+    close TMP_PATH
+        or confess "Error printing to '$tmp_path' : $!";
+    copy_and_check_file($tmp_path, $tmp_dest_path);
+    unlink($tmp_path);
+    rename($tmp_dest_path, $dest_path)
+        or confess "Error renaming '$tmp_dest_path' to '$dest_path' : $!";
+    return 1;
+}
 
 sub mirror_copy_dir {
     my( $from, $to, $flag_make_link ) = @_;

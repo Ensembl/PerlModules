@@ -84,6 +84,26 @@ sub reverse_complement {
     return $rev_obj;
 }
 
+sub ace_string {
+    my( $seq_obj ) = @_;
+    
+    my $name = $seq_obj->name
+        or confess "No name";
+    my $seq  = $seq_obj->sequence_string
+        or confess "No sequence";
+    
+    my $ace_string =
+        qq{\nSequence "$name"\n}
+             . qq{DNA "$name"\n};
+    
+    while ($seq =~ /(.{1,60})/g) {
+        $ace_string .= $1 . "\n";
+    }
+    $ace_string .= "\n";
+    
+    return $ace_string;
+}
+
 1;
 
 __END__

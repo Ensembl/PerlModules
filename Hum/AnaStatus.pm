@@ -7,6 +7,8 @@ use strict;
 use vars qw{ @ISA @EXPORT_OK };
 use Carp;
 use Exporter;
+use File::Path 'mkpath';
+use Hum::Conf 'SPECIES_ANALYSIS_ROOT';
 use Hum::Submission 'prepare_statement';
 
 @ISA = ('Exporter');
@@ -16,6 +18,7 @@ use Hum::Submission 'prepare_statement';
     set_ana_sequence_not_current
     annotator_full_name
     date_dir
+    make_ana_dir_from_species_chr_seqname_time
     };
 
 {
@@ -91,16 +94,6 @@ use Hum::Submission 'prepare_statement';
 {
     my( $sth );
 
-    sub retire_ana_sequece {
-        my( $seq_name, $dir ) = @_;
-        
-        confess "Not yet implemented!";
-    }
-}
-
-{
-    my( $sth );
-
     sub set_ana_sequence_not_current {
         my( $seq_id ) = @_;
         
@@ -133,6 +126,28 @@ use Hum::Submission 'prepare_statement';
         
         return $annotator{$uid};
     }
+}
+
+sub make_ana_dir_from_species_chr_seqname_time {
+    my( $species, $chr, $seq_name, $time ) = @_;
+    
+    $species ||= 'UNKNOWN';
+    $chr     ||= 'UNKNOWN';
+    
+    my $ana_root = $SPECIES_ANALYSIS_ROOT->{$species}
+        || '/nfs/disk100/humpub/analysis/misc';
+
+    $chr = "Chr_$chr";
+    
+    # Must have a sequence name!
+    confess "No sequence given" unless $seq_name;
+    
+    my $date_dir = date_dir($time);
+    
+    my $ana_dir = "$ana_root/$chr/$seq_name/$date_dir";
+    mkpath($ana_dir);
+    confess "Failed to make '$ana_dir'" unless -d $ana_dir;
+    return $ana_dir;
 }
 
 sub date_dir {
