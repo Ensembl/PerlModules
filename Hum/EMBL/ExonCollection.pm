@@ -13,9 +13,17 @@
 
 =head1 NAME Hum::EMBL::ExonCollection
  
-=head2 Constructor:
+=head2 Description
 
- ??
+Created by the Bio::Otter::EMBL::Factory object, as part of the process of building
+up FT lines to annotate a finished genomic clone sequence, from an Otter database.
+
+Hum::EMBL::ExonCollection objects are created to annotate the mRNA and CDS of each
+Transcript, for all the Genes on the clone sequence.
+
+  my $mRNA_exon_collection = Hum::EMBL::ExonCollection->new;
+
+  $mRNA_exon_collection->exons(@exons); #Array of Hum::EMBL::Exon objects.
 
 =cut
 
@@ -24,46 +32,24 @@ package Hum::EMBL::ExonCollection;
 use Carp;
 use strict;
 
+=head2 new
+
+Constructor:
+
+ my $collection = Hum::EMBL::ExonCollection->new;
+
+=cut
+
 sub new {
     my( $pkg ) = @_;
 
     return bless {}, $pkg;
-}    
-
-# Storage methods
-#sub strand {
-#    my( $loc, $value ) = @_;
-#    
-#    if ($value) {
-#        $loc->{'strand'} = $value;;
-#    } else {
-#        return $loc->{'strand'};
-#    }
-#}
-
-sub missing_5_prime {
-    my( $loc, $value ) = @_;
-    
-    if (defined $value) {
-        $loc->{'missing_5_prime'} = $value;
-    } else {
-        return $loc->{'missing_5_prime'};
-    }
-}
-sub missing_3_prime {
-    my( $loc, $value ) = @_;
-    
-    if (defined $value) {
-        $loc->{'missing_3_prime'} = $value;
-    } else {
-        return $loc->{'missing_3_prime'};
-    }
 }
 
 =head2 exons
 
 Get/set method for the list of 
-Hum::EMBL::Location::Exon objects.
+Hum::EMBL::Exon objects.
 
 =cut
 
@@ -71,52 +57,94 @@ sub exons {
     my( $loc, @exons ) = @_;
     
     if (@exons) {
-        $loc->{'exons'} = [@exons];
+        $loc->{'_hum_embl_exoncollection_exons'} = [@exons];
     } else {
-        return @{$loc->{'exons'}};
+        return @{$loc->{'_hum_embl_exoncollection_exons'}};
     }
 }
 
-sub start_not_found {
-    my( $loc ) = @_;
+=head2 missing_5_prime
+
+Get/set method for the missing_5_prime flag
+
+=cut
+
+sub missing_5_prime {
+    my( $loc, $value ) = @_;
     
-    if ($loc->strand eq 'W') {
-        $loc->missing_5_prime(1);
-    } elsif ($loc->strand eq 'C') {
-        $loc->missing_3_prime(1);
+    if (defined $value) {
+        $loc->{'_hum_embl_exoncollection_missing_5_prime'} = $value;
     } else {
-        confess "Direction not specified";
+        return $loc->{'_hum_embl_exoncollection_missing_5_prime'};
     }
 }
-sub end_not_found {
-    my( $loc ) = @_;
+
+=head2 missing_3_prime
+
+Get/set method for the missing_3_prime flag
+
+=cut
+
+sub missing_3_prime {
+    my( $loc, $value ) = @_;
     
-    if ($loc->strand eq 'W') {
-        $loc->missing_3_prime(1);
-    } elsif ($loc->strand eq 'C') {
-        $loc->missing_5_prime(1);
+    if (defined $value) {
+        $loc->{'_hum_embl_exoncollection_missing_3_prime'} = $value;
     } else {
-        confess "Direction not specified";
+        return $loc->{'_hum_embl_exoncollection_missing_3_prime'};
     }
 }
 
 sub start {
-    my( $loc ) = @_;
-    
-    confess "Needs to be fixed";
-    #return $loc->strand eq 'W' ? $loc->five_prime : $loc->three_prime;
-}
-sub end {
-    my( $loc ) = @_;
-    
-    confess "Needs to be fixed";
-    #return $loc->strand eq 'W' ? $loc->three_prime : $loc->five_prime;
+    my( $self, $value ) = @_;
+
+    if ($value) {
+        $self->{_hum_embl_exoncollection_start} = $value;
+    }
+    return $self->{_hum_embl_exoncollection_start};
 }
 
-sub length {
-    my( $loc ) = @_;
+sub end {
+    my( $self, $value ) = @_;
+
+    if ($value) {
+        $self->{_hum_embl_exoncollection_end} = $value;
+    }
+    return $self->{_hum_embl_exoncollection_end};
+}
+
+
+sub start_not_found {
+    my( $self ) = @_;
     
-    return $loc->three_prime - $loc->five_prime + 1;
+    if ($self->strand eq 'W') {
+        $self->missing_5_prime(1);
+    } elsif ($self->strand eq 'C') {
+        $self->missing_3_prime(1);
+    } else {
+        confess "Direction not specified";
+    }
+}
+
+sub end_not_found {
+    my( $self ) = @_;
+    
+    if ($self->strand eq 'W') {
+        $self->missing_3_prime(1);
+    } elsif ($self->strand eq 'C') {
+        $self->missing_5_prime(1);
+    } else {
+        confess "Direction not specified";
+    }
+}
+
+
+sub length {
+    my( $self ) = @_;
+    
+    confess "length got called";
+    
+    return $self->three_prime - $self->five_prime + 1;
 }
 
 =head2 five_prime
@@ -127,9 +155,9 @@ object, or confess should none exist
 =cut
 
 sub five_prime {
-    my( $loc ) = @_;
+    my( $self ) = @_;
     
-    if (my $exon = $loc->{'exons'}[0]) {
+    if (my $exon = $self->{'exons'}[0]) {
         return $exon->start;
     } else {
         confess "No start position";
@@ -144,9 +172,9 @@ object, or confess should none exist
 =cut
 
 sub three_prime {
-    my( $loc ) = @_;
+    my( $self ) = @_;
     
-    if (my $exon = $loc->{'exons'}[-1]) {
+    if (my $exon = $self->{'exons'}[-1]) {
         return $exon->end;
     } else {
         confess "No end position";
@@ -155,6 +183,8 @@ sub three_prime {
 
 sub parse {
     my( $loc, $s ) = @_;
+    
+    confess "This needs to be fixed";
     
     # If the location contains multiple complement
     # tags, then the order of the exons will need
@@ -212,42 +242,52 @@ BEGIN {
     my $joiner = "\nFT". ' ' x 19;
 
     sub compose {
-        my( $loc ) = @_;
+        my( $self ) = @_;
 
-        my( @exons ) = $loc->exons;
+        my $text;
+        my( @exons ) = $self->exons;
+        $text = 'join(' unless @exons == 1; #Don't need the join if its single exon
 
-        my( $text );
-        if (ref $exons[0]) {
-            if ($loc->missing_5_prime) {
-                my $i = $exons[0][0];
-                $exons[0][0] = "<$i";
-            }
-            if ($loc->missing_3_prime) {
-                my $i = $exons[$#exons][1];
-                $exons[$#exons][1] = ">$i";
-            }
+        foreach my $exon (@exons) {
             
-            if (@exons == 1) {
-                $text = "$exons[0][0]..$exons[0][1]";
-            } else {
-                $text = 'join('. join(',', map "$_->[0]..$_->[1]", @exons) .')';
+            my $exon_text;
+            if ($exon->accession_version) {
+                $exon_text .= $exon->accession_version . ':';
             }
-        } else {
-            $text = $exons[0];
-            if ($loc->missing_5_prime) {
-                $text = "<$text";
-            } elsif ($loc->missing_3_prime) {
-                $text = ">$text";
+            $exon_text .= $exon->start .  '..' . $exon->end;
+            
+            if ($exon->strand == -1) {
+                $exon_text = 'complement(' . $exon_text . ')';
             }
+            $exon_text .= ',';
+            $text .= $exon_text;
         }
-
-        my $strand = $loc->strand;
-        if ($strand eq 'C') {
-            $text = "complement($text)";
-        } else {
-            confess "Strand='$strand'"
-                unless $strand eq 'W';
-        }
+        chop ($text);
+        $text .= ')' unless @exons == 1;
+        
+   #     if (ref $exons[0]) {
+   #         if ($self->missing_5_prime) {
+   #             my $i = $exons[0][0];
+   #             $exons[0][0] = "<$i";
+   #         }
+   #         if ($self->missing_3_prime) {
+   #            my $i = $exons[$#exons][1];
+   #            $exons[$#exons][1] = ">$i";
+   #         }
+   #         
+   #         if (@exons == 1) {
+   #             $text = "$exons[0][0]..$exons[0][1]";
+   #         } else {
+   #             $text = 'join('. join(',', map "$_->[0]..$_->[1]", @exons) .')';
+   #         }
+   #    } else {
+   #         $text = $exons[0];
+   #         if ($self->missing_5_prime) {
+   #             $text = "<$text";
+   #        } elsif ($self->missing_3_prime) {
+   #            $text = ">$text";
+   #        }
+   #    }
 
         my( @lines );
         while ($text =~ /(.{1,58}(,|$))/g) {
