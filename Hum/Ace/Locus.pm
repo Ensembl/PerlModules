@@ -20,6 +20,8 @@ use Bio::Otter::GeneName;
 use Bio::Otter::TranscriptRemark;
 use Bio::Otter::TranscriptClass;
 use Bio::Otter::GeneSynonym;
+use Data::Dumper;
+use Storable qw(dclone);
 
 sub new {
     my( $pkg ) = shift;
@@ -107,8 +109,14 @@ sub gene_type {
     if ($gene_type) {
         $self->{'_gene_type'} = $gene_type;
     }
-    return $self->{'_gene_type'} || confess "gene_type not set";
+    return $self->{'_gene_type'}  || confess "gene_type not set";
 }
+
+sub unset_gene_type{
+    my ($self ) = @_ ;
+    $self->{'_gene_type'} = undef ;
+}
+
 
 sub gene_type_prefix {
     my( $self, $gene_type_prefix ) = @_;
@@ -1318,14 +1326,16 @@ sub get_unique_EnsEMBL_Exon {
 # Needed to preserve otter_id?
 # If locus is renamed twice, then otter
 sub ace_string {
-    my( $self ) = @_;
+    my( $self , $old_name ) = @_;
     
-    my $name = $self->name;
-    my $out = qq{\nLocus "$name"\n}
-        . qq{-D Otter_id\n}
-        
-        . qq{\nLocus "$name"\n};
+    my $name = $self->name ;
+    my $out = '' ;
+    if ($old_name){
+        $out .= qq{-D Locus "$old_name"\n};
+    }
     
+    $out .= qq{\nLocus : "$name"\n} ;
+         
     ### Need to add locus type and positive sequences
     ### Deal with Polymorphic loci
     ### Are the ?Seqence tags pointing to Clone or SubSeqences?
@@ -1334,7 +1344,37 @@ sub ace_string {
         $out .= qq{Otter_id "$ott"\n};
     }
     
+    $out .= $self->is_known_string();
+    
+    $out .= "\n";
+      
     return $out;
+}
+
+sub is_known_string{
+    my ($self) = @_ ;
+    
+    my $ace = '' ;
+    my $is_known ;
+    eval { $is_known = $self->gene_type };
+#    warn "is known $is_known";
+    
+    my $name = $self->name ;
+    $ace =  qq{\nLocus "$name" \n}
+        .   qq{-D Known    \n} ;
+    
+    if ($is_known){
+        $ace .=  qq{\nLocus "$name" \n}
+             .   qq{$is_known    \n} ;
+    }
+    return $ace ;   
+}
+
+sub clone{
+    my ($self) = @_ ;
+    my $new = Storable::dclone($self);
+    $new->name($self->name.'_clone') ;
+    return $new;
 }
 
 #   Locus: textfield
