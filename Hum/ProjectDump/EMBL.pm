@@ -75,7 +75,7 @@ sub make_embl {
     $pdmp->add_Description($embl);
 
     # KW line
-    $pdmp->add_keywords($embl);
+    $pdmp->add_keywords($embl, scalar @$contig_map);
 
     # Organism
     add_Organism($embl, $species);
@@ -387,10 +387,15 @@ sub add_FT_assembly_fragments {
         # CC   *    20745 20844: gap of      100 bp
 
 sub add_keywords {
-    my( $pdmp, $embl ) = @_;
+    my( $pdmp, $embl, $contig_count ) = @_;
     
     my $kw = $embl->newKW;
-    my @kw_list = ('HTG', 'HTGS_PHASE1');
+    my @kw_list = ('HTG');
+    if ($contig_count == 1) {
+        push(@kw_list, 'HTGS_PHASE2');
+    } else {
+        push(@kw_list, 'HTGS_PHASE1');
+    }
 
     if ($pdmp->is_htgs_draft) {
         my ($contig_depth) = $pdmp->contig_and_agarose_depth_estimate;
