@@ -15,21 +15,22 @@ use vars '@ISA';
 
     my $author_list = q{
 
-        Clarke D.
-        Connor R.
-        Leaves N.I.
-        Caveberry L.
+        North P.
+        Leaves N.
         Greystrong J.
-        North P.C.
+        Coppola M.
+        Manjunath S.
+        Russell E.
+        Smith M.
+        Strachan G.
+        Tofts C.
+        Boal E.
+        Cobley V.
         Hunter G.
-        Shufflebottom L.
-        Kimberly C.
-        Campbell M.
-        Jones S.
-        Lawrence N.
-        Strachan G.L.
-        Greenham L.
-        Maggott K.
+        Kimberley C.
+        Thomas D.
+        Cave-Berry L.
+        Weston P.
         Botcherby M.R.M.
 
         };
@@ -56,7 +57,7 @@ use vars '@ISA';
         $ref->locations(
             "Submitted ($date) to the EMBL/Genbank/DDBJ databases.",
             'Mouse Sequencing Group, HGMP-RC, Hinxton, Cambridge, CB10 1SB, UK.',
-            'E-mail enquiries:- mrbotche@hgmp.mrc.ac.uk or dclarke2@hgmp.mrc.ac.uk');
+            'E-mail enquiries:- mrbotche@hgmp.mrc.ac.uk or pnorth@hgmp.mrc.ac.uk');
         $embl->newXX;
     }
 }
