@@ -32,7 +32,10 @@ use vars qw( @ISA @EXPORT_OK );
 
 @EXPORT_OK = qw( expand_project_name ref_from_query
                  find_project_directories
-                 finised_accession external_clone_name );
+                 finised_accession unfinised_accession
+                 localisation_data
+                 external_clone_name
+                 project_finisher project_team_leader );
 
 =pod
 
@@ -243,6 +246,178 @@ sub finished_accession {
         die "No accession found for projectname '$project' and suffix '$suffix'";
     }
 }
+
+
+=pod
+
+=head2 unfinised_accession( PROJECT )
+
+Returns the accession number for the unfinished
+sequence corresponding to project B<PROJECT>. 
+Multiple matches, or no matches, are fatal.
+
+=cut
+
+sub unfinished_accession {
+    my( $project, $suffix ) = @_;
+    
+    my $query = qq( select accession
+                    from unfinished_submission
+                    where projectname = '$project' );
+
+    my $ans = ref_from_query( $query );
+    if (@$ans == 1) {
+        return $ans->[0][0];
+    } elsif (@$ans > 1) {
+        die "Mulitple accessions found for '$project' and suffix '$suffix' : ",
+            join(', ', map "'$_->[0]'", @$ans);
+    } else {
+        die "No accession found for projectname '$project' and suffix '$suffix'";
+    }
+}
+
+=pod
+
+=head2 (CHR, MAP) = localisation_data( PROJECT )
+
+Returns the chromosome and cytogenetic location
+(if FISH has been done on the project) for
+project named PROJECT.
+
+=cut
+
+
+sub localisation_data {
+    my( $project ) = @_;
+    
+    # Get the chromosome from the tracking db
+    my( $chr );
+    {
+        my $ans = ref_from_query(qq(
+                                    select cd.chromosome
+                                    from chromosomedict cd,
+                                        clone c, clone_project cp
+                                    where cd.id_dict = c.chromosome
+                                        and c.clonename = cp.clonename
+                                        and cp.projectname = '$project' ));
+        if (@$ans) {
+	    $chr = $ans->[0][0];
+	} else {
+            die "Chromosome unknown for project '$project'";
+        }
+    }
+
+    # Get most recent fish result from tracking db
+    my( $fish, $map );
+    {
+        my $ans = ref_from_query(qq(
+                                    select remark
+                                    from project_status
+                                    where status = 9
+                                    and projectname = '$project'
+                                    order by statusdate desc ));
+        eval{ $fish = $ans->[0][0] };
+        if ($fish) {
+            $map = fishParse( $fish )
+		or die "Can't parse fish tag [ $fish ]\n";
+	} else {
+            warn "No fish data for project '$project'\n";
+        }
+    }
+
+    return( $chr, $map );
+}
+
+
+sub fishParse {
+    my ($fishLine) = @_;
+    $fishLine =~ s/\s+$//; # Remove trailing space
+    $fishLine =~ s/\//-/g; # Replace slashes with dashes
+    my (@catch);
+    if (@catch = $fishLine =~
+	/^[0-9XY]{0,2}([pq])(\d+\.*\d*-)[0-9XY]{0,2}[pq](\d+\.*\d*)$/) {
+    } elsif (@catch = $fishLine =~
+	     /^[0-9XY]{0,2}([pq])(\d+\.*\d*-)[pq]{0,1}(\d+\.*\d*)$/) {
+    } elsif (@catch = $fishLine =~
+	     /^[0-9XY]{0,2}([pq])(\d+\.*\d*)$/) {
+    } else {
+	return;
+    }
+    return join '', @catch;
+}
+
+=pod
+
+=head2 get_finisher( PROJECT );
+
+Returns the finisher for a project in EMBL author
+format (eg: "J. Smith").
+
+=cut
+
+
+sub project_finisher {
+    my( $project ) = @_;
+
+    my $query = qq(
+                   select p.forename, p.surname
+                   from project_role pr, team_person_role tpr, person p
+                   where pr.id_role = tpr.id_role and
+                         tpr.id_person = p.id_person and
+                         pr.projectname = '$project' and
+                         tpr.roletype = 'Finishing'
+                   order by pr.assigned_from desc
+                   );
+    my $ans = ref_from_query( $query );
+    
+    my( $forename, $surname );
+    if (@$ans) {
+        ( $forename, $surname ) = @{$ans->[0]};
+    } else {
+        die "No finsher for project";
+    }
+    
+    # Abbreviate forename
+    $forename =~ s/^(.).+/$1\./ or return;
+    return( "$surname $forename" );
+}
+
+
+=pod
+
+=head2 get_team_leader( PROJECT );
+
+Returns the team leader for a project in EMBL author
+format (eg: "J. Smith").
+
+=cut
+
+
+sub project_team_leader {
+    my( $project ) = @_;
+
+    my $query = qq(
+                   select p.forename, p.surname
+                   from project_owner o, team t, person p
+                   where o.teamname = t.teamname and
+                         t.teamleader = p.id_person and
+                         o.projectname = '$project'
+                   order by o.owned_from desc
+                   );
+    my $ans = ref_from_query( $query );
+    
+    my( $forename, $surname );
+    if (@$ans) {
+        ( $forename, $surname ) = @{$ans->[0]};
+    } else {
+        die "No team leader for project";
+    }
+    
+    # Abbreviate forename
+    $forename =~ s/^(.).+/$1\./ or return;
+    return( "$surname $forename" );
+}
+
 
 
 1;

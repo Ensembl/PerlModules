@@ -958,16 +958,18 @@ BEGIN {
         }
         
         # Format the last line
-        my $last = substr($seq, $i);
-        my $last_len = length($last);
-        my $last_pat = 'a10' x int($last_len / 10) .'a'. $last_len % 10;
-        my @blocks = unpack($last_pat, $last);
-        $last = "     @blocks";                 # Add the last sequence blocks
-        $last .= ' ' x (70 - length($last));    # Pad the line with whitespace
-        $last .=  sprintf( " %9d\n", $length ); # Add the length to the end
+        if (my $last = substr($seq, $i)) {
+            my $last_len = length($last);
+            my $last_pat = 'a10' x int($last_len / 10) .'a'. $last_len % 10;
+            my @blocks = unpack($last_pat, $last);
+            $last = "     @blocks";                 # Add the last sequence blocks
+            $last .= ' ' x (70 - length($last));    # Pad the line with whitespace
+            $last .=  sprintf( " %9d\n", $length ); # Add the length to the end
+            $embl .= $last;
+        }
         
         # Return as a single string
-        return $line->string($embl, $last);
+        return $line->string($embl);
     }
 }
 
