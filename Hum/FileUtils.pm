@@ -147,7 +147,7 @@ sub run_pressdb {
         ) = @_;
     
     my ($name) = $blast =~ m{([^/]+)$};
-    $name = "$name.v". ace_date();
+    $name = "$name.". ace_date();
     
     die "Names for new and old databases are both '$blast'"
         if $blast eq $build;
