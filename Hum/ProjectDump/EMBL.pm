@@ -48,6 +48,7 @@ BEGIN {
 
         my $project = $pdmp->project_name;
         my $acc     = $pdmp->accession || 'AL000000';
+        my @sec     = $pdmp->secondary;
         my $embl_id = $pdmp->embl_name || 'ENTRYNAME';
         my $author  = $pdmp->author;
         my $species = $pdmp->species;
@@ -86,11 +87,10 @@ BEGIN {
         $embl->newXX;
         
         # AC line
-        if ($acc) {
-            my $ac = $embl->newAC;
-            $ac->primary($acc);
-            $embl->newXX;
-        }
+        my $ac = $embl->newAC;
+        $ac->primary($acc);
+        $ac->secondaries(@sec) if @sec;
+        $embl->newXX;
         
         # AC * line
         my $ac_star = $embl->newAC_star;

@@ -16,6 +16,7 @@ use Hum::Tracking qw( track_db
 use humConf qw( HUMAN_SEQ_FTP_DIR
                 FTP_GHOST
                 );
+use File::Path;
 
 # Object methods
 
