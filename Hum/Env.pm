@@ -41,6 +41,10 @@ BEGIN {
 }
 use lib @libs;
 
+# HOME environment variable (and LOGDIR)
+$ENV{HOME} = (getpwuid($<))[7];
+$ENV{LOGDIR} = $ENV{HOME};
+
 # Ensure @INC gets propagated in system calls
 $ENV{PERL5LIB} = join ':', @libs;
 
