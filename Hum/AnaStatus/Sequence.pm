@@ -301,7 +301,7 @@ sub annotator_uname {
 {
     my( $get_acefile_data );
 
-    sub get_all_Acefiles {
+    sub get_all_AceFiles {
         my ($self) = @_;
 
         my $ana_seq_id = $self->ana_seq_id
@@ -322,18 +322,41 @@ sub annotator_uname {
             $acefile_status_id,
             $task_name,
             $creation_time ) = $get_acefile_data->fetchrow) {
-                my $self = Hum::AnaStatus::AceFile->new;
-                $self->ana_seq_id($ana_seq_id);
-                $self->acefile_name($acefile_name);
-                $self->acefile_status_id($acefile_status_id);
-                $self->task_name($task_name);
-                $self->creation_time($creation_time);
+                my $acefile = Hum::AnaStatus::AceFile->new;
+                $acefile->ana_seq_id($ana_seq_id);
+                $acefile->acefile_name($acefile_name);
+                $acefile->acefile_status_id($acefile_status_id);
+                $acefile->task_name($task_name);
+                $acefile->creation_time($creation_time);
                                 
                 push(@acefiles, $self);
         }
         return @acefiles;
     }
 }
+
+
+sub new_AceFile_from_filename_and_time {
+    my ($self, $file_name, $time) = @_;
+    
+    my $ana_seq_id = $self->ana_seq_id
+        or confess "No ana_seq_id";
+    unless ($time =~ /^\d+$/) {
+        my $unix_time = timeace($time)
+            or confess "Bad time '$time'";
+        $time = $unix_time;
+    }
+    
+    my ($seq_name, $acefile_name) =
+        $file_name =~ /(.+?)\.([a-zA-Z].*)\.ace$/;
+    confess "Not my acefile '$file_name'" unless
+        $seq_name eq $self->seq_name;
+    my $acefile = Hum::AnaStatus::AceFile->new;
+    $acefile->acefile_name($acefile_name);
+    $acefile->creation_time($time);
+    return $acefile;
+}
+
 
 1;
 

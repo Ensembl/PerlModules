@@ -15,18 +15,6 @@ sub new {
     return $self;
 }
 
-sub new_from_file_and_time {
-    my ($pkg, $file_name, $time) = @_;
-    
-    unless ($time =~ /^\d+$/) {
-        
-    }
-    
-    my ($seq_name, $acefile_name) =
-        $file_name =~ /(.+?)\.([a-zA-Z].*)\.ace$/;
-    
-}
-
 sub creation_time {
     my ( $self, $creation_time ) = @_;
 
