@@ -318,8 +318,8 @@ a time string as input, or defaulting to current time.
     sub chromosome_id_from_species_and_chr_name {
         my( $species, $chr ) = @_;
 
-        $chr     ||= 'UNKNOWN';
         $species ||= 'UNKNOWN';
+        $chr     ||= 'UNKNOWN';
         
         # Initialize the static hash the first time we are called
         _init_species_chr_hash() unless %species_chr;
@@ -330,8 +330,8 @@ a time string as input, or defaulting to current time.
     sub add_new_species_chr {
         my( $species, $chr ) = @_;
         
-        $chr     ||= 'UNKNOWN';
         $species ||= 'UNKNOWN';
+        $chr     ||= 'UNKNOWN';
         
         # Make sure we are in sync with the database
         _init_species_chr_hash();

@@ -91,8 +91,8 @@ sub new_from_sanger_id {
     
     my $pdmp = $pkg->new;
     $pdmp->sanger_id($sanger_id);
-    $pdmp->read_accession_data;
     $pdmp->read_submission_data;
+    $pdmp->read_accession_data;
     
     return $pdmp;
 }
@@ -1622,7 +1622,31 @@ sub read_accession_data {
     my( $accession, $embl_name, @secondaries ) = acc_data($pdmp->sanger_id);
     $pdmp->accession($accession);
     $pdmp->embl_name($embl_name);
+    
+    my $project_name = $pdmp->project_name
+        or confess "project_name not set";
+    
+    if (my($ext_sec, $institute) = Hum::Tracking::external_draft_info($pdmp->project_name)) {
+        #warn "Got [$ext_sec, $institute]";
+        $pdmp->draft_institute($institute);
+        my $seen = 0;
+        foreach my $sec (@secondaries) {
+            $seen = 1 if $sec eq $ext_sec;
+        }
+        push(@secondaries, $ext_sec) unless $seen;
+    } else {
+        warn "No external draft info [$ext_sec, $institute]";
+    }
     $pdmp->secondary(@secondaries) if @secondaries;
+}
+
+sub draft_institute {
+    my( $pdmp, $institute ) = @_;
+    
+    if ($institute) {
+        $pdmp->{'_draft_institute'} = $institute;
+    }
+    return $pdmp->{'_draft_institute'};
 }
 
 {

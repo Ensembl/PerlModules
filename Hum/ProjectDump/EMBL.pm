@@ -84,6 +84,7 @@ sub make_embl {
     # Reference
     $pdmp->add_Reference($embl, $seqlength);
 
+    # CC lines
     $pdmp->add_Headers($embl, $contig_map);
     $embl->newXX;
 
@@ -240,50 +241,80 @@ sub add_FT_assembly_fragments {
     }
 }
 
-sub add_Headers {
-    my( $pdmp, $embl, $contig_map ) = @_;
-    
-    my $project = $pdmp->project_name;
-    
-    my $draft_or_unfinished = is_shotgun_complete($project)
-        ? 'working draft'
-        : 'unfinished';
 
-    $embl->newCC->list(
-        '-------------- Genome Center',
-        'Center: Sanger Centre',
-        'Center code: SC',
-        'Web site: http://www.sanger.ac.uk',
-        'Contact: humquery@sanger.ac.uk',
-        '-------------- Project Information',
-        "Center project name: $project",
-        '-------------- Summary Statistics',
-        'Assembly program: XGAP4; version 4.5',
-        $pdmp->make_read_comments(),
-        $pdmp->make_consensus_quality_summary(),
-        $pdmp->make_consensus_length_report(),
-        $pdmp->make_q20_depth_report(),
-        '--------------',
-        "* NOTE: This is a '$draft_or_unfinished' sequence. It currently",
-        "* consists of ". scalar(@$contig_map) ." contigs. The true order of the pieces is",
-        "* not known and their order in this sequence record is",
-        "* arbitrary.  Where the contigs adjacent to the vector can",
-        "* be identified, they are labelled with 'clone_end' in the",
-        "* feature table.  Some order and orientation information",
-        "* can tentatively be deduced from paired sequencing reads",
-        "* which have been identified to span the gap between two",
-        "* contigs.  These are labelled as part of the same",
-        "* 'fragment_chain', and the order and relative orientation",
-        "* of the pieces within a fragment_chain is reflected in",
-        "* this file.  Gaps between the contigs are represented as",
-        "* runs of N, but the exact sizes of the gaps are unknown.",
-        "* This record will be updated with the finished sequence as",
-        "* soon as it is available and the accession number will be",
-        "* preserved.",
 
-        $pdmp->make_fragment_summary($embl, $contig_map),
-    );   
+
+
+
+{
+    my %ext_institute_remark = (
+        WIBR =>  ['Draft Sequence Produced by Whitehead Institute/MIT',
+                  'Center for Genome Research, 320 Charles Street,',
+                  'Cambridge, MA 02141, USA',
+                  'http://www-seq.wi.mit.edu'],
+        WUGSC => ['Draft Sequence Produced by Genome Sequencing Center,',
+                  'Washington University School of Medicine, 4444 Forest',
+                  'Park Parkway, St. Louis, MO 63108, USA',
+                  'http://genome.wustl.edu/gsc/index.shtml'],
+        );
+
+    sub add_Headers {
+        my( $pdmp, $embl, $contig_map ) = @_;
+
+        # Special comment for sequences where the draft
+        # was produced externally
+        if (my $inst = $pdmp->draft_institute) {
+            if (my $remark = $ext_institute_remark{$inst}) {
+                $embl->newCC->list(@$remark);
+                $embl->newXX;
+            } else {
+                confess "No remark for institute '$inst'";
+            }
+        }
+
+        my $project = $pdmp->project_name;
+
+        my $draft_or_unfinished = is_shotgun_complete($project)
+            ? 'working draft'
+            : 'unfinished';
+
+        $embl->newCC->list(
+            '-------------- Genome Center',
+            'Center: Sanger Centre',
+            'Center code: SC',
+            'Web site: http://www.sanger.ac.uk',
+            'Contact: humquery@sanger.ac.uk',
+            '-------------- Project Information',
+            "Center project name: $project",
+            '-------------- Summary Statistics',
+            'Assembly program: XGAP4; version 4.5',
+            $pdmp->make_read_comments(),
+            $pdmp->make_consensus_quality_summary(),
+            $pdmp->make_consensus_length_report(),
+            $pdmp->make_q20_depth_report(),
+            '--------------',
+            "* NOTE: This is a '$draft_or_unfinished' sequence. It currently",
+            "* consists of ". scalar(@$contig_map) ." contigs. The true order of the pieces is",
+            "* not known and their order in this sequence record is",
+            "* arbitrary.  Where the contigs adjacent to the vector can",
+            "* be identified, they are labelled with 'clone_end' in the",
+            "* feature table.  Some order and orientation information",
+            "* can tentatively be deduced from paired sequencing reads",
+            "* which have been identified to span the gap between two",
+            "* contigs.  These are labelled as part of the same",
+            "* 'fragment_chain', and the order and relative orientation",
+            "* of the pieces within a fragment_chain is reflected in",
+            "* this file.  Gaps between the contigs are represented as",
+            "* runs of N, but the exact sizes of the gaps are unknown.",
+            "* This record will be updated with the finished sequence as",
+            "* soon as it is available and the accession number will be",
+            "* preserved.",
+
+            $pdmp->make_fragment_summary($embl, $contig_map),
+        );   
+    }
 }
+
 
 =pod         
 

@@ -618,6 +618,35 @@ sub unfinished_accession {
     }
 }
 
+=head2 (ACC, INSTITUTE_CODE) = external_draft_info( PROJECT )
+
+For clones finished by the Sanger Centre, but
+where the draft sequence was produced elsewhere.
+
+=cut
+
+{
+    my( $sth );
+    
+    sub external_draft_info {
+        my( $project ) = @_;
+        
+        $sth ||= prepare_track_statement(q{
+            SELECT remark
+            FROM project_status
+            WHERE status = 26
+              AND projectname = ?
+            });
+        $sth->execute($project);
+        while (my ($remark) = $sth->fetchrow) {
+            next unless $remark;
+            my ($centre, $acc) = $remark =~ /^(\w+)\s+\((\w+)\)/;
+            return ($acc, $centre) if $acc and $centre;
+        }
+        return;
+    }
+}
+
 =pod
 
 =head2 (CHR, MAP) = localisation_data( PROJECT )
