@@ -109,6 +109,8 @@ BEGIN {
         project_suffix
         sanger_id
         seq_id
+        sequenced_by
+        funded_by
     );
     
     # Make scalar field access functions
@@ -423,10 +425,14 @@ sub read_submission_data {
           , s.unpadded_length
           , s.contig_count
           , s.file_path
-        FROM project_acc a
+          , c.sequenced_by
+          , c.funded_by
+        FROM project_check c
+          , project_acc a
           , project_dump d
           , sequence s
-        WHERE a.sanger_id = d.sanger_id
+        WHERE c.project_name = a.project_name
+          AND a.sanger_id = d.sanger_id
           AND d.seq_id = s.seq_id
           AND a.sanger_id = ?
           AND d.is_current = 'Y'

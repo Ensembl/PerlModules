@@ -258,6 +258,17 @@ sub add_FT_assembly_fragments {
                   'http://genome.wustl.edu/gsc/index.shtml'],
         );
 
+    my %sequencing_center = (
+        5  => ['Center: Sanger Centre',
+               'Center code: SC',
+               'Web site: http://www.sanger.ac.uk',
+               'Contact: humquery@sanger.ac.uk',],
+        57 => ['Center: UK Medical Research Council',
+               'Center code: UK-MRC',
+               'Web site: http://mrcseq.har.mrc.ac.uk',
+               'Contact: mouseq@har.mrc.ac.uk',],
+        );
+
     sub add_Headers {
         my( $pdmp, $embl, $contig_map ) = @_;
 
@@ -278,12 +289,16 @@ sub add_FT_assembly_fragments {
             ? 'working draft'
             : 'unfinished';
 
+        # So that the UK-MRC funded sequences end up in the correct
+        # bin at http://ray.nlm.nih.gov/genome/cloneserver/
+        my $genome_center_lines =
+               $sequencing_center{$pdmp->funded_by}
+            || $sequencing_center{$pdmp->sequneced_by}
+            || $sequencing_center{5};
+
         $embl->newCC->list(
             '-------------- Genome Center',
-            'Center: Sanger Centre',
-            'Center code: SC',
-            'Web site: http://www.sanger.ac.uk',
-            'Contact: humquery@sanger.ac.uk',
+            @$genome_center_lines,
             '-------------- Project Information',
             "Center project name: $project",
             '-------------- Summary Statistics',
