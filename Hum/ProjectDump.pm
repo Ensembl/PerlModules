@@ -6,6 +6,7 @@ use Carp;
 use Hum::Submission qw( acc_data prepare_statement );
 use Hum::Tracking qw(
     track_db
+    prepare_track_statement
     is_full_shotgun_complete
     is_assigned_to_finisher
     is_shotgun_complete
