@@ -416,8 +416,8 @@ sub project_name_and_suffix_from_sequence_name {
           AND s.sequence_name = '$name'
         });
     $sth->execute;
-    my ($name, $suffix) = $sth->fetchrow;
-    return( $name, $suffix );
+    my ($project, $suffix) = $sth->fetchrow;
+    return( $project, $suffix );
 }
 
 
