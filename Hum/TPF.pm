@@ -22,7 +22,6 @@ sub new {
         }, $pkg;
 }
 
-
 sub species {
     my( $self, $species ) = @_;
     
@@ -156,7 +155,7 @@ sub _express_fetch_TPF_Rows {
 
     my $rank_gap = $self->_express_fetch_TPF_Gaps_rank_hash;
 
-    my $sth = prepare_cached_track_statement(q{
+    my $sql = q{
         SELECT r.id_tpfrow
           , r.rank
           , r.clonename
@@ -174,10 +173,12 @@ sub _express_fetch_TPF_Rows {
           AND c.libraryname = l.libraryname (+)
           AND c.clonename = cs.clonename (+)
           AND cs.id_sequence = s.id_sequence (+)
-          AND cs.is_current = 1
+          AND cs.is_current != 0
           AND r.id_tpf = ?
         ORDER BY r.rank ASC
-        });
+        };
+    #warn $sql;
+    my $sth = prepare_cached_track_statement($sql);
     $sth->execute($db_id);
     my( $clone_id, $clone_rank, $clonename, $contigname,
         $int_pre, $ext_pre, $acc, $current_seq_id );
