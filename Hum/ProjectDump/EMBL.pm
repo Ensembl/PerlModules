@@ -139,7 +139,7 @@ sub add_Reference {
     
     my $query_email = 'humquery';
     if ($pdmp->species eq 'Zebrafish') {
-        $query_email = 'zface';
+        $query_email = 'zfish-help';
     }
 
     my $ref = $embl->newReference;
@@ -394,7 +394,7 @@ sub add_FT_entries {
             );
         
         if ($pdmp->species eq 'Zebrafish') {
-            $seq_center[4] =~ s/humquery/zface/;
+            $seq_center[4] =~ s/humquery/zfish-help/;
         }
         
         return @seq_center;
