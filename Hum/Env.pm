@@ -100,6 +100,9 @@ $ENV{NCBI}          = '/nfs/disk100/pubseq/blastdb';
 # For halfwise
 $ENV{WISECONFIGDIR} = '/nfs/disk100/pubseq/wise/wisecfg';
 
+# For mkcon-gap (and therefore hcon)
+$ENV{TAGDB}         = '/usr/local/badger/staden/tables/TAGDB';
+
 1;
 
 __END__
