@@ -310,41 +310,65 @@ sub sequence_name {
     return $self->{'_seq_name'};
 }
 
+sub get_all_AceFiles {
+    my ($self) = @_;
+
+    $self->fetch_AceFile_data unless $self->{'_acefile'};
+
+    return values %{$self->{'_acefile'}};
+}
+
+sub get_AceFile_by_name {
+    my ($self, $acefile_name) = @_;
+
+    $self->fetch_AceFile_data unless $self->{'_acefile'};
+    
+    return $self->{'_acefile'}{$acefile_name};
+}
+
+sub get_AceFile_by_filename {
+    my ($self, $file_name) = @_;
+
+    my $acefile_name = $self->parse_filename($file_name);
+
+    $self->fetch_AceFile_data unless $self->{'_acefile'};
+    
+    return $self->{'_acefile'}{$acefile_name};
+}
 
 {
-    my( $get_acefile_data );
+    my( $fetch_acefile_data );
 
-    sub get_all_AceFiles {
+    sub fetch_AceFile_data {
         my ($self) = @_;
 
         my $ana_seq_id = $self->ana_seq_id
             or confess "No ana_seq_id in object";
 
-        $get_acefile_data ||= prepare_statement(q{
+        $fetch_acefile_data ||= prepare_statement(q{
             SELECT acefile_name
               , acefile_status_id
               , UNIX_TIMESTAMP(creation_time)
             FROM ana_acefile
             WHERE ana_seq_id = ?
             });
-        $get_acefile_data->execute($ana_seq_id);
+        $fetch_acefile_data->execute($ana_seq_id);
         
-        my( @acefiles );
+        $self->{'_acefile'} = {};
         while ( my($acefile_name,
             $acefile_status_id,
-            $creation_time ) = $get_acefile_data->fetchrow) {
-                my $acefile = Hum::AnaStatus::AceFile->new;
-                $acefile->ana_seq_id($ana_seq_id);
-                $acefile->acefile_name($acefile_name);
-                $acefile->acefile_status_id($acefile_status_id);
-                $acefile->creation_time($creation_time);
-                                
-                push(@acefiles, $acefile);
+            $creation_time ) = $fetch_acefile_data->fetchrow) {
+
+            my $acefile = Hum::AnaStatus::AceFile->new;
+            $acefile->ana_seq_id($ana_seq_id);
+            $acefile->acefile_name($acefile_name);
+            $acefile->acefile_status_id($acefile_status_id);
+            $acefile->creation_time($creation_time);
+
+            $self->{'_acefile'}{$acefile_name} = $acefile;
         }
-        return @acefiles;
     }
 }
-
 
 sub new_AceFile_from_filename_and_time {
     my ($self, $file_name, $time) = @_;
@@ -360,10 +384,15 @@ sub new_AceFile_from_filename_and_time {
         $time = $unix_time;
     }
     
-    my ($seq_name, $acefile_name) =
-        $file_name =~ /(.+?)\.([a-zA-Z].*)\.ace$/;
-    confess "Not my acefile '$file_name'" unless
-        $seq_name eq $self->sequence_name;
+    my $acefile_name = $self->parse_filename($file_name);
+    my $seq_name = $self->sequence_name;
+    
+    # Check that we don't already have the acefile in the database
+    if ($self->get_AceFile_by_name($acefile_name)) {
+        confess "AceFile '$acefile_name' is already stored in the database";
+    }
+
+    # Make a new acefile object, and populate it
     my $acefile = Hum::AnaStatus::AceFile->new;
     $acefile->acefile_name($acefile_name);
     $acefile->creation_time($time);
@@ -371,7 +400,36 @@ sub new_AceFile_from_filename_and_time {
     $acefile->ana_seq_id($ana_seq_id);
     
     $acefile->store;
+    
     return $acefile;
+}
+
+sub parse_filename {
+    my ($self, $file_name) = @_;
+    
+    my $seq_name = $self->sequence_name
+        or confess "sequence_name not defined";
+    
+    # Remove the .ace suffix from $file_name
+    my $ace = substr($file_name, -4, 4);
+    if ($ace eq '.ace') {
+        # Remove the suffix
+        substr($file_name, -4, 4) = '';
+    } else {
+        confess "acefile name '$file_name' doesn't end '.ace'";
+    }
+    
+    # Remove the seqname. prefix from $file_name
+    my $seq_name_prefix = "$seq_name.";
+    my $prefix_len = length($seq_name_prefix);
+    my $prefix = substr($file_name, 0, $prefix_len);
+    if ($prefix eq $seq_name_prefix) {
+        substr($file_name, 0, $prefix_len) = '';
+    } else {
+        confess "acefile name '$file_name' doesn't begin '$seq_name_prefix'";
+    }
+    
+    return $file_name;
 }
 
 
