@@ -143,6 +143,8 @@ BEGIN {
 sub parse {
     my( $embl, $fh ) = @_;
     
+    my $entry = $embl->new();
+    
     my( $current, @group, @obj );
     while (<$fh>) {
     
@@ -151,7 +153,7 @@ sub parse {
         
         # This ignores lines which aren't registered in the handler
         ### FIXME - this will merge blocks separated by unregistered line types ###
-        if (my $class = $embl->{'handler'}{$prefix}) {
+        if (my $class = $entry->{'handler'}{$prefix}) {
             $current ||= $class; # Needed for first line
             if ($current eq $class) {
                 # Add to the group if belongs to same class
@@ -181,7 +183,6 @@ sub parse {
     
     # Return an new Entry object if we've got Line objects
     if (@obj) {
-        my $entry = $embl->new();
         $entry->lines( \@obj );
         return $entry;
     } else {

@@ -798,7 +798,7 @@ BEGIN {
 sub newLocation {
     my( $line ) = @_;
     
-    my $l = Hum::EMBL::Location->new;
+    my $l = 'Hum::EMBL::Location'->new;
     $line->location( $l );
     return $l;
 }
@@ -806,7 +806,7 @@ sub newLocation {
 sub newQualifier {
     my( $line ) = @_;
     
-    my $q = Hum::EMBL::Qualifier->new;
+    my $q = 'Hum::EMBL::Qualifier'->new;
     $line->addQualifier( $q );
     return $q;
 }
@@ -819,7 +819,7 @@ sub addQualifier {
 sub addQualifierStrings {
     my( $line, $name, $value ) = @_;
     
-    my $q = Hum::EMBL::Qualifier->new;
+    my $q = 'Hum::EMBL::Qualifier'->new;
     $q->name($name);
     $q->value($value) if defined $value;
     
@@ -851,13 +851,13 @@ sub parse {
         
     # Location is first string on @qual
     my $loc_string = shift @qual;
-    my $location = Hum::EMBL::Location->new;
+    my $location = 'Hum::EMBL::Location'->new;
     $location->parse(\$loc_string);
     
     # Make a new qualifier object from each string
     for (my $i = 0; $i < @qual; $i++) {
         my $s = $qual[$i];
-        my $n = Hum::EMBL::Qualifier->new;
+        my $n = 'Hum::EMBL::Qualifier'->new;
         $n->parse(\$s);
         $qual[$i] = $n;
     }
