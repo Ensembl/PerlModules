@@ -55,7 +55,7 @@ sub SequenceInfo {
 sub position {
     my( $self, $position ) = @_;
     
-    if ($position) {
+    if (defined $position) {
         $self->{'_position'} = $position;
     }
     return $self->{'_position'};
@@ -76,9 +76,39 @@ sub validate {
     my $pos = $self->position;
     my $seq = $self->SequenceInfo;
     my $length = $seq->sequence_length;
-    if ($pos < 0 or $pos > $length) {
-        my $seq_name = $seq->name;
-        confess "Position $pos is outside sequence '$seq_name' of length $length";
+    if ($pos < 1 or $pos > $length) {
+        my $acc = $seq->accession;
+        confess "Position $pos lies outside sequence '$acc' of length $length\n";
+    }
+}
+
+sub matches {
+    my( $self, $othr ) = @_;
+    
+    foreach my $num (qw{ position is_3prime }) {
+        return 0 unless $self->$num() == $othr->$num()
+    }
+    my $self_inf = $self->SequenceInfo;
+    my $othr_inf = $othr->SequenceInfo;
+    foreach my $num (qw{ sequence_version sequence_length }) {
+        return 0 unless $self_inf->$num() == $othr_inf->$num()
+    }
+    return 0 unless $self_inf->accession eq $othr_inf->accession;
+    
+    return 1;
+}
+
+sub distance_to_end {
+    my( $self ) = @_;
+    
+    my $pos = $self->position
+        or confess 'position not set';
+    my $is_3prime = $self->is_3prime;
+    my $length = $self->SequenceInfo->sequence_length;
+    if ($is_3prime) {
+        return $length - $pos
+    } else {
+        return $pos - 1;
     }
 }
 

@@ -2,14 +2,11 @@
 ### Hum::SequenceOverlap
 
 package Hum::SequenceOverlap;
-use Hum::SequenceOverlap::Position;
 
 use strict;
 use Carp;
 use Hum::Tracking qw{ track_db prepare_track_statement };
-
-### This is missing code to deal with statuses
-### Probably need at least to add "Detected" status
+use Hum::SequenceOverlap::Position;
 
 sub new {
     my( $pkg ) = @_;
@@ -34,11 +31,19 @@ sub fetch_by_SequenceInfo_pair {
           , o.pct_substitutions
           , o.pct_insertions
           , o.pct_deletions
+          , s.id_status
+          , s.remark
+          , s.program
+          , s.operator
         FROM sequence_overlap oa
           , overlap o
           , sequence_overlap ob
+          , overlap_status s
         WHERE oa.id_overlap = o.id_overlap
           AND o.id_overlap = ob.id_overlap
+          AND o.id_overlap = s.id_overlap
+          AND s.iscurrent = 1
+          AND s.id_status != 3
           AND oa.id_sequence = ?
           AND ob.id_sequence = ?
         });
@@ -47,7 +52,8 @@ sub fetch_by_SequenceInfo_pair {
     my( $a_pos, $a_is3prime,
         $b_pos, $b_is3prime,
         $overlap_id, $length, $source_id,
-        $sub, $ins, $del) = $sth->fetchrow;
+        $sub, $ins, $del,
+        $status, $remark, $program, $operator) = $sth->fetchrow;
     $sth->finish;
     
     return unless $overlap_id;
@@ -59,6 +65,10 @@ sub fetch_by_SequenceInfo_pair {
     $self->percent_substitution($sub);
     $self->percent_insertion($ins);
     $self->percent_deletion($del);
+    $self->status_id($status);
+    $self->remark($remark);
+    $self->program($program || '');
+    $self->operator($operator || '');
     
     my ($pa, $pb) = $self->make_new_Position_objects;
     $pa->position($a_pos);
@@ -127,7 +137,8 @@ sub b_Position {
 sub overlap_length {
     my( $self, $overlap_length ) = @_;
     
-    if ($overlap_length) {
+    # overlap length is zero for abutting sequences
+    if (defined $overlap_length) {
         $self->{'_overlap_length'} = $overlap_length;
     }
     return $self->{'_overlap_length'};
@@ -160,6 +171,28 @@ sub percent_deletion {
     return $self->{'_percent_deletion'};
 }
 
+sub matches {
+    my( $self, $othr ) = @_;
+    
+    confess "Missing SequenceOverlap argument" unless $othr;
+    my $self_a = $self->a_Position;
+    my $self_b = $self->b_Position;
+    my $othr_a = $othr->a_Position;
+    my $othr_b = $othr->b_Position;
+    
+    # Are the Position objects the other way around?
+    if    ($self_a->SequenceInfo->accession eq $othr_a->SequenceInfo->accession) {
+        return 0 unless $self_a->matches($othr_a);
+        return 0 unless $self_b->matches($othr_b);
+    }
+    else {
+        return 0 unless $self_a->matches($othr_b);
+        return 0 unless $self_b->matches($othr_a);
+    }
+    
+    return 1;
+}
+
 sub source_name {
     my( $self, $source_name ) = @_;
     
@@ -167,6 +200,83 @@ sub source_name {
         $self->{'_source_name'} = $source_name;
     }
     return $self->{'_source_name'};
+}
+
+sub status_id {
+    my( $self, $status_id ) = @_;
+    
+    if ($status_id) {
+        $self->{'_status_id'} = $status_id;
+    }
+    # Default status is 1 ("Identified")
+    return $self->{'_status_id'} || 1;
+}
+
+sub remark {
+    my( $self, $remark ) = @_;
+    
+    if (defined $remark) {
+        $self->{'_remark'} = $remark;
+    }
+    return $self->{'_remark'};
+}
+
+sub program {
+    my( $self, $program ) = @_;
+    
+    if ($program) {
+        $self->{'_program'} = $program;
+    }
+    return $self->{'_program'};
+}
+
+{
+    my ($prog) = $0 =~ m{([^/]+)$};
+
+    sub default_program {
+        return $prog;
+    }
+}
+
+sub operator {
+    my( $self, $operator ) = @_;
+    
+    if ($operator) {
+        $self->{'_operator'} = $operator;
+    }
+    return $self->{'_operator'};
+}
+
+{
+    my $who = (getpwuid($<))[0];
+
+    sub default_operator {
+        return $who;
+    }
+}
+
+{
+    my( %id_desc );
+
+    sub status_description {
+        my( $self ) = @_;
+        
+        my $id = $self->status_id or return;
+        $self->_fetch_status_descriptions unless %id_desc;
+        return $id_desc{$id} || confess "No description for id_status '$id'";
+    }
+    
+    sub _fetch_status_descriptions {
+        my $sth = prepare_track_statement(q{
+            SELECT id_status
+              , description
+            FROM overlapstatusdict
+            });
+        $sth->execute;
+        while (my ($id, $desc) = $sth->fetchrow) {
+            $id_desc{$id} = $desc;
+        }
+    }
 }
 
 {
@@ -261,19 +371,45 @@ sub store {
         $self->percent_deletion,
         );
     
-    # Give it a status of 1 (Identified)
+    $self->store_status;
+    
+    $self->a_Position->store($db_id);
+    $self->b_Position->store($db_id);
+}
+
+sub store_status {
+    my( $self ) = @_;
+    
+    my $db_id = $self->db_id
+        or confess "Can't store status without db_id";
+    
+    my $unset_status = track_db->prepare_cached(q{
+        UPDATE overlap_status
+        SET iscurrent = 0
+        WHERE id_overlap = ?
+        });
+    $unset_status->execute($db_id);
+    
     my $store_status = track_db->prepare_cached(q{
         INSERT INTO overlap_status(
             id_overlap
           , id_status
+          , remark
+          , program
+          , operator
           , statusdate
           , iscurrent )
-        VALUES(?,1,sysdate,1)
+        VALUES(?,?,?,?,?,sysdate,1)
         });
-    $store_status->execute($db_id);
-    
-    $self->a_Position->store($db_id);
-    $self->b_Position->store($db_id);
+
+    ### Should populate SESSIONID column?
+    $store_status->execute(
+        $db_id,
+        $self->status_id,
+        $self->remark,
+        $self->program  || $self->default_program,
+        $self->operator || $self->default_operator,
+        );
 }
 
 sub get_next_id {
