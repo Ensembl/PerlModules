@@ -6,57 +6,191 @@ package Hum::ProjectDump::EMBL::Finished;
 use strict;
 
 use Carp;
-use Hum::ProjectDump::EMBL;
+use Hum::EMBL::FeatureSet;
 use Hum::Tracking qw{
     library_and_vector
-    prepare_track_statement };
+    prepare_track_statement
+    project_from_clone
+    };
+use Hum::ProjectDump::EMBL;
+use Hum::EMBL::LocationUtils qw{
+    simple_location
+    locations_from_subsequence
+    location_from_homol_block
+    };
+use Hum::EmblUtils qw{
+    extCloneName
+    };
 
 use vars qw{ @ISA };
 @ISA = qw{ Hum::ProjectDump::EMBL };
+
+
+### These first subroutines override
+### subroutines in Hum::ProjectDump::EMBL
+
+=pod
+
+=head2 EMBL Database Divisions
+
+    Division                Code
+    -----------------       ----
+    ESTs                    EST
+    Bacteriophage           PHG
+    Fungi                   FUN
+    Genome survey           GSS
+    High Throughput cDNA    HTC
+    High Throughput Genome  HTG
+    Human                   HUM
+    Invertebrates           INV
+    Mus musculus            MUS
+    Organelles              ORG
+    Other Mammals           MAM
+    Other Vertebrates       VRT
+    Plants                  PLN
+    Prokaryotes             PRO
+    Rodents                 ROD
+    STSs                    STS
+    Synthetic               SYN
+    Unclassified            UNC
+    Viruses                 VRL
+
+=cut
+
+{
+    my %species_division = (
+        'Human'         => 'HUM',
+        'Gibbon'        => 'PRI',
+        'Mouse'         => 'MUS',
+        'Rat'           => 'ROD',
+        'Dog'           => 'MAM',
+
+        'Fugu'          => 'VRT',
+        'Zebrafish'     => 'VRT',
+        'B.floridae'    => 'VRT',
+
+        'Drosophila'    => 'INV',
+        
+        'Arabidopsis'   => 'PLN',
+        );
+
+    sub EMBL_division {
+        my( $pdmp ) = @_;
+
+        my $species = $pdmp->species;
+        return $species_division{$species} || 'VRT';
+    }
+}
 
 sub add_Description {
     my( $pdmp, $embl ) = @_;
     
     my $species   = $pdmp->species;
     my $ext_clone = $pdmp->external_clone_name;
-    my $desc = "$species DNA sequence from clone $ext_clone";
+    my $species_chr_desc = "$species DNA sequence from clone $ext_clone";
     if (my $chr = $pdmp->chromosome) {
         if ($species eq 'Zebrafish') {
-            $desc .= " in linkage group $chr";
+            $species_chr_desc .= " in linkage group $chr";
         } else {
-            $desc .= " on chromosome $chr";
+            $species_chr_desc .= " on chromosome $chr";
         }
     }
     if (my $map = $pdmp->fish_map) {
-        $desc .= $map;
+        $species_chr_desc .= $map;
     }
+    
+    my @desc = ($species_chr_desc);
+    if (my $ace = $pdmp->ace_Sequence_object) {
+        # Add any further DE lines
+        foreach my $d ($ace->at('DB_info.EMBL_dump_info.DE_line[1]')) {
+            push( @desc, "$d" );
+        }
+    }
+    
     my $de = $embl->newDE;
-    $de->list($desc);
+    $de->list(@desc);
     $embl->newXX;
 }
 
 sub add_Keywords {
     my( $pdmp, $embl ) = @_;
+
+    my @key_words = ('HTG');
+    if (my $ace = $pdmp->ace_Sequence_object) {
+        push(@key_words, map $_->name, $ace->at('DB_info.Keyword[1]'));
+    }
     
     my $kw = $embl->newKW;
-    $kw->list('HTG');
+    $kw->list(@key_words);
     $embl->newXX;
 }
 
 sub add_Headers {
     my( $pdmp, $embl ) = @_;
     
-    $pdmp->      add_standard_CC($embl);
-    $pdmp->   add_chromosomal_CC($embl);
-    $pdmp->       add_library_CC($embl);
+    $pdmp->add_standard_CC($embl);
+    unless ($pdmp->add_MHC_Consortium_CC($embl)) {
+        $pdmp->add_chromosomal_CC($embl);
+    }
+    $pdmp->add_extra_CC($embl);
+    $pdmp->add_library_CC($embl);
     $pdmp->add_external_draft_CC($embl);
-    
-    ### Can't add overlap info yet because this depends on acedb data
-    #$pdmp->add_overlap_CC($embl);
+    $pdmp->add_overlap_CC($embl);
 }
 
 sub add_FT_entries {
-    # Nothing to add (but maybe some genes and stuff in the future?)
+    my( $pdmp, $embl ) = @_;
+    
+    # Can't do this without an attached AcePerl sequence object
+    return unless $pdmp->ace_Sequence_object;
+    
+    $pdmp->add_genes_FT($embl);
+    $pdmp->add_GSS_STS_FT($embl);
+    $pdmp->add_AssemblyTags_FT($embl);
+    $pdmp->add_Repeats_FT($embl);
+}
+
+### Most of the following subs use an AcePerl object
+### to get add annotation to the EMBL entry.
+
+sub ace_Sequence_object {
+    my( $self, $ace ) = @_;
+    
+    if ($ace) {
+        $self->{'_ace_Sequence_object'} = $ace;
+    }
+    return $self->{'_ace_Sequence_object'};
+}
+
+sub remove_ace_Sequence_object_ref {
+    my( $self, $ace ) = @_;
+    
+    $self->{'_ace_Sequence_object'} = undef;
+}
+
+sub add_extra_CC {
+    my( $pdmp, $embl ) = @_;
+    
+    return unless my $ace = $pdmp->ace_Sequence_object;
+
+    # Add any CC lines
+    my( @comment );
+    foreach my $c ($ace->at('DB_info.EMBL_dump_info.CC_line[1]')) {
+        push( @comment, "$c" );
+    }
+    
+    return unless @comment;
+    
+    my $cc = $embl->newCC;
+    $cc->list( @comment );
+    $embl->newXX;
+}
+
+sub add_overlap_CC {
+    my( $pdmp, $embl ) = @_;
+    
+    return unless my $ace = $pdmp->ace_Sequence_object;
+    
 }
 
 {
@@ -92,6 +226,29 @@ http://www.sanger.ac.uk/Projects/C_elegans/wormpep');
             my $cc = $embl->newCC;
             $cc->list($t);
             $embl->newXX;
+        }
+    }
+}
+
+{
+    my %mhc_prefix = map {$_, 1} qw{ bPG bCX bAZ bQB bMC bSS bMA bAP };
+
+    sub add_MHC_Consortium_CC {
+        my( $pdmp, $embl ) = @_;
+        
+        my ($tlp) = $pdmp->sequence_name =~ /^(...)/;
+        if ($mhc_prefix{$tlp}) {
+            my $t = 
+"This sequence was generated from part of bacterial clone contigs
+constructed by the MHC Haplotype Consortium and collaborators.
+Further information can be found at
+http://www.sanger.ac.uk/HGP/Chr6/MHC";
+
+            my $cc = $embl->newCC;
+            $cc->list($t);
+            $embl->newXX;
+        } else {
+            return 0;
         }
     }
 }
@@ -253,58 +410,567 @@ For further details see http://www.chori.org/bacpac/home.htm"
     }
 }
 
-=pod
+sub add_genes_FT {
+    my( $pdmp, $embl ) = @_;
+    
+    my $ace = $pdmp->ace_Sequence_object;
+    
+    # Load up the genes hash
+    my( %genes );
+    
+    # Some subsequences have an "SC:" prefix (Zebrafish)
+    my $prefix = '';
+    
+    foreach my $g ($ace->at('Structure.Subsequence[1]')) {
+        # Allow for sloppy capitalization of sequence name
+        my $nam = $ace->name;
+        $nam =~ s{^([A-Za-z])}{ my $f = $1; '['. lc($f) . uc($f) .']' }e;
+        if ($g =~ /^(SC[:\.])?$nam\.(\d+)(?:\.(\d+))?(\.mRNA)?/) {
+	    $prefix = $1 if $1;
+            my $num = $2;       # The gene number
+            my $iso = $3 || 0;  # The isoform number -- zero if no isoforms
+            my $key = $4 ? 'mRNA' : 'CDS';
+            $genes{$num}->[$iso]{$key} = $g;
+        }
+    }
+    
+    
+    # Rules for remarks:
+    # The remark for the /product qualifier comes from CDS
+    # object, or the corresponding CDS isoform, if there
+    # are isoforms.
+    # If there are no CDS objects, then the remark for the
+    # /product qualfier comes from each mRNA itself.
+    my $set = 'Hum::EMBL::FeatureSet'->new;
+    foreach my $n (sort {$a <=> $b} keys %genes) {
+        my( $locusname );
+        my $trans = $genes{$n};
+        my $pseudo = 0;
+        for (my $i = 0; $i < @$trans; $i++) {
+            my $iso = $trans->[$i] or next;
+            
+            # Make the name of the product
+            my $product_name = "$prefix$ace.$n";
+            $product_name .= ".$i" if $i;
+            
+            my( $cds_loc, $mrna_loc );
+            foreach my $sub_tag (values %$iso) {
+                # Get Hum::EMBL::Location objects for CDS and mRNA
+                my @locs = locations_from_subsequence($sub_tag);
+                if ($locs[0]) {
+                    if ($mrna_loc) {
+                        die "Processing '$sub_tag' : already have a mRNA"
+                    } else {                        
+                        $mrna_loc = $locs[0];
+                    }
+                }
+                if ($locs[1]) {
+                    if ($cds_loc) {
+                        die "Processing '$sub_tag' : already have a CDS"
+                    } else {                        
+                        $cds_loc = $locs[1];
+                    }
+                }
+            }
+            
+            foreach my $v ('CDS', 'mRNA') {
+                my $key = $v;
+                my $sub_tag = $iso->{$key};
+                
+                # If we don't have a subsequence tag for mRNA, but
+                # it is a new-style combined object (because we
+                # have an mRNA Location object), then we use the CDS
+                # location tag.
+                my $is_combined = 0;
+                if (! $sub_tag and $key eq 'mRNA' and $mrna_loc) {
+                    $sub_tag = $iso->{'CDS'};
+                    $is_combined = 1;
+                }
 
-=head2 EMBL Database Divisions
+                my( $loc );
+                if ($key eq 'CDS') {
+                    $loc =  $cds_loc or next;
+                } else {
+                    $loc = $mrna_loc or next;
+                }
+                
+                # Shouldn't get here without a Subsequence
+                die "No $key Subsequence for product '$product_name'"
+                    unless $sub_tag;
 
-    Division                Code
-    -----------------       ----
-    ESTs                    EST
-    Bacteriophage           PHG
-    Fungi                   FUN
-    Genome survey           GSS
-    High Throughput cDNA    HTC
-    High Throughput Genome  HTG
-    Human                   HUM
-    Invertebrates           INV
-    Mus musculus            MUS
-    Organelles              ORG
-    Other Mammals           MAM
-    Other Vertebrates       VRT
-    Plants                  PLN
-    Prokaryotes             PRO
-    Rodents                 ROD
-    STSs                    STS
-    Synthetic               SYN
-    Unclassified            UNC
-    Viruses                 VRL
+                # Fetch the object from the database
+                my $g = $sub_tag->fetch;
+                my $method = $g->at('Method[1]');
+                $method = $method ? $method->name : '';
 
-=cut
+                if ($method eq 'Transposon') {
+                    $key = 'transposon';
+                }
 
-{
-    my %species_division = (
-        'Human'         => 'HUM',
-        'Gibbon'        => 'PRI',
-        'Mouse'         => 'MUS',
-        'Rat'           => 'ROD',
-        'Dog'           => 'MAM',
+                # Create a feature
+                my $ft = $set->newFeature;
+                $ft->key($key);
+                $ft->location($loc);
 
-        'Fugu'          => 'VRT',
-        'Zebrafish'     => 'VRT',
-        'B.floridae'    => 'VRT',
+                # Get the locus name
+                my( $locus );
+                eval{ $locus = $g->at('Visible.Locus[1]')->name };
+                die "No locus defined in '$g'" unless $locus;
+                if (defined $locusname) {
+                    die "Locus '$locus' from '$g' doesn't match '$locusname' from same gene"
+                        unless $locus eq $locusname;
+                } else {
+                    $locusname = $locus;
+                }
+                
+                unless ($method eq 'Transposon') {
+                   $ft->addQualifierStrings('gene', $locusname);
+                }
 
-        'Drosophila'    => 'INV',
+                # Add /product qualifier, and any further remarks
+                {
+                    my( $product, @remarks );
+                    my $r;  # First remark line to take
+                    if ($product = $trans->[0]{'product'} || $iso->{'product'}) {
+                        $r = 0; # /product is from another object, so
+                                # we take all $iso's remarks
+                        
+                        # ... unless it is a combined mRNA/CDS object
+                        if ($is_combined) {
+                            $r = 1;
+                        }
+                    } else {
+                        $product = $pdmp->make_product_qualifier($g, $product_name, \$pseudo);
+                        $iso->{'product'} = $product;
+                        $r = 1; # /product is from $iso, so we skip the
+                                # first remark field
+                    }
+                    $ft->addQualifierStrings('pseudo') if $pseudo;
+                    $ft->addQualifier($product);
+
+                    # Get just the remarks we need
+                    @remarks = $g->at('Visible.Remark[1]');
+                    foreach my $remark (@remarks[$r..$#remarks]) {
+                        $ft->addQualifierStrings('note', "$remark");
+                    }
+                }
+
+                # Add supporting evidence - database matches
+                $pdmp->addSupportingEvidence( $g, $ft, $cds_loc && $mrna_loc );
+
+                # Is it supported by experimental evidence?
+                if ($method =~ /^GD_/) {
+                    # Gene_ID genes have method GD_mRNA or GD_CDS
+                    $ft->addQualifierStrings('evidence','EXPERIMENTAL');
+                } else {
+                    $ft->addQualifierStrings('evidence','NOT_EXPERIMENTAL');
+                }
+            }
+        }
+    }
+    
+    # Get polyA sites
+    $pdmp->addPolyA_toSet($set);
+    
+    # Get CpG islands
+    $pdmp->addCpG_toSet($set);
+    
+    # Add the genes and other features into the entry
+    $set->sortByPosition;
+    $set->mergeFeatures(1); # Flag discards qualifiers on merge
+    $set->addToEntry($embl);
+}
+
+
+sub make_product_qualifier {
+    my( $pdmp, $g, $name, $pseudo ) = @_;
+    
+    if (my $remark = $g->at('Visible.Remark[1]')) {
+        my( $prod_qual );
+        if ($g->at('Properties.Pseudogene')) {
+            # EMBL don't allow the /product qualifier for pseudogenes
+            $$pseudo = 1;   # Set pseudo flag in caller
+            $prod_qual = 'note';
+        } else {
+            $prod_qual = 'product';
+        }
+	my $description = "$name ($remark)";
+        my $product = 'Hum::EMBL::Qualifier'->new;
+        $product->name($prod_qual);
+        $product->value($description);
         
-        'Arabidopsis'   => 'PLN',
-        );
+        return $product;
+    } else {
+        die "No description in Visible.Remark for '$name'\n";
+    }
+    
+}
 
-    sub EMBL_division {
-        my( $pdmp ) = @_;
+BEGIN {
 
-        my $species = $pdmp->species;
-        return $species_division{$species} || 'VRT';
+    # For adding supporting evidence to a feature
+    my @Seq_Matches = (
+                       ['cDNA_match',    'match: cDNAs:'      , 'mRNA' ],
+                       ['EST_match',     'match: ESTs:'       , 'mRNA' ],
+                       ['Protein_match', 'match: proteins:'   , 'CDS'  ],
+                       ['Genomic_match', 'match: genomic DNA:', 'mRNA' ],
+                       );
+    
+    sub addSupportingEvidence {
+        my( $pdmp, $seq, $ft, $filter_flag ) = @_;
+
+        # $key is CDS or mRNA
+        my $key = $ft->key;
+
+        foreach my $m (@Seq_Matches) {
+            my ($m_type, $m_text, $m_key) = @$m;
+        
+            # We confine certain types of matches to CDS
+            # or mRNA if we are making both
+            if ($filter_flag) {
+                next unless $m_key eq $key,
+            }
+        
+            if (my @matches = $seq->at("Annotation.Sequence_matches.$m_type".'[1]')) {
+                # May not have any valid matches left after fixing names!
+                if (@matches = $pdmp->fixNames(@matches)) {
+                    $ft->addQualifierStrings('note', "$m_text @matches");
+                }
+            }
+        }
     }
 }
+
+sub addPolyA_toSet {
+    my( $pdmp, $set ) = @_;
+    
+    my $ace = $pdmp->ace_Sequence_object;
+    
+    foreach my $sig ($ace->at('Feature.polyA_signal[1]')) {
+        my($x, $y) =  map $_->name, $sig->row;
+        confess "Bad polyA_signal coordinates ('$x','$y')"
+            unless $x and $y;
+        my $ft = $set->newFeature;
+        $ft->key('polyA_signal');
+        $ft->location(simple_location($x, $y));
+    }
+    
+    # The two numbers for the polyA_site are the last
+    # two bases of the mRNA in the genomic sequence
+    # (Laurens' counterintuitive idea.)
+    foreach my $site ($ace->at('Feature.polyA_site[1]')) {
+        my($x, $y) = map $_->name, $site->row;
+        confess "Bad polyA_site coordinates ('$x','$y')"
+            unless $x and $y;
+        my $ft = $set->newFeature;
+        $ft->key('polyA_site');
+        my $loc = Hum::EMBL::Location->new;
+        if ($x < $y) {
+            $loc->exons($y);
+            $loc->strand('W');
+        }
+        elsif ($x > $y) {
+            $loc->exons($y);
+            $loc->strand('C');
+        }
+        else {
+            confess "Illegal polyA_site position ($x,$y)";
+        }
+        $ft->location($loc);
+    }
+
+}
+
+sub addCpG_toSet {
+    my( $pdmp, $set ) = @_;
+    
+    my $ace = $pdmp->ace_Sequence_object;
+    
+    foreach my $cpg ($ace->at('Feature.Predicted_CpG_island[1]')) {
+        my( $x, $y ) = map $_->name, $cpg->row();
+        my $ft = $set->newFeature;
+        $ft->key('misc_feature');
+        $ft->location( simple_location($x, $y) );
+        $ft->addQualifierStrings('note', 'CpG island');
+        not_experimental( $ft );
+    }
+}
+
+
+sub add_GSS_STS_FT {
+    my( $pdmp, $embl ) = @_;
+    
+    my $ace = $pdmp->ace_Sequence_object;
+    
+    my $set = Hum::EMBL::FeatureSet->new;
+    
+    # Add GSS matches
+    $pdmp->addHomolFeatures_toSet($set, 70, 'GSS', 
+        ['GSS_homol'],
+        ['GSS_blastn', 'GSS_eg']);
+    
+    # Add STS matches
+    $pdmp->addHomolFeatures_toSet($set, 70, 'STS',
+        ['STS_homol', 'Sanger_STS_homol'],
+        ['STS_blastn', 'STS_eg', 'sanger_sts_eg']);
+    
+    # Add the features into the entry
+    $set->sortByPosition;
+    $set->mergeFeatures;
+    $set->addToEntry($embl);
+}
+
+sub addHomolFeatures_toSet {
+    my( $pdmp, $set, $score, $type, $matches, $homol_tags ) = @_;
+    
+    my $ace = $pdmp->ace_Sequence_object;
+    
+    # %locstore stores location objects, keyed on strings
+    # which are the same for identical locations.  Names
+    # of matches are stored under this key, so that matches
+    # in the same place are listed under the same location
+    # in the EMBL file.
+    my( %locstore );
+    
+    foreach my $match_type (@$matches) {
+        foreach my $homol_tag (@$homol_tags) {
+            foreach my $homol ($ace->at("Homol.\Q$match_type\E[1]")) {
+
+                # Skip names containing question marks!
+                warn "Skipping bad name '$homol'\n" and next if $homol =~ /\?/;
+
+                my( @block );
+                foreach my $coords ($homol->at("\Q$homol_tag\E[1]")) {
+                    my( @row ) = map $_->name, $coords->row;
+                    die "Incomplete data row Homol.$match_type.$homol.$homol_tag '@row'"
+                        unless @row == 5;
+
+                    # Store data in @block array
+                    push( @block, [@row] );
+                }
+
+                if (my @loc_objects = location_from_homol_block(\@block, $score, 300)) {
+
+                    # Don't add data for this match unless it has a sensible name
+                    my ($homol_name) = $pdmp->fixNames( $homol->name );
+                    next unless $homol_name;
+
+                    foreach my $loc (@loc_objects) {
+                        my $loc_string = $loc->hash_key;
+                        $locstore{$loc_string}->{'loc'} = $loc;
+                        $locstore{$loc_string}->{'names'}{$homol_name}++
+                    }
+                }
+            }
+        }
+    }
+    
+    foreach my $s (keys %locstore) {
+        my $loc = $locstore{$s}->{'loc'};
+        my @names = sort keys %{$locstore{$s}->{'names'}};
+        
+        # Warn about db data duplication
+        foreach my $n (@names) {
+            my $i = $locstore{$s}->{'names'}{$n};
+            warn "Match to sequence '$n' found in $i databases\n" if $i > 1;
+        }
+        
+        # Make a new feature object
+        my $feat = $set->newFeature;
+        $feat->key('misc_feature');
+        $feat->location( $loc );
+        $feat->addQualifierStrings('note', "match: $type: @names");
+    }
+}
+
+
+BEGIN {
+    
+    # Mapping of assembly tags to variation types for notes in features
+    my %TN = ('Variation - Substitution' => 'substitution',
+	      'Variation - Insertion' => 'insertion',
+	      'Variation - Deletion' => 'deletion');
+
+    sub add_AssemblyTags_FT {
+        my( $pdmp, $embl ) = @_;
+
+        my $set = Hum::EMBL::FeatureSet->new;
+
+        # Add data from the unsure tag
+        foreach my $row ($pdmp->get_all_assembly_tags('Assembly_tags.unsure')) {
+            my ($x, $y, @notes) = @$row;
+	    # Make a new feature object
+	    my $feat = $set->newFeature;
+	    $feat->key('unsure');
+	    $feat->location( simple_location($x, $y) );
+            foreach my $n (@notes) {
+	        $feat->addQualifierStrings('note', $n);
+            }
+        }
+
+        # Add data from the - tag (This now goes under "misc_feature").
+        foreach my $row ($pdmp->get_all_assembly_tags('Assembly_tags.-')) {
+            my ($x, $y, @notes) = @$row;
+	    # Make a new feature object
+	    my $feat = $set->newFeature;
+	    $feat->key('misc_feature');
+	    $feat->location( simple_location($x, $y) );
+            foreach my $n (@notes) {
+	        $feat->addQualifierStrings('note', $n);
+            }
+        }
+
+        # Add variation data
+        # Case won't matter for each of the types
+        foreach my $type ( keys %TN ) {
+            my $var_type = $TN{$type};
+            my $tag_string = "Assembly_tags.$type";
+
+    	    # Get data for this variation type
+          ROW: foreach my $row ($pdmp->get_all_assembly_tags($tag_string)) {
+                my ($x, $y, $note) = @$row;
+                
+		my ($feat,  # The new feature
+		    @quals  # Qualifiers to add to the feature
+		    );
+
+		# Get the text for the qualifiers
+		my ($other_seq)     = $note =~ /Sequence in other clone -\s*(\w+)/i;
+		my ($other_clone)   = $note =~ /Other clone -\s*(\w+)/i;
+		my ($this_seq)      = $note =~ /Sequence in this clone -\s*(\w+)/i;
+
+		# Check we got something from each pattern match:
+		foreach my $txt ($other_seq, $other_clone, $this_seq) {
+		    unless ($txt) {
+			warn "Unparseable line: $tag_string: [",
+			    (join ', ', map "'$_'", @$row), "]\n";
+			next ROW;
+		    }
+		}
+		$other_seq = lc $other_seq;
+		$this_seq = lc $this_seq;
+
+                # Give the correct international clone name for the other sequence
+                my $ext_name = extCloneName( project_from_clone($other_clone) )
+                    or warn "Assembly_tags: Can't get external name for '$other_clone'"
+                    and next ROW;
+		$other_clone = "clone $ext_name";
+		$this_seq .= ' in this entry';
+
+		# Make a new feature object
+		$feat = $set->newFeature;
+		$feat->key('variation');
+		$feat->location( simple_location($x,$y) );
+                $feat->addQualifierStrings('replace', $other_seq   );
+                $feat->addQualifierStrings('note',    $other_clone );
+                $feat->addQualifierStrings('note',    $this_seq    );
+                $feat->addQualifierStrings('note',    $var_type    );
+	    }
+        }
+        # Add the features into the entry
+        $set->sortByPosition;
+        $set->mergeFeatures;
+        $set->addToEntry($embl);
+    }
+}
+
+
+sub get_all_assembly_tags {
+    my( $pdmp, $tag_string ) = @_;
+    
+    my $ace = $pdmp->ace_Sequence_object;
+    
+    # Yes, it's a loop 3 levels deep to get all the data!
+    my( @table );
+    foreach my $x ($ace->at($tag_string .'[1]')) {
+        foreach my $y ($x->col(1)) {
+            my $ass_tag = [$x->name, $y->name];
+            foreach my $note ($y->col(1)) {
+                my $note_text = $note->name;
+                push(@$ass_tag, $note_text) if $note_text;
+            }
+            push(@table, $ass_tag);
+        }
+    }
+    return @table;
+}
+
+sub add_Repeats_FT {
+    my( $pdmp, $embl ) = @_;
+    
+    my $ace = $pdmp->ace_Sequence_object;
+    
+    my $tan = Hum::EMBL::FeatureSet->new;
+    foreach my $tag (qw{ trf tandem }) {
+        my $have_tan = 0;
+        foreach my $t ($ace->at("Feature.$tag". '[1]')) {
+            my($x, $y, $pc, $desc) = map $_->name, $t->row;
+            next unless $desc;
+            $pc = sprintf("%2d", $pc);
+
+            $have_tan = 1;
+
+            my $ft = $tan->newFeature;
+            $ft->key('repeat_region');
+            $ft->location(simple_location($x, $y));
+            $ft->addQualifierStrings('note', "$desc $pc\% conserved");
+        }
+        last if $have_tan;  # Don't add features from both trf and tandem
+    }
+    $tan->sortByPosition;
+    $tan->mergeFeatures;
+    $tan->addToEntry($embl);
+    
+    my $complex = Hum::EMBL::FeatureSet->new;
+    foreach my $repeat ($ace->at('Homol.Motif_homol[1]')) {
+        foreach my $score ($repeat->col(2)) {
+            foreach my $row ($score->col(1)) {
+                my( $x, $y, $b, $e ) = map $_->name, $row->row;
+                my $ft = $complex->newFeature;
+                $ft->key('repeat_region');
+                $ft->location(simple_location($x, $y));
+                $ft->addQualifierStrings('note', "$repeat repeat: matches $b..$e of consensus");
+            }
+        }
+    }
+    $complex->sortByPosition;
+    $complex->mergeFeatures;
+    $complex->addToEntry($embl);
+}
+
+
+BEGIN {
+
+    # List of known prefixes
+    my %DBprefixes = map {$_, 1} qw( Em Sw Tr Wp );
+    
+    sub fixNames {
+        my( $pdmp, @matches ) = @_;
+        
+        for (my $i = 0; $i < @matches;) {
+            my $m = $matches[$i];
+            my ($prefix, $acc) = $m =~ /^(..):(.+)/;
+            eval{
+                die "No prefix\n" unless $prefix and $acc;
+                if ($acc =~ s/(\.\d+)//) {
+                    warn "Removed suffix '$1' from '$acc$1'\n";
+                }
+                $prefix = ucfirst lc $prefix;
+                die "Unknown DB prefix '$prefix'\n" unless $DBprefixes{ $prefix };
+            };
+            
+            if ($@) {
+                warn "Removing '$m' from list: $@";
+                splice(@matches, $i, 1);
+            } else {
+                $matches[$i] = "$prefix:$acc";
+                $i++;
+            }
+        }
+        return @matches;
+    }
+}
+
 
 1;
 

@@ -35,7 +35,7 @@ sub sortByPosition {
 
 # EMBL won't allow two features with the same key and location
 sub mergeFeatures {
-    my( $set ) = @_;
+    my( $set, $discard_flag ) = @_;
     
     my( %tree );
     for (my $i = 0; $i < @$set;) {
@@ -45,9 +45,11 @@ sub mergeFeatures {
         
         # Is there already a feature with this key and location?
         if (my $pt = $tree{$k}{$l}) {
-            # Add all the qualifiers from this feature to the new one
-            foreach my $qual ($ft->qualifiers) {
-                $pt->addQualifier($qual);
+            unless ($discard_flag) {
+                # Add all the qualifiers from this feature to the new one
+                foreach my $qual ($ft->qualifiers) {
+                    $pt->addQualifier($qual);
+                }
             }
             # Remove the feature from the set
             splice(@$set, $i, 1);

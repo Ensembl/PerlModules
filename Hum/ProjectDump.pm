@@ -78,6 +78,32 @@ sub create_new_dump_object {
     }
 }
 
+sub new_from_sequence_name {
+    my( $pkg, $name ) = @_;
+    
+    my $sth = prepare_statement(qq{
+        SELECT d.sanger_id
+        FROM project_dump d
+          , sequence s
+        WHERE d.seq_id = s.seq_id
+          AND d.is_current = 'Y'
+          AND s.sequence_name = '$name'
+        });
+    $sth->execute;
+    
+    my( @sid );
+    while (my ($s) = $sth->fetchrow) {
+        push(@sid, $s);
+    }
+    
+    if (@sid == 1) {
+        return $pkg->new_from_sanger_id($sid[0]);
+    } else {
+        confess "Looking for the sanger_id corresponding to sequence '$name' I got (",
+            join(', ', map "'$_'", @sid), ')';
+    }
+}
+
 sub new_from_sanger_id {
     my( $pkg, $sanger_id ) = @_;
     
