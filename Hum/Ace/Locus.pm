@@ -113,6 +113,26 @@ sub list_positive_SubSeq_names {
     return @{$self->{'_positive_SubSeq_name_list'}};
 }
 
+sub get_all_SubSeqs {
+    my( $self ) = @_;
+    
+    my %locus_subseq = map {$_, 1} $self->list_positive_SubSeq_names;
+    my( @subs );
+    foreach my $clone ($self->get_all_CloneSeqs) {
+        foreach my $sub ($self->get_all_SubSeqs) {
+            my $name = $sub->name;
+            if ($locus_subseq{$name}) {
+                push(@subs, $sub);
+                $locus_subseq{$name} = 0;
+            }
+        }
+    }
+    
+    ### Could check that we found all the SubSeqs in %locus_subseq
+    
+    return @subs;
+}
+
 sub add_CloneSeq {
     my( $self, $clone ) = @_;
     
@@ -135,7 +155,7 @@ sub set_names_lister {
             unless ref($sub) eq 'CODE';
         $self->{'_set_names_lister'} = $sub;
     }
-    return $self->{'_set_names_lister'};
+    return $self->{'_set_names_lister'} || \&set_names_from_continue_tags;
 }
 
 sub count_CloneSeqs {
@@ -255,6 +275,9 @@ sub make_transcript_sets {
             if ($cds) {
                 my $cds_name  = $cds->name;
                 my $mrna_name = $mrna->name;
+                
+                ### contains_all_exons can be improved so that it
+                ### checks for mismatches in internal exons.
                 unless ($mrna->contains_all_exons($cds)) {
                     confess "'$mrna_name' doesn't contain all the exons in '$cds_name'";
                 } else {
@@ -270,8 +293,9 @@ sub make_transcript_sets {
             }
         }
         
-        # Eliminate mRNA == CDS pairs where we have
-        # the CDS paired with one of the mRNAs
+        # Eliminate mRNA + CDS pairs where the mRNA
+        # object is actually the CDS object, but the
+        # CDS is infact paired with another mRNA
         {
             # Make a hash of all the CDS names which are
             # in pairs where mRNA != CDS
@@ -312,87 +336,135 @@ sub make_transcript_sets {
         }
     }
     print STDERR "isoforms=$isoform_count\n" if $isoform_count > 1;
+
+    # Show the sets we have made
+    foreach my $c (@clone_sets) {
+        print STDERR "\nclone:\n";
+        foreach my $pair (@$c) {
+            print STDERR "  ['", $pair->[1]->name, "'";
+            print STDERR ", '", $pair->[2]->name, "'" if $pair->[2];
+            print STDERR "]\n";
+
+        }
+    }
     
     my( @sets );
     if ($isoform_count > 1 and @clone_sets > 1) {
         print STDERR "Processing multi-clone multi-isoform locus\n";
-        
-        # Show the sets
-        foreach my $c (@clone_sets) {
-            print STDERR "\nclone:\n";
-            foreach my $pair (@$c) {
-                print STDERR "  ['", $pair->[1]->name, "'";
-                print STDERR ", '", $pair->[2]->name, "'" if $pair->[2];
-                print STDERR "]\n";
-                
-            }
-        }
     
-        # If we have more than isoform spanning more than
-        # one clone, then we need to rely on a hand-made
-        # list of names which make the isoform.
-        my $set_names_lister = $self->set_names_lister
-            or confess "No set_names_lister subroutine";
-        foreach my $names (&$set_names_lister($self->name)) {
-            
-            my( @s );
-            for (my $i = 0; $i < @clone_sets; $i++) {
-                foreach my $pair (@{$clone_sets[$i]}) {
-                    my( $name, $mrna, $cds ) = @$pair;
-                    
-                    # Do we want this mRNA?
-                    if ($names->{$mrna->name}) {
-                        my $new_pair = [$name];
-                        $s[$i] = $new_pair;
-                        $new_pair->[1] = $mrna;
-                        
-                        # Do we want the CDS as well?
-                        if ($cds and $names->{$cds->name}) {
-                            $new_pair->[2] = $cds;
-                            last;   # We've found both
-                        }
-                    }
-                }
-                if (my $new_pair = $s[$i]) {
-                    my( $name, $mrna, $cds ) = @$new_pair;
-                    $names->{$mrna->name} = 0;
-                    $names->{$cds->name}  = 0 if $cds;
-                }
-            }
-            if (my @missing = grep $names->{$_}, sort keys %$names) {
-                warn "Failed to find (",
-                    join(', ', map "'$_'", @missing),
-                    ") in clone_sets";
-                ## If we didn't find a name, it may be because it is the
-                ## name of a CDS which we already have, which is paired
-                ## up with an mRNA of a different name.
-                #my( %found_cds );
-                #foreach my $pair (grep defined $_, @s) {
-                #    my $mRNA = $pair->[2] or next;
-                #    my $cds_name = $mRNA->name;
-                #    $found_cds{$cds_name} = 1;
-                #}
-                #for (my $i = 0; $i < @names;) {
-                #    my $n = $names[$i];
-                #    if ($found_cds{$n}) {
-                #        splice(@names, $i, 1);
-                #    } else {
-                #        $i++;
-                #    }
-                #}
-                #warn "Failed to find (",
-                #    join(', ', map "'$_'", @names),
-                #    ") in clone_sets" if @names;
-            } else {
-                push(@sets, [@s]);
-            }
-        }
+        @sets = $self->make_transcript_sets_for_complex_locus(@clone_sets);
     } else {
         for (my $i = 0; $i < $isoform_count; $i++) {
             my @s = map {defined($_) ? $_->[$i] : undef} @clone_sets;
             push(@sets, [@s]);
         }
     }
+    return @sets;
+}
+
+sub make_name_hashes_from_continue_tags {
+    my( $self ) = @_;
+    
+    my %name_SubSeq = map {$_->name, $_} $self->get_all_SubSeqs;
+    
+    my( @name_hashes );
+    foreach my $name (keys %name_SubSeq) {
+        my $sub = $name_SubSeq{$name} or next;
+        $name_SubSeq{$name} = 0;
+        my $nh = {};
+        push(@name_hashes, $nh);
+    
+        my $up = $sub;
+        while (my $up_name = $up->upstream_subseq_name) {
+            $up = $name_SubSeq{$up_name}
+                or confess "Can't see '$up_name'";
+            $name_SubSeq{$up_name} = 0;
+            $nh->{$up_name} = 1;
+        }
+
+        my $down = $sub;
+        while (my $down_name = $down->downstream_subseq_name) {
+            $down = $name_SubSeq{$down_name}
+                or confess "Can't see '$down_name'";
+            $name_SubSeq{$down_name} = 0;
+            $nh->{$down_name} = 1;
+        }
+    }
+    
+    return @name_hashes;
+}
+
+sub make_transcript_sets_for_complex_locus {
+    my( $self, @clone_sets ) = @_;
+
+    # If we have more than isoform spanning more than
+    # one clone, then we need to rely on a hand-made
+    # list of names which make the isoform.
+
+    my( @name_hashes );
+    if (my $lister = $self->set_names_lister) {
+        @name_hashes = &$lister($self);
+    }
+    unless (@name_hashes) {
+        @name_hashes = $self->make_name_hashes_from_continue_tags;
+    }
+    confess "Can't get name sets" unless @name_hashes;
+
+    my( @sets );
+    foreach my $names (@name_hashes) {
+        my( @s );
+        for (my $i = 0; $i < @clone_sets; $i++) {
+            foreach my $pair (@{$clone_sets[$i]}) {
+                my( $name, $mrna, $cds ) = @$pair;
+
+                # Do we want this mRNA?
+                if ($names->{$mrna->name}) {
+                    my $new_pair = [$name];
+                    $s[$i] = $new_pair;
+                    $new_pair->[1] = $mrna;
+
+                    # Do we want the CDS as well?
+                    if ($cds and $names->{$cds->name}) {
+                        $new_pair->[2] = $cds;
+                        last;   # We've found both
+                    }
+                }
+            }
+            if (my $new_pair = $s[$i]) {
+                my( $name, $mrna, $cds ) = @$new_pair;
+                $names->{$mrna->name} = 0;
+                $names->{ $cds->name} = 0 if $cds;
+            }
+        }
+        if (my @missing = grep $names->{$_}, sort keys %$names) {
+            warn "Failed to find (",
+                join(', ', map "'$_'", @missing),
+                ") in clone_sets";
+            ## If we didn't find a name, it may be because it is the
+            ## name of a CDS which we already have, which is paired
+            ## up with an mRNA of a different name.
+            #my( %found_cds );
+            #foreach my $pair (grep defined $_, @s) {
+            #    my $mRNA = $pair->[2] or next;
+            #    my $cds_name = $mRNA->name;
+            #    $found_cds{$cds_name} = 1;
+            #}
+            #for (my $i = 0; $i < @names;) {
+            #    my $n = $names[$i];
+            #    if ($found_cds{$n}) {
+            #        splice(@names, $i, 1);
+            #    } else {
+            #        $i++;
+            #    }
+            #}
+            #warn "Failed to find (",
+            #    join(', ', map "'$_'", @names),
+            #    ") in clone_sets" if @names;
+        } else {
+            push(@sets, [@s]);
+        }
+    }
+    
     return @sets;
 }
 
@@ -775,9 +847,6 @@ sub get_unique_EnsEMBL_Exon {
     }
     return $ens_exon;
 }
-
-
-
 
 1;
 
