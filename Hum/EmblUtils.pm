@@ -9,7 +9,7 @@ use vars qw( @EXPORT_OK @ISA );
 @ISA       = qw( Exporter );
 @EXPORT_OK = qw( extCloneName projectAndSuffix
                  add_source_FT add_Organism
-                 library_and_vector species_binomial
+                 species_binomial
                  );
 
 sub add_source_FT {
@@ -31,24 +31,6 @@ sub add_source_FT {
     
     return $ft;
 }
-
-sub library_and_vector {
-    my( $project ) = @_;
-    
-    my $ans = ref_from_query(qq(
-                                select l.libraryname, l.vectorname
-                                from clone_project cp, clone c, library l
-                                where
-                                    cp.clonename = c.clonename and
-                                    c.libraryname = l.libraryname and
-                                    cp.projectname = '$project' ));
-    if (@$ans) {
-        return(@{$ans->[0]});
-    } else {
-        return;
-    }
-}
-
 
 =pod
 

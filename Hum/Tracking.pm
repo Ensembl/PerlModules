@@ -31,6 +31,7 @@ use vars qw( @ISA @EXPORT_OK );
 @ISA = qw( Exporter );
 
 @EXPORT_OK = qw(
+                library_and_vector
                 ref_from_query
                 expand_project_name
                 clone_from_project
@@ -44,6 +45,26 @@ use vars qw( @ISA @EXPORT_OK );
                 project_finisher
                 project_team_leader
                 );
+
+
+sub library_and_vector {
+    my( $project ) = @_;
+    
+    my $ans = ref_from_query(qq(
+                                select l.libraryname, l.vectorname
+                                from clone_project cp, clone c, library l
+                                where
+                                    cp.clonename = c.clonename and
+                                    c.libraryname = l.libraryname and
+                                    cp.projectname = '$project' ));
+    if (@$ans) {
+        return(@{$ans->[0]});
+    } else {
+        return;
+    }
+}
+
+
 
 =pod
 
@@ -321,16 +342,14 @@ sub entry_name {
     my $ans = ref_from_query(qq( select name
                                  from embl_submission
                                  where accession = '$acc' ));
-    my @nam = map $_->[0], @$ans;
-    
     my( $entry_name );
-    if (@nam > 1) {
+    if (@$ans > 1) {
         die "Multiple names for accession '$acc' : ",
-            join(', ', map "'$_'", @nam);
-    } elsif (@nam == 0) {
+            join(', ', map "'$_->[0]'", @$ans);
+    } elsif (@$ans == 0) {
         $entry_name = 'ENTRYNAME';
     } else {                 
-        $entry_name = $nam[0];
+        $entry_name = $ans->[0][0];
     }                
     
     return $entry_name;
@@ -339,16 +358,19 @@ sub entry_name {
 
 =pod
 
-=head2 unfinished_accession( PROJECT )
+=head2 unfinished_accession( PROJECT, DUMMY_FLAG )
 
 Returns the accession number for the unfinished
-sequence corresponding to project B<PROJECT>. 
-Multiple matches, or no matches, are fatal.
+sequence corresponding to project B<PROJECT>.  If
+B<DUMMY_FLAG> is TRUE, then the appropriate dummy
+accession number for EMBL is returned.  No
+matches, or multiple matches, are otherwise
+fatal.
 
 =cut
 
 sub unfinished_accession {
-    my( $project ) = @_;
+    my( $project, $dummy_flag ) = @_;
     
     my $query = qq( select accession
                     from unfinished_submission
@@ -361,7 +383,11 @@ sub unfinished_accession {
         die "Mulitple accessions found for '$project' : ",
             join(', ', map "'$_->[0]'", @$ans);
     } else {
-        die "No accession found for projectname '$project'";
+        if ($dummy_flag) {
+            return 'AL000000';
+        } else {
+            die "No accession found for projectname '$project'";
+        }
     }
 }
 
@@ -436,7 +462,7 @@ sub fishParse {
 
 =pod
 
-=head2 get_finisher( PROJECT );
+=head2 project_finisher( PROJECT );
 
 Returns the finisher for a project in EMBL author
 format (eg: "J. Smith").
