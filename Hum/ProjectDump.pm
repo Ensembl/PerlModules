@@ -546,8 +546,9 @@ sub add_contig_chain {
 
 sub read_gap_contigs {
     my( $pdmp ) = @_;
-    my $db_name  = uc $pdmp->project_name;
-    my $db_dir   = $pdmp->online_path || confess "No online path";
+    my $db_name          = uc $pdmp->project_name;
+    my $db_dir              = $pdmp->online_path || confess "No online path";
+    my $contam_report_file  = $pdmp->contamination_report_file;
     
     local *GAP2CAF;
     local $/ = ""; # Paragraph mode for reading caf file
@@ -555,7 +556,7 @@ sub read_gap_contigs {
     my $contig_prefix = "Contig_prefix_ezelthrib";
 
     $pdmp->dump_time(time); # Record the time of the dump
-    my $gaf_pipe = "cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $contig_prefix | caf_depad | caftagfeature -tagid CONT -clean -vector /nfs/disk100/humpub/blast/contamdb 2>/dev/null |";
+    my $gaf_pipe = "cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $contig_prefix | caf_depad | caftagfeature -tagid CONT -clean -vector /nfs/disk100/humpub/blast/contamdb 2>>$contam_report_file |";
     warn "gap2caf pipe: $gaf_pipe\n";
     open(GAP2CAF, $gaf_pipe)
 	|| die "COULDN'T OPEN PIPE FROM GAP2CAF : $!\n";
@@ -703,6 +704,15 @@ sub contamination {
         $pdmp->{'_assembled_contam'}{$name} = $contam_array;
     }
     return $pdmp->{'_assembled_contam'}{$name};
+}
+
+sub contamination_report_file {
+    my( $pdmp, $file ) = @_;
+    
+    if ($file) {
+        $pdmp->{'_contamination_report_file'} = $file;
+    }
+    return $pdmp->{'_contamination_report_file'} || '/dev/null';
 }
 
 sub parse_contig_tags {
