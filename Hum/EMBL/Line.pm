@@ -181,6 +181,7 @@ BEGIN {
     Hum::EMBL::Line::ID->makeFieldAccessFuncs(qw(
                                                  entryname
                                                  dataclass
+                                                 is_circular
                                                  molecule
                                                  division
                                                  seqlength
@@ -190,13 +191,14 @@ BEGIN {
 sub parse {
     my( $line, $s ) = @_;
     
-    my( $entryname, $dataclass, $molecule, $division, $length ) =
-        $$s =~ /^ID   (\S+)\s+(\S+);\s+(\S+);\s+(\S+);\s+(\d+)/
+    my( $entryname, $dataclass, $is_circular, $molecule, $division, $length ) =
+        $$s =~ /^ID   (\S+)\s+(\S+);\s+(circular\s+)?(\S+);\s+(\S+);\s+(\d+)/
         or confess( "Can't parse ID line: $$s" );
     
     $line->entryname( $entryname );
     $line->dataclass( $dataclass );
     $line->molecule ( $molecule  );
+    $line->is_circular(1) if $is_circular;
     $line->division ( $division  );
     $line->seqlength( $length    );
 }
@@ -206,11 +208,12 @@ sub _compose {
     
     my $entryname = $line->entryname();
     my $dataclass = $line->dataclass();
+    my $circular  = $line->is_circular ? 'circular ' : '';
     my $molecule  = $line->molecule ();
     my $division  = $line->division ();
     my $length    = $line->seqlength();
     
-    return "ID   $entryname  $dataclass; $molecule; $division; $length BP.\n";
+    return "ID   $entryname  $dataclass; $circular$molecule; $division; $length BP.\n";
 }
 
 ###############################################################################
