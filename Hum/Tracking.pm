@@ -44,8 +44,69 @@ use vars qw( @ISA @EXPORT_OK );
                 external_clone_name
                 project_finisher
                 project_team_leader
+                is_htgs_draft
+                is_finished
                 );
 
+
+=pod
+
+=head2 is_finished( PROJECT )
+
+Returns TRUE if the project has had a status of
+'Finished' in the project_status table, and zero
+otherwise.
+
+=cut
+
+sub is_finished {
+    my( $project ) = @_;
+    
+    my $ans = ref_from_query(qq(
+        select status
+        from project_status
+        where projectname = '$project'
+          and status = 20
+    ));
+    
+    return @$ans ? 1 : 0;
+}
+
+=pod
+
+=head2 is_htgs_draft( PROJECT )
+
+Returns 'HTGS_DRAFT' if the PROJECT should have
+the B<HTGS_DRAFT> keyword in its EMBL file, or
+undef if it shouldn't
+
+=cut
+
+#'
+
+sub is_htgs_draft {
+    my( $project ) = @_;
+    
+    my $ans = ref_from_query(qq(
+        select status
+        from project_status
+        where projectname = '$project'
+          and status = 30
+          and iscurrent = 1
+    ));
+    
+    return @$ans ? 'HTGS_DRAFT' : undef;
+}
+
+=pod
+
+=head2 library_and_vector( PROJECT )
+
+Given the name of a PROJECT, returns the name of
+the library and the name of the library vector
+(plasmid).  Returns undef on failure.
+
+=cut
 
 sub library_and_vector {
     my( $project ) = @_;
