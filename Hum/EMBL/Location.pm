@@ -109,8 +109,6 @@ sub three_prime {
 sub parse {
     my( $loc, $s ) = @_;
     
-    warn "Parsing '$$s'";
-    
     if ($$s =~ /complement/) {
         $loc->strand('C');
     } else {
