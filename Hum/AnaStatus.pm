@@ -19,6 +19,8 @@ use Hum::Submission 'prepare_statement';
     annotator_full_name
     date_dir
     make_ana_dir_from_species_chr_seqname_time
+    set_annotator_uname
+    get_annotator_uname
     };
 
 sub add_seq_id_dir {
@@ -90,6 +92,20 @@ sub set_ana_sequence_not_current {
     $sth->execute;
 }
 
+{
+    my( $u_name );
+    
+    sub set_annotator_uname {
+        $u_name = shift;
+    }
+    
+    sub get_annotator_uname {
+        unless ($u_name) {
+            $u_name = (getpwuid($<))[0];
+        }
+        return $u_name;
+    }
+}
 
 {
     my( %annotator );

@@ -6,7 +6,7 @@ package Hum::AnaStatus::Sequence;
 use strict;
 use Carp;
 use Hum::Submission qw( prepare_statement timeace );
-use Hum::AnaStatus qw( annotator_full_name );
+use Hum::AnaStatus qw( annotator_full_name get_annotator_uname );
 use Hum::AnaStatus::AceFile;
 use Hum::AnaStatus::Job;
 use Hum::AnaStatus::AceDatabase;
@@ -58,6 +58,7 @@ sub get_all_for_sequence_name_root {
           , a.db_prefix
           , status.status_id
           , UNIX_TIMESTAMP(status.status_date)
+          , status.annotator_uname
           , s.sequence_name
           , s.embl_checksum
           , s.sequence_version
@@ -114,6 +115,7 @@ sub get_all_for_sequence_name_root {
                 $db_prefix,
                 $status_id,
                 $status_date,
+                $status_user,
                 $sequence_name,
                 $embl_checksum,
                 $sequence_version,
@@ -132,6 +134,7 @@ sub get_all_for_sequence_name_root {
             $self->db_prefix($db_prefix);
             $self->status_id($status_id || 0);
             $self->status_date($status_date || 0);
+            $self->status_user($status_user);
             $self->embl_checksum($embl_checksum);
             $self->sequence_version($sequence_version);
             $self->annotator_uname($annotator_uname);
@@ -196,6 +199,7 @@ sub set_status {
     #
     # The current time is recorded:
     $time ||= time;
+    my $u_name = get_annotator_uname();
 
     confess "status id not defined" unless $status;
 
@@ -218,11 +222,13 @@ sub set_status {
         INSERT ana_status( ana_seq_id
               , is_current
               , status_date
-              , status_id )
+              , status_id
+              , annotator_uname )
         VALUES( $ana_seq_id
               , 'Y'
               , FROM_UNIXTIME($time)
-              , $status)
+              , $status
+              , '$u_name'))
         });
 
     $set_not_current->execute;
@@ -231,6 +237,7 @@ sub set_status {
     if ($rows == 1) {
         $self->{'_status_id'}   = $status;
         $self->{'_status_date'} = $time;
+        $self->{'_status_user'} = $u_name;
         return 1;
     } else {
         confess "ana_status INSERT failed";
@@ -268,6 +275,17 @@ sub status_id {
         $self->{'_status_id'} = $status_id;
     }
     return $self->{'_status_id'};
+}
+
+sub status_user {
+    my ( $self, $status_user ) = @_;
+    
+    if ($status_user) {
+        confess "Can't modify status_user"
+            if $self->{'_status_user'};
+        $self->{'_status_user'} = $status_user;
+    }
+    return $self->{'_status_user'};
 }
 
 
