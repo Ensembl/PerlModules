@@ -66,8 +66,7 @@ sub ref_from_query {
         unless ($db) {
             
             my $user=get_user();
-            my $dbname = 'submissions';
-            my ($host, $port)=Hum::SubmissionConf::localisation();
+            my ($host, $port, $dbname)=Hum::SubmissionConf::localisation();
             if (my $test = $ENV{'SUBMISSION_TEST_DB'}) {
                 # Legal formats:
                 #
