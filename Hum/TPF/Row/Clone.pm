@@ -363,7 +363,7 @@ sub store_SequenceInfo_and_link {
             });
         $set_not_current->execute($clone);
         
-        if ($current == 0) {
+        if (defined($current) and $current == 0) {
             # There is already a row in the table, so just set it to current
             my $set_current = prepare_cached_track_statement(q{
                 UPDATE clone_sequence
