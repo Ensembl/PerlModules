@@ -50,21 +50,23 @@ $cgp_path{'EU'}="$ext_path/EU";
 $cgp_path{'EF'}="$ext_path/EF";
 
 my $ftp_structure = {
-    'Human'         => [ 'human/sequences', 'Chr_' ],
-    'Mouse'         => [ 'mouse',           'Chr_' ],
+    #'Arabidopsis'   => [ 'arabidopsis'             ],
+    #'Drosophila'    => [ 'drosophila/sequences'    ],
+    'B.floridae'    => [ 'b_floridae'              ],
+    'Carp'          => [ 'carp'                    ],
+    'Chicken'       => [ 'chicken'                 ],
+    'Chimp'         => [ 'chimp'                   ],
+    'Dog'           => [ 'dog'                     ],
     'Fugu'          => [ 'fugu'                    ],
+    'Gibbon'        => [ 'gibbon'                  ],
+    'Human'         => [ 'human',           'Chr_' ],
+    'Mouse'         => [ 'mouse',           'Chr_' ],
+    'Pig'           => [ 'pig'                     ],
+    'Platypus'      => [ 'platypus'                ],
+    'Rhesus'        => [ 'rhesus'                  ],
+    'Sminthopsis'   => [ 'sminthopsis'             ],
     'Tetraodon'     => [ 'tetraodon'               ],
     'Zebrafish'     => [ 'zebrafish'               ],
-    'B.floridae'    => [ 'b_floridae'              ],
-    'Gibbon'        => [ 'gibbon'                  ],
-    'Dog'           => [ 'dog'                     ],
-    'Pig'           => [ 'pig'                     ],
-    'Sminthopsis'   => [ 'sminthopsis'             ],
-    'Chicken'       => [ 'chicken'                 ],
-    'Platypus'      => [ 'platypus'                ],
-    'Carp'          => [ 'carp'                    ],
-    #'Drosophila'    => [ 'drosophila/sequences'    ],
-    #'Arabidopsis'   => [ 'arabidopsis'             ],
     };
 
 my $humace_queue = "$humpub/humace/queue";
@@ -76,10 +78,10 @@ my $humace_queue = "$humpub/humace/queue";
     CHR_DB_PATH     => \%chr_path,
 
     # FTP site variables
-    HUMAN_SEQ_FTP_DIR   => "$ftp/pub/human/sequences",
+    HUMAN_SEQ_FTP_DIR   => "$ftp/pub/sequences/human",
     FTP_GHOST           =>  $ftp_ghost,
     FTP_ATTIC           => "$ftp_ghost/attic",
-    FTP_ROOT            => "$ftp/pub",
+    FTP_ROOT            => "$ftp/pub/sequences",
     FTP_STRUCTURE       =>  $ftp_structure,
     SPECIES_LIST =>  [keys %$ftp_structure],
 
