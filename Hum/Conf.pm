@@ -12,18 +12,18 @@ my $humace = ( getpwnam('humace') )[7];
 
 # List of acedb servers and ports
 my %ace_server = (
-    'humace'            => [qw( humsrv1 210000 )],
-    'humace-live-ro'    => [qw( humsrv1 310000 )],
-    'humace-query'      => [qw( humsrv1 410000 )],
-    '1ace'              => [qw( kaka    100201 )],
-    '6ace'              => [qw( kaka    100206 )],
-    '9ace'              => [qw( kaka    100209 )],
-    '10ace'             => [qw( kaka    100210 )],
-    '11ace'             => [qw( kaka    100211 )],
-    '13ace'             => [qw( kaka    100213 )],
-    '20ace'             => [qw( kaka    100220 )],
-    '22ace'             => [qw( kaka    100222 )],
-    'Xace'              => [qw( kaka    100224 )],
+    'humace'            => [qw( humsrv1   210000 )],
+    'humace-live-ro'    => [qw( humsrv1   310000 )],
+    'humace-query'      => [qw( humsrv1   410000 )],
+    '1ace'              => [qw( socrates  100201 )],
+    '6ace'              => [qw( socrates  100206 )],
+    '9ace'              => [qw( socrates  100209 )],
+    '10ace'             => [qw( socrates  100210 )],
+    '11ace'             => [qw( socrates  100211 )],
+    '13ace'             => [qw( socrates  100213 )],
+    '20ace'             => [qw( socrates  100220 )],
+    '22ace'             => [qw( socrates  100222 )],
+    'Xace'              => [qw( socrates  100224 )],
     );
 
 my %chr_path = map { $_, "$humace/databases/$_" } qw( 1ace 6ace 9ace 10ace 11ace 13ace 20ace 22ace Xace );

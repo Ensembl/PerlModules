@@ -283,7 +283,7 @@ Details of primary submissions.
     PROJECT#      Sequencing project code  NOT NULL  NUMBER(2)
     NAME          EMBL ID                  NOT NULL  VARCHAR2(10)
     ACC           Primary accession        NOT NULL  VARCHAR2(15)
-    ACC_SYNONYM   eg: 12_DJ1187J4                    VARCHAR2(45)
+    gp_id   eg: 12_DJ1187J4                    VARCHAR2(45)
     SEQLEN        Length of sequence       NOT NULL  NUMBER(15)
     CRC32         EMBL checksum            NOT NULL  NUMBER(15)
     SV            Sequence version         NOT NULL  NUMBER(5)
