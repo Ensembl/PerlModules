@@ -192,8 +192,14 @@ sub _express_fetch_TPF_Rows {
         $clone->db_id($clone_id);
         $clone->contig_name($contigname);
         $clone->sanger_clone_name($clonename);
-        $clone->set_intl_clone_name_from_sanger_int_ext($clonename, $int_pre, $ext_pre);
         $clone->accession($acc);
+        
+        # If the clonename is same as the accession, this means
+        # that we don't know the clonename is, so don't set it.
+        unless ($clonename eq $acc) {
+            $clone->set_intl_clone_name_from_sanger_int_ext($clonename, $int_pre, $ext_pre);
+        }
+        
         $self->add_Row($clone);
         $rank++;
     }

@@ -3,7 +3,10 @@ package Hum::ProjectDump;
 
 use strict;
 use Carp;
-use Hum::Submission qw( acc_data prepare_statement );
+use Hum::Submission qw(
+    acc_data
+    prepare_statement
+    );
 use Hum::Tracking qw(
     track_db
     prepare_track_statement

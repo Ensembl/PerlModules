@@ -5,7 +5,10 @@ package Hum::SequenceInfo;
 
 use strict;
 use Carp;
-use Hum::Tracking 'track_db';
+use Hum::Tracking qw{
+    track_db
+    prepare_cached_track_statement
+    };
 
 sub new {
     my( $pkg ) = @_;
@@ -49,6 +52,8 @@ sub _fetch_generic {
     my ($db_id, $acc, $sv, $htgs_phase, $length, $cksum, $proj) = $sth->fetchrow;
     $sth->finish;
     
+    return unless $db_id;
+    
     my $self = $pkg->new;
     $self->db_id($db_id);
     $self->accession($acc);
@@ -57,6 +62,7 @@ sub _fetch_generic {
     $self->sequence_length($length);
     $self->embl_checksum($cksum);
     $self->projectname($proj);
+    
     return $self;
 }
 
@@ -134,6 +140,12 @@ sub Sequence {
     return $self->{'_Sequence'};
 }
 
+sub drop_Sequence {
+    my( $self ) = @_;
+    
+    $self->{'_Sequence'} = undef;
+}
+
 sub store {
     my( $self ) = @_;
     
@@ -141,7 +153,7 @@ sub store {
     
     # Get next value from sequence
     $self->get_next_id;
-    
+        
     # Could check if already stored, or use a REPLACE?
     my $sth = track_db->prepare_cached(q{
         INSERT INTO sequence(
@@ -161,18 +173,20 @@ sub store {
         $self->htgs_phase,
         $self->sequence_length,
         $self->embl_checksum,
-        $self->projectname,
+        $self->projectname || 'NONE',   # "NONE" is a hack until Dave makes
+                                        # the PROJECTNAME column non null
         );
 }
 
 sub get_next_id {
     my( $self ) = @_;
     
-    my $sth = track_db()->prepare_cached(q{
+    my $sth = prepare_cached_track_statement(q{
         SELECT sequ_seq.nextval FROM dual
         });
     $sth->execute;
     my ($id) = $sth->fetchrow;
+    $sth->finish;
     $self->db_id($id);
 }
 

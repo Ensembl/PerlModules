@@ -10,7 +10,10 @@ use Hum::Tracking qw{
     prepare_track_statement
     prepare_cached_track_statement
     };
+use Hum::Submission 'prepare_statement';
 use Hum::SequenceInfo;
+use Hum::FastaFileIO;
+use Hum::Pfetch 'get_EMBL_entries';
 
 sub accession {
     my( $self, $accession ) = @_;
@@ -44,7 +47,11 @@ sub set_intl_clone_name_from_sanger_int_ext {
     $clonename = uc $clonename;
     $int_pre ||= '';
     $ext_pre ||= 'XX';
-    substr($clonename, 0, length($int_pre)) = "$ext_pre-";
+    if ($ext_pre =~ /^XX/) {
+        $clonename = "$ext_pre-$clonename";
+    } else {
+        substr($clonename, 0, length($int_pre)) = "$ext_pre-";
+    }
     $self->intl_clone_name($clonename);
 }
 
@@ -111,10 +118,11 @@ sub contig_name {
 }
 
 sub SequenceInfo {
-    my( $self, $SequenceInfo ) = @_;
+    my( $self, $seq ) = @_;
     
-    if ($SequenceInfo) {
-        $self->{'_SequenceInfo'} = $SequenceInfo;
+    if ($seq) {
+        confess "empty SequenceInfo" unless keys %$seq;
+        $self->{'_SequenceInfo'} = $seq;
     }
     return $self->{'_SequenceInfo'};
 }
@@ -210,9 +218,12 @@ sub store_SequenceInfo_and_link {
     my $clone     = $self->sanger_clone_name;
     my $accession = $self->accession;
     
-    my $seq = $self->SequenceInfo
-        || Hum::SequenceInfo->fetch_latest_by_accession($accession)
-        || confess sprintf("No SequenceInfo for accession '%s'", $accession);
+    my $seq = $self->SequenceInfo;
+    unless ($seq) {
+        $seq = Hum::SequenceInfo->fetch_latest_by_accession($accession)
+            or confess "No SequenceInfo for accession '$accession'";
+        $self->SequenceInfo($seq);
+    }
     
     my( $seq_id );
     unless ($seq_id = $seq->db_id) {
@@ -242,13 +253,132 @@ sub store_SequenceInfo_and_link {
         my $insert = prepare_cached_track_statement(q{
             INSERT INTO clone_sequence( clonename
                   , id_sequence
-                  , entry_date
+                  , entrydate
                   , is_current )
             VALUES (?,?,sysdate,1)
             });
         $insert->execute($clone, $seq_id);
     }
 }
+
+
+sub get_latest_Sequence_and_SequenceInfo {
+    my( $self ) = @_;
+    
+    # First get from our ftp site, which will be
+    # the most recent version.
+    $self->_sanger_sequence_get
+
+        # If the ftp site get fails, then get it from our
+        # online copy of EMBL in the pfetch server.
+        or $self->_embl_sequence_get 
+        
+        # else produce a fatal error
+        or confess sprintf("Couldn't get any EMBL entries for '%s'", $self->accession);
+}
+
+sub _embl_sequence_get {
+    my( $self ) = @_;
+    
+    my $acc = $self->accession;
+    my ($embl) = get_EMBL_entries($acc);
+    return unless $embl;
+
+    my $seq = $embl->hum_sequence;
+    my $sv  = $embl->SV->version;
+    
+    my( $seq_inf );
+    unless ($seq_inf = Hum::SequenceInfo->fetch_by_accession_sv($acc, $sv)) {
+        $seq_inf = Hum::SequenceInfo->new;
+        $seq_inf->accession($acc);
+        $seq_inf->sequence_version($sv);
+
+        my( $htgs_phase );
+        foreach my $word ($embl->KW->list) {
+            #warn "KW: $word\n";
+            if ($word =~ /HTGS_PHASE(\d)/) {
+                $htgs_phase = $1;
+                last;
+            }
+        }
+        unless ($htgs_phase) {
+            if ($embl->ID->division eq 'HTG') {
+                $htgs_phase = 1;
+            } else {
+                $htgs_phase = 3;
+            }
+        }
+
+        $seq_inf->htgs_phase($htgs_phase);
+    }
+    $seq_inf->Sequence($seq);
+    $self->SequenceInfo($seq_inf);
+    return 1;
+}
+
+{
+    my( $sth );
+
+    sub _sanger_sequence_get {
+        my( $self ) = @_;
+
+        my $acc = $self->accession;
+
+        my $sth ||= prepare_statement(q{
+            SELECT s.sequence_name
+              , s.sequence_version
+              , s.embl_checksum
+              , s.file_path
+              , d.htgs_phase
+              , a.project_name
+            FROM project_acc a
+              , project_dump d
+              , sequence s
+            WHERE a.sanger_id = d.sanger_id
+              AND d.seq_id = s.seq_id
+              AND d.is_current = 'Y'
+              AND a.accession = ?
+            });
+        $sth->execute($acc);
+
+        my( @seq );
+        while (my ($name, $sv, $cksum, $path, $htgs_phase, $proj) = $sth->fetchrow) {
+            unless ($sv) {
+                warn "sv not set for '$acc' ($name)\n";
+                return;
+            }
+
+            my $fasta = Hum::FastaFileIO->new_DNA_IO("$path/$name");
+            my ($seq) = $fasta->read_one_sequence;
+
+            my( $seq_inf );
+            unless ($seq_inf = Hum::SequenceInfo->fetch_by_accession_sv($acc, $sv)) {
+                $seq_inf = Hum::SequenceInfo->new;
+                $seq_inf->accession($acc);
+                $seq_inf->sequence_version($sv);
+                $seq_inf->htgs_phase($htgs_phase);
+                $seq_inf->projectname($proj);
+            }
+            
+            $seq_inf->Sequence($seq);
+
+            push(@seq, $seq_inf);
+        }
+
+        if (@seq == 1) {
+            $self->SequenceInfo($seq[0]);
+            return 1;
+        }
+        elsif (@seq) {
+            confess "got ", scalar(@seq), " sequences for accession '$acc'\n";
+        }
+        else {
+            return;
+        }
+    }
+}
+
+
 
 1;
 

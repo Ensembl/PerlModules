@@ -37,6 +37,10 @@ sub parse {
     my $tpf = Hum::TPF->new;
     while (<$fh>) {
         next if /^$/;
+        if (/^#/) {
+            $self->parse_comment_line($tpf, $_);
+            next;
+        }
         my @line = split /\s+/, $_;
         confess "Bad line in TPF: $_" unless @line == 3;
         if ('GAP' eq uc $line[0]) {
@@ -57,6 +61,9 @@ sub parse {
             $tpf->add_Row($gap);
         } else {
             my( $acc, $intl, $contig_name ) = @line;
+            if ($acc eq '?' and $acc eq $intl) {
+                die "Bad TPF line (accession and clone are both blank): $_";
+            }
             my $row = Hum::TPF::Row::Clone->new;
             $row->accession($acc);
             $row->intl_clone_name($intl);
@@ -66,6 +73,26 @@ sub parse {
     }
     $self->{'_file'} = undef;
     return $tpf;
+}
+
+{
+    my %accepted_field = map {$_, 1} qw{
+        species chromosome subregion
+        };
+
+    sub parse_comment_line {
+        my( $self, $tpf, $line ) = @_;
+        
+        while ($line =~ /(\S+)=(\S+)/g) {
+            my $field = $1;
+            my $value = $2;
+            if ($accepted_field{$field}) {
+                $tpf->$field($value);
+            } else {
+                warn "Unrecognized field in TPF header: '$field=$value'\n";
+            }
+        }
+    }
 }
 
 1;

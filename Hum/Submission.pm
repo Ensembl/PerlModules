@@ -19,6 +19,7 @@ use Hum::SubmissionConf;
                  prepare_statement
                  prepare_cached_statement
                  sanger_name
+                 sanger_id_from_accession
                  project_name_and_suffix_from_sequence_name
                  submission_disconnect
                  acetime
@@ -107,7 +108,7 @@ sub ref_from_query {
         my( $text ) = @_;
         
         my $sth = sub_db()->prepare_cached($text);
-        push(@active_statement_handles, $sth);
+        #push(@active_statement_handles, $sth);
         return $sth;
     }
     
@@ -451,6 +452,33 @@ sub project_name_and_suffix_from_sequence_name {
     $sth->execute;
     my ($project, $suffix) = $sth->fetchrow;
     return( $project, $suffix );
+}
+
+### Unused and untested
+sub sanger_id_from_accession {
+    my( $acc ) = @_;
+    
+    my $sth = prepare_cached_statement(q{
+        SELECT sanger_id
+        FROM project_acc
+        WHERE accession = ?
+        });
+    $sth->execute($acc);
+    
+    my( @sid );
+    while (my ($sanger) = $sth->fetchrow) {
+        push(@sid, $sanger);
+    }
+    if (@sid == 1) {
+        return $sid[0];
+    }
+    elsif (@sid) {
+        confess "Got multiple sanger IDs for '$acc':\n",
+            map "  '$_'\n", @sid;
+    }
+    else {
+        return;
+    }
 }
 
 # TH 11/11/02

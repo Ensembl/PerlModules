@@ -107,11 +107,13 @@ sub get_EMBL_entries {
     print $server "-F @id_list\n";
     my( @entries );
     for (my $i = 0; $i < @id_list; $i++) {
-        chomp( my $embl = <$server> );
-        if ($embl eq 'no match') {
+        my $entry = join '', <$server>;
+        if ($entry eq "no match\n") {
             $entries[$i] = undef;
         } else {
-            $entries[$i] = $parser->parse(\$embl);
+            my $embl = $parser->parse(\$entry)  
+                or confess "nothing returned from parsing '$entry'";
+            $entries[$i] = $embl;
         }
     }
     return @entries;

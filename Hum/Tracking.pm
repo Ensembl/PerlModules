@@ -356,7 +356,7 @@ block, to ensure a graceful exit.
     sub prepare_cached_track_statement {
         my( $query ) = @_;
 
-        warn $query;
+        #warn $query;
 
         my $sth = track_db()->prepare_cached($query);
         push( @active_statements, $sth );
