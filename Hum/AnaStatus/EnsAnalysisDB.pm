@@ -5,7 +5,7 @@ package Hum::AnaStatus::EnsAnalysisDB;
 
 use strict;
 use Carp;
-use Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Hum::Submission 'prepare_statement';
 use Hum::AnaStatus::EnsAnalysis;
 
@@ -159,30 +159,49 @@ sub ace_data_factory {
     return $self->{'_ace_data_factory'};
 }
 
+{
+    # Set default db adaptor type
+    my $adaptor_type = 'Bio::EnsEMBL::DBSQL::DBAdaptor';
 
-sub db_adaptor {
-    my( $self ) = @_;
-    
-    my( $db_adaptor );
-    unless ($db_adaptor = $self->{'_db_adaptor'}) {
-        my $db_name = $self->db_name or confess "db_name not set";
-        my $host    = $self->host    or confess    "host not set";
-        my $user    = $self->user    or confess    "user not set";
-        my $type    = $self->golden_path_type
-                            or confess "golden_path_type not set";
-        my $pass    = $self->password || '';
+    sub set_db_adaptor_type {
+        my( $thing, $type ) = @_;
         
-        $db_adaptor
-            = $self->{'_db_adaptor'}
-            = Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor->new(
-                -HOST   => $host,
-                -DBNAME => $db_name,
-                -USER   => $user,
-                -PASS   => $pass,
-                );
-        $db_adaptor->static_golden_path_type($type);
+        if ($type eq 'Pipeline') {
+            $adaptor_type = 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor';
+            require Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor;
+        }
+        elsif ($type eq 'DBSQL') {
+            $adaptor_type = 'Bio::EnsEMBL::DBSQL::DBAdaptor';
+        }
+        else {
+            confess "argument must be either 'Pipeline' or 'DBSQL'; got '$type'";
+        }
     }
-    return $db_adaptor;
+    
+    sub db_adaptor {
+        my( $self ) = @_;
+
+        my( $db_adaptor );
+        unless ($db_adaptor = $self->{'_db_adaptor'}) {
+            my $db_name = $self->db_name or confess "db_name not set";
+            my $host    = $self->host    or confess    "host not set";
+            my $user    = $self->user    or confess    "user not set";
+            my $type    = $self->golden_path_type
+                                or confess "golden_path_type not set";
+            my $pass    = $self->password || '';
+
+            $db_adaptor
+                = $self->{'_db_adaptor'}
+                = $adaptor_type->new(
+                    -HOST   => $host,
+                    -DBNAME => $db_name,
+                    -USER   => $user,
+                    -PASS   => $pass,
+                    );
+            $db_adaptor->static_golden_path_type($type);
+        }
+        return $db_adaptor;
+    }
 }
 
 sub store {
