@@ -191,7 +191,7 @@ sub run_pressdb {
         my($mday,$mon,$year) = (localtime($time))[3,4,5];
         $year += 1900;
         ($mday,$mon) = @two_digit[$mday,$mon+1];
-        return "$year-$mday-$mon";
+        return "$year-$mon-$mday";
     }
 }
 
