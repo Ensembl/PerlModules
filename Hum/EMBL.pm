@@ -5,6 +5,8 @@ use strict;
 use Carp;
 use Hum::EMBL::Line;    # Contains most of the line handling packages
 use Hum::EMBL::Handle;
+use Hum::Sequence::DNA;
+use Hum::Sequence::Peptide;
 use Symbol 'gensym';
 
 BEGIN {
@@ -286,6 +288,18 @@ sub bio_seq {
     );
 }
 
+sub hum_sequence {
+    my( $embl ) = @_;
+    
+    my $id_line = $embl->ID;
+    my $name = $id_line->entryname;
+    
+    my $seq = Hum::Sequence::DNA->new;
+    $seq->sequence_string( $embl->Sequence->seq );
+    $seq->name           ( $embl->ID->accession );
+    
+    return $seq;
+}
 
 1;
 
