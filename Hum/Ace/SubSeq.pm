@@ -5,6 +5,7 @@ package Hum::Ace::SubSeq;
 
 use strict;
 use Hum::Sequence::DNA;
+use Hum::Ace::Exon;
 use Carp;
 
 sub new {
@@ -268,7 +269,7 @@ sub exon_Sequence {
     return $seq;
 }
 
-sub translatable_Sequence {
+sub OLD_translatable_Sequence {
     my( $self ) = @_;
     
     my ($t_start, $t_end)   = $self->translation_region;
@@ -319,6 +320,76 @@ sub translatable_Sequence {
     }
     
     return $seq;
+}
+
+sub translatable_Sequence {
+    my( $self ) = @_;
+    
+    my ($t_start, $t_end)   = $self->translation_region;
+    my $strand              = $self->strand;
+    my $phase               = $self->start_phase;
+    my $clone_seq           = $self->clone_Sequence or confess "No clone_Sequence";
+    
+    #warn "strand = $strand, phase = $phase\n";
+    
+    my $seq = Hum::Sequence::DNA->new;
+    $seq->name($self->name);
+    
+    my $seq_str = '';
+    foreach my $exon ($self->get_all_CDS_Exons) {
+        my $start = $exon->start;
+        my $end   = $exon->end;
+
+        # Is this the first coding exon?        
+        if ($strand == 1 and $start == $t_start) {
+            $start += $phase - 1;
+        }
+        elsif ($strand == -1 and $end == $t_end) {
+            $end += 1 - $phase;
+        }
+        
+        $seq_str .= $clone_seq
+            ->sub_sequence($start, $end)
+            ->sequence_string;
+    }
+    $seq->sequence_string($seq_str);
+    
+    if ($strand == -1) {
+        $seq = $seq->reverse_complement;
+    }
+    
+    return $seq;
+}
+
+sub get_all_CDS_Exons {
+    my( $self ) = @_;
+
+    my ($t_start, $t_end)   = $self->translation_region;
+    my $strand              = $self->strand;
+
+    my( @cds_exons );
+    foreach my $exon ($self->get_all_Exons) {
+        my $start = $exon->start;
+        my $end   = $exon->end;
+        
+        # Skip non-coding exons
+        next if $end   < $t_start;
+        last if $start > $t_end;
+        
+        # Trim coordinates to translation start and end
+        if ($start < $t_start) {
+            $start = $t_start;
+        }
+        if ($end > $t_end) {
+            $end = $t_end;
+        }
+        
+        my $cds = Hum::Ace::Exon->new;
+        $cds->start($start);
+        $cds->end($end);
+        push(@cds_exons, $cds);
+    }
+    return @cds_exons;
 }
 
 sub GeneMethod {
