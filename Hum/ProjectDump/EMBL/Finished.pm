@@ -443,9 +443,16 @@ Pieter de Jong. For further details see
 http://www.chori.org/bacpac/home.htm"
     }
 
-    foreach (qw( RPCI-21 RPCI-23 RPCI-22 )) {
-        $lib_comments{$_} =
+    # RPCI-21 is PAC
+    $lib_comments{'RPCI-21'} =
 "is from the $_ Mouse PAC Library
+constructed by the group of Pieter de Jong.
+For further details see http://www.chori.org/bacpac/home.htm";
+
+    # ... but RPCI-22 and 23 are BAC
+    foreach (qw( RPCI-22 RPCI-23 )) {
+        $lib_comments{$_} =
+"is from the $_ Mouse BAC Library
 constructed by the group of Pieter de Jong.
 For further details see http://www.chori.org/bacpac/home.htm"
     }
