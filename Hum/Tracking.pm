@@ -677,7 +677,6 @@ sub localisation_data {
     return(chromosome_from_project($project), fishData($project));
 }
 
-# A lot of these subroutines should be written this way:
 {
     my( $get_chr );
 
@@ -698,7 +697,7 @@ sub localisation_data {
         if (my ($chr) = $get_chr->fetchrow) {
 	    return $chr;
         } else {
-            confess "Chromosome unknown for project '$project'";
+            return;
         }
     }
 }
