@@ -30,12 +30,18 @@ use vars qw( @ISA @EXPORT_OK );
 
 @ISA = qw( Exporter );
 
-@EXPORT_OK = qw( expand_project_name ref_from_query
-                 find_project_directories
-                 finised_accession unfinised_accession
-                 localisation_data
-                 external_clone_name
-                 project_finisher project_team_leader );
+@EXPORT_OK = qw(
+                ref_from_query
+                expand_project_name
+                find_project_directories
+                finised_accession
+                unfinised_accession
+                localisation_data
+                external_clone_name
+                library_and_vector
+                project_finisher
+                project_team_leader
+                );
 
 =pod
 
