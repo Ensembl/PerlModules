@@ -1,4 +1,4 @@
-### Hum::EMBL::Location::Exon
+### Hum::EMBL::Exon
 #
 # Copyright 2004 Genome Research Limited (GRL)
 #
@@ -11,7 +11,7 @@
 # preceded with a _
 #
 
-=head1 NAME Hum::EMBL::Location::Exon
+=head1 NAME Hum::EMBL::Exon
  
 =head2 Constructor:
 
@@ -19,14 +19,17 @@
 
 =cut
 
-package Hum::EMBL::Location::Exon;
+package Hum::EMBL::Exon;
 
 use strict;
 use Carp;
 
-use vars '@ISA';
- 
-@ISA = ('Hum::EMBL::Location');
+
+sub new {
+    my( $pkg ) = @_;
+                                                                                 
+    return bless {}, $pkg;
+}
 
 sub strand {
     my ($self, $value) = @_;
