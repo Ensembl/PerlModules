@@ -157,31 +157,26 @@ sub _express_fetch_TPF_Rows {
     my $rank_clone = $self->_express_fetch_TPF_Clones_hash;
 
     my $sql = q{
-        SELECT cs.is_current
-          , r.rank
+        SELECT r.rank
           , s.accession
           , s.id_sequence
         FROM tpf_row r
-          , clone c
           , clone_sequence cs
           , sequence s
-        WHERE r.clonename = c.clonename
-          AND c.clonename = cs.clonename
+        WHERE r.clonename = cs.clonename
           AND cs.id_sequence = s.id_sequence
+          AND cs.is_current = 1
           AND r.id_tpf = ?
         ORDER BY r.rank ASC
         };
     #warn $sql;
     my $sth = prepare_cached_track_statement($sql);
     $sth->execute($db_id);
-    my( $current, $clone_rank, $acc, $current_seq_id );
-    $sth->bind_columns(\$current, \$clone_rank, \$acc, \$current_seq_id);
+    my( $clone_rank, $acc, $current_seq_id );
+    $sth->bind_columns(\$clone_rank, \$acc, \$current_seq_id);
     
     my $rank = 1;
     while ($sth->fetch) {
-        
-        # clone_sequence.is_current index broken or missing?
-        next unless $current;
         
         # Add any non-sequence entries before this position
         until ($clone_rank == $rank) {
