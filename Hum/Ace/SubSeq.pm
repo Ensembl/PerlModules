@@ -805,7 +805,7 @@ sub translation_region {
             }
         }
         confess "start '$start' not less than end '$end'"
-            unless $start < $end;
+            unless $start <= $end;
         $self->{'_translation_region'} = [$start, $end];
     }
     if (my $pn = $self->{'_translation_region'}) {
