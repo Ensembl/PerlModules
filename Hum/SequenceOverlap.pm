@@ -424,6 +424,40 @@ sub get_next_id {
     $self->db_id($id);
     return $id;
 }
+
+
+# This only stores the overlap if it is different
+# to the one in the database, or if there isn't 
+# one in the database.
+sub store_if_new {
+    my( $self ) = @_;
+    
+    my $inf_a = $self->a_Position->SequenceInfo;
+    my $inf_b = $self->b_Position->SequenceInfo;
+    
+    # If there is an existing overlap, is it
+    # identical to the new coordinates?
+    my $old = Hum::SequenceOverlap
+        ->fetch_by_SequenceInfo_pair($inf_a, $inf_b);
+    
+    if ($old) {
+        if ($self->matches($old)) {
+            # Coordinates are identical to existing overlap
+            return 0;
+        } else {
+            $old->status_id(3);  # Refuted
+            $old->program($old->default_program);
+            ### Need to change to logged in user:
+            $old->operator($old->default_operator);
+            $old->remark('');
+            $old->store_status;
+        }
+    }
+    
+    $self->store;
+    return 1;
+}
+
 1;
 
 __END__
