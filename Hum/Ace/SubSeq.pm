@@ -245,8 +245,6 @@ sub delete_Exon {
 sub replace_all_Exons {
     my( $self, @exons ) = @_;
     
-    confess "No new exons given"
-        unless @exons;
     $self->{'_Exon_list'} = [@exons];
     $self->is_sorted(0);
     return 1;
@@ -422,9 +420,6 @@ sub as_ace_file_format_text {
         or confess "name not set";
     my $clone_seq   = $self->clone_Sequence
         or confess "no clone_Sequence";
-    my $start       = $self->start;
-    my $end         = $self->end;
-    my $strand      = $self->strand;
     my @exons       = $self->get_all_Exons;
     my $method      = $self->GeneMethod;
     
@@ -434,13 +429,25 @@ sub as_ace_file_format_text {
     # Position in parent sequence
     my $out = qq{\nSequence "$clone"\n}
         . qq{-D SubSequence "$name"\n};
-    if ($strand == 1) {
-        $out .= qq{SubSequence "$name"  $start $end\n};
-    } else {
-        $out .= qq{SubSequence "$name"  $end $start\n};
+    
+    my( $start, $end, $strand );
+    if (@exons) {
+        $start  = $self->start;
+        $end    = $self->end;
+        $strand = $self->strand;
+        if ($strand == 1) {
+            $out .= qq{SubSequence "$name"  $start $end\n};
+        } else {
+            $out .= qq{SubSequence "$name"  $end $start\n};
+        }
     }
     
     $out .= qq{\n-D Sequence "$name"\n};
+    
+    # We just delete the object if it doesn't have any exons
+    unless (@exons) {
+        return $out;
+    }
     
     $out .= qq{\nSequence "$name"\n}
         . qq{Source "$clone"\n};

@@ -92,6 +92,12 @@ sub ace_handle {
     return $ace;
 }
 
+sub disconnect_client {
+    my( $self ) = @_;
+    
+    $self->{'_ace_handle'} = undef;
+}
+
 sub server_executable {
     my( $self, $exe ) = @_;
     
@@ -113,6 +119,7 @@ sub server_pid {
 sub restart_server {
     my( $self ) = @_;
     
+    $self->disconnect_client;
     $self->kill_server;
     $self->start_server;
 }
