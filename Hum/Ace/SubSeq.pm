@@ -33,8 +33,9 @@ sub new_from_start_end_fox_subseq {
     my( $pkg, $start, $end, $sub ) = @_;
     
     my $self = $pkg->new;
-    my $txt = $sub->mutable_data;
     my $name = $sub->name;
+    $self->name($name);
+    my $txt = $sub->mutable_data;
 
     # Sort out the strand
     my( $strand );
@@ -125,6 +126,7 @@ sub new_from_start_end_fox_subseq {
 
     $self->validate;
     
+    return $self;
 }
 
 sub new_from_name_start_end_transcript_seq {
@@ -553,6 +555,28 @@ sub get_all_CDS_Exons {
     #    ), "\n";
     
     return @cds_exons;
+}
+
+sub get_all_exon_Sequences {
+    my( $self ) = @_;
+    
+    my $clone_seq = $self->clone_Sequence or confess "No clone_Sequence";
+    my( @ex_seq );
+    foreach my $exon ($self->get_all_Exons) {
+        my $start = $exon->start;
+        my $end   = $exon->end;
+        push(@ex_seq, $clone_seq->sub_sequence($start, $end));
+    }
+    
+    if ($self->strand == -1) {
+        @ex_seq = reverse(@ex_seq);
+        for (my $i = 0; $i < @ex_seq; $i++) {
+            my $ex = $ex_seq[$i];
+            $ex_seq[$i] = $ex->reverse_complement;
+        }
+    }
+    
+    return @ex_seq;
 }
 
 sub GeneMethod {
