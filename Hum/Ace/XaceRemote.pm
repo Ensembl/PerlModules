@@ -13,7 +13,7 @@ sub new {
     if ($xwid) {
         $self->xace_window_id($xwid);
     }
-    return;
+    return $self;
 }
 
 sub xace_window_id {
@@ -22,15 +22,31 @@ sub xace_window_id {
     if ($xwid) {
         $self->{'_xace_window_id'} = $xwid;
     }
-    unless ($xwid = $self->{'_xace_window_id'}) {
-        my $xwid = $self->get_xace_window_id;
-        $self->{'_xace_window_id'} = $xwid;
-    }
-    return $xwid;
+    return $self->{'_xace_window_id'}
+        || confess "xace_window_id not set";
 }
 
+sub send_command {
+    my( $self, @command ) = @_;
+    
+    my $com_str = join(' ; ', @command);
+    my @xrem_com = (
+        'xremote',
+        -id         => $self->xace_window_id,
+        -remote     => $com_str,
+        );
+    if (system(@xrem_com) == 0) {
+        return 1;
+    } else {
+        confess "Failed xremote: (@xrem_com) : $?";
+    }
+}
 
-
+sub show_sequence {
+    my( $self, $seq_name ) = @_;
+    
+    $self->send_command('gif', "seqget $seq_name", 'seqdisplay');
+}
 
 1;
 
