@@ -6,7 +6,7 @@ package Hum::Ace::CloneSeq;
 use strict;
 use Carp;
 
-use Hum::Fox::AceData::GenomeSequence;
+#use Hum::Fox::AceData::GenomeSequence;
 
 use Hum::Sequence::DNA;
 use Hum::Ace::Locus;

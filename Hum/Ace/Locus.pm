@@ -6,8 +6,8 @@ package Hum::Ace::Locus;
 use strict;
 use Carp qw{ confess cluck };
 
-use Hum::Fox::AceData::Locus;
-use Hum::Fox::AceData::SubSequence;
+#use Hum::Fox::AceData::Locus;
+#use Hum::Fox::AceData::SubSequence;
 
 use Bio::EnsEMBL::Exon;
 use Bio::EnsEMBL::Translation;
