@@ -151,9 +151,11 @@ sub add_Reference {
         my $author = $pdmp->author;
         my $date = EMBLdate();
 
-        my $query_email = 'vega';
+        my $query_email  = 'vega';
+        my $clonerequest = 'clonerequest@sanger.ac.uk'; 
         if ($pdmp->species eq 'Zebrafish') {
-            $query_email = 'zfish-help';
+            $query_email  = 'zfish-help';
+            $clonerequest = "http://www.sanger.ac.uk/Projects/D_rerio/faqs.shtml#dataeight"; 
         }
 
         my $ref = $embl->newReference;
@@ -163,7 +165,7 @@ sub add_Reference {
         $ref->locations("Submitted ($date) to the EMBL/Genbank/DDBJ databases.",
                         'Wellcome Trust Sanger Institute, Hinxton, Cambridgeshire, CB10 1SA, UK.',
                         "E-mail enquiries: $query_email\@sanger.ac.uk",
-                        'Clone requests: clonerequest@sanger.ac.uk');
+                        "Clone requests: $clonerequest");
         $embl->newXX;
     }
     
