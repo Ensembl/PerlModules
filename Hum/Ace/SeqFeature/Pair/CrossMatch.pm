@@ -1,7 +1,7 @@
 
-### Ace::SeqFeature::Pair::CrossMatch
+### Hum::Ace::SeqFeature::Pair::CrossMatch
 
-package Ace::SeqFeature::Pair::CrossMatch;
+package Hum::Ace::SeqFeature::Pair::CrossMatch;
 
 use strict;
 
@@ -12,7 +12,7 @@ use strict;
 
 __END__
 
-=head1 NAME - Ace::SeqFeature::Pair::CrossMatch
+=head1 NAME - Hum::Ace::SeqFeature::Pair::CrossMatch
 
 =head1 AUTHOR
 
