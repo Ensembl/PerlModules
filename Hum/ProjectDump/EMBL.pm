@@ -63,7 +63,6 @@ sub make_embl {
     my $embl = Hum::EMBL->new();
 
     # ID line
-    $pdmp->add_ID;
     my $id = $embl->newID;
     $id->entryname($embl_id);
     $id->dataclass('standard');
