@@ -337,6 +337,11 @@ sub add_FT_entries {
 
 {
     my %ext_institute_remark = (
+        GTC =>   ['Draft Sequence Produced by Genome Therapeutics Corp,',
+                  '100 Beaver Street, Waltham, MA 02453, USA',
+                  'http://www.genomecorp.com'],
+        UWGC  => ['Draft Sequence Produced by Genome Center, University of Washington,',
+                  'Box 352145, Seattle, WA 98195, USA'],
         WIBR =>  ['Draft Sequence Produced by Whitehead Institute/MIT',
                   'Center for Genome Research, 320 Charles Street,',
                   'Cambridge, MA 02141, USA',
@@ -345,9 +350,6 @@ sub add_FT_entries {
                   'Washington University School of Medicine, 4444 Forest',
                   'Park Parkway, St. Louis, MO 63108, USA',
                   'http://genome.wustl.edu/gsc/index.shtml'],
-        GTC =>   ['Draft Sequence Produced by Genome Therapeutics Corp,',
-                  '100 Beaver Street, Waltham, MA 02453, USA',
-                  'http://www.genomecorp.com'],
         );
 
     sub add_external_draft_CC {
