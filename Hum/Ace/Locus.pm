@@ -389,7 +389,7 @@ sub make_Otter_Gene {
     
     my $gene_type = $self->gene_type;
     if ($gene_type eq 'Known' or $gene_type eq 'Polymorphic_known') {
-        $geneinfo->is_known(1);
+        $geneinfo->known_flag(1);
     }
 
     my $i = 0;
