@@ -108,7 +108,7 @@ sub gene_type {
     if ($gene_type) {
         $self->{'_gene_type'} = $gene_type;
     }
-    return $self->{'_gene_type'}  || confess "gene_type not set";
+    return $self->{'_gene_type'};
 }
 
 sub unset_gene_type{
@@ -120,7 +120,8 @@ sub unset_gene_type{
 sub gene_type_prefix {
     my( $self, $gene_type_prefix ) = @_;
     
-    if ($gene_type_prefix) {
+    # Can unset with empty string
+    if (defined $gene_type_prefix) {
         $self->{'_gene_type_prefix'} = $gene_type_prefix;
     }
     return $self->{'_gene_type_prefix'} || '';
@@ -143,16 +144,16 @@ sub is_truncated {
     ### Gene types need to be set from set of transcripts
     ### Need to propagate Unprocessed/Processed Pseudogene
     my @type_map = (
-        [qw{ Known                  Type.Gene.Known                 }],
-        [qw{ Novel_CDS              Type.Gene.Novel_CDS             }],
-        [qw{ Novel_Transcript       Type.Gene.Novel_Transcript      }],
-        [qw{ Unprocessed_pseudogene Type.Pseudogene.Unprocessed     }],
-        [qw{ Processed_pseudogene   Type.Pseudogene.Processed       }],
-        [qw{ Polymorphic_known      Type.Polymorphic.Known_in       }],
-        [qw{ Polymorphic            Type.Polymorphic                }],
-        [qw{ Pseudogene             Type.Pseudogene                 }],
-        [qw{ Putative               Type.Putative                   }],
-        [qw{ Transposon             Type.Transposon                 }],
+        [qw{ Known                      Type.Gene.Known                 }],
+        [qw{ Novel_CDS                  Type.Gene.Novel_CDS             }],
+        [qw{ Novel_Transcript           Type.Gene.Novel_Transcript      }],
+        [qw{ Unprocessed_pseudogene     Type.Pseudogene.Unprocessed     }],
+        [qw{ Processed_pseudogene       Type.Pseudogene.Processed       }],
+        [qw{ Pseudogene                 Type.Pseudogene                 }],
+        [qw{ Putative                   Type.Putative                   }],
+        [qw{ Transposon                 Type.Transposon                 }],
+        [qw{ Ig_Segment                 Type.Ig_Segment                 }],
+        [qw{ Ig_Pesuodgene_Segment      Type.Ig_Pesuodgene_Segments     }],
         );
 
     sub save_locus_info {
@@ -168,6 +169,10 @@ sub is_truncated {
         if ($ace_locus->at('Otter.Truncated')) {
             $self->is_truncated(1);
             #warn $self->name, " is truncated";
+        }
+
+        if (my $type = $ace_locus->at('Type_prefix[1]')) {
+            $self->gene_type_prefix($type->name);
         }
 
         my( @pos_name );
@@ -1125,7 +1130,7 @@ sub make_transcript {
     sub set_transcript_class {
         my( $self, $trans, $types ) = @_;
 
-        my $gene_type = $self->gene_type;
+        my $gene_type = $self->gene_type or confess "gene_type not set";
         my( $class );
         if ($typical{$gene_type}) {
             if ($types->{'Pseudogene'}) {
@@ -1332,49 +1337,41 @@ sub get_unique_EnsEMBL_Exon {
 # Needed to preserve otter_id?
 # If locus is renamed twice, then otter
 sub ace_string {
-    my( $self , $old_name ) = @_;
-    
+    my( $self, $old_name ) = @_;
+
     my $name = $self->name ;
-    my $out = '' ;
+    my $ace = '';
     if ($old_name){
-        $out .= qq{-D Locus "$old_name"\n};
+        $ace .= qq{-R Locus "$old_name" "$name"\n};
     }
-    
-    $out .= qq{\nLocus : "$name"\n} ;
-         
+
+    $ace .= qq{\nLocus : "$name"\n}
+        . qq{-D Type_prefix\n}
+        . qq{-D Type\n}
+        . qq{\nLocus : "$name"\n};
+
     ### Need to add locus type and positive sequences
-    ### Deal with Polymorphic loci
     ### Are the ?Seqence tags pointing to Clone or SubSeqences?
-    
+
     if (my $ott = $self->otter_id) {
-        $out .= qq{Otter_id "$ott"\n};
+        $ace .= qq{Locus_id "$ott"\n};
     }
-    
-    $out .= $self->is_known_string();
-    
-    $out .= "\n";
-      
-    return $out;
+    if (my $prefix = $self->gene_type_prefix) {
+        $ace .= qq{Type_prefix "$prefix"\n};
+    }
+    if (my $type = $self->gene_type) {
+        if ($type =~ /^((Unp|P)rocessed)_pseuodgene$/) {
+            $type = $1;
+        }
+        $ace .= qq{$type\n};
+    }
+
+    $ace .= "\n";
+
+    return $ace;
 }
 
-sub is_known_string{
-    my ($self) = @_ ;
-    
-    my $ace = '' ;
-    my $is_known ;
-    eval { $is_known = $self->gene_type };
-#    warn "is known $is_known";
-    
-    my $name = $self->name ;
-    $ace =  qq{\nLocus "$name" \n}
-        .   qq{-D Known    \n} ;
-    
-    if ($is_known){
-        $ace .=  qq{\nLocus "$name" \n}
-             .   qq{$is_known    \n} ;
-    }
-    return $ace ;   
-}
+
 
 sub clone {
     my ($self) = @_ ;

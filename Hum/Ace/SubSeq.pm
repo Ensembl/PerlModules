@@ -1087,10 +1087,6 @@ sub ace_string {
     if ($ott) {
         $out .= qq{Otter_id "$ott"\n};
     }
-    if ($locus) {
-        my $ln = $locus->name;
-        $out .= qq{Locus "$ln"\n};
-    }
     
     if ($method) {
         my $mn = $method->name;
@@ -1143,6 +1139,11 @@ sub ace_string {
                 $out .= qq{Source_Exons  $x $y\n};
             }
         }
+    }
+    if ($locus) {
+        my $ln = $locus->name;
+        $out .= qq{Locus "$ln"\n};
+        $out .= $locus->ace_string;
     }
     
     $out .= "\n";
