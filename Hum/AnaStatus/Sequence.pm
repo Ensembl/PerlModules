@@ -357,11 +357,16 @@ sub get_all_AceFiles {
                 or confess "No ana_seq_id in object";
 
             $fetch_acefile_data ||= prepare_statement(q{
-                SELECT acefile_name
-                  , acefile_status_id
-                  , UNIX_TIMESTAMP(creation_time)
-                FROM ana_acefile
-                WHERE ana_seq_id = ?
+                SELECT f.acefile_name
+                  , f.acefile_status_id
+                  , UNIX_TIMESTAMP(f.creation_time)
+                FROM ana_task t
+                  , ana_task_version v
+                  , ana_acefile f
+                WHERE t.task_name = v.task_name
+                  AND v.acefile_name = f.acefile_name
+                  AND t.is_active = 'Y'
+                  AND f.ana_seq_id = ?
                 });
             $fetch_acefile_data->execute($ana_seq_id);
 
@@ -543,8 +548,9 @@ annotate this sequence.
 
 =item get_all_AceFiles
 
-Returns a list of all Hum::AnaStatus::AceFile objects
-associated with this sequence.
+Returns a list of all Hum::AnaStatus::AceFile
+objects associated with this sequence which
+correspond to currently active tasks.
 
 =back
 
