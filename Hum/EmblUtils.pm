@@ -76,6 +76,12 @@ BEGIN {
             Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia
             Eutheria Carnivora Fissipedia Canidae Canis
             )],
+        
+        sminthopsis =>
+        [qw(Sminthopsis macroura), 'Australian stripe-faced dunnart', qw(
+            Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia
+            Metatheria Dasyuromorphia Dasyuridae Sminthopsis
+            )],
 
         chicken =>
         [qw(Gallus gallus chicken
