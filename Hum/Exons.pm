@@ -154,8 +154,8 @@ sub revcomp {
     my( $dna ) = @_;
     
     $dna = reverse($dna);
-    $dna =~ tr[acgtrymkswhbvdn-ACGTRYMKSWHBVDN]
-              [tgcayrkmswdvbhn-TGCAYRKMSWDVBHN];
+    $dna =~ tr[acgtrymkswhbvdn\-ACGTRYMKSWHBVDN]
+              [tgcayrkmswdvbhn\-TGCAYRKMSWDVBHN];
     return $dna;
 }
 

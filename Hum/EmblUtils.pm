@@ -120,10 +120,16 @@ BEGIN {
         arabidopsis =>
         [qw(Arabidopsis thaliana), 'thale cress', qw(
             Eukaryota Viridiplantae Streptophyta Embryophyta Tracheophyta
-            euphyllophytes Spermatophyta Magnoliophyta eudicotyledons
-            core eudicots Rosidae eurosids II Brassicales Brassicaceae
-            Arabidopsis
-            )],
+            Spermatophyta Magnoliophyta eudicotyledons ),
+            'core eudicots', 'rosids', 'eurosids II',
+            qw( Rosidae  Brassicales Brassicaceae Arabidopsis )],
+        
+        'm.truncatula' =>
+        [qw(Medicago truncatula), 'barrel medic', qw(
+            Eukaryota Viridiplantae Streptophyta Embryophyta Tracheophyta
+            Spermatophyta Magnoliophyta eudicotyledons ),
+            'core eudicots', 'rosids', 'eurosids I',
+            qw( Fabales Fabaceae Papilionoideae Trifolieae Medicago )],
         
         'b.floridae' => 
         [qw(Branchiostoma floridae), 'forida lancelet', qw(
