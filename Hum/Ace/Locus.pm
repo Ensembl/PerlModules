@@ -155,7 +155,7 @@ sub set_names_lister {
             unless ref($sub) eq 'CODE';
         $self->{'_set_names_lister'} = $sub;
     }
-    return $self->{'_set_names_lister'} || \&set_names_from_continue_tags;
+    return $self->{'_set_names_lister'};
 }
 
 sub count_CloneSeqs {
@@ -418,12 +418,14 @@ sub make_name_hashes_from_continue_tags {
     my( @name_hashes );
     foreach my $name (keys %name_SubSeq) {
         my $sub = $name_SubSeq{$name} or next;
+        warn "\n  Starting from: '$name'\n";
         $name_SubSeq{$name} = 0;
-        my $nh = {};
+        my $nh = {$name => 1};
         push(@name_hashes, $nh);
     
         my $up = $sub;
         while (my $up_name = $up->upstream_subseq_name) {
+            warn "       Upstream: '$up_name'\n";
             $up = $name_SubSeq{$up_name}
                 or confess "Can't see '$up_name'";
             $name_SubSeq{$up_name} = 0;
@@ -432,6 +434,7 @@ sub make_name_hashes_from_continue_tags {
 
         my $down = $sub;
         while (my $down_name = $down->downstream_subseq_name) {
+            warn "     Downstream: '$down_name'\n";
             $down = $name_SubSeq{$down_name}
                 or confess "Can't see '$down_name'";
             $name_SubSeq{$down_name} = 0;
@@ -457,8 +460,8 @@ sub make_transcript_sets_for_complex_locus {
     }
     confess "Can't get name sets" unless @name_hashes;
     
-    use Data::Dumper;
-    print STDERR Dumper(\@name_hashes);
+    #use Data::Dumper;
+    #print STDERR Dumper(\@name_hashes);
 
     my( @sets );
     foreach my $names (@name_hashes) {
@@ -584,8 +587,10 @@ sub make_transcript {
 			# support was for CDS, in which case overwrite
 			$evidence->{$acc}=[$type,$cds_name,0];
 		    }else{
-			# some sort of error
-			warn("Duplicate evidence found: $acc mRNA ($mrna_name, $type2) and CDS ($cds_name, $type)\n");
+			# some sort of error unless it is a combined CDS / mRNA object
+                        unless ($cds == $mrna) {
+			    warn("Duplicate evidence found: $acc mRNA ($mrna_name, $type2) and CDS ($cds_name, $type)\n");
+                        }
 		    }
 		}else{
 		    $evidence->{$acc}=[$type,$cds_name,0];
@@ -657,10 +662,10 @@ sub make_transcript {
         confess "Failed to match all CDS exons to mRNA" if @cds_exons;
 
 	# check to see how much evidence was not found
-	print STDERR scalar(keys %$evidence)." accessions of supporting evidence annotated\n";
+	#print STDERR scalar(keys %$evidence)." accessions of supporting evidence annotated\n";
 	foreach my $acc (keys %$evidence){
 	    my($type,$name,$hit)=@{$evidence->{$acc}};
-	    print STDERR " $acc: $type [\'$name\'] $hit features matched\n";
+	    #print STDERR " $acc: $type [\'$name\'] $hit features matched\n";
 	}
 	
         

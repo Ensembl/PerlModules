@@ -314,7 +314,11 @@ sub add_support_to_Clone {
 sub get_all_support {
     my( $self ) = @_;
     
-    return @{$self->{'_supporting_evidence_object'}};
+    if (my $se = $self->{'_supporting_evidence_object'}) {
+        return @$se;
+    } else {
+        return;
+    }
 }
 
 #sub DESTROY {
