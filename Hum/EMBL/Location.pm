@@ -125,8 +125,9 @@ sub locationFromHomolBlock {
         @data = sort numeric_ascend @data;
         
         # Make a location string
-        my @exons = map "$_->[1]..$_->[2]", @data;
-        my $loc = Hum::EMBL::Location->new($strand, @exons);
+        my @exons = map [ $_->[1], $_->[2] ], @data;
+        @exons = merge_ranges($merge, @exons);
+        my $loc = Hum::EMBL::Location->new($strand, map "$_->[0]..$_->[1]", @exons);
         my $str = $loc->format_location();
         
         # Get the start and end of the feature
@@ -138,27 +139,25 @@ sub locationFromHomolBlock {
 }
 
 sub merge_ranges {
-    my( $merge, @ranges ) = @_;
+    my $merge = shift;
+    my @ranges = sort {$a->[0] <=> $b->[0]} @_;
     
     $merge ||= 0;
     
     my($start, $end, @fused);
-    
-    foreach my $ra (sort {$a->[0] <=> $b->[0]} @ranges) {
+
+    $start = $ranges[0]->[0];
+    foreach my $ra (@ranges) {
         my( $s, $e ) = @$ra;
-        $start = $s unless defined $start;
-        $end   = $e unless defined $end;
         
-        # Make a new range, unless this one
-        # almost overlaps the previous
-        unless (($s - $merge) <= $end) {
+        # Make a new range, unless this one almost
+        # overlaps the previous.
+        if (defined($end) and not (($s - $merge) <= $end)) {
             push(@fused, [$start, $end]);
             $start = $s;
         }
-        
-        $end = $e;
+        $end   = $e;
     }
-    
     return(@fused, [$start, $end]);
 }
 
