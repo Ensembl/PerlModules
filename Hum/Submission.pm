@@ -11,6 +11,8 @@ use vars qw( @ISA @EXPORT_OK );
 @ISA = ('Exporter');
 @EXPORT_OK = qw( sub_db
                  acc_data
+                 create_lock
+                 destroy_lock
                  ftp_path
                  timeace
                  ghost_path
@@ -36,6 +38,56 @@ use vars qw( @ISA @EXPORT_OK );
 
     END {
         $db->disconnect if $db;
+    }
+}
+
+sub create_lock {
+    my( $name ) = @_;
+    
+    confess "Can't create lock without a name" unless $name;
+    
+    my $create_lock = sub_db()->prepare(qq{
+        INSERT INTO general_lock(lock_name, lock_time)
+        VALUES (?, NOW())
+        });
+    
+    # This is a bit "belt and braces".  It will work
+    # wether {RaiseError => 1} is set or not
+    my( $success );
+    eval{
+        $create_lock->execute($name);
+        $success = $create_lock->rows;
+    };
+    
+    if ($success and ! $@) {
+        return 1;
+    } else {
+        confess "Failed to create lock '$name':\n$@"
+    }
+}
+
+sub destroy_lock {
+    my( $name ) = @_;
+    
+    confess "Can't create lock without a name" unless $name;
+    
+    my $destroy_lock = sub_db()->prepare(qq{
+        DELETE FROM general_lock
+        WHERE lock_name = ?
+        });
+    
+    # This is a bit "belt and braces".  It will work
+    # wether {RaiseError => 1} is set or not
+    my( $success );
+    eval{
+        $destroy_lock->execute($name);
+        $success = $destroy_lock->rows;
+    };
+    
+    if ($success and ! $@) {
+        return 1;
+    } else {
+        confess "Failed to destroy lock '$name':\n$@"
     }
 }
 

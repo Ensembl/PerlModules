@@ -505,6 +505,55 @@ sub cleanup_contigs {
     $cutoff = 1000 unless defined $cutoff;
 
     foreach my $contig ($pdmp->contig_list) {
+        my $dna  = $pdmp->DNA        ($contig);
+        my $qual = $pdmp->BaseQuality($contig);
+
+        # Check that all pads are removed
+        confess "Bad characters in dna contig '$contig':\n$$dna"
+            if $$dna =~ /[^acgtn]/;
+        
+        # Remove any detected contamination
+        if (my $contam = $pdmp->contamination($contig)) {
+            foreach my $c (@$contam) {
+                my $offset = $c->[0] - 1;
+                my $length = $c->[1] - $c->[0] + 1;
+                # Mask DNA and qual with characters which won't appear
+                # Max score for quality is 99, so shouldn't be any with
+                # score of 255 (which is octal 177)
+                substr($$dna,  $offset, $length) = '#'    x $length;
+                substr($$qual, $offset, $length) = "\177" x $length;
+            }
+            # Delete contaminated DNA
+            $$dna  =~ s/#//g;
+            $$qual =~ s/\177//g;
+        }
+
+        # Remove trailing n's from contig
+        if ($$dna =~ s/(n+)$//) {
+            my $n_len = length($1);
+            warn "Removed $n_len trailing N's from contig '$contig'";
+            my $q_offset = length($$qual) - $n_len;
+            substr($$qual, $q_offset, $n_len) = '';
+        }
+
+        # Filter out contigs shorter than minimum contig length
+	if (length($$dna) < $cutoff) {
+            $pdmp->delete_contig($contig);
+        }
+    }
+    
+    confess "No significant contigs found" unless $pdmp->contig_count;
+    
+    # Check that dna and basequality strings are all the same length
+    $pdmp->validate_contig_lengths;
+}
+
+sub old_cleanup_contigs {
+    my( $pdmp, $cutoff ) = @_;
+
+    $cutoff = 1000 unless defined $cutoff;
+
+    foreach my $contig ($pdmp->contig_list) {
         my $dna  = $pdmp->DNA($contig);
         my $qual = $pdmp->BaseQuality($contig);
 
@@ -582,7 +631,9 @@ sub read_gap_contigs {
     my $contig_prefix = "Contig_prefix_ezelthrib";
 
     $pdmp->dump_time(time); # Record the time of the dump
-    open(GAP2CAF, "cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $contig_prefix | caf_depad |")
+    my $gaf_pipe = "cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $contig_prefix | caf_depad | caftagfeature -tagid CONT -clean -vector /nfs/disk100/humpub/blast/contamdb 2>/dev/null |";
+    warn "gap2caf pipe: $gaf_pipe\n";
+    open(GAP2CAF, $gaf_pipe)
 	|| die "COULDN'T OPEN PIPE FROM GAP2CAF : $!\n";
     
     while (<GAP2CAF>) {
@@ -607,7 +658,7 @@ sub read_gap_contigs {
 		    $pdmp->BaseQuality($contig, \$qual);
 		}
                 elsif ($class eq 'Sequence') {
-		    $pdmp->parse_assembled_from($contig, \$value);
+		    $pdmp->parse_contig_tags($contig, \$value);
 		}
 	    } else {
 		# It's a Read object
@@ -640,7 +691,7 @@ sub parse_read_sequence {
     # The template is the name of the subclone
     # which the read is from.
     my $template;
-    if (/Template\s+(\S+)/) {
+    if ($$seq =~ /Template\s+(\S+)/) {
 	$template = $1;
     } else {
 	$template = $name;
@@ -648,8 +699,7 @@ sub parse_read_sequence {
     }
     $pdmp->read_template($name, $template);
 
-    if (/Insert_size\s+\d+\s+(\d+)/) {
-	#$pdmp->{_template_max_insert}->{$template} = $1;
+    if ($$seq =~ /Insert_size\s+\d+\s+(\d+)/) {
         $pdmp->insert_size($template, $1);
     }
 }
@@ -663,35 +713,45 @@ sub insert_size {
     return $pdmp->{'_template_max_insert'}{$template};
 }
 
-sub read_list {
-    my( $pdmp ) = @_;
-    
-    return keys %{$pdmp->{'_read_templates'}};
-}
 
-sub read_template {
-    my( $pdmp, $name, $value ) = @_;
-    
-    if (defined $value) {
-        $pdmp->{'_read_templates'}{$name} = $value;
+{
+    sub read_list {
+        my( $pdmp ) = @_;
+
+        return keys %{$pdmp->{'_read_templates'}};
     }
-    return $pdmp->{'_read_templates'}{$name};
-}
 
-sub read_extent {
-    my( $pdmp, $name, $value ) = @_;
-    
-    if ($value) {
-        $pdmp->{'_read_extents'}{$name} = $value;
+    sub read_template {
+        my( $pdmp, $name, $value ) = @_;
+
+        if (defined $value) {
+            $pdmp->{'_read_templates'}{$name} = $value;
+        }
+        return $pdmp->{'_read_templates'}{$name};
     }
-    return $pdmp->{'_read_extents'}{$name};
-}
 
-#sub read_extents_ref {
-#    my( $pdmp ) = @_;
-#    
-#    return $pdmp->{'_read_extents'};
-#}
+    sub read_extent {
+        my( $pdmp, $name, $value ) = @_;
+
+        if ($value) {
+            $pdmp->{'_read_extents'}{$name} = $value;
+        }
+        return $pdmp->{'_read_extents'}{$name};
+    }
+
+    sub remove_read_info_for_contigs {
+        my $pdmp = shift;
+        my %contig_to_delete = map {$_, 1} @_;
+
+        foreach my $read ($pdmp->read_list) {
+            my $extent = $pdmp->read_extent($read) or next;
+            if ($contig_to_delete{$extent->[0]}) {
+                delete($pdmp->{'_read_templates'}{$read});
+                delete($pdmp->{'_read_extents'  }{$read});
+            }
+        }
+    }
+}
 
 sub read_quality {
     my ($pdmp, $name, $qual) = @_;
@@ -712,19 +772,28 @@ sub assembled_from {
     return $pdmp->{'_assembled_from'}{$name};
 }
 
-sub parse_assembled_from {
+sub contamination {
+    my( $pdmp, $name, $contam_array ) = @_;
+    
+    if ($contam_array) {
+        $pdmp->{'_assembled_contam'}{$name} = $contam_array;
+    }
+    return $pdmp->{'_assembled_contam'}{$name};
+}
+
+sub parse_contig_tags {
     my ($pdmp, $name, $seq) = @_;
 
     my @af;
-    #my $read_extents = $pdmp->read_extents;
+    my @contamination;
 
     foreach my $line (split(/\n/, $$seq)) {
-	my ($af, $read, $cs, $ce, $rs, $re) = split(" ", $line);
-	if ($af eq "Assembled_from") {
+        my ($key, @values) = split(" ", $line);
+	if ($key eq "Assembled_from") {
+            my ($read, $cs, $ce, $rs, $re) = @values;
 	    push(@af, [$read, $cs, $ce, $rs, $re]);
 	    my $dirn = ($cs > $ce);
 	    if ($dirn) { ($cs, $ce) = ($ce, $cs); }
-	    #if (exists($read_extents->{$read})) {
 	    if (my $extent = $pdmp->read_extent($read)) {
 
 		my ($contig, $ecs, $ece, $ers, $ere) = @{$extent};
@@ -735,15 +804,22 @@ sub parse_assembled_from {
 		if ($re < $ere) { $re = $ere; }
 	    }
 
-	    #$read_extents->{$read} = [$name, $cs, $ce, $rs, $re, $dirn];
             $pdmp->read_extent($read, [$name, $cs, $ce, $rs, $re, $dirn]);
 	}
+        elsif ($key eq "Tag") {
+            my ($tag, $from, $to) = @values;
+            if ($tag eq "CONT") {
+                if ($from > $to) {
+                    ($from, $to) = ($to, $from);
+                }
+                push(@contamination, [$from, $to]);
+            }
+        }
     }
 
     @af = sort { $a->[0] cmp $b->[0] || $a->[3] <=> $b->[3] || $a cmp $b } @af;
-
-    #$pdmp->{_assembled_from}->{$name} = \@af;
     $pdmp->assembled_from($name, \@af);
+    $pdmp->contamination($name, \@contamination);
 }
 
 {
@@ -813,6 +889,7 @@ sub get_vector_end_reads {
 sub vector_ends {
     my( $pdmp, $contig ) = @_;
 
+    # Fill in the _vector_ends hash the first time we're called
     unless (exists $pdmp->{'_vector_ends'}) {
         $pdmp->{'_vector_ends'} = undef;
         
