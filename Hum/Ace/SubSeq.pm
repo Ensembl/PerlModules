@@ -6,7 +6,6 @@ package Hum::Ace::SubSeq;
 use strict;
 use Hum::Sequence::DNA;
 use Hum::Ace::Exon;
-use Hum::Ace::PolyA;
 use Carp;
 
 sub new {
@@ -319,11 +318,6 @@ sub clone {
         $new->add_Exon($new_ex);
     }
     
-    # Clone all the PolyA sites
-    foreach my $poly ($old->get_all_PolyA) {
-        $new->add_PolyA($poly->clone);
-    }
-    
     return $new;
 }
 
@@ -418,101 +412,6 @@ sub annotation_remarks {
     }
 }
 
-# Can't call this method before clone_Sequence is attached
-sub add_all_PolyA_from_ace {
-    my( $self, $ace ) = @_;
-
-    my $mRNA = $self->exon_Sequence;
-
-    eval{
-	foreach my $site ($ace->at('Feature.polyA[1]')) {
-	    my($sig_pos, $site_pos, $score, $name) = map $_->name, $site->row;
-	    my $signal = $mRNA
-		->sub_sequence($sig_pos, $sig_pos + 5)
-		    ->sequence_string;
-	    my $cons = Hum::Ace::PolyA::Consensus->fetch_by_signal($signal);
-	    
-	    ( $sig_pos) = $self->remap_coords_mRNA_to_genomic($sig_pos);
-	    ($site_pos) = $self->remap_coords_mRNA_to_genomic($site_pos);
-	    
-	    my $p = Hum::Ace::PolyA->new;
-	    $p->signal_position($sig_pos);
-	    $p->site_position($site_pos);
-	    $p->consensus($cons);
-	    
-	    $self->add_PolyA($p);
-	}
-    };
-    if($@){
-	if(!$self->is_truncated){
-	    print "Transcript ".$self->name.
-		" extends beyond this genomic region - cannot be edited\n";
-	    $self->is_truncated(1);
-	}
-    }
-}
-
-sub find_PolyA_above_score {
-    my( $self, $score ) = @_;
-    
-    return grep $_->score >= $score, Hum::Ace::PolyA->find_best_in_SubSeq($self);
-}
-
-sub add_PolyA {
-    my( $self, $polyA ) = @_;
-    
-    my $pa = $self->{'_PolyA'} ||= [];
-    push(@$pa, $polyA);
-}
-
-sub get_all_PolyA {
-    my( $self ) = @_;
-    
-    if (my $pa = $self->{'_PolyA'}) {
-        return @$pa;
-    } else {
-        return;
-    }
-}
-
-sub replace_all_PolyA {
-    my( $self, @poly ) = @_;
-    
-    $self->{'_PolyA'} = [@poly];
-}
-
-#  Feature  "polyA_signal" 36228 36233 0.500000 "polyA_signal"
-#  Feature  "polyA_signal" 36239 36244 0.500000 "polyA_signal"
-#  Feature  "polyA_signal" 79853 79848 0.500000 "polyA_signal"
-#  Feature  "polyA_site" 36257 36258 0.500000 "polyA_site"
-#  Feature  "polyA_site" 79831 79830 0.500000 "polyA_site"
-sub make_PolyA_ace_string {
-    my( $self ) = @_;
-    
-    my $ace = '';
-    
-    foreach my $poly ($self->get_all_PolyA) {
-        my $gen_sig_start = $poly->signal_position;
-        my $gen_site_end  = $poly->site_position;
-        my $signal        = $poly->consensus->signal;
-        my $score = sprintf "%.2f", $poly->score;
-        
-        my ($sig_start, $site_end) = $self
-            ->remap_coords_genomic_to_mRNA($gen_sig_start, $gen_site_end);
-        
-        # Check remapping was successful
-        my $err = '';
-        $err .= "failed to remap PolyA signal position '$gen_sig_start'\n" unless $sig_start;
-        $err .= "failed to remap PolyA site position '$gen_site_end'\n"    unless $site_end;
-        confess $err if $err;
-        
-        my $name = "polyA $signal";
-        $ace .= qq{Feature  "polyA"  $sig_start  $site_end  $score  "$name"\n};
-    }
-    
-    return $ace;
-}
-
 sub add_evidence_list {
     my($self, $type, $list) = @_;
     
@@ -546,19 +445,9 @@ sub exon_Sequence {
     foreach my $exon ($self->get_all_Exons) {
 	my $start = $exon->start;
 	my $end   = $exon->end;
-	eval{
 	    $seq_str .= $clone_seq
 		->sub_sequence($start, $end)
 		->sequence_string;
-	};
-	if($@){
-	    if(!$self->is_truncated){
-		print "Transcript ".$self->name.
-		    " extends beyond this genomic region - cannot be edited\n";
-		$self->is_truncated(1);
-		$seq_str .= abs($end-$start+1)x'X';
-	    }
-	}
     }
     $seq->sequence_string($seq_str);
     
@@ -1161,7 +1050,6 @@ sub ace_string {
         
         . qq{-D Continued_from\n}
         . qq{-D Continues_as\n}
-        . qq{-D Feature "polyA"\n}
         
         # New SubSequencce object starts here
         . qq{\nSequence "$name"\n}
@@ -1229,8 +1117,6 @@ sub ace_string {
             }
         }
     }
-    
-    $out .= $self->make_PolyA_ace_string;
     
     $out .= "\n";
     
