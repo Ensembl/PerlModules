@@ -6,8 +6,9 @@ package Hum::ProjectDump::EMBL::Unfinished;
 use strict;
 use Carp;
 use Hum::ProjectDump::EMBL;
-use vars qw{ @ISA };
+use Hum::Tracking 'prepare_track_statement';
 
+use vars qw{ @ISA };
 @ISA = qw{ Hum::ProjectDump::EMBL };
 
 
@@ -17,7 +18,6 @@ sub store_dump {
     $pdmp->SUPER::store_dump;
     $pdmp->store_draft_info;
 }
-
 
 sub store_draft_info {
     my( $pdmp ) = @_;
@@ -918,7 +918,7 @@ sub write_quality_file {
         my ($pdmp, $name) = @_;
 
         unless (%suffix_chem_map) {
-            my $get_chem = track_db()->prepare(q{
+            my $get_chem = prepare_track_statement(q{
                 SELECT seqchem.suffix
                   , seqchem.is_primer
                   , dyeset.name
@@ -971,9 +971,7 @@ sub write_quality_file {
     sub _get_agarose_estimated_length {
         my ($pdmp) = @_;
 
-        my $dbh = track_db();
-
-        my $get_lengths = $dbh->prepare(qq{
+        my $get_lengths = prepare_track_statement(qq{
             SELECT COUNT(image.insert_size_bp)
               , AVG(image.insert_size_bp)
               , STDDEV(image.insert_size_bp)
