@@ -311,6 +311,30 @@ BEGIN {
     }
 }
 
+sub parse_read_sequence {
+    my ($pdmp, $name, $seq) = @_;
+
+    my ($seq_vec) = $$seq =~ /Sequencing_vector\s+\"(\S+)\"/;
+    $pdmp->count_vector($seq_vec);
+    $pdmp->count_chemistry($name);
+    if (/Clone_vec\s+CVEC/) {
+	$pdmp->record_clone_vec($name, $seq);
+    }
+    my $template;
+    if (/Template\s+(\S+)/) {
+	$template = $1;
+    } else {
+	$template = $name;
+	$template =~ s/\..*//;
+    }
+    $pdmp->{_read_templates}->{$name} = $template;
+
+    if (/Insert_size\s+\d+\s+(\d+)/) {
+	$pdmp->{_template_max_insert}->{$template} = $1;
+    }
+    
+}
+
 sub parse_assembled_from {
     my ($pdmp, $name, $seq) = @_;
 
@@ -375,24 +399,6 @@ sub read_gap_contigs {
 	# tags as gap2caf was told to put $contig_prefix in front of the
 	# contig staden id.
 	
-#	if ($object =~ /(DNA|BaseQuality)\s+\:\s+$contig_prefix(\d+)/) {
-#	    
-#	    my ($class, $name) = ($1, $2);
-#	    if ($class eq 'DNA') {
-#		$value =~ s/\s+//g;
-#                $value = lc $value;
-#		$pdmp->DNA($name, \$value);
-#	    } else {
-#		$pdmp->BaseQuality($name, [split(/\s+/, $value)]);
-#	    }
-#	    
-#	} elsif (my ($name) = $object =~ /Sequence\s+\:\s+(\S+)/) {
-#	    if ($value =~ /Is_read/) {
-#		my ($seq_vec) = $value =~ /Sequencing_vector\s+\"(\S+)\"/;
-#		$pdmp->count_vector($seq_vec);
-#		$pdmp->count_chemistry($name);
-#	    }
-#	}
 	if (my ($class, $name)
 	    = $object =~ /(DNA|BaseQuality|Sequence)\s+\:\s+(\S+)/) {
 
@@ -418,12 +424,7 @@ sub read_gap_contigs {
 		
 		if ($class eq 'Sequence' && $value =~ /Is_read/) {
 		    
-		    my ($seq_vec) = $value =~ /Sequencing_vector\s+\"(\S+)\"/;
-		    $pdmp->count_vector($seq_vec);
-		    $pdmp->count_chemistry($name);
-		    if (/Clone_vec\s+CVEC/) {
-			$pdmp->record_clone_vec($name, \$value);
-		    }
+		    $pdmp->parse_read_sequence($name, \$value);
 
 		} elsif ($class eq 'BaseQuality') {
 		    
@@ -468,9 +469,8 @@ sub record_clone_vec {
 
     my ($start, $end, $vec_end)
 	= $$seq =~ /Clone_vec\s+CVEC\s+(\d+)\s+(\d+)\s+\"CAF\:End\=(Left|Right)/;
-    return unless ($vec_end);
 
-    print STDERR "$name, $start, $end, $vec_end\n";
+    return unless ($vec_end);
 
     push(@{$pdmp->{_found_vector}->{$vec_end}}, [$name, $start, $end]);
 }
@@ -615,7 +615,7 @@ sub find_vector_ends {
     my $read_extents = $pdmp->{_read_extents} || {};
 
     foreach my $vec_end ('Left', 'Right') {
-	print STDERR "$vec_end\n";
+
 	next unless (exists($pdmp->{_found_vector}->{$vec_end}));
 
 	my $contig;
@@ -623,13 +623,11 @@ sub find_vector_ends {
 
 	foreach my $found_vec (@{$pdmp->{_found_vector}->{$vec_end}}) {
 	    my ($read, $start, $end) = @$found_vec;
-	    print STDERR "$read $start $end\n";
 	    next unless (exists($read_extents->{$read}));
 
 	    my ($name, $cs, $ce, $rs, $re, $dirn)
 		= @{$read_extents->{$read}};
 
-	    print STDERR "$read, $start, $end ==== $name, $cs, $ce, $rs, $re, $dirn\n";
 	    unless ($contig) { $contig = $name; }
 	    if ($contig ne $name) {
 		$contig = "";
@@ -662,6 +660,180 @@ sub find_vector_ends {
     }
 
     return \%ends;
+}
+
+sub get_contig_order {
+    my ($pdmp) = @_;
+
+    return unless (exists($pdmp->{_read_templates}));
+    return unless (exists($pdmp->{_template_max_insert}));
+    return unless (exists($pdmp->{_read_extents}));
+
+    my $read_templates = $pdmp->{_read_templates};
+    my $insert_sizes = $pdmp->{_template_max_insert};
+    my $extents = $pdmp->{_read_extents};
+    
+    my %contig_lengths = map {$_, $pdmp->contig_length($_)} $pdmp->contig_list;
+
+    my %overhanging_templates;
+
+    # First find reads which point out from the ends of the contigs.
+
+    while (my ($read, $extent) = each %$extents) {
+	my $template = $read_templates->{$read};
+	my $insert_size = $insert_sizes->{$template};
+
+	my ($contig, $cs, $ce, $rs, $re, $dirn) = @$extent;
+	next unless (exists($contig_lengths{$contig}));
+	my $clen = $contig_lengths{$contig};
+
+	if ($dirn) {
+	    if ($ce < $insert_size) {
+		$overhanging_templates{$template}->{$contig} =
+		    [$read, 'L', $ce, $insert_size - $ce];
+	    }
+	} else {
+	    if (($clen - $cs) < $insert_size) {
+		$overhanging_templates{$template}->{$contig} =
+		    [$read, 'R', $clen - $cs, $insert_size - ($clen - $cs)];
+	    }
+	}
+    }
+
+    # Next make a graph of which contigs are joined by read pairs.
+
+    my %joined_contigs;
+    my @anomalies;
+
+    while (my ($template, $contigs) = each %overhanging_templates) {
+	my @c = %$contigs;
+	my $count = scalar(keys %$contigs);
+
+	next unless ($count == 2);
+	my ($contig1, $contig2) = keys %$contigs;
+	my ($read1, $dirn1, $in_contig1, $overhang1) = @{$contigs->{$contig1}};
+	my ($read2, $dirn2, $in_contig2, $overhang2) = @{$contigs->{$contig2}};
+
+	next if ($overhang1 < $in_contig2);
+	next if ($overhang2 < $in_contig1);
+
+	# $joined_contigs{$contig1}->{$contig2} = [values %$contigs];
+	push(@{$joined_contigs{$contig1}->{$dirn1}->{$contig2}}, $dirn2);
+	push(@{$joined_contigs{$contig2}->{$dirn2}->{$contig1}}, $dirn1);
+
+	# Look for contig pairs where the joined ends are inconsistent
+	if ($dirn2 ne $joined_contigs{$contig1}->{$dirn1}->{$contig2}->[0]
+	    || $dirn1 ne $joined_contigs{$contig2}->{$dirn2}->{$contig1}->[0]){
+	    push(@anomalies, [$contig1, $contig2]);
+	}
+    }
+
+    # Remove joins where joined ends are inconsistent
+
+    foreach my $anomaly (@anomalies) {
+	my ($contig1, $contig2) = @$anomaly;
+	delete($joined_contigs{$contig1}->{'L'}->{$contig2});
+	delete($joined_contigs{$contig1}->{'R'}->{$contig2});
+	delete($joined_contigs{$contig2}->{'L'}->{$contig1});
+	delete($joined_contigs{$contig2}->{'R'}->{$contig1});
+    }
+
+    # Deal with branches.  If one scores better than the rest, use it
+    # else delete all the possible branches
+
+    while (my ($contig1, $dirns) = each %joined_contigs) {
+	while (my ($dirn, $contigs) = each %$dirns) {
+	    my @scores = ( 0, 0 );
+	    while (my ($contig2, $joins) = each %$contigs) {
+		push(@scores, scalar(@$joins));
+	    }
+	    my ($best_score, $next_best) = sort { $b <=> $a } @scores;
+	    if ($next_best) {
+		# Have found a branch
+		if ($next_best == $best_score) {
+		    # Don't know which one is best, so get rid of all of them
+		    $best_score = 0;
+		}
+		foreach my $contig2 (keys %$contigs) {
+		    my $score = scalar(@{$contigs->{$contig2}});
+		    if ($score == $best_score) { next; }
+
+		    my $dirn2 = $contigs->{$contig2}->[0];
+		    delete($joined_contigs{$contig2}->{$dirn2}->{$contig1});
+		    delete($joined_contigs{$contig1}->{$dirn}->{$contig2});
+		}
+	    }
+	}
+    }
+#    while (my ($contig1, $dirns) = each %joined_contigs) {
+#	print STDERR "$contig1 joins to:\n";
+#	while (my ($dirn, $contigs) = each %$dirns) {
+#	    while (my ($contig2, $joins) = each %$contigs) {
+#		print STDERR "    $dirn $contig2 @$joins\n";
+#	    }
+#	}
+#    }
+
+    # Make chains of contigs based on the remaining read pair links
+
+    my %visited;
+    my @chains;
+    foreach my $contig ($pdmp->contig_list()) {
+	next if ($visited{$contig});
+	if (exists($joined_contigs{$contig})) {
+	    my @chain;
+
+	    # Look for links to left of current contig
+
+	    my $c_dirn = 'L';
+	    my $c_contig = $contig;
+	    while ($c_contig) {
+		last if (exists $visited{$c_contig});
+		my $fwd = ($c_dirn eq 'L') ? "F" : "R";
+		unshift(@chain, "$c_contig.$fwd");
+		$visited{$c_contig} = 1;
+		last unless (exists($joined_contigs{$c_contig}->{$c_dirn}));
+		my ($n_contig) = keys %{$joined_contigs{$c_contig}->{$c_dirn}};
+		last unless ($n_contig);
+		my ($n_dirn)
+		    = @{$joined_contigs{$c_contig}->{$c_dirn}->{$n_contig}};
+		last unless ($n_dirn);
+		$c_contig = $n_contig;
+		$c_dirn = ($n_dirn eq 'R') ? 'L' : 'R';
+	    }
+
+	    # Look for links to right of current contig
+
+	    $c_dirn = 'R';
+	    $c_contig = $contig;
+	    pop(@chain);
+	    delete($visited{$contig});
+	    while ($c_contig) {
+		last if (exists $visited{$c_contig});
+		my $fwd = ($c_dirn eq 'R') ? "F" : "R";
+		push(@chain, "$c_contig.$fwd");
+		$visited{$c_contig} = 1;
+		last unless (exists($joined_contigs{$c_contig}->{$c_dirn}));
+		my ($n_contig) = keys %{$joined_contigs{$c_contig}->{$c_dirn}};
+		last unless ($n_contig);
+		my ($n_dirn)
+		    = @{$joined_contigs{$c_contig}->{$c_dirn}->{$n_contig}};
+		last unless ($n_dirn);
+		$c_contig = $n_contig;
+		$c_dirn = ($n_dirn eq 'R') ? 'L' : 'R';
+	    }
+	    push(@chains, \@chain);
+	} else {
+	    push(@chains, ["$contig.F"]);
+	    $visited{$contig} = 1;
+	}
+    }
+
+    foreach my $chain (sort {scalar(@$b) <=> scalar(@$a)} @chains) {
+	print STDERR "@$chain\n";
+    }
+
+    return \@chains;
 }
 
 sub read_fasta_file {
