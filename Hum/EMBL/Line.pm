@@ -168,33 +168,6 @@ BEGIN {
 
 ###############################################################################
 
-package Hum::EMBL::CC;
-
-use strict;
-use Carp;
-use vars qw( @ISA );
-@ISA = qw( Hum::EMBL::Line );
-
-sub parse {
-    my( $line, $s ) = @_;
-    
-    my @lines = $$s =~ /^CC   (.+)$/mg;
-    my $text = join ' ', @lines;
-    $line->list($text);
-}
-
-sub compose {
-    my( $line ) = @_;
-    
-    my( @compose );
-    foreach my $txt ($line->list()) {
-        push( @compose, $line->wrap('CC   ', $txt) );
-    }
-    return $line->string(@compose);
-}
-
-###############################################################################
-
 package Hum::EMBL::ID;
 
 use strict;
@@ -271,6 +244,33 @@ sub compose {
     my $ac = join( '', map "$_;", ($line->primary(), $line->secondaries()) );
     
     return $line->string($line->wrap('AC   ', $ac));
+}
+
+###############################################################################
+
+package Hum::EMBL::CC;
+
+use strict;
+use Carp;
+use vars qw( @ISA );
+@ISA = qw( Hum::EMBL::Line );
+
+sub parse {
+    my( $line, $s ) = @_;
+    
+    my @lines = $$s =~ /^CC   (.+)$/mg;
+    my $text = join ' ', @lines;
+    $line->list($text);
+}
+
+sub compose {
+    my( $line ) = @_;
+    
+    my( @compose );
+    foreach my $txt ($line->list()) {
+        push( @compose, $line->wrap('CC   ', $txt) );
+    }
+    return $line->string(@compose);
 }
 
 ###############################################################################
@@ -929,6 +929,13 @@ BEGIN {
         my $seq = $line->seq();
         my $length = length($seq);
         confess "Sequence length '$length' too long for EMBL format" if length($length) > 9;
+
+#        # Set the sequence length in the ID line, if the
+#        # entry contains it
+#        eval{
+#            $line->entry->ID->seqlength($length);
+#        };
+#        warn $@ if $@;
 
         # Count the number of each nucleotide in the sequence
         my $a_count = $seq =~ tr/a/a/;
