@@ -89,26 +89,26 @@ sub test_count {
 }
 
 sub make_stats {
-    my( $self, $dba ) = @_;
+    my( $self, $dba, @gene_id ) = @_;
     
     confess "missing dba argument" unless $dba;
     my $type = $self->gene_type or confess "gene_type not set";
     my $stadp = $dba->get_StaticGoldenPathAdaptor;
     
-    my $sth = $dba->prepare(q{
-        SELECT gsid.stable_id
-        FROM gene g
-          , gene_stable_id gsid
-        WHERE g.gene_id = gsid.gene_id
-          AND g.type = ?
-        });
-    $sth->execute($type);
+    unless (@gene_id) {
+        my $sth = $dba->prepare(q{
+            SELECT gsid.stable_id
+            FROM gene g
+              , gene_stable_id gsid
+            WHERE g.gene_id = gsid.gene_id
+              AND g.type = ?
+            });
+        $sth->execute($type);
 
-    my( @gene_id );
-    while (my ($id) = $sth->fetchrow) {
-        push(@gene_id, $id);
+        while (my ($id) = $sth->fetchrow) {
+            push(@gene_id, $id);
+        }
     }
-    
     
     my $gene_lengths        = $self->gene_lengths;
     my $exon_lengths        = $self->exon_lengths;
@@ -120,6 +120,7 @@ sub make_stats {
     my $test_count = $self->test_count;
     my $gene_i = 0;
     foreach my $id (@gene_id) {
+        #warn "Fetching gene '$id'\n";
         $gene_i++;
         if ($test_count) {
             last if $gene_i > $test_count;
@@ -127,7 +128,13 @@ sub make_stats {
         my( $gene, $vc );
         eval{
             $vc = $stadp->fetch_VirtualContig_of_gene($id, 100);
-            ($gene) = grep $_->stable_id || '' eq $id, $vc->get_all_Genes_exononly;
+            foreach my $g ($vc->get_all_Genes_exononly) {
+                my $gsid = $g->stable_id or next;
+                if ($gsid eq $id) {
+                    $gene = $g;
+                    last;
+                }
+            }
         };
         if ($@ or ! $gene) {
             my $msg = "Can't get gene '$id'";
@@ -141,6 +148,7 @@ sub make_stats {
             -gene   => $gene,
             -contig => $vc,
             );
+        #warn "vg is ", $vg->length, " long\n";
         
         # Stats from the gene
         push @$gene_lengths, $vg->length;
@@ -149,9 +157,17 @@ sub make_stats {
         $self->save_most_transcripts($gene);
         $self->save_most_exons($gene);
         push @$transcript_counts, scalar $gene->each_Transcript;
-        foreach my $ex ($gene->get_all_Exons) {
-            $self->save_longest_exon($ex);
-            $self->save_shortest_exon($ex);
+        foreach my $transcript ($gene->each_Transcript) {
+            my @exons = $transcript->get_all_Exons;
+            for (my $i = 0; $i < @exons; $i++) {
+                my $ex = $exons[$i];
+                $self->save_longest_exon($ex);
+
+                # Don't use the first or last exon to find the shortest
+                unless ($i == 0 or $i == $#exons) {
+                    $self->save_shortest_exon($ex);
+                }
+            }
         }
         
         # Stats from the longest transcript

@@ -274,6 +274,13 @@ sub make_transcript_sets {
         my ( %t_pair );
         foreach my $t ($clone_seqs[$i]->get_all_SubSeqs) {
             my $t_name = $t->name;
+            my $gene_method_name = $t->GeneMethod->name;
+            
+            # Ignore Gene ID transcripts
+            if ($gene_method_name =~ /^GD/) {
+                warn "Skipping Gene ID transcript '$t_name'\n";
+                next;
+            }
             
             # Only get SubSeqs from this locus
             next unless $is_locus_seq{$t_name};
@@ -285,7 +292,7 @@ sub make_transcript_sets {
             
             my( $pair_name, $is_mRNA ) = $t_name =~ /^(.+?)(\.mRNA)?$/;
             unless ($is_mRNA) {
-                if ($t->GeneMethod->name =~ /mRNA$/) {
+                if ($gene_method_name =~ /mRNA$/) {
                     $is_mRNA = 1;
                 }
             }
