@@ -34,17 +34,7 @@ sub end {
     return $self->{'_end'} || confess "end not set";
 }
 
-sub phase {
-    my( $self, $phase ) = @_;
-    
-    if (defined $phase) {
-        confess "Illegal phase '$phase'; must be one of (1,2,3)"
-            unless $phase =~ /^[123]$/;
-        $self->{'_phase'} = $phase;
-    }
-    return $self->{'_phase'};
-}
-
+# Used to use EnsEMBL convention:
 #sub phase {
 #    my( $self, $phase ) = @_;
 #    
@@ -55,6 +45,23 @@ sub phase {
 #    }
 #    return $self->{'_phase'};
 #}
+
+sub unset_phase {
+    my( $self ) = @_;
+    
+    $self->{'_phase'} = undef;
+}
+
+sub phase {
+    my( $self, $phase ) = @_;
+    
+    if (defined $phase) {
+        confess "Illegal phase '$phase'; must be one of (1,2,3)"
+            unless $phase =~ /^[123]$/;
+        $self->{'_phase'} = $phase;
+    }
+    return $self->{'_phase'};
+}
 
 sub ensembl_phase {
     my( $self, $arg ) = @_;
@@ -67,12 +74,6 @@ sub ensembl_phase {
     } else {
         return;
     }
-}
-
-sub unset_phase {
-    my( $self ) = @_;
-    
-    $self->{'_phase'} = undef;
 }
 
 sub overlaps {

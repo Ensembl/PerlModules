@@ -41,15 +41,6 @@ sub accession {
     return $self->{'_accession'} || confess "accession not set";
 }
 
-sub ace_method {
-    my( $self, $ace_method ) = @_;
-    
-    if ($ace_method) {
-        $self->{'_ace_method'} = $ace_method;
-    }
-    return $self->{'_ace_method'} || confess "ace_method not set";
-}
-
 sub golden_start {
     my( $self, $golden_start ) = @_;
     

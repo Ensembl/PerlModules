@@ -615,13 +615,13 @@ sub make_transcript {
 sub record_t_start_point {
     my( $self, $exon_pos, $ens_exon, $cds_exon, $strand ) = @_;
     
-    my $ace_phase = $cds_exon->phase;
+    my $ens_phase = $cds_exon->ensembl_phase;
     my $ex_id     = $ens_exon->id;
     
     my( $phase );
-    if (defined $ace_phase) {
-        print STDERR "Exon '$ex_id' has phase $ace_phase from acedb CDS object\n";
-        $phase = $ace_phase;
+    if (defined $ens_phase) {
+        print STDERR "Exon '$ex_id' has phase $ens_phase from acedb CDS object\n";
+        $phase = $ens_phase;
     } else {
         $phase = 0;
     }
@@ -635,12 +635,12 @@ sub record_t_start_point {
 
     # Only record the ace_phase if both the EnsEMBL and
     # CDS exons start in the same place.
-    if (defined $ace_phase) {
+    if (defined $ens_phase) {
         if ($strand == 1 and $cds_exon->start == $ens_exon->start) {
-            $exon_pos->{"ace_phase-$ex_id"} = $ace_phase;
+            $exon_pos->{"ace_phase-$ex_id"} = $ens_phase;
         }
         elsif ($strand == -1 and $cds_exon->end == $ens_exon->end) {
-            $exon_pos->{"ace_phase-$ex_id"} = $ace_phase;
+            $exon_pos->{"ace_phase-$ex_id"} = $ens_phase;
         }
     }
 }

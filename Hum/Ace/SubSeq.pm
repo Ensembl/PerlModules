@@ -26,6 +26,113 @@ sub new_from_ace_subseq_tag {
     return $sub;
 }
 
+sub new_from_name_start_end_transcript_seq {
+    my( $pkg, $name, $start, $end, $t_seq ) = @_;
+    
+    my $self = $pkg->new;
+    $self->name($name);
+    $self->process_ace_start_end_transcript_seq($start, $end, $t_seq);
+    return $self;
+}
+
+sub process_ace_transcript {
+    my( $self, $t ) = @_;
+    
+    $self->name($t->name);
+    # Get coordinates of Subsequence in parent
+    my ($start, $end) = map $_->name, $t->row(1);
+    die "Missing coordinate for '$t'\n"
+        unless $start and $end;
+        
+    # Fetch the Subsequence object
+    my $t_seq = $t->fetch;
+    
+    $self->process_ace_start_end_transcript_seq($start, $end, $t_seq);
+}
+
+sub process_ace_start_end_transcript_seq {
+    my( $self, $start, $end, $t_seq ) = @_;
+
+    # Get the ace Method
+    if (my $meth = $t_seq->at('Method[1]')) {
+        $self->ace_method($meth->name);
+    }
+
+    # Sort out the strand
+    my( $strand );
+    if ($start < $end) {
+        $strand = 1;
+    } else {
+        ($start, $end) = ($end, $start);
+        $strand = -1;
+    }
+    $self->strand($strand);
+
+    # Is this a partial CDS?
+    my( $start_phase );
+    {
+        my( $s_n_f, $codon_start );
+        eval{ ($s_n_f, $codon_start) = map "$_", $t_seq->at('Properties.Start_not_found')->row() };
+        if ($s_n_f) {
+            $codon_start ||= 1;
+        }
+        if ($codon_start and $t_seq->at('Properties.Coding.CDS')) {
+            unless ($codon_start =~ /^[123]$/) {
+                confess("Bad codon start ('$codon_start') in '$t_seq'");
+            }
+            
+            # Store phase in AceDB convention (not EnsEMBL)
+            $start_phase = $codon_start;
+        }
+    }
+    
+    # Make the exons
+    foreach ($t_seq->at('Structure.From.Source_exons[1]')) {
+        
+        # Make an Exon object
+        my $exon = Hum::Ace::Exon->new;
+        
+        my ($x, $y) = map $_->name, $_->row;
+        die "Missing coordinate in '$t_seq' : start='$x' end='$y'\n"
+            unless $x and $y;
+        if ($strand == 1) {
+            foreach ($x, $y) {
+                $_ = $start + $_ - 1;
+            }
+        } else {
+            foreach ($x, $y) {
+                $_ = $end - $_ + 1;
+            }
+            ($x, $y) = ($y, $x);
+        }
+        $exon->start($x);
+        $exon->end($y);
+        $self->add_Exon($exon);
+    }
+    
+    my @exons = $self->get_all_Exons
+        or confess "No exons in '", $self->name, "'";
+    
+    # Add the phase to the first exon
+    if (defined $start_phase) {
+        my( $start_exon );
+        if ($strand == 1) {
+            $start_exon = $exons[0];
+        } else {
+            $start_exon = $exons[$#exons];
+        }
+        $start_exon->phase($start_phase);
+        #warn "Setting exon phase=$start_phase ", join(' ',
+        #    $self->name,
+        #    $start_exon->start,
+        #    $start_exon->end,
+        #    $strand,
+        #    ), "\n";
+    }
+
+    $self->validate;
+}
+
 sub name {
     my( $self, $name ) = @_;
     
@@ -33,6 +140,15 @@ sub name {
         $self->{'_name'} = $name;
     }
     return $self->{'_name'} || confess "name not set";
+}
+
+sub ace_method {
+    my( $self, $ace_method ) = @_;
+    
+    if ($ace_method) {
+        $self->{'_ace_method'} = $ace_method;
+    }
+    return $self->{'_ace_method'} || confess "ace_method not set";
 }
 
 sub strand {
@@ -153,95 +269,6 @@ sub validate {
     }
 }
 
-sub process_ace_transcript {
-    my( $self, $t ) = @_;
-    
-    $self->name($t->name);
-    # Get coordinates of Subsequence in parent
-    my ($start, $end) = map $_->name, $t->row(1);
-    die "Missing coordinate for '$t'\n"
-        unless $start and $end;
-
-    # Sort out the strand
-    my( $strand );
-    if ($start < $end) {
-        $strand = 1;
-    } else {
-        ($start, $end) = ($end, $start);
-        $strand = -1;
-    }
-    $self->strand($strand);
-        
-    # Fetch the Subsequence object
-    my $t_seq = $t->fetch;
-    
-    # Is this a partial CDS?
-    my( $start_phase );
-    {
-        my( $s_n_f, $codon_start );
-        eval{ ($s_n_f, $codon_start) = map "$_", $t_seq->at('Properties.Start_not_found')->row() };
-        if ($s_n_f) {
-            $codon_start ||= 1;
-        }
-        if ($codon_start and $t_seq->at('Properties.Coding.CDS')) {
-            unless ($codon_start =~ /^[123]$/) {
-                confess("Bad codon start ('$codon_start') in '$t_seq'");
-            }
-            # EMBL/ACeDB -> EnsEMBL phase conversion
-            #$start_phase = (3 - ($codon_start - 1)) % 3;
-            
-            # Decided to store as ace phase instead
-            $start_phase = $codon_start;
-        }
-    }
-    
-    # Make the exons
-    foreach ($t_seq->at('Structure.From.Source_exons[1]')) {
-        
-        # Make an Exon object
-        my $exon = Hum::Ace::Exon->new;
-        
-        my ($x, $y) = map $_->name, $_->row;
-        die "Missing coordinate in '$t_seq' : start='$x' end='$y'\n"
-            unless $x and $y;
-        if ($strand == 1) {
-            foreach ($x, $y) {
-                $_ = $start + $_ - 1;
-            }
-        } else {
-            foreach ($x, $y) {
-                $_ = $end - $_ + 1;
-            }
-            ($x, $y) = ($y, $x);
-        }
-        $exon->start($x);
-        $exon->end($y);
-        $self->add_Exon($exon);
-    }
-    
-    my @exons = $self->get_all_Exons
-        or confess "No exons in '", $self->name, "'";
-    
-    # Add the phase to the first exon
-    if (defined $start_phase) {
-        my( $start_exon );
-        if ($strand == 1) {
-            $start_exon = $exons[0];
-        } else {
-            $start_exon = $exons[$#exons];
-        }
-        $start_exon->phase($start_phase);
-        #warn "Setting exon phase=$start_phase ", join(' ',
-        #    $self->name,
-        #    $start_exon->start,
-        #    $start_exon->end,
-        #    $strand,
-        #    ), "\n";
-    }
-
-    $self->validate;
-}
-
 sub contains_all_exons {
     my( $self, $other ) = @_;
     
@@ -292,7 +319,22 @@ sub contains_all_exons {
     return $all_contained;
 }
 
-
+sub as_ace_file_format_text {
+    my( $self ) = @_;
+    
+    warn "This method isn't finished";
+    
+    my $name    = $self->name;
+    my $strand  = $self->strand;
+    my @exons   = $self->get_all_Exons;
+    my $out = qq{\nSequence "$name"\n};
+    
+    foreach my $exon (@exons) {
+        $out .= sprintf(qq{Exon %d %d\n}, $exon->start, $exon->end);
+    }   
+    
+    return $out;
+}
 
 
 1;
