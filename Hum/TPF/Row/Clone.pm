@@ -270,16 +270,13 @@ sub store_clone_if_missing {
         INSERT INTO clone(clonename
               , libraryname
               , speciesname
+              , remark
               , sequenced_by
               , funded_by
               , seq_reason
               , is_hsm
-              , remark
               , clone_type)
-        VALUES(?,?
-              , 0,0,1,1
-              , ?
-              , 1)
+        VALUES(?,?,?,?,0,0,1,1,1)
         });
     $insert->execute(
         $self->sanger_clone_name,
