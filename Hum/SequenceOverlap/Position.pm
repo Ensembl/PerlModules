@@ -5,6 +5,8 @@ package Hum::SequenceOverlap::Position;
 
 use strict;
 use Carp;
+use Hum::Tracking 'track_db';
+use Hum::SequenceInfo;
 
 sub new {
     my( $pkg ) = @_;
@@ -12,13 +14,33 @@ sub new {
     return bless {}, $pkg;
 }
 
-sub db_id {
-    my( $self, $db_id ) = @_;
+
+
+# Don't think this method will be needed?
+sub fetch_both_for_overlap_id {
+    my( $pkg, $id ) = @_;
     
-    if ($db_id) {
-        $self->{'_db_id'} = $db_id;
+    my $sth = track_db()->prepare_cached(q{
+        SELECT id_seqeunce
+          , position
+          , is_3prime
+        FROM sequence_overlap
+        WHERE id_overlap = ?
+        });
+    $sth->execute($id);
+    my( @pos );
+    while (my ($seq_id, $pos, $is_3prime) = $sth->fetchrow) {
+        my $seq_info = Hum::SequenceInfo->fetch_by_db_id($seq_id);
+        my $self = $pkg->new;
+        $self->position($pos);
+        $self->is_3prime($is_3prime);
+        $self->SequenceInfo($seq_info);
     }
-    return $self->{'_db_id'};
+    if (@pos) {
+        return @pos;
+    } else {
+        confess "No overlap positions for id_overlap = '$id'";
+    }
 }
 
 sub SequenceInfo {
@@ -58,6 +80,32 @@ sub validate {
         my $seq_name = $seq->name;
         confess "Position $pos is outside sequence '$seq_name' of length $length";
     }
+}
+
+sub store {
+    my( $self, $overlap_id ) = @_;
+    
+    confess "No overlap_id given"
+        unless $overlap_id;
+    
+    my $info = $self->SequenceInfo;
+    $info->store;
+    
+    # REPLACE instead of INSERT?
+    my $sth = track_db->prepare_cached(q{
+        INSERT INTO sequence_overlap(
+            id_sequence
+          , id_overlap
+          , position
+          , is_3prime )
+        VALUES(?,?,?,?)
+        });
+    $sth->execute(
+        $info->db_id,
+        $overlap_id,
+        $self->position,
+        $self->is_3prime,
+        );    
 }
 
 1;
