@@ -160,10 +160,25 @@ sub merge_ranges {
     return(@fused, [$start, $end]);
 }
 
+# Frist argument is a feature object
+# Second argument is the subsequence tag in the parent Ace sequence
 sub location_from_subsequence {
-    my( $start, $end, @exons ) = @_;
+    my( $ft, $sub_tag ) = @_;
     
-    my $loc = Hum::EMBL::Location->new;
+    # Get the start and end coordinates
+    my($start, $end) = map $_->name, $sub_tag->row(1);
+
+    # Fetch the object from the database
+    my $g = $sub_tag->fetch;
+
+    # Create the location string
+    my(@exons);
+    foreach ($g->at('Structure.From.Source_exons[1]')) {
+        my ($x, $y) = $_->row;
+        push(@exons, [$x->name, $y->name]);
+    }
+    
+    my $loc = 'Hum::EMBL::Location'->new;
     
     if ($start < $end) {
         $loc->strand('W');
@@ -190,7 +205,30 @@ sub location_from_subsequence {
     }
     
     $loc->exons(@exons);
-    return $loc;
+
+    # Add start not found, and codon offset if specified
+    my( $s_n_f, $codon_start );
+    eval{ ($s_n_f, $codon_start) = map "$_", $g->at('Properties.Start_not_found')->row() };
+    if ($s_n_f) {
+        $loc->start_not_found;
+        $codon_start ||= 1;
+    }
+    if ($codon_start and $g->at('Properties.Coding.CDS')) {
+        unless ($codon_start =~ /^[123]$/) {
+            confess("Bad codon start ('$codon_start') in '$g'");
+        }
+        $ft->addQualifierStrings('codon_start', $codon_start);
+    }
+
+    # Add end not found
+    if ($g->at('Properties.End_not_found')) {
+        $loc->end_not_found;
+    }
+
+    # Store the new location
+    $ft->location( $loc );
+    
+    return ($start, $end);
 }
 
 1;
