@@ -141,13 +141,8 @@ sub EnsEMBL_Contig {
     return $self->{'_EnsEMBL_Contig'};
 }
 
-sub new_SubSeq_from_ace_subseq_tag {
-    my( $self, $ace_trans ) = @_;
-    
-    # Make a SubSeq object
-    my $sub = Hum::Ace::SubSeq->new;
-    
-    $sub->process_ace_transcript($ace_trans);
+sub trim_SubSeq_to_golden_path {
+    my( $self, $sub ) = @_;
     
     # Deal with exons not entirely contained in the golden path
     my $golden_start = $self->golden_start;
@@ -177,7 +172,6 @@ sub new_SubSeq_from_ace_subseq_tag {
         }
     }
     
-    $sub->validate;
     return $sub;    # May have zero Exons
 }
 

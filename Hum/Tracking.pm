@@ -560,7 +560,7 @@ sub external_clone_name {
         my( $clone, $int, $ext ) = @{$proj{$p}};
         
         # Attempt to remove internal prefixes from the name
-        unless ($int and $clone =~ s/^$int//) {
+        unless ($ext and $int and $clone =~ s/^$int//) {
             $clone = uc $clone;
         }
         
