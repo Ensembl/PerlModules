@@ -31,14 +31,14 @@ sub new {
 }
 
 sub find_SequenceOverlap {
-    my( $self, $sa, $sb ) = @_;
+    my( $self, $sinf_a, $sinf_b ) = @_;
     
     # Run cross_match and find overlap
-    my $feat = $self->find_end_overlap($sa, $sb);
+    my $feat = $self->find_end_overlap($sinf_a->Sequence, $sinf_b->Sequence);
     
     # Convert into a SequenceOverlap object that
     # can be written into the tracking database.
-    return $self->make_SequenceOverlap($sa, $sb, $feat);
+    return $self->make_SequenceOverlap($sinf_a, $sinf_b, $feat);
 }
 
 sub make_SequenceOverlap {
@@ -52,12 +52,11 @@ sub make_SequenceOverlap {
     $overlap->source_name('CrossMatch');
     
     my ($pos_a, $pos_b) = $overlap->make_new_Position_objects;
-    $pos_a->Sequence($sa);
-    $pos_b->Sequence($sb);
+    $pos_a->SequenceInfo($sa);
+    $pos_b->SequenceInfo($sb);
     $pos_a->is_3prime($self->is_three_prime_hit($feat, $sa->sequence_length, 'seq'));
     $pos_b->is_3prime($self->is_three_prime_hit($feat, $sb->sequence_length, 'hit'));
     
-
     if ($feat->hit_length > $feat->seq_length) {
         # More unusual "upstairs" overlap which is only chosen
         # where the length of overlap on the hit is longer

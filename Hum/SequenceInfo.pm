@@ -12,6 +12,14 @@ sub new {
     return bless {}, $pkg;
 }
 
+sub new_from_Sequence {
+    my( $pkg, $seq ) = @_;
+    
+    my $self = bless {}, $pkg;
+    $self->Sequence($seq);
+    return $self;
+}
+
 sub db_id {
     my( $self, $db_id ) = @_;
     
@@ -85,10 +93,12 @@ sub clonename {
 }
 
 sub Sequence {
-    my( $self, $Sequence ) = @_;
+    my( $self, $seq ) = @_;
     
-    if ($Sequence) {
-        $self->{'_Sequence'} = $Sequence;
+    if ($seq) {
+        $self->{'_Sequence'} = $seq;
+        $self->sequence_length($seq->sequence_length);
+        $self->embl_checksum($seq->embl_checksum);
     }
     return $self->{'_Sequence'};
 }
