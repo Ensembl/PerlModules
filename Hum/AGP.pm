@@ -17,6 +17,19 @@ sub new {
         }, $pkg;
 }
 
+sub min_htgs_phase {
+    my( $self, $min_htgs_phase ) = @_;
+    
+    if ($min_htgs_phase) {
+        confess "bad HTGS_PHASE '$min_htgs_phase'"
+            unless $min_htgs_phase =~ /^\d+$/;
+        confess "Can't set min_htgs_phase to more than '3' (trying to set to '$min_htgs_phase')"
+            if $min_htgs_phase > 3;
+        $self->{'_min_htgs_phase'} = $min_htgs_phase;
+    }
+    return $self->{'_min_htgs_phase'};
+}
+
 sub allow_unfinished {
     my( $self, $flag ) = @_;
     
@@ -97,7 +110,14 @@ sub process_TPF {
 
     my @rows = $tpf->fetch_all_Rows;
     my $contig = [];
-    my $unfin_flag = $self->allow_unfinished;
+    my $min_phase  = $self->min_htgs_phase;
+    unless ($min_phase) {
+        if ($self->allow_unfinished) {
+            $min_phase = 1;
+        } else {
+            $min_phase = 2;
+        }
+    }
     for (my $i = 0; $i < @rows; $i++) {
         my $row = $rows[$i];
         if ($row->is_gap) {
@@ -108,10 +128,11 @@ sub process_TPF {
             $gap->remark($row->remark);
         } else {
             my $inf = $row->SequenceInfo;
-            if ($unfin_flag or ($inf and ($inf->htgs_phase == 3 or $inf->htgs_phase == 2))) {
+            my $phase = $inf ? $inf->htgs_phase : 0;
+            if ($phase >= $min_phase) {
                 push(@$contig, $row);
             } else {
-                printf STDERR "Skipping unifinished sequence '%s'\n",
+                printf STDERR "Skipping HTGS_PHASE$phase sequence '%s'\n",
                     $row->sanger_clone_name;
                 $self->_process_contig($contig) if @$contig;
                 $contig = [];

@@ -99,7 +99,7 @@ sub sanger_library_name {
 }
 
 {
-    my( %intl_sanger );
+    my( %intl_sanger, %sanger_info );
     my $init_flag = 0;
     
     sub _init_prefix_hash {
@@ -117,6 +117,7 @@ sub sanger_library_name {
         my( $libname, $sang, $intl, $first, $last );
         $sth->bind_columns(\$libname, \$sang, \$intl, \$first, \$last);
         while ($sth->fetch) {
+            ### Add stuff for XX clones
             next unless $sang and $intl;
             next if $intl eq 'XX';
             my $lib_info = $intl_sanger{$intl} ||= [];
@@ -129,6 +130,11 @@ sub sanger_library_name {
         my( $self, $intl ) = @_;
         
         _init_prefix_hash() unless $init_flag;
+        
+        ### Tread XX* clones differently - should be able
+        ### to just knock off the XX- prefix, but make an
+        ### attempt to identify the library from the start
+        ### of the remaining name.
         
         my ($intl_prefix, $plate, $rest) = $intl =~ /^([^-]+)-(\d*)(.+)$/;
         $intl_prefix ||= '';

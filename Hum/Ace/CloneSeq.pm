@@ -300,17 +300,34 @@ sub new_Sequence_from_ace_handle {
     my( $self, $ace ) = @_;
     
     my $name = $self->ace_name;
+    my $seq = Hum::Sequence::DNA->new;
+    $seq->name($name);
     my $dna_obj = $ace->fetch(DNA => $name);
     if ($dna_obj) {
         my $dna_str = $dna_obj->fetch->at;
         #warn "Got DNA string ", length($dna_str), " long";
-        my $seq = Hum::Sequence::DNA->new;
-        $seq->name($name);
         $seq->sequence_string($dna_str);
-        return $seq;
     } else {
-        confess "No DNA object '$name'";
+        my $genomic = $ace->fetch(Sequence => $name)
+            or confess "Can't fetch Sequence '$name' : ", Ace->error;
+        my $dna_str = $genomic->asDNA
+            or confess "asDNA didn't fetch the DNA : ", Ace->error;
+        $dna_str =~ s/^>.+//m
+            or confess "Can't strip fasta header";
+        $dna_str =~ s/\s+//g;
+        
+        ### Nasty hack sMap is putting dashes
+        ### on the end of the sequence.
+        $dna_str =~ s/[\s\-]+$//;
+        
+        $seq->sequence_string($dna_str);
+        
+        #use Hum::FastaFileIO;
+        #my $debug = Hum::FastaFileIO->new_DNA_IO("> /tmp/spandit-debug.seq");
+        #$debug->write_sequences($seq);
     }
+    warn "Sequence '$name' is ", $seq->sequence_length, " long\n";
+    return $seq;
 }
 
 sub add_support_to_Clone {
