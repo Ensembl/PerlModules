@@ -13,9 +13,7 @@ use Hum::Tracking qw( track_db
                       project_team_leader
                       fishData
                       );
-use humConf qw( HUMAN_SEQ_FTP_DIR
-                FTP_GHOST
-                );
+use humConf qw( FTP_ROOT FTP_GHOST );
 use File::Path;
 
 # Object methods
@@ -68,7 +66,7 @@ BEGIN {
 
 sub set_ftp_path {
     my( $pdmp ) = @_;
-    return $pdmp->set_path($HUMAN_SEQ_FTP_DIR);
+    return $pdmp->set_path($FTP_ROOT);
 }
 sub set_ghost_path {
     my( $pdmp ) = @_;
@@ -96,7 +94,8 @@ BEGIN {
         my $phase   = $pdmp->htgs_phase;
         my $p = $species_dirs{$species}
             or confess "Don't know about '$species'";
-        my $path = $p->[0];
+
+        my $path = "$base_dir/$p->[0]";
         $path .= "/$p->[1]$chr" if $p->[1];
         if ($phase == 0 or $phase == 1) {
             $path .= "/unfinished_sequence";
@@ -197,6 +196,16 @@ BEGIN {
             }
             return $pdmp->{'_contig_count'};
         }
+    }
+
+    sub new_dna_ref {
+        my( $pdmp, $contig ) = @_;
+
+        confess "Can't call new_dna_ref() without contig name"
+            unless $contig;
+        my $dna = '';
+        $pdmp->{'_DNA'}{$contig} = \$dna;
+        return $pdmp->{'_DNA'}{$contig};
     }
 
     sub delete_contig {
@@ -334,15 +343,45 @@ sub read_gap_contigs {
     $pdmp->dump_time(time); # Record the time of the dump
 }
 
+sub read_fasta_file {
+    my( $pdmp ) = @_;
+    
+    my $dir = $pdmp->file_path or confess "file_path not set";
+    my $seq_name = $pdmp->sequence_name;
+    my $file = "$dir/$seq_name";
+    
+    local *FASTA;
+    open FASTA, $file or confess "Can't read '$file' : $!";
+    my( $dna );
+    while (<FASTA>) {
+        if (/^>/) {
+            my ($contig) = /Contig_ID:\s+(\w+)/;
+            unless ($contig) {
+                $pdmp->htgs_phase == 3
+                    or confess "Can't see 'Contig_ID:' in fasta header; not a Sanger fasta file?";
+                $contig = 'FINISHED_CONTIG';
+            }
+            $dna = $pdmp->new_dna_ref($contig);
+        } else {
+            chomp;
+            $$dna .= $_;
+        }
+    }
+    
+    if (my $count = $pdmp->contig_count) {
+        return $count;
+    } else {
+        confess "No contigs read";
+    }
+}
+
 sub write_fasta_file {
-    my( $pdmp, $file ) = @_;
+    my( $pdmp ) = @_;
     
     my $seq_name = $pdmp->sequence_name;
     my $accno    = $pdmp->accession || '';
-    unless ($file) {
-        my $dir = $pdmp->file_path;
-        $file = "$dir/$seq_name";
-    }
+    my $dir = $pdmp->file_path;
+    my $file = "$dir/$seq_name";
     
     local *FASTA;
     open FASTA, "> $file" or confess "Can't write to '$file' : $!";
@@ -364,14 +403,12 @@ sub write_fasta_file {
 }
 
 sub write_quality_file {
-    my( $pdmp, $file ) = @_;
+    my( $pdmp ) = @_;
     
     my $seq_name = $pdmp->sequence_name;
     my $accno    = $pdmp->accession || '';
-    unless ($file) {
-        my $dir = $pdmp->file_path;
-        $file = "$dir/$seq_name.qual";
-    }
+    my $dir = $pdmp->file_path;
+    my $file = "$dir/$seq_name.qual";
     
     my $N = 30; # Number of quality values per line
     my $pat = 'A3' x $N;
@@ -411,13 +448,11 @@ sub write_quality_file {
 }
 
 sub write_embl_file {
-    my( $pdmp, $file ) = @_;
+    my( $pdmp ) = @_;
 
     my $seq_name = $pdmp->sequence_name;
-    unless ($file) {
-        my $dir = $pdmp->file_path;
-        $file = "$dir/$seq_name.embl";
-    }
+    my $dir = $pdmp->file_path;
+    my $file = "$dir/$seq_name.embl";
     
     my $embl = $pdmp->embl_file;
     
