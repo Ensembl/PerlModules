@@ -25,7 +25,7 @@ sub species {
     my( $self, $species ) = @_;
     
     if ($species) {
-        $self->{'_species'} = $species;
+        $self->{'_species'} = ucfirst lc $species;
     }
     return $self->{'_species'};
 }
@@ -34,7 +34,7 @@ sub chromosome {
     my( $self, $chromosome ) = @_;
     
     if ($chromosome) {
-        $self->{'_chromosome'} = $chromosome;
+        $self->{'_chromosome'} = uc $chromosome;
     }
     return $self->{'_chromosome'};
 }
@@ -83,7 +83,7 @@ sub new_from_db_id {
     return $pkg->_fetch_generic(q{ AND t.id_tpf = ? }, $db_id);
 }
 
-sub new_current_from_species_chromsome {
+sub current_from_species_chromsome {
     my( $pkg, $species, $chromsome ) = @_;
     
     return $pkg->_fetch_generic(q{
@@ -94,7 +94,7 @@ sub new_current_from_species_chromsome {
         $species, $chromsome);
 }
 
-sub new_current_from_species_chromsome_subregion {
+sub current_from_species_chromsome_subregion {
     my( $pkg, $species, $chromsome, $subregion ) = @_;
     
     return $pkg->_fetch_generic(q{
@@ -112,7 +112,7 @@ sub _fetch_generic {
     ### Need to convert Oracle date to unix time int
     my $sth = prepare_cached_track_statement(qq{
         SELECT t.id_tpf
-          , t.entry_date
+          , TO_CHAR(accept_date, 'YYYY-MM-DD HH24:MI:SS') accept_date
           , t.program
           , t.operator
           , g.subregion
@@ -267,10 +267,11 @@ sub string {
 sub store {
     my( $self ) = @_;
     
-    return if $self->db_id;
+    confess("Already stored with id_tpf=", $self->db_id)
+        if $self->db_id;
     
     my ($chr_id, $id_tpftarget) = $self->get_store_chr_tpftarget_ids;
-    my $db_id = $self->get_next_id_tpf;
+    $self->get_next_id_tpf;
     
     # Set any existing to not_current
     my $not_current = prepare_cached_track_statement(q{
@@ -280,6 +281,7 @@ sub store {
         });
     $not_current->execute($id_tpftarget);
     
+    # Store self into TPF table
     my $sth = prepare_cached_track_statement(q{
         INSERT INTO tpf(id_tpf
               , id_tpftarget
@@ -289,13 +291,17 @@ sub store {
               , operator)
         VALUES(?,?,sysdate,1,?,?)
         });
-    $sth->execute($db_id,
+    $sth->execute($self->db_id,
         $id_tpftarget,
         $self->program,
         $self->operator,
         );
     
-    $self->db_id($db_id);
+    # Store all rows
+    my $rank = 0;
+    foreach my $row ($self->fetch_all_Rows) {
+        $row->store($self, ++$rank);
+    }
 }
 
 sub get_store_chr_tpftarget_ids {
@@ -390,7 +396,7 @@ sub get_next_id_tpf {
     my $sth = prepare_track_statement(q{SELECT tpf_seq.nextval FROM dual});
     $sth->execute;
     my ($id) = $sth->fetchrow;
-    return $id;
+    $self->db_id($id);
 }
 
 1;

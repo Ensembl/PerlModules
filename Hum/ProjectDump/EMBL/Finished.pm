@@ -274,7 +274,8 @@ were either double-stranded or sequenced with an alternate chemistry or
 covered by high quality data (i.e., phred quality >= 30); an attempt was
 made to resolve all sequencing problems, such as compressions and repeats;
 all regions were covered by at least one plasmid subclone or more than one
-M13 subclone; and the assembly was confirmed by restriction digest.',
+M13 subclone; and the assembly was confirmed by restriction digest, except
+on the rare occasion of the clone being a YAC.',
 
 
 'The following abbreviations are used to associate primary accession

@@ -4,8 +4,9 @@
 package Hum::TPF::Row::Gap;
 
 use strict;
-use base 'Hum::TPF::Row';
 use Carp;
+use base 'Hum::TPF::Row';
+use Hum::Tracking 'prepare_cached_track_statement';
 
 
 sub is_gap { return 1; }
@@ -51,6 +52,39 @@ sub string {
 }
 
 
+sub store {
+    my( $self, $tpf, $rank ) = @_;
+    
+    confess("row is already stored with id_tpfrow=", $self->db_id)
+        if $self->db_id;
+    
+    my $db_id = $self->get_next_id_tpfrow;
+    my $insert = prepare_cached_track_statement(q{
+        INSERT INTO tpf_row(id_tpfrow
+              , id_tpf
+              , rank)
+        VALUES(?,?,?)
+        });
+    $insert->execute(
+        $db_id,
+        $tpf->db_id,
+        $rank,
+        );
+    
+    my $gap_insert = prepare_cached_track_statement(q{
+        INSERT INTO tpf_gap(id_tpfrow
+              , length
+              , id_gaptype)
+        VALUES(?,?,?)
+        });
+    $gap_insert->execute(
+        $db_id,
+        $self->gap_length,
+        $self->type,
+        );
+    
+    $self->db_id($db_id);
+}
 
 1;
 

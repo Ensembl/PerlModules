@@ -353,15 +353,15 @@ sub add_FT_entries {
             }
         }
         
-        ## Waiting for official wording (if any):
-        #
-        #if ($pdmp->species eq 'Mouse') {
-        #    $embl->newCC->list(
-        #        'Sequence data from version 1 or 2 of the Mouse Genome Sequencing',
-        #        'Consortium whole genome shotgun may have been used to finish this sequence',
-        #    );
-        #    $embl->newXX;
-        #}
+        if ($pdmp->species eq 'Mouse') {
+            $embl->newCC->list(
+                'Sequence from the Mouse Genome Sequencing Consortium whole genome shotgun',
+                'may have been used to confirm this sequence.  Sequence data from the whole',
+                'genome shotgun alone has only been used where it has a phred quality of at',
+                'least 30.',
+            );
+            $embl->newXX;
+        }
     }
 }
 

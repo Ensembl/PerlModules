@@ -5,6 +5,10 @@ package Hum::TPF::Row::Clone;
 
 use strict;
 use base 'Hum::TPF::Row';
+use Hum::Tracking qw{
+    prepare_track_statement
+    prepare_cached_track_statement
+    };
 use Carp;
 
 sub accession {
@@ -114,6 +118,78 @@ sub string {
         . "\n";
 }
 
+sub store {
+    my( $self, $tpf, $rank ) = @_;
+    
+    confess("row is already stored with id_tpfrow=", $self->db_id)
+        if $self->db_id;
+    
+    $self->store_clone_if_missing($tpf);
+    
+    my $db_id = $self->get_next_id_tpfrow;
+    my $insert = prepare_cached_track_statement(q{
+        INSERT INTO tpf_row(id_tpfrow
+              , id_tpf
+              , rank
+              , clonename
+              , contigname)
+        VALUES(?,?,?,?,?)
+        });
+    $insert->execute(
+        $self->db_id,
+        $tpf->db_id,
+        $rank,
+        $self->sanger_clone_name,
+        $self->contig_name,
+        );
+}
+
+sub store_clone_if_missing {
+    my( $self, $tpf ) = @_;
+    
+    my $upper = uc $self->sanger_clone_name;
+    my $get_clone = prepare_cached_track_statement(q{
+        SELECT clonename
+        FROM clone
+        WHERE upper(clonename) = ?
+        });
+    $get_clone->execute($upper);
+    my ($db_clonename) = $get_clone->fetchrow;
+    $get_clone->finish;
+    
+    if ($db_clonename) {
+        $self->sanger_clone_name($db_clonename);
+        return;
+    }
+    
+    # Insert into clone table
+    my $insert = prepare_cached_track_statement(q{
+        INSERT INTO clone(clonename
+              , speciesname
+              , sequenced_by
+              , funded_by
+              , seq_reason
+              , is_hsm
+              , remark
+              , clone_type)
+        VALUES(?,?
+              , 0,0,1,1
+              , 'added by ChromoView'
+              , 1)
+        });
+    $insert->execute(
+        $self->sanger_clone_name,
+        $tpf->species,
+        );
+    
+    # and into clone status
+    my $status_insert = prepare_cached_track_statement(q{
+        INSERT INTO clone_status(clonename
+              , status)
+        VALUES(?,1)
+        });
+    $status_insert->execute($self->sanger_clone_name);
+}
 
 1;
 

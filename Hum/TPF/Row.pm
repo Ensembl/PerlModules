@@ -5,6 +5,7 @@ package Hum::TPF::Row;
 
 use strict;
 use Carp;
+use Hum::Tracking 'prepare_cached_track_statement';
 
 sub new {
     my( $pkg ) = @_;
@@ -23,6 +24,16 @@ sub db_id {
 
 # This is overridden in TPF::Row::Gap
 sub is_gap { return 0; }
+
+sub get_next_id_tpfrow {
+    my( $self ) = @_;
+    
+    my $sth = prepare_cached_track_statement(q{SELECT tpfr_seq.nextval FROM dual});
+    $sth->execute;
+    my ($id) = $sth->fetchrow;
+    $sth->finish;
+    $self->db_id($id);
+}
 
 1;
 

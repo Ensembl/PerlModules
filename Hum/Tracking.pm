@@ -24,6 +24,7 @@ I<Tracking> database.
 use strict;
 use WrapDBI;
 use Exporter;
+use Time::Local 'timelocal';
 use Carp;
 
 use vars qw( @ISA @EXPORT_OK );
@@ -63,6 +64,8 @@ use vars qw( @ISA @EXPORT_OK );
                 track_db_commit
                 track_db_rollback
                 unfinished_accession
+                iso2time
+                time2iso
                 );
 
 =head2 current_project_status_number( PROJECT )
@@ -1051,6 +1054,19 @@ more than one match in the project table.
     }
 }
 
+sub iso2time {
+    my $iso = shift || die "No iso time given";
+    
+    my ($year, $mon, $mday, $hour, $min, $sec)
+}
+
+sub time2iso {
+    my $time = shift || time;
+    
+    my ($sec,$min,$hour,$mday,$mon,$year) = localtime($time);
+    return sprintf("%04d-%02d-%02d %02d:%02d:%02d",
+        $year+1900, $mon+1, $mday, $hour, $min, $sec);
+}
 
 1;
 
