@@ -40,7 +40,7 @@ sub seq_end {
 }
 
 {
-    my %allowed_strand = map {$_, 1} qw{ -1 0 1 +1 };
+    my %allowed_strand = map {$_, 1} qw{ -1 0 1 };
 
     sub seq_strand {
         my( $self, $strand ) = @_;

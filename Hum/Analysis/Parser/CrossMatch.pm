@@ -48,8 +48,13 @@ sub parse_coordinate_line {
     my $feature = Hum::Ace::SeqFeature::Pair::CrossMatch->new();
     $feature->seq_strand(1);
     
+    # Strip internal parentheses, asterisks and leading space
     $line =~ s/[\(\)\*]//g;
+    $line =~ s/^\s+//;
+    
+    # Split into fields on white space
     my @data = split /\s+/, $line;
+    
     $feature->score(                $data[0]  );
     $feature->percent_substitution( $data[1]  );
     $feature->percent_insertion(    $data[2]  );
@@ -77,7 +82,7 @@ sub parse_coordinate_line {
         $feature->hit_end(          $data[11] );
     }
     else {
-        confess "Unexpected match line format '$_'";
+        confess "Unexpected match line format '$_' (", scalar(@data), " elements)";
     }
 }
 
