@@ -139,7 +139,7 @@ sub store {
         VALUES(NULL,'$set_name', '$set_description')
         });
     $insert_set->execute;
-    $set_id = $insert_set->{'insertid'}
+    $set_id = $insert_set->{'mysql_insertid'}
         or confess "Didn't get a set_id";
 
     my $insert_seq = prepare_statement(q{

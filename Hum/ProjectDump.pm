@@ -978,7 +978,7 @@ sub store_dump {
             . q{) VALUES (NULL,?,?,?,?,?,?)}
             );
         $insert->execute(map $pdmp->$_(), @fields);
-        return $insert->{'insertid'};   # The auto_incremented value
+        return $insert->{'mysql_insertid'};   # The auto_incremented value
     }
 }
 

@@ -237,7 +237,7 @@ sub store {
         VALUES (NULL, $ana_seq_id, '$task_name', NOW())
         });
     $insert->execute;
-    my $ana_job_id = $insert->{'insertid'}
+    my $ana_job_id = $insert->{'mysql_insertid'}
         or confess "No insertid from statement handle";
     $self->ana_job_id($ana_job_id);
 }

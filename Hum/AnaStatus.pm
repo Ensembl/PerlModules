@@ -41,7 +41,7 @@ sub add_seq_id_dir {
         VALUES (NULL,'Y', $seq_id, '$ana_dir', '$db_prefix')
         });
     $sth->execute;
-    my $ana_seq_id = $sth->{'insertid'};
+    my $ana_seq_id = $sth->{'mysql_insertid'};
 
     make_status_entered($ana_seq_id);
 }
@@ -82,7 +82,7 @@ sub add_new_sequence_entry {
         1,
         $dir,
         $chr_id );
-    return $sth->{'insertid'};
+    return $sth->{'mysql_insertid'};
 }
 
 sub set_ana_sequence_not_current {

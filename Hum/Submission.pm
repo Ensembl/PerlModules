@@ -375,7 +375,7 @@ a time string as input, or defaulting to current time.
                 VALUES (NULL,?,?)
                 });
             $sth->execute($species, $chr);
-            $species_chr{$species}{$chr} = $sth->{'insertid'};
+            $species_chr{$species}{$chr} = $sth->{'mysql_insertid'};
         }
         return $species_chr{$species}{$chr};
     }
