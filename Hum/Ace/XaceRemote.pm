@@ -89,6 +89,8 @@ sub load_ace {
     my $self        = shift;
     my $ace = join("\n\n", @_);
     
+    #warn "\nLoading:\n\n$ace\n\n";
+    
     my $tmp_ace = "/tmp/xremote.$$.ace";
     local *ACE_REMOTE;
     open ACE_REMOTE, "> $tmp_ace"

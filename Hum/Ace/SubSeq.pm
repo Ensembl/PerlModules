@@ -502,7 +502,8 @@ sub ace_string {
     
     # Position in parent sequence
     my $out = qq{\nSequence "$clone"\n}
-        . qq{-D SubSequence "$name"\n};
+        . qq{-D SubSequence "$name"\n}
+        . qq{\nSequence "$clone"\n};
     
     my( $start, $end, $strand );
     if (@exons) {
@@ -521,6 +522,8 @@ sub ace_string {
         . qq{-D Method\n}
         . qq{-D CDS\n}
         . qq{-D Source_Exons\n}
+        
+        . qq{\nSequence "$name"\n}
         . qq{Source "$clone"\n}
         ;
     
