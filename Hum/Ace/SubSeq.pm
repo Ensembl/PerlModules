@@ -29,6 +29,104 @@ sub new_from_ace_subseq_tag {
     return $sub;
 }
 
+sub new_from_start_end_fox_subseq {
+    my( $pkg, $start, $end, $sub ) = @_;
+    
+    my $self = $pkg->new;
+    my $txt = $sub->mutable_data;
+    my $name = $sub->name;
+
+    # Sort out the strand
+    my( $strand );
+    if ($start < $end) {
+        $strand = 1;
+    } else {
+        ($start, $end) = ($end, $start);
+        $strand = -1;
+    }
+    $self->strand($strand);
+
+    # Make the exons
+    foreach my $ints ($txt->get_values('Source_exons')) {
+        
+        # Make an Exon object
+        my $exon = Hum::Ace::Exon->new;
+        
+        my ($x, $y) = @$ints;
+        die "Missing coordinate in '$name' : start='$x' end='$y'\n"
+            unless $x and $y;
+        if ($strand == 1) {
+            foreach ($x, $y) {
+                $_ = $start + $_ - 1;
+            }
+        } else {
+            foreach ($x, $y) {
+                $_ = $end - $_ + 1;
+            }
+            ($x, $y) = ($y, $x);
+        }
+        $exon->start($x);
+        $exon->end($y);
+        $self->add_Exon($exon);
+    }
+    
+    # Parse Contines_from and Continues_as
+    if (my ($from) = $txt->get_values('Continued_from')) {
+        $self->upstream_subseq_name($from->[0]);
+    }
+    if (my ($as) = $txt->get_values('Continues_as')) {
+        $self->downstream_subseq_name($as->[0]);
+    }
+
+    # Parse Supporting evidence tags
+    foreach my $type (qw{ Protein_match EST_match cDNA_match }) {
+        foreach my $evidence ($txt->get_values($type)) {
+	    $self->add_SupportingEvidence_accession($type, @$evidence);
+        }
+    }
+    
+    my @exons = $self->get_all_Exons
+        or confess "No exons in '", $self->name, "'";
+
+    # Add CDS coordinates
+    if (my ($cds) = $txt->get_values('CDS')) {
+        if (@$cds == 2) {
+            $self->set_translation_region_from_cds_coords(@$cds);
+        }
+        elsif (@$cds != 0) {
+            warn "ERROR: Got ", scalar(@$cds), " coordinates from CDS tag";
+        }
+    }
+
+    # Is this a partial CDS?
+    my( $start_phase );
+    {
+        my $s_n_f = $txt->count_tag('Start_not_found');
+        my ($snf_val) = $txt->get_values('Start_not_found');
+        my $codon_start = $snf_val->[0] if $snf_val;
+        if ($s_n_f) {
+            $codon_start ||= 1;
+            $self->start_not_found($codon_start);
+        }
+        if ($codon_start and $txt->count_tag('CDS')) {
+            unless ($codon_start =~ /^[123]$/) {
+                confess("Bad codon start ('$codon_start') in '$name'");
+            }
+            
+            # Store phase in AceDB convention (not EnsEMBL)
+            $start_phase = $codon_start;
+        }
+    }
+
+    # Are we missing the 3' end?
+    if ($txt->count_tag('End_not_found')) {
+        $self->end_not_found(1);
+    }
+
+    $self->validate;
+    
+}
+
 sub new_from_name_start_end_transcript_seq {
     my( $pkg, $name, $start, $end, $t_seq ) = @_;
     

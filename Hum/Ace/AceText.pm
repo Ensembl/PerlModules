@@ -1,7 +1,7 @@
 
-### Hum::Ace::ParseText
+### Hum::Ace::AceText
 
-package Hum::Ace::ParseText;
+package Hum::Ace::AceText;
 
 use strict;
 use 5.6.0;  # Needed for qr support
@@ -50,7 +50,7 @@ sub get_values {
     my ($pat, $offset) = _make_pattern_and_offset($tag_path);
     
     my( @matches );
-    while ($$self =~ /$pat/img) {
+    while ($$self =~ /$pat/g) {
         my @ele = quotewords('\s+', 0, $1);
         #warn join('  ', map "<$_>", @ele), "\n";
         push(@matches, [@ele[$offset .. $#ele]]);
@@ -63,7 +63,7 @@ sub count_tag {
     
     my ($pat) = _make_pattern_and_offset($tag_path);
     my $count = 0;
-    while ($$self =~ /$pat/img) {
+    while ($$self =~ /$pat/g) {
         $count++;
     }
     return $count;
@@ -73,7 +73,7 @@ sub delete_tag {
     my( $self, $tag_path ) = @_;
     
     my ($pat) = _make_pattern_and_offset($tag_path);
-    $$self =~ s/$pat\n//img;
+    $$self =~ s/$pat\n//g;
 }
 
 sub add_tag_values {
@@ -133,7 +133,7 @@ sub _quoted_ace_line {
         unless ($pat = $pattern_cache{$tag_path}) {
             $offset += $tag_path =~ s/\./\\s+/g;
             #warn "Tag path = '$tag_path'\n";
-            $pat = $pattern_cache{$tag_path} = [qr/^($tag_path\b.*)/, $offset];
+            $pat = $pattern_cache{$tag_path} = [qr/^($tag_path\b.*?)\s*$/im, $offset];
         }
         
         return @$pat
@@ -144,12 +144,12 @@ sub _quoted_ace_line {
 
 __END__
 
-=head1 NAME - Hum::Ace::ParseText
+=head1 NAME - Hum::Ace::AceText
 
 =head1 SYNOPSIS
 
     # Make new object
-    my $txt = Hum::Ace::ParseText->new($ace_string);
+    my $txt = Hum::Ace::AceText->new($ace_string);
 
     # Get Source_Exons coordinates
     foreach my $coord ($txt->get_values('Source_Exons')) {
@@ -167,7 +167,7 @@ __END__
 
 =head1 DESCRIPTION
 
-B<Hum::Ace::ParseText> parses the values for
+B<Hum::Ace::AceText> parses the values for
 given tags from a piece of acedb formatted text. 
 It avoids having to write a bunch of regular
 expressions every time you need to do this.
@@ -178,9 +178,10 @@ expressions every time you need to do this.
 
 =item new
 
-Creates a new B<Hum::Ace::ParseText> object.  It
-takes a single mandatory argument, a string of
-.ace formatted text.  (See SYNOPSIS above.)
+Creates a new B<Hum::Ace::AceText> object.  It
+takes a single mandatory argument which is a
+string of .ace formatted text.  (See SYNOPSIS
+above.)
 
 =item get_values
 
@@ -201,7 +202,8 @@ in the ace text.
 
 =item delete_tag
 
-Deletes all occurences of the tag from the text.
+Deletes all occurences of the given tag (and its
+values) from the text.
 
 =item add_tag_values
 
@@ -217,8 +219,8 @@ name of the tag.
 
 =item ace_string
 
-Returns the ParseText object as ace file
-formatted text.
+Returns the B<AceText> object as an ace file
+formatted string.
 
 =back
 
