@@ -85,13 +85,16 @@ sub mirror_copy_file {
     my $from_size = 0;
     if (-e $from_file) {
         ($from_size,@utime) = (stat(_))[7,8,9];
-        confess "Source file '$from_file' is empty\n"
-            unless $from_size;
     } else {
         confess "No such source file '$from_file'\n";
     }
     
     my $to_size = (stat($to_file))[7] || 0;
+    
+    if ($from_size == 0 and $from_size != $to_size) {
+        confess "Source file '$from_file' is empty\n",
+            "but '$to_file' is not ('$to_size')";
+    }
     
     unless ($to_size == $from_size
         and identical_file_checksums($from_file, $to_file)) {
@@ -135,7 +138,7 @@ sub file_checksum {
     my( $file ) = @_;
     
     my ($sum) = qx{cksum $file 2>/dev/null} =~ /^(\d+)/;
-    return $sum ? $sum : -1;
+    return defined($sum) ? $sum : -1;
 }
 
 sub run_pressdb {
