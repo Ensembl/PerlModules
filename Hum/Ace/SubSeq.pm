@@ -566,6 +566,30 @@ sub exon_Sequence {
     return $seq;
 }
 
+sub mRNA_Sequence {
+    my( $self ) = @_;
+    
+    my $strand    = $self->strand;
+    my $clone_seq = $self->clone_Sequence or confess "No clone_Sequence";
+    
+    my $seq = Hum::Sequence::DNA->new;
+    $seq->name($self->name);
+    
+    my $seq_str = '';
+    foreach my $exon ($self->get_all_Exons) {
+        $seq_str .= $clone_seq
+            ->sub_sequence($exon->start, $exon->end)
+            ->sequence_string;
+    }
+    $seq->sequence_string($seq_str);
+    
+    if ($strand == -1) {
+        $seq = $seq->reverse_complement;
+    }
+    
+    return $seq;
+}
+
 sub translatable_Sequence {
     my( $self ) = @_;
     

@@ -62,17 +62,12 @@ sub fork_dotter {
         return 1;
     }
     elsif (defined $pid) {
+        my $prefix = "/tmp/dotter.$$";
+        my $query_file   = "$prefix.query";
+        my $subject_file = "$prefix.subject";
         eval{
-            my $prefix = "/tmp/dotter.$$";
-            my $query_file   = "$prefix.query";
-            my $subject_file = "$prefix.subject";
             my $query_seq = $seq->sub_sequence($start, $end);
             $query_seq->name($seq->name);
-
-            # Write out the query sequence
-            my $query_out = Hum::FastaFileIO->new("> $query_file");
-            $query_out->write_sequences($query_seq);
-            $query_out = undef;
 
             # Write the subject with pfetch
             my ($subject_seq) = Hum::Pfetch::get_Sequences($subject_name);
@@ -81,11 +76,22 @@ sub fork_dotter {
             $subject_out->write_sequences($subject_seq);
             $subject_out = undef;
 
+            # Write out the query sequence
+            my $query_out = Hum::FastaFileIO->new("> $query_file");
+            $query_out->write_sequences($query_seq);
+            $query_out = undef;
+
             # Run dotter
             my $offset = $start - 1;
             my $dotter_command = "dotter -q $offset $query_file $subject_file ; rm $query_file $subject_file";
             exec($dotter_command) or warn "Failed to exec '$dotter_command' : $!";
         };
+        if ($@) {
+            warn $@;
+            # Execing rm here ensures that the perl
+            # DESTROY methods in the child aren't called
+            exec("rm -f $query_file $subject_file");
+        }
         exit(0);
     }
     else {
