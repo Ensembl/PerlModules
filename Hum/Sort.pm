@@ -40,7 +40,7 @@ sub _ace_array_sort {
     }
     else {
         # cmp does the right thing otherwise
-        # (numbers are smaller than letters)
+        # (numbers are sorted before letters).
         return $x cmp $y || _ace_array_sort($A, $B);
     }
 }
@@ -66,10 +66,10 @@ __END__
 
 =head2 ace_sort
 
-Sorts objects in a human intuitive way.  This is
-especially nice for sorting things like clone
-names, and is copied from how acedb sorts data in
-its displays.
+Sorts objects in a case insensitive and human
+intuitive way.  This is especially nice for
+sorting things like clone names, and is copied
+from how acedb sorts data in its displays.
 
 =head1 AUTHOR
 
