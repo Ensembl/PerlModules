@@ -20,6 +20,9 @@ sub new {
 sub fetch_by_SequenceInfo_pair {
     my( $pkg, $seq_a, $seq_b ) = @_;
     
+    confess "Need two SequenceInfo objects, but got '$seq_a' and '$seq_b'"
+        unless $seq_a and $seq_b;
+    
     my $sth = track_db->prepare_cached(q{
         SELECT oa.position
           , oa.is_3prime

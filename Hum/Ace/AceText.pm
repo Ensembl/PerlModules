@@ -11,8 +11,13 @@ use Text::ParseWords 'quotewords';
 sub new {
     my( $pkg, $txt ) = @_;
 
+    # Trim trailing empty lines so that it
+    # is safe to add data onto the end.
     $txt =~ s/\s+$/\n/s;
-    $txt =~ s/\0//g;    # Remove pesky nulls
+    
+    # Remove pesky nulls
+    $txt =~ s/\0//g;
+    
     return bless \$txt, $pkg;
 }
 
@@ -144,6 +149,11 @@ __END__
     # Count how many EST matches are recorded
     print "There are ", $txt->count_tag('EST_match'), " est matches\n";
 
+    # Get values under a data tag.  (The double quote is
+    # qualified by a '?' in case the tag is not quoted).
+    foreach my $val ($txt->get_values('Feature."?NonGolden')) {
+        my ($start, $end) = @$val;
+    }
 
 =head1 DESCRIPTION
 

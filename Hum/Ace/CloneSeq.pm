@@ -186,15 +186,20 @@ sub set_golden_start_end_from_NonGolden_Features {
     $ace->raw_query("find Sequence $clone_name");
     my $feat_list = $ace->raw_query('show -a Feature');
     my $txt = Hum::Ace::AceText->new($feat_list);
+    my( $g_start, $g_end );
     foreach my $f ($txt->get_values('Feature."?NonGolden')) {
         my ($start, $end) = @$f;
         if ($start == 1) {
-            $self->golden_start($end + 1);
+            $g_start = $end + 1;
+            $self->golden_start($g_start);
         }
         elsif ($end == $length) {
-            $self->golden_end($start - 1);
+            $g_end = $start - 1;
+            $self->golden_end($g_end);
         }
     }
+    $self->golden_start(1) unless $g_start;
+    $self->golden_end($length) unless $g_end;
 }
 
 sub express_data_fetch {

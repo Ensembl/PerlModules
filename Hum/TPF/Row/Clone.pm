@@ -399,8 +399,19 @@ sub _embl_sequence_get {
                 return;
             }
 
-            my $fasta = Hum::FastaFileIO->new_DNA_IO("$path/$name");
-            my ($seq) = $fasta->read_one_sequence;
+            my( $seq );
+            if ($htgs_phase == 3) {
+                # Finished sequences may not have an EMBL file
+                my $fasta = Hum::FastaFileIO->new_DNA_IO("$path/$name");
+                $seq = $fasta->read_one_sequence;
+            } else {
+                # Unfinished sequences may be in multiple pieces
+                # so we need the sequence from the EMBL file where
+                # it is in one piece.
+                my $embl = Hum::EMBL->new;
+                my $entry = $embl->parse("$path/$name.embl");
+                $seq = $entry->hum_sequence;
+            }
 
             my( $seq_inf );
             unless ($seq_inf = Hum::SequenceInfo->fetch_by_accession_sv($acc, $sv)) {
