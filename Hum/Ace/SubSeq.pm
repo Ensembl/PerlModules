@@ -144,7 +144,7 @@ sub clone {
     # Make new SubSeq object
     my $new = ref($old)->new;
     
-    # Copy scalar fields
+    # Copy scalar fields (But not is_archival!)
     foreach my $meth (qw{
         name
         clone_Sequence
@@ -228,6 +228,14 @@ sub is_sorted {
     return $self->{'_is_sorted'};
 }
 
+sub is_archival {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_is_archival'} = $flag ? 1 : 0;
+    }
+    return $self->{'_is_archival'};
+}
 
 ### Methods to record type?
 

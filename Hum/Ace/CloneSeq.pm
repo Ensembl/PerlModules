@@ -80,9 +80,9 @@ sub add_SubSeq {
 }
 
 sub replace_SubSeq {
-    my( $self, $sub ) = @_;
+    my( $self, $sub, $old_name ) = @_;
     
-    my $name = $sub->name;
+    my $name = $old_name || $sub->name;
     my $ss_list = $self->{'_SubSeq_list'}
         or confess "No SubSeq list";
     for (my $i = 0; $i < @$ss_list; $i++) {
