@@ -50,6 +50,7 @@ $ENV{'PERL5LIB'} = join ':', @libs;
 	   /nfs/disk100/humpub/scripts
 	   /usr/local/pubseq/scripts
 	   /usr/local/badger/bin
+           /usr/local/badger/staden/bin
 	   /usr/local/pubseq/bin
 	   /nfs/disk100/pubseq/compugen/OSF/exe
 	   /usr/local/oracle/bin
