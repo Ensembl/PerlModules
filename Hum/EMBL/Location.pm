@@ -109,17 +109,19 @@ sub three_prime {
 sub parse {
     my( $loc, $s ) = @_;
     
+    warn "Parsing '$$s'";
+    
     if ($$s =~ /complement/) {
         $loc->strand('C');
     } else {
         $loc->strand('W');
     }
     
-    $loc->missing_5_prime if $loc =~ s/<//;
-    $loc->missing_3_prime if $loc =~ s/>//;
+    $loc->missing_5_prime(1) if $$s =~ /</;
+    $loc->missing_3_prime(1) if $$s =~ />/;
     
     my( @exons );
-    while ($$s =~ /(\d+)\.\.(\d+)/g) {
+    while ($$s =~ /(\d+)\.\.>?(\d+)/g) {
         push( @exons, [$1, $2] );
     }
     if (@exons) {
