@@ -35,6 +35,7 @@ my (@libs, @path);
 BEGIN {
     @libs = qw(
 	       /nfs/disk100/humpub/modules/PerlModules
+               /nfs/disk100/humpub/modules/bioperl-0.6
 	       /nfs/disk100/humpub/modules
 	       /usr/local/badger/bin
 	       );
