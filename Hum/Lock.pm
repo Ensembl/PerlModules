@@ -100,8 +100,8 @@ sub new {
     
     # Create the lockfile object
     return bless {
-    	    	  file => $lockFile,
-     		  home => cwd()
+    	    	  'file' => $lockFile,
+     		  'home' => cwd()
 		  }, $pkg;
 }
 
@@ -109,29 +109,34 @@ sub new {
 # running on a remote host
 sub processExists {
     my( $host, $pid ) = @_;
+    my( $ostype, $ps, $ps_pipe );
     
-    # Get OS type for host which set lockfile
-    if (my $ostype = qx(lsrun -m $host perl -e 'print \$^O')) {
-    
-    	# Get correct format for ps command to show all processes
-    	my $psCommand = psCommand( $ostype )
-	    or return "Don't know correct ps command for [ $ostype ]";
-	
-	open PS, "lsrun -m $host $psCommand |"
-	    or return "Can't run [ lsrun -m $host $psCommand ]";
-	while (<PS>) {
-	    /^\s*$pid\s/ and return 'RUN'
-	}
-	close PS;
-	
-	# Check status of lsrun ps command 
-	if ($?) {
-	    return "Error: $? $!";
-	} else {
-	    return 'DEAD';
-	}
+    # Don't need lsrun if on same host
+    if ($host eq hostname()) {
+        $ostype = $^O;
+        $ps = psCommand($ostype);
+        $ps_pipe = "$ps |";
     } else {
-    	return "Can't determine OS type";
+        $ostype = qx(lsrun -m $host perl -e 'print \$^O')
+            or return "Can't determine OS type";
+        $ps = psCommand($ostype);
+        $ps_pipe = "lsrun -m $host $ps |";
+    }
+
+    return "Don't know correct ps command for [ $ostype ]" unless $ps;
+
+    open PS, $ps_pipe
+	or return "Can't run [ $ps_pipe ]";
+    while (<PS>) {
+	/^\s*$pid\s/ and return 'RUN'
+    }
+    close PS;
+
+    # Check status of lsrun ps command 
+    if ($?) {
+	return "$ps_pipe : $? $!";
+    } else {
+	return 'DEAD';
     }
 }
 
@@ -157,11 +162,14 @@ __END__
 =head1 SYNOPSIS
 
     use Hum::Lock;
-
+    
+    # Catch SIGTERM so that lock file is removed if killed
+    $SIG{'TERM'} = sub { die "Shot through the heart!" };
+    
     my $lock; # Lock will be removed when it goes
               # out of scope.
     eval {
-        # new method is fatal on failure
+        # The new() method is fatal on failure
         $lock = Hum::Lock->new('anaScript.lock');
     };
     if ($@) {
@@ -169,10 +177,6 @@ __END__
     }
     print "Host: ", $lock->host(),
     	"\nProcessID: ", $lock->pid(), "\n";
-    
-Creates the lock file I<anaScript.lock>, then
-prints out some details which are held in the
-object.
 
 =head1 METHODS
 
@@ -192,7 +196,7 @@ available on the machine.
 =item processExists
 
     $exists = processExists( $host, $pid );
-    
+
 Checks wether the process with PID I<$pid> exists
 on host I<$host> using the LSF system.  Will fail
 if the host concerned isn't using LSF.  Optionally
