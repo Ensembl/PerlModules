@@ -97,7 +97,7 @@ sub acefile_status_id_name {
     sub set_acefile_status {
         my( $self, $acefile_status) = @_;
 
-        confess "Acefile status not defined" unless $acefile_status;
+        confess "Acefile status not given" unless $acefile_status;
         return 1 if $acefile_status == $self->acefile_status_id;
         confess "Unknown acefile status '$acefile_status'"
             unless $self->is_valid_acefile_status_id($acefile_status);

@@ -94,7 +94,7 @@ sub ace_string {
     
     my $ace_string =
         qq{\nSequence "$name"\n}
-             . qq{DNA "$name"\n};
+           . qq{\nDNA "$name"\n};
     
     while ($seq =~ /(.{1,60})/g) {
         $ace_string .= $1 . "\n";
