@@ -545,6 +545,9 @@ sub cleanup_contigs {
             $pdmp->delete_contig($contig);
         }
     }
+    
+    confess "No significant contigs found" unless $pdmp->contig_count;
+    
     $pdmp->validate_contig_lengths;
 }
 
@@ -579,7 +582,7 @@ sub read_gap_contigs {
     my $contig_prefix = "Contig_prefix_ezelthrib";
 
     $pdmp->dump_time(time); # Record the time of the dump
-    open(GAP2CAF, "cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $contig_prefix 2> /dev/null | caf_depad |")
+    open(GAP2CAF, "cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $contig_prefix | caf_depad |")
 	|| die "COULDN'T OPEN PIPE FROM GAP2CAF : $!\n";
     
     while (<GAP2CAF>) {

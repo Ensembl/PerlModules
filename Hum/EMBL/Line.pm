@@ -72,7 +72,7 @@ sub makeFieldAccessFuncs {
         *$func = sub {
             my( $line, $data ) = @_;
 
-            if ($data) {
+            if (defined $data) {
                 $line->data->{$field} = $data;
             } else {
                 return $line->data->{$field};
