@@ -1470,8 +1470,6 @@ sub read_accession_data {
 	        }
             }
             $get_chem->finish();
-            use Data::Dumper;
-            warn Dumper \%suffix_chem_map;
         }
 
         if (my ($suffix) = $name =~ /\.(...)/) {
@@ -1499,7 +1497,7 @@ sub read_accession_data {
         return $pdmp->{'_agarose_error'};
     }
 
-    sub _get_agarose_est_length {
+    sub _get_agarose_estimated_length {
         my ($pdmp) = @_;
 
         my $dbh = track_db();
