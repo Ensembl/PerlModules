@@ -44,7 +44,7 @@ sub find_Feature_sets {
     my $ex_list = [];
     for (my $i = 0; $i < @$exon_seqs; $i++) {
         #my $exon = $exon_seqs->[$i];
-        if (my $feat = $features->[$i]) {
+        if ($features and my $feat = $features->[$i]) {
             @$feat = sort {$b->hit_length <=> $a->hit_length} @$feat;
             push(@$ex_list, shift @$feat);
         } else {
