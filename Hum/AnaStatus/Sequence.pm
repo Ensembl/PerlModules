@@ -86,8 +86,8 @@ sub new_from_sequence_name {
         my $time = time;
         
         confess "status id not defined" unless $status;
-        confess "Sequence already has status '$status'"
-            if $status == $self->status_id;
+        # Just return TRUE if we already have this status
+        return 1 if $status == $self->status_id;
         confess "Unknown status_id '$status'"
             unless $self->_is_valid_status_id($status);
 
