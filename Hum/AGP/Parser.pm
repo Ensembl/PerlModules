@@ -70,7 +70,6 @@ sub parse {
             my $phase = $type_phase{$type}
                 or confess "No phase number for type '$type'";
             $row->htgs_phase($phase);
-            $row->is_finished($type eq 'F' ? 1 : 0);
         }
     }
     $self->{'_file'} = undef;
