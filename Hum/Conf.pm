@@ -83,6 +83,8 @@ $cgp_path{'EF'}="$ext_path/EF";
     HUMPUB_DISK4A => $humpub_disk4a,
     HUMPUB_DISK5A => $humpub_disk5a,
 
+    HUMPUB_BLAST  => "$humpub_disk3/data/blast",
+
     PUBLIC_HUMAN_DISK => '/nfs/repository/p100',
     HUMACE_DUMP   => '/nfs/disk100/humpub2/data',
     HUMACE_QUEUE => "$humpub/humace/queue",
