@@ -545,7 +545,7 @@ sub add_clone_span {
 sub clone_name_overlapping {
     my( $self, $pos ) = @_;
     
-    print STDERR "Getting: $self, $pos\n";
+    #print STDERR "Getting: $self, $pos\n";
     
     my $list = $self->{'_clone_span_list'} or return;
     foreach my $span (@$list) {
