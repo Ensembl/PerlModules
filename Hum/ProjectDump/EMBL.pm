@@ -4,7 +4,6 @@ package Hum::ProjectDump::EMBL;
 use strict;
 use Carp;
 use vars qw( @ISA );
-use Hum::Tracking qw( is_shotgun_complete );
 
 @ISA = 'Hum::ProjectDump';
 
@@ -141,14 +140,12 @@ sub embl_checksum {
         my $kw = $embl->newKW;
         my @kw_list = ('HTG', 'HTGS_PHASE1');
         
-        if (is_shotgun_complete($project)) {
+        if ($pdmp->is_htgs_draft) {
             my ($contig_depth) = $pdmp->contig_and_agarose_depth_estimate;
             
             # Check that the project really is draft quality
             if ($contig_depth >= 3) {
                 push( @kw_list, 'HTGS_DRAFT' );
-            } else {
-                send_warning_email('BELOW DRAFT QUALITY', $project, "contig_depth=$contig_depth");
             }
         }
         $kw->list(@kw_list);

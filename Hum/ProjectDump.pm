@@ -4,7 +4,7 @@ package Hum::ProjectDump;
 use strict;
 use Carp;
 use Hum::Submission qw( sub_db acc_data prepare_statement );
-use Hum::Tracking 'track_db';
+use Hum::Tracking qw( track_db is_shotgun_complete );
 use Hum::ProjectDump::EMBL;
 use Hum::EMBL;
 use Hum::EBI_FTP;
@@ -1732,7 +1732,37 @@ sub store_dump {
         or confess "Got no seq_id from _store_sequence()";
     $pdmp->seq_id($seq_id);
     $pdmp->_store_project_dump;
+    if ($pdmp->can('store_draft_info')) {
+        $pdmp->store_draft_info;
+    }
 }
+
+sub is_htgs_draft {
+    my( $pdmp ) = @_;
+    
+    my $project = $pdmp->project_name;
+    is_shotgun_complete($project);
+}
+
+{
+    my( $sth );
+
+    sub store_draft_info {
+        my( $pdmp ) = @_;
+
+        my $seq_id = $pdmp->seq_id;
+        my $is_draft = ($pdmp->is_htgs_draft) ? 'Y' : 'N';
+        my ($q20_depth) = $pdmp->contig_and_agarose_depth_estimate;
+        $sth ||= prepare_statement(q{
+            INSERT draft_status(seq_id
+                  , is_htgs_draft
+                  , q20_contig_depth)
+            VALUES(?,?,?)
+            });
+        $sth->execute($seq_id, $is_draft, $q20_depth);
+    }
+}
+
 
 =pod
 
