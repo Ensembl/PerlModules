@@ -38,7 +38,11 @@ sub intl_clone_name {
             $self->{'_intl_clone_name'} = $intl;
         }
     }
-    return $self->{'_intl_clone_name'};
+    if ($self->is_multi_clone) {
+        return "Multiple";
+    } else {
+        return $self->{'_intl_clone_name'};
+    }
 }
 
 sub current_seq_id {
@@ -93,7 +97,7 @@ sub sanger_clone_name {
     my( %intl_sanger );
     my $init_flag = 0;
     
-    sub _init_prefix_hashes {
+    sub _init_prefix_hash {
         my $sth = prepare_track_statement(q{
             SELECT internal_prefix, external_prefix
             FROM library
@@ -112,7 +116,7 @@ sub sanger_clone_name {
     sub get_sanger_prefix {
         my( $self, $intl ) = @_;
         
-        _init_prefix_hashes() unless $init_flag;
+        _init_prefix_hash() unless $init_flag;
         return $intl_sanger{$intl};
     }
 }
@@ -125,6 +129,16 @@ sub contig_name {
     }
     return $self->{'_contig_name'};
 }
+
+sub is_multi_clone {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_is_multi_clone'} = $flag ? 1 : 0;
+    }
+    return $self->{'_is_multi_clone'} || 0;
+}
+
 
 sub SequenceInfo {
     my( $self, $seq ) = @_;
@@ -147,11 +161,15 @@ sub SequenceInfo {
 sub string {
     my( $self ) = @_;
     
-    return join("\t",
+    my @fields = (
         $self->accession       || '?',
         $self->intl_clone_name || '?',
-        $self->contig_name     || '?')
-        . "\n";
+        $self->contig_name     || '?',
+        );
+    if (my $txt = $self->remark) {
+        push(@fields, $txt);
+    }
+    return join("\t", @fields) . "\n";
 }
 
 sub store {
@@ -169,8 +187,9 @@ sub store {
               , id_tpf
               , rank
               , clonename
-              , contigname)
-        VALUES(?,?,?,?,?)
+              , contigname
+              , remark)
+        VALUES(?,?,?,?,?,?)
         });
     $insert->execute(
         $self->db_id,
@@ -178,6 +197,7 @@ sub store {
         $rank,
         $self->sanger_clone_name,
         $self->contig_name,
+        $self->remark,
         );
 }
 
@@ -199,6 +219,17 @@ sub store_clone_if_missing {
         return;
     }
     
+    my $remark = 'added by ChromoView';
+    if ($self->is_multi_clone) {
+        $remark = 'MULTIPLE: placeholder for sequence from multiple clones';
+    }
+    elsif (! $self->intl_clone_name) {
+        $remark = 'UNKNOWN: placeholder for sequence from unknown clone';
+    }
+    elsif (my ($actual, $part) = $self->intl_clone_name =~ /(.+)__([^_])$/) {
+        $remark = "SUFFIX: placeholder for sequence '$part' from clone '$actual'";
+    }
+    
     # Insert into clone table
     my $insert = prepare_cached_track_statement(q{
         INSERT INTO clone(clonename
@@ -211,12 +242,13 @@ sub store_clone_if_missing {
               , clone_type)
         VALUES(?,?
               , 0,0,1,1
-              , 'added by ChromoView'
+              , ?
               , 1)
         });
     $insert->execute(
         $self->sanger_clone_name,
         $tpf->species,
+        $remark,
         );
     
     # and into clone status

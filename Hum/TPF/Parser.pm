@@ -36,47 +36,47 @@ sub parse {
     my $fh = $self->file or confess "file not set";
     my $tpf = Hum::TPF->new;
     while (<$fh>) {
+        chomp;
         next if /^$/;
         if (/^#/) {
             $self->parse_comment_line($tpf, $_);
             next;
         }
-        my @line = split /\s+/, $_;
+        my @line = split /\s+/, $_, 4;
         confess "Bad line in TPF: $_" unless @line >= 3;
-        if ($line[0] =~ /(GAP|CENTROMERE|TELOMERE|SHORT_ARM)/i) {
+        my( $row );
+        if ($line[0] =~ /GAP/i) {
             my $identifier = uc $1;
             my( $type_str, $length_str ) = @line[1,2];
-            my $gap = Hum::TPF::Row::Gap->new;
-            if ($identifier eq 'CENTROMERE') {
-                $gap->type(5);
-            }
-            elsif ($identifier eq 'TELOMERE') {
-                $gap->type(6);
-            }
-            elsif ($identifier eq 'SHORT_ARM') {
-                $gap->type(7);
-            }
-            elsif ($type_str =~ /type-([1234])/i) {
-                $gap->type($1);
+            $row = Hum::TPF::Row::Gap->new;
+            if ($type_str =~ /type-([1234])/i) {
+                $row->type($1);
             }
             else {
                 confess "Can't parse gap type from '$type_str'";
             }
             if ($length_str =~ /(\d+)/) {
-                $gap->gap_length($1);
+                $row->gap_length($1);
             }
-            $tpf->add_Row($gap);
         } else {
             my( $acc, $intl, $contig_name ) = @line;
             if ($acc eq '?' and $acc eq $intl) {
                 die "Bad TPF line (accession and clone are both blank): $_";
             }
-            my $row = Hum::TPF::Row::Clone->new;
+            elsif ($intl =~ /type/i) {
+                die "Bad TPF gap line: $_";
+            }
+            $row = Hum::TPF::Row::Clone->new;
             $row->accession($acc);
-            $row->intl_clone_name($intl);
+            if ($intl =~ /MULTIPLE/i) {
+                $row->is_multi_clone(1);
+            } else {
+                $row->intl_clone_name($intl);
+            }
             $row->contig_name($contig_name);
-            $tpf->add_Row($row);
         }
+        $row->remark($line[3]);
+        $tpf->add_Row($row);
     }
     $self->{'_file'} = undef;
     return $tpf;

@@ -15,7 +15,7 @@ sub type {
     my( $self, $type ) = @_;
     
     if ($type) {
-        confess "Bad type '$type'" unless $type =~ /^[1234567]$/;
+        confess "Bad type '$type'" unless $type =~ /^[1234]$/;
         $self->{'_type'} = $type;
     }
     return $self->{'_type'};
@@ -41,30 +41,19 @@ sub gap_length {
     return $self->{'_gap_length'};
 }
 
-{
-    my %type_identifer = (
-        5 => 'CENTROMERE',
-        6 => 'TELOMERE',
-        7 => 'SHORT_ARM',
-        );
-
-    sub gap_identifier {
-        my( $self ) = @_;
-
-        return $type_identifer{$self->type} || 'GAP';
-    }
-}
-
 sub string {
     my( $self ) = @_;
-    
-    return join("\t",
-        $self->gap_identifier,
-        $self->type_string,
-        $self->gap_length || '?')
-        . "\n";
-}
 
+    my @fields = (
+        'GAP',
+        $self->type_string,
+        $self->gap_length || '?',
+        );
+    if (my $txt = $self->remark) {
+        push(@fields, $txt);
+    }
+    return join("\t", @fields) . "\n";
+}
 
 sub store {
     my( $self, $tpf, $rank ) = @_;
@@ -76,13 +65,15 @@ sub store {
     my $insert = prepare_cached_track_statement(q{
         INSERT INTO tpf_row(id_tpfrow
               , id_tpf
-              , rank)
-        VALUES(?,?,?)
+              , rank
+              , remark)
+        VALUES(?,?,?,?)
         });
     $insert->execute(
         $db_id,
         $tpf->db_id,
         $rank,
+        $self->remark,
         );
     
     my $gap_insert = prepare_cached_track_statement(q{

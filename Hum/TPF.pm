@@ -217,6 +217,7 @@ sub _express_fetch_TPF_Clones_hash {
           , r.rank
           , r.clonename
           , r.contigname
+          , r.remark
           , l.internal_prefix
           , l.external_prefix
         FROM tpf_row r
@@ -230,9 +231,9 @@ sub _express_fetch_TPF_Clones_hash {
     my $sth = prepare_cached_track_statement($sql);
     $sth->execute($self->db_id);
     my( $clone_id, $clone_rank, $clonename, $contigname,
-        $int_pre, $ext_pre );
+        $remark, $int_pre, $ext_pre );
     $sth->bind_columns(\$clone_id, \$clone_rank, \$clonename, \$contigname,
-        \$int_pre, \$ext_pre );
+        \$remark, \$int_pre, \$ext_pre );
     
     my $rank_clone = {};
     while ($sth->fetch) {
@@ -241,6 +242,7 @@ sub _express_fetch_TPF_Clones_hash {
         $clone->contig_name($contigname);
         $clone->sanger_clone_name($clonename);
         $clone->set_intl_clone_name_from_sanger_int_ext($clonename, $int_pre, $ext_pre);
+        $clone->remark($remark);
         
         $rank_clone->{$clone_rank} = $clone;
     }
@@ -253,6 +255,7 @@ sub _express_fetch_TPF_Gaps_rank_hash {
     my $sql = q{
         SELECT r.id_tpfrow
           , r.rank
+          , r.remark
           , g.length
           , g.id_gaptype
         FROM tpf_row r
@@ -262,8 +265,8 @@ sub _express_fetch_TPF_Gaps_rank_hash {
         };
     my $sth = prepare_cached_track_statement($sql);
     $sth->execute($self->db_id);
-    my( $gap_id, $gap_rank, $gap_length, $gap_type );
-    $sth->bind_columns(\$gap_id, \$gap_rank, \$gap_length, \$gap_type);
+    my( $gap_id, $gap_rank, $remark, $gap_length, $gap_type );
+    $sth->bind_columns(\$gap_id, \$gap_rank, \$remark, \$gap_length, \$gap_type);
     
     my $rank_gap = {};
     while ($sth->fetch) {
@@ -272,6 +275,7 @@ sub _express_fetch_TPF_Gaps_rank_hash {
         $gap->db_id($gap_id);
         $gap->gap_length($gap_length);
         $gap->type($gap_type);
+        $gap->remark($remark);
         $rank_gap->{$gap_rank} = $gap;
     }
     return $rank_gap;

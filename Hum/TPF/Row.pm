@@ -22,6 +22,16 @@ sub db_id {
     return $self->{'_db_id'};
 }
 
+sub remark {
+    my( $self, $remark ) = @_;
+    
+    if ($remark) {
+        $self->{'_remark'} = $remark;
+    }
+    return $self->{'_remark'};
+}
+ 
+
 # This is overridden in TPF::Row::Gap
 sub is_gap { return 0; }
 
