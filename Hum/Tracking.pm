@@ -39,7 +39,7 @@ use vars qw( @ISA @EXPORT_OK );
                 find_project_directories
                 entry_name
                 finished_accession
-                unfinised_accession
+                unfinished_accession
                 localisation_data
                 external_clone_name
                 project_finisher
