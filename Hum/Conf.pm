@@ -48,6 +48,17 @@ my %cgp_path=map {$_,"$sanger_path/$_"} qw ( SU SF );
 $cgp_path{'EU'}="$ext_path/EU";
 $cgp_path{'EF'}="$ext_path/EF";
 
+my $ftp_structure = {
+        'Human'         => [ 'human/sequences', 'Chr_' ],
+        'Mouse'         => [ 'mouse',           'Chr_' ],
+        'Chicken'       => [ 'chicken'                 ],
+        'Fugu'          => [ 'fugu'                    ],
+        'Zebrafish'     => [ 'zebrafish'               ],
+        'Drosophila'    => [ 'drosophila/sequences'    ],
+        'Arabidopsis'   => [ 'arabidopsis'             ],
+        'B.floridae'    => [ 'b_floridae'              ],
+        };
+
 # Hash containing config info
 %humConf = (
     ACESERVER_HOST  => \%ace_host,
@@ -59,16 +70,8 @@ $cgp_path{'EF'}="$ext_path/EF";
     FTP_GHOST => $ftp_ghost,
     FTP_ATTIC => "$ftp_ghost/attic",
     FTP_ROOT  => "$ftp/pub",
-    FTP_STRUCTURE => {
-        'Human'         => [ 'human/sequences', 'Chr_' ],
-        'Mouse'         => [ 'mouse',           'Chr_' ],
-        'Chicken'       => [ 'chicken'                 ],
-        'Fugu'          => [ 'fugu'                    ],
-        'Zebrafish'     => [ 'zebrafish'               ],
-        'Drosophila'    => [ 'drosophila/sequences'    ],
-        'Arabidopsis'   => [ 'arabidopsis'             ],
-        'B.floridae'    => [ 'b_floridae'              ],
-        },
+    FTP_STRUCTURE => $ftp_structure,
+    SPECIES_LIST => [keys %$ftp_structure],
 
     HUMACE_DIR    => "/nfs/humace/humpub/humace",
     HUMACE_RO_DIR => '/nfs/humace/humpub/humace-live-ro',

@@ -55,8 +55,9 @@ use vars qw( @ISA @EXPORT_OK );
                 sanger_id_to_project
                 species_from_project
                 track_db
-                track_db_commit
                 track_db_user
+                track_db_commit
+                track_db_rollback
                 unfinished_accession
                 );
 
@@ -70,18 +71,23 @@ statuses.
 
 =cut
 
-sub is_finished {
-    my( $project ) = @_;
-    
-    my $ans = ref_from_query(qq(
-        SELECT status
-        FROM project_status
-        WHERE projectname = '$project'
-          AND status IN(20,21,22,23,27,28,29)
-          AND iscurrent = 1
-        ));
-    
-    return @$ans ? $ans->[0][0] : 0;
+{
+    my( $sth );
+
+    sub is_finished {
+        my( $project ) = @_;
+
+        $sth ||= prepare_track_statement(q{
+            SELECT status
+            FROM project_status
+            WHERE projectname = '$project'
+              AND status IN(20,34,35,32,21,22,23)
+              AND iscurrent = 1
+            });
+        $sth->execute($project);
+        my ($status) = $sth->fetchrow;
+        return $status;
+    }
 }
 
 =pod
@@ -276,13 +282,20 @@ block, to ensure a graceful exit.
     my( $dbh, $user, @active_statements );
 
     sub track_db {
-        $dbh ||= WrapDBI->connect(track_db_user(), {RaiseError => 1});
+        $dbh ||= WrapDBI->connect(track_db_user(),{
+                RaiseError  => 1,
+                AutoCommit  => 0,
+                });
         
         return $dbh;
     }
 
     sub track_db_commit {
         $dbh->commit if $dbh;
+    }
+
+    sub track_db_rollback {
+        $dbh->rollback if $dbh;
     }
 
     sub track_db_user {
