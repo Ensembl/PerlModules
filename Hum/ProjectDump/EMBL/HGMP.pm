@@ -52,7 +52,7 @@ use vars '@ISA';
         $ref->positions("1-$seqlength");
         $ref->comments('HGMP-RC part of the UK Mouse Sequencing Consortium');
         $ref->authors(@author_list);
-        $ref->title("The sequence of $bi_nom clone $ext_clone");
+        #$ref->title("The sequence of $bi_nom clone $ext_clone");
         $ref->locations(
             "Submitted ($date) to the EMBL/Genbank/DDBJ databases.",
             'Mouse Sequencing Group, HGMP-RC, Hinxton, Cambridge, CB10 1SB, UK.',
