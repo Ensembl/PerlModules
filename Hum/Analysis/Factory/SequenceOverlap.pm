@@ -36,6 +36,8 @@ sub find_SequenceOverlap {
     # Run cross_match and find overlap
     my $feat = $self->find_end_overlap($sinf_a->Sequence, $sinf_b->Sequence);
     
+    return unless $feat;
+    
     # Convert into a SequenceOverlap object that
     # can be written into the tracking database.
     return $self->make_SequenceOverlap($sinf_a, $sinf_b, $feat);
@@ -123,22 +125,9 @@ sub find_end_overlap {
     
     my $seq_end = $self->closest_end_best_pid(  $query->sequence_length, $end_distances{'seq'}, @matches);
     my $hit_end = $self->closest_end_best_pid($subject->sequence_length, $end_distances{'hit'}, @matches);
-    printf "%s (%d) vs %s (%d)\n",
-          $query->name,   $query->sequence_length,
-        $subject->name, $subject->sequence_length;
     
-    foreach my $feat ($seq_end, $hit_end) {
-        printf("   %5.1f%% %16s %6d %6d %16s %6d %6d     %3s\n",
-            $feat->percent_identity,
-            $feat->seq_name,
-            $feat->seq_start,
-            $feat->seq_end,
-            $feat->hit_name,
-            $feat->hit_start,
-            $feat->hit_end,
-            ($feat->hit_strand == 1 ? 'Fwd' : 'Rev'),
-            );
-    }
+    $self->warn_match($query, $subject, $seq_end, $hit_end);
+    
     unless ($seq_end and $hit_end) {
         confess "No end overlap found\n";
     }
@@ -150,6 +139,31 @@ sub find_end_overlap {
        # that best cover the gap.
        return $self->merge_features($seq_end, $hit_end);
     }
+}
+
+sub warn_match {
+    my( $self, $query, $subject, $seq_end, $hit_end ) = @_;
+    
+    printf "%s (%d) vs %s (%d)\n",
+          $query->name,   $query->sequence_length,
+        $subject->name, $subject->sequence_length;
+    
+    my @feat = ($seq_end);
+    push(@feat, $hit_end) unless $seq_end == $hit_end;
+    
+    foreach my $feat (@feat) {
+        printf("   %5.1f%% %16s %6d %6d %16s %6d %6d     %3s\n",
+            $feat->percent_identity,
+            $feat->seq_name,
+            $feat->seq_start,
+            $feat->seq_end,
+            $feat->hit_name,
+            $feat->hit_start,
+            $feat->hit_end,
+            ($feat->hit_strand == 1 ? 'Fwd' : 'Rev'),
+            );
+    }
+    
 }
 
 sub merge_features {

@@ -74,8 +74,8 @@ sub validate {
     my( $self ) = @_;
     
     my $pos = $self->position;
-    my $seq = $self->Sequence;
-    my $length   = $seq->sequence_length;
+    my $seq = $self->SequenceInfo;
+    my $length = $seq->sequence_length;
     if ($pos < 0 or $pos > $length) {
         my $seq_name = $seq->name;
         confess "Position $pos is outside sequence '$seq_name' of length $length";
@@ -89,7 +89,7 @@ sub store {
         unless $overlap_id;
     
     my $info = $self->SequenceInfo;
-    $info->store;
+    $info->store unless $info->db_id;
     
     # REPLACE instead of INSERT?
     my $sth = track_db->prepare_cached(q{

@@ -311,6 +311,7 @@ sub _embl_sequence_get {
 
         $seq_inf->htgs_phase($htgs_phase);
     }
+    $seq->name("$acc.$sv");
     $seq_inf->Sequence($seq);
     $self->SequenceInfo($seq_inf);
     return 1;
@@ -360,6 +361,7 @@ sub _embl_sequence_get {
                 $seq_inf->projectname($proj);
             }
             
+            $seq->name("$acc.$sv");
             $seq_inf->Sequence($seq);
 
             push(@seq, $seq_inf);

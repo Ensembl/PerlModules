@@ -22,7 +22,7 @@ sub fetch_by_SequenceInfo_pair {
     
     my $sth = track_db->prepare_cached(q{
         SELECT oa.position
-          , os.is_3prime
+          , oa.is_3prime
           , ob.position
           , ob.is_3prime
           , o.id_overlap
@@ -45,6 +45,9 @@ sub fetch_by_SequenceInfo_pair {
         $b_pos, $b_is3prime,
         $overlap_id, $length, $source_id,
         $sub, $ins, $del) = $sth->fetchrow;
+    $sth->finish;
+    
+    return unless $overlap_id;
     
     my $self = $pkg->new;
     $self->db_id($overlap_id);
@@ -230,9 +233,11 @@ sub validate_Positions {
 sub store {
     my( $self ) = @_;
     
-    # Warn here?
-    return if $self->db_id;
-    my $db_id = $self->get_next_id;
+    my $db_id = $self->db_id;
+    if ($db_id) {
+        confess "Already stored with db_id $db_id";
+    }
+    $db_id = $self->get_next_id;
     
     my $sth = track_db->prepare_cached(q{
         INSERT INTO overlap(
@@ -240,12 +245,12 @@ sub store {
           , length
           , id_source
           , pct_substitutions
-          , pct_insertions,
+          , pct_insertions
           , pct_deletions )
         VALUES(?,?,?,?,?,?)
         });
     $sth->execute(
-        $self->db_id,
+        $db_id,
         $self->overlap_length,
         $self->source_id,
         $self->percent_substitution,
@@ -264,6 +269,7 @@ sub get_next_id {
         });
     $sth->execute;
     my ($id) = $sth->fetchrow;
+    $sth->finish;
     $self->db_id($id);
     return $id;
 }
