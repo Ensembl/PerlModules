@@ -179,7 +179,7 @@ block, to ensure a graceful exit.
     my( $dbh, @active_statements );
 
     sub track_db {
-        $dbh = WrapDBI->connect('reports', {RaiseError => 1}) unless $dbh;
+        $dbh ||= WrapDBI->connect('reports', {RaiseError => 1});
         
         return $dbh;
     }
