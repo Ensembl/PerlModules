@@ -173,9 +173,10 @@ sub run_pressdb {
         close PIPE or $error_flag++;
     }
     
+    my $bad_db = "$blast.BAD";
     if ($error_flag) {
         # Save BAD file for debugging
-        rename( $build, "$blast.BAD" );
+        rename( $build, $bad_db  );
         unlink( map "$build$_", @extn );
         die "Creation of blast database '$blast' from '$build' failed:\n",
             @outLines,
@@ -185,6 +186,7 @@ sub run_pressdb {
         foreach (@extn) {
             rename("$build$_", "$blast$_");
         }
+        unlink($bad_db);
         return 1;
     }
 }
