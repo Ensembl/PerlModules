@@ -39,19 +39,19 @@ sub find_Feature_sets {
     my( $self, $exon_seqs ) = @_;
     
     my $features = $self->find_Features($exon_seqs);
-    my $transcr = [];
+    my $ex_list = [];
     for (my $i = 0; $i < @$exon_seqs; $i++) {
         #my $exon = $exon_seqs->[$i];
         my $feat = $features->[$i];
         @$feat = sort {$b->hit_length <=> $a->hit_length} @$feat;
-        push(@$transcr, shift @$feat);
+        push(@$ex_list, shift @$feat);
     }
     
-    # Check that features are colinear
+    # Check that features are colinear - no use when we are finding $gene->get_all_Exons
 
     # May return several sets in future when, for example
     # there are tandemly duplicated genes.
-    return [$transcr];
+    return [$ex_list];
 }
 
 sub find_Features {
@@ -69,14 +69,30 @@ sub find_Features {
         } else {
             my $factory = Hum::Analysis::Factory::CrossMatch->new;
             $factory->show_all_matches(1);
-            #my $ex_length = $exon->sequence_length - 1;
-            #if ($ex_length < $factory->min_match_length) {
-            #    warn "Setting min match length to '$ex_length'";
-            #    $factory->min_match_length($ex_length);
-            #}
-
             my $parser = $factory->run($genomic, $exon);
             push(@$features, $parser->get_all_Features);
+        }
+    }
+    return $features;
+}
+
+sub find_Features_cross_match_first {
+    my( $self, $exon_seqs ) = @_;
+    
+    my $genomic = $self->genomic_Sequence
+        or confess "genomic_Sequence not set";
+    
+    my $features = [];
+    foreach my $exon (@$exon_seqs) {
+        my $factory = Hum::Analysis::Factory::CrossMatch->new;
+        $factory->show_all_matches(1);
+        my $parser = $factory->run($genomic, $exon);
+        my $matches = $parser->get_all_Features;
+        if (@$matches) {
+            push(@$features, $matches);
+        } else {
+            my $str_matcher = Hum::Analysis::Factory::StringMatch->new;
+            push(@$features, $str_matcher->run($genomic, $exon));
         }
     }
     return $features;

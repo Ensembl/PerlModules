@@ -29,8 +29,10 @@ sub run {
 sub find_features {
     my( $self, $query, $subject, $strand, $features ) = @_;
     
-    my $seq_str = $query->sequence_string;
-    my $hit_str = $subject->sequence_string;
+    my $seq_str = lc $query->sequence_string
+        or confess "Empty sequence string for '",   $query->name, "'";
+    my $hit_str = lc $subject->sequence_string
+        or confess "Empty sequence string for '", $subject->name, "'";
     my $hit_len = $subject->sequence_length;
     
     my $i = 0;
@@ -38,10 +40,13 @@ sub find_features {
         $i = $pos + 1;
         #warn "Found on $strand at ", $pos + 1, "\n";
         my $match = Hum::Ace::SeqFeature::Pair->new;
+        $match->percent_identity(100);
+
         $match->seq_name($query->name);
         $match->seq_start($pos + 1);
         $match->seq_end($pos + $hit_len);
         $match->seq_strand($strand);
+
         $match->hit_name($subject->name);
         $match->hit_start(1);
         $match->hit_end($hit_len);
