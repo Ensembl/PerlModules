@@ -555,7 +555,7 @@ sub parse {
     # The authors of the reference
     my( @authors );
     while ($$s =~ /^RA   (.+)$/mg) {
-        push( @authors, split(/,\s+|;/, $1) );
+        push( @authors, split(/,\s*|;\s*/, $1) );
     }
     $line->authors( @authors );
     
