@@ -43,6 +43,10 @@ sub write_access {
     return $self->{'_write_flag'};
 }
 
+sub db_list {
+    return @_;
+}
+
 sub path {
     my( $self, $path ) = @_;
     
