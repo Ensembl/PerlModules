@@ -219,6 +219,26 @@ sub addLine {
     }
 }
 
+sub bio_primary_seq {
+    my( $embl ) = @_;
+    
+    require Bio::PrimarySeq;
+    
+    my $id_line = $embl->ID;
+    my $name =    $id_line->entryname;
+    my $type = lc $id_line->molecule;
+    my $seq  = $embl->Sequence->seq;
+    
+    my $acc = $embl->AC->primary;
+    
+    return Bio::PrimarySeq->new(
+        -id        => $name,
+        -accession => $acc,
+        -moltype   => $type,
+        -seq       => $seq,
+    );
+}
+
 
 1;
 

@@ -43,6 +43,13 @@ use Hum::EMBL (
     );
 use Hum::EMBL::Utils qw( EMBLdate );
 
+# Overrides method in Hum::ProjectDump
+sub embl_checksum {
+    my( $pdmp ) = @_;
+    
+    return $pdmp->embl_file->Sequence->embl_checksum;
+}
+
 {
     my $number_Ns = 100;
     my $padding_Ns = 'n'  x $number_Ns;
@@ -90,7 +97,7 @@ use Hum::EMBL::Utils qw( EMBLdate );
             
             # Append dna and quality
             $dna          .= $$con;
-            $base_quality .= $$qual;
+            $base_quality .= $$qual if $qual;
             
             # Record coordinates
 	    my $contig_start = $pos + 1;
@@ -245,7 +252,7 @@ use Hum::EMBL::Utils qw( EMBLdate );
                 
                 # Add note if this is part of a group ordered by read-pairs
                 if (my $group = $pdmp->contig_chain($contig)) {
-                    $fragment->addQualifierStrings('note', "group:$group");
+                    $fragment->addQualifierStrings('note', "fragment_chain:$group");
                 }
                 
                 # Mark the left and right end contigs
@@ -292,7 +299,7 @@ sub make_fragment_summary {
         my $frag = sprintf("* %8d %8d contig of %d bp in length",
             $start, $end, $end - $start + 1);
         if (my $group = $pdmp->contig_chain($contig)) {
-            $frag .= "; group $group";
+            $frag .= "; fragment_chain $group";
         }
         push(@list, $frag);
         #unless ($i == $#contig_pos) {

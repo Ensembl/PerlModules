@@ -279,18 +279,16 @@ sub external_clone_name {
     my $proj_list = join(',', map "'$_'", @projects) or return;
     
     my $ans = ref_from_query(qq(
-        SELECT p.projectname
+        SELECT cp.projectname
           , c.clonename
           , l.internal_prefix
           , l.external_prefix
         FROM clone c
           , clone_project cp
-          , project p
           , library l
         WHERE l.libraryname = c.libraryname
           AND c.clonename = cp.clonename
-          AND cp.projectname = p.projectname
-          AND p.projectname IN($proj_list)
+          AND cp.projectname IN($proj_list)
         ));
         
     my %proj = map { $_->[0], [@{$_}[1,2,3]] } @$ans;

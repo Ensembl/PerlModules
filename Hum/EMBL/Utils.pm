@@ -41,7 +41,6 @@ BEGIN {
     }
 }
 
-
 {
     my( @crcTable );
     

@@ -13,6 +13,8 @@ use Hum::Tracking qw( track_db
                       project_team_leader
                       fishData
                       );
+use Hum::ProjectDump::EMBL; # --> uses Hum::EMBL
+use Hum::EBI_FTP;
 use Hum::Conf qw( FTP_ROOT FTP_GHOST );
 use File::Path;
 
@@ -40,16 +42,19 @@ BEGIN {
         author
         dump_time
         chromosome
+        embl_checksum
         embl_name
         htgs_phase
         online_path
         project_name
+        project_suffix
         fish_map
         sanger_id
         seq_id
         sequence_name
         sequence_version
         species
+        submission_type
     );
     
     # Make scalar field access functions
@@ -120,47 +125,97 @@ sub file_path {
     return $pdmp->{'_file_path'} || confess "file_path not set";
 }
 
-sub new_from_project_name {
+sub get_all_dumps_for_project {
     my( $pkg, $project ) = @_;
     
-    my $pdmp = $pkg->new;
-    $pdmp->project_name($project);
-    $pdmp->read_tracking_details;
-    $pdmp->sanger_id('_'. uc $project);
-    $pdmp->read_accession_data;
-    return $pdmp;
+    my $sub_db = sub_db();
+    my $get_sids = $sub_db->prepare(q{
+        SELECT a.sanger_id
+        FROM project_acc a
+          , project_dump d
+        WHERE a.sanger_id = d.sanger_id
+          AND d.is_current = 'Y'
+          AND a.project_name = ?
+        });
+    $get_sids->execute($project);
+    
+    my(@dumps);
+    while (my($sid) = $get_sids->fetchrow) {
+        my $pdmp = $pkg->new_from_sanger_id($sid);
+        push(@dumps, $pdmp);
+    }
+    
+    if (@dumps) {
+        return @dumps;
+    } else {
+        my $pdmp = $pkg->create_new_dump_object($project);
+        return($pdmp);
+    }
 }
 
+sub create_new_dump_object {
+    my( $pkg, $project ) = @_;
+    
+    my $sub_db = sub_db();
+    my $is_active = $sub_db->selectall_arrayref(q{
+        SELECT count(*)
+        FROM project_check
+        WHERE is_active = 'Y'
+          AND project_name = ?
+        })->[0];
+    if ($is_active) {
+        my $pdmp = $pkg->new;
+        $pdmp->project_name($project);
+        $pdmp->sanger_id("_\U$project");
+        $pdmp->read_tracking_details;
+        return $pdmp;
+    } else {
+        confess "Project '$project' is not active";
+    }
+}
 
 sub new_from_sanger_id {
     my( $pkg, $sanger_id ) = @_;
     
+    my $pdmp = $pkg->new;
+    $pdmp->sanger_id($sanger_id);
+    $pdmp->read_accession_data;
+    $pdmp->read_submission_data;
+    $pdmp->read_tracking_details;
+}
+
+sub read_submission_data {
+    my( $pdmp ) = @_;
+    
+    my $sid = $pdmp->sanger_id or confess "No sanger_id";
     my $sub_db = sub_db();
     my $get_dump = $sub_db->prepare(q{
-        SELECT UNIX_TIMESTAMP(d.dump_time) dump_time
+        SELECT a.project_name
+          , a.project_suffix
+          , UNIX_TIMESTAMP(d.dump_time) dump_time
           , d.htgs_phase
+          , s.seq_id
           , s.sequence_name
           , s.sequence_version
           , s.embl_checksum
           , s.unpadded_length
           , s.contig_count
           , s.file_path
-        FROM project_dump d
+        FROM project_acc a
+          , project_dump d
           , sequence s
-        WHERE d.seq_id = s.seq_id
-          AND d.is_current = 1
-          AND d.sanger_id = ?
+        WHERE a.sanger_id = d.sanger_id
+          AND d.seq_id = s.seq_id
+          AND a.sanger_id = ?
+          AND d.is_current = 'Y'
         });
-    $get_dump->execute($sanger_id);
+    $get_dump->execute($sid);
     if (my $ans = $get_dump->fetchrow_hashref) {
-        my $pdmp = $pkg->new;
         map $pdmp->$_($ans->{$_}), keys %$ans; 
-        return $pdmp;
     } else {
-        return;
+        confess("No data for sanger_id '$sid'");
     }
 }
-
 
 BEGIN {
     foreach my $func (qw( DNA BaseQuality )) {
@@ -562,17 +617,7 @@ sub parse_assembled_from {
 
         my $ncbi_vec = $vector_string{lc $vector} or return;
 
-        $pdmp->{_vector_count}->{$ncbi_vec}++;
-    }
-}
-
-sub count_chemistry {
-    my ($pdmp, $name) = @_;
-
-    if (my ($suffix) = $name =~ /\.(...)/) {
-	if (exists($pdmp->{suffix_chemistry}->{$suffix})) {
-	    $pdmp->{_chem_count}->{$pdmp->{suffix_chemistry}->{$suffix}}++;
-	}
+        $pdmp->{'_vector_count'}{$ncbi_vec}++;
     }
 }
 
@@ -686,26 +731,14 @@ sub vector_ends {
 sub order_contigs {
     my ($pdmp) = @_;
 
-    #return unless (exists($pdmp->{_read_templates}));
-    #return unless (exists($pdmp->{_template_max_insert}));
-    #return unless (exists($pdmp->{_read_extents}));
-
     # Do we have read information?
     my @read_names = $pdmp->read_list or return;
-
-    #my $read_templates = $pdmp->{_read_templates};
-    #my $insert_sizes = $pdmp->{_template_max_insert};
-    #my $extents = $pdmp->read_extents_ref;
     
     my %contig_lengths = map {$_, $pdmp->contig_length($_)} $pdmp->contig_list;
 
     my %overhanging_templates;
 
     # First find reads which point out from the ends of the contigs.
-
-    #while (my ($read, $extent) = each %$extents) {
-        #my $template = $read_templates->{$read};
-        #my $insert_size = $insert_sizes->{$template};
     foreach my $read (@read_names) {
         my $extent      = $pdmp->read_extent($read) or next;
 	my $template    = $pdmp->read_template($read);
@@ -729,12 +762,10 @@ sub order_contigs {
     }
 
     # Next make a graph of which contigs are joined by read pairs.
-
     my %joined_contigs;
     my @anomalies;
 
     while (my ($template, $contigs) = each %overhanging_templates) {
-	#my @c = %$contigs;
 	my $count = scalar(keys %$contigs);
 
 	next unless ($count == 2);
@@ -757,7 +788,6 @@ sub order_contigs {
     }
 
     # Remove joins where joined ends are inconsistent
-
     foreach my $anomaly (@anomalies) {
 	my ($contig1, $contig2) = @$anomaly;
 	delete($joined_contigs{$contig1}->{'L'}->{$contig2});
@@ -768,7 +798,6 @@ sub order_contigs {
 
     # Deal with branches.  If one scores better than the rest, use it
     # else delete all the possible branches
-
     while (my ($contig1, $dirns) = each %joined_contigs) {
 	while (my ($dirn, $contigs) = each %$dirns) {
 	    my @scores = ( 0, 0 );
@@ -803,7 +832,6 @@ sub order_contigs {
 #    }
 
     # Make chains of contigs based on the remaining read pair links
-
     my( %visited, @group );
     foreach my $contig ($pdmp->contig_list()) {
 	next if ($visited{$contig});
@@ -811,14 +839,11 @@ sub order_contigs {
 	    my @chain;
 
 	    # Look for links to left of current contig
-
 	    my $c_dirn = 'L';
 	    my $c_contig = $contig;
 	    while ($c_contig) {
 		last if (exists $visited{$c_contig});
                 
-		#my $fwd = ($c_dirn eq 'L') ? "F" : "R";
-		#unshift(@chain, "$c_contig.$fwd");
                 unless ($c_dirn eq 'L') {
                     $pdmp->revcomp_contig($c_contig);
                 }
@@ -836,7 +861,6 @@ sub order_contigs {
 	    }
 
 	    # Look for links to right of current contig
-
 	    $c_dirn = 'R';
 	    $c_contig = $contig;
 	    pop(@chain);
@@ -844,8 +868,6 @@ sub order_contigs {
 	    while ($c_contig) {
 		last if (exists $visited{$c_contig});
                 
-		#my $fwd = ($c_dirn eq 'R') ? "F" : "R";
-		#push(@chain, "$c_contig.$fwd");
                 unless ($c_dirn eq 'R') {
                     $pdmp->revcomp_contig($c_contig);
                 }
@@ -862,9 +884,7 @@ sub order_contigs {
 		$c_dirn = ($n_dirn eq 'R') ? 'L' : 'R';
 	    }
 	    push(@group, \@chain);
-            #$pdmp->add_contig_chain(\@chain);
 	} else {
-	    #push(@group, ["$contig.F"]);
 	    push(@group, [$contig]);
 	    $visited{$contig} = 1;
 	}
@@ -873,8 +893,8 @@ sub order_contigs {
     # Find contigs which are at left and right, because
     # they're at the SP6 or T7 primer sites.
     my( $left_contig, $right_contig );
-    $left_contig = $right_contig = '__NOT_FOUND__';
     if (my $ends = $pdmp->vector_ends) {
+
         # Structure of $ends can be:
         #
         #   ends = {
@@ -895,21 +915,43 @@ sub order_contigs {
         #   };
         #
         # etc...
+                
         foreach my $contig (keys %$ends) {
             foreach my $v_end (keys %{$ends->{$contig}}) {
                 my $side = $ends->{$contig}{$v_end};
                 if ($side eq 'left') {
-                    $left_contig = $contig;
+                    if ($left_contig) {
+                        confess "'$contig' : Already have both left ('$left_contig') and right ('$right_contig') contigs"
+                            if $right_contig;
+                        if ($v_end eq 'Left') {
+                            $right_contig = $left_contig;
+                            $left_contig = $contig;
+                        } else {
+                            $right_contig = $contig;
+                        }
+                    } else {
+                        $left_contig = $contig;
+                    }
                 }
                 elsif ($side eq 'right') {
-                    $right_contig = $contig;
+                    if ($right_contig) {
+                        confess "'$contig' : Already have both left ('$left_contig') and right ('$right_contig') contigs"
+                            if $left_contig;
+                        if ($v_end eq 'Right') {
+                            $left_contig = $right_contig;
+                            $right_contig = $contig;
+                        } else {
+                            $left_contig = $contig;
+                        }
+                    } else {
+                        $right_contig = $contig;
+                    }
                 }
             }
         }
     }
 
-    # Remove the left and right chains from @group if we
-    # can find them
+    # Remove the left and right chains from @group if we can find them
     my( $left_chain, $right_chain );
     CHAIN: for (my $i = 0; $i < @group;) {
         my $chain = $group[$i];
@@ -917,11 +959,35 @@ sub order_contigs {
             if ($contig eq $left_contig) {
                 $left_chain = $chain;
                 splice(@group, $i, 1);
+                
+                # Reverse this chain if it isn't tagged as 'left'
+                my $v_end = $pdmp->vector_ends($contig);
+                unless (
+                        $v_end->{'Left'} and $v_end->{'Left'}  eq 'left'
+                    or $v_end->{'Right'} and $v_end->{'Right'} eq 'left'
+                    ) {
+                    @$left_chain = reverse(@$left_chain);
+                    foreach my $c (@$left_chain) {
+                        $pdmp->revcomp_contig($c);
+                    }
+                }
                 next CHAIN;
             }
             elsif ($contig eq $right_contig) {
                 $right_chain = $chain;
                 splice(@group, $i, 1);
+                
+                # Reverse this chain if it isn't tagged as 'right'
+                my $v_end = $pdmp->vector_ends($contig);
+                unless (
+                        $v_end->{'Left'} and $v_end->{'Left'}  eq 'right'
+                    or $v_end->{'Right'} and $v_end->{'Right'} eq 'right'
+                    ) {
+                    @$right_chain = reverse(@$right_chain);
+                    foreach my $c (@$right_chain) {
+                        $pdmp->revcomp_contig($c);
+                    }
+                }
                 next CHAIN;
             }
         }
@@ -1075,6 +1141,25 @@ sub write_quality_file {
     close QUAL or confess "Error creating quality file ($?) $!";
 }
 
+sub read_embl_file {
+    my( $pdmp ) = @_;
+    
+    my $dir = $pdmp->file_path or confess "file_path not set";
+    my $seq_name = $pdmp->sequence_name;
+    my $file = "$dir/$seq_name.embl";
+    
+    if (-e $file) {
+        local *EMBL;
+        my $parser = Hum::EMBL->new;
+        open EMBL, $file or die "Can't read '$file' : $!";
+        my $embl = $parser->parse(\*EMBL) or die "No embl file returned";
+        close EMBL;
+        return $embl;
+    } else {
+        return;
+    }    
+}
+
 sub write_embl_file {
     my( $pdmp ) = @_;
 
@@ -1090,23 +1175,41 @@ sub write_embl_file {
     close EMBL or confess "Error creating EMBL file ($?) $!";
 }
 
+{
+    my $padding_Ns = 'n' x 800;
+
+    sub make_old_embl {
+        my ( $pdmp ) = @_;
+
+        $pdmp->read_fasta_file unless $pdmp->contig_count;
+        my $seq = '';
+        foreach my $contig ($pdmp->contig_list) {
+            $seq .= $padding_Ns if $seq;
+            $seq .= $pdmp->DNA($contig);
+        }
+        my $embl = Hum::EMBL->new;
+        $embl->newSequence->seq($seq);
+        return $embl;
+    }
+}
+
 sub embl_file {
     my( $pdmp ) = @_;
     
     unless ($pdmp->{'_embl_file'}) {
-        # Add EMBL dumping capability
-        require Hum::ProjectDump::EMBL;
-        bless $pdmp, 'Hum::ProjectDump::EMBL';
-        
-        $pdmp->{'_embl_file'} = $pdmp->make_embl($pdmp);
+        my( $embl );
+        if ($pdmp->read_list) {
+            # We have read details, so it's a new dump
+            bless $pdmp, 'Hum::ProjectDump::EMBL';
+            $embl = $pdmp->make_embl($pdmp);
+        } else {
+            # Read the existing file, or make a new
+            # one from the fasta file
+            $embl = $pdmp->read_embl_file || $pdmp->make_old_embl;
+        }
+        $pdmp->{'_embl_file'} = $embl;
     }
     return $pdmp->{'_embl_file'}
-}
-
-sub embl_checksum {
-    my( $pdmp ) = @_;
-    
-    return $pdmp->embl_file->Sequence->embl_checksum;
 }
 
 sub read_accession_data {
@@ -1116,6 +1219,50 @@ sub read_accession_data {
     $pdmp->accession($accession);
     $pdmp->embl_name($embl_name);
     $pdmp->secondary(@secondaries) if @secondaries;
+}
+
+{
+    my( $record_submission );
+
+    sub ebi_submit {
+        my( $pdmp ) = @_;
+
+        unless ($record_submission) {
+            my $sub_db = sub_db();
+            $record_submission = $sub_db->prepare(q{
+                INSERT submission( seq_id
+                                 , submission_time
+                                 , submission_type )
+                VALUES (?,FROM_UNIXTIME(?),?)
+            });
+        }
+
+        my $sub_type = $pdmp->submission_type;
+        unless ($sub_type) {
+            my $phase = $pdmp->htgs_phase;
+            if ($phase eq '1') {
+                $sub_type = 'UNFIN';
+            }
+            elsif ($phase eq '3') {
+                $sub_type = 'FIN';
+            }
+            else {
+                confess("Can't determine submission type");
+            }
+        }
+        my $time = time;
+        
+        warn "Not actually submitting to the EBI" and return;
+        
+        my $seq_name = $pdmp->sequence_name;
+        my $em_file = $pdmp->file_path .'/'. $seq_name .'.embl';
+        confess "No such file '$em_file'" unless -e $em_file;
+        
+        my $ebi_ftp = 'Hum::EBI_FTP'->new();
+        $ebi_ftp->put_project( $seq_name, $em_file );
+        
+        $record_submission->execute($pdmp->seq_id, $time, $sub_type);
+    }
 }
 
 # Fills in information found in the oracle Tracking database
@@ -1139,7 +1286,7 @@ sub read_tracking_details {
           AND cp.projectname = p.projectname
           AND p.id_online = o.id_online (+)
           AND p.projectname = '$project'
-    };
+        };
     my $project_details = $dbh->prepare($query);
     $project_details->execute;
     if (my $ans = $project_details->fetchrow_hashref) {
@@ -1169,6 +1316,16 @@ sub read_tracking_details {
 	'BigDye'      => ' Big Dye',
 	'MegaBace_ET' => ' ET',
     );
+
+    sub count_chemistry {
+        my ($pdmp, $name) = @_;
+
+        if (my ($suffix) = $name =~ /\.(...)/) {
+	    if (exists($pdmp->{suffix_chemistry}->{$suffix})) {
+	        $pdmp->{'_chem_count'}{ $pdmp->{'suffix_chemistry'}{$suffix} }++;
+	    }
+        }
+    }
 
     sub get_suffix_chemistries {
         my ($pdmp) = @_;
@@ -1261,17 +1418,17 @@ sub store_dump {
 
 =pod
 
- +------------------+--------------+------+-----+---------+----------------+
- | Field            | Type         | Null | Key | Default | Extra          |
- +------------------+--------------+------+-----+---------+----------------+
- | seq_id           | int(11)      |      | PRI | 0       | auto_increment |
- | sequence_name    | varchar(20)  |      | MUL |         |                |
- | sequence_version | int(11)      | YES  |     | NULL    |                |
- | embl_checksum    | int(11)      |      | MUL | 0       |                |
- | unpadded_length  | int(11)      |      | MUL | 0       |                |
- | contig_count     | int(11)      |      |     | 0       |                |
- | file_path        | varchar(200) |      |     |         |                |
- +------------------+--------------+------+-----+---------+----------------+
+ +------------------+---------------------------+------+-----+------------+----------------+
+ | Field            | Type                      | Null | Key | Default    | Extra          |
+ +------------------+---------------------------+------+-----+------------+----------------+
+ | seq_id           | int(11)                   |      | PRI | 0          | auto_increment |
+ | sequence_name    | varchar(20)               |      | MUL |            |                |
+ | sequence_version | int(11)                   | YES  |     | NULL       |                |
+ | embl_checksum    | int(10) unsigned zerofill |      | MUL | 0000000000 |                |
+ | unpadded_length  | int(10) unsigned          |      | MUL | 0          |                |
+ | contig_count     | int(11)                   |      |     | 0          |                |
+ | file_path        | varchar(200)              |      |     |            |                |
+ +------------------+---------------------------+------+-----+------------+----------------+
 
 =cut
 
@@ -1305,8 +1462,8 @@ BEGIN {
  +------------+-----------------------------+------+-----+---------------------+-------+
  | Field      | Type                        | Null | Key | Default             | Extra |
  +------------+-----------------------------+------+-----+---------------------+-------+
- | sanger_id  | varchar(20)                 |      | MUL |                     |       |
- | dump_time  | datetime                    |      | MUL | 0000-00-00 00:00:00 |       |
+ | sanger_id  | varchar(20)                 |      | PRI |                     |       |
+ | dump_time  | datetime                    |      | PRI | 0000-00-00 00:00:00 |       |
  | seq_id     | int(11)                     |      | MUL | 0                   |       |
  | is_current | enum('Y','N')               |      |     | Y                   |       |
  | htgs_phase | enum('1','2','3','4','UNK') |      |     | UNK                 |       |
@@ -1327,19 +1484,21 @@ BEGIN {
         my( $pdmp ) = @_;
 
         my $sub_db = sub_db();
-        my $update = $sub_db->prepare(q{
-            UPDATE project_dump
-            SET is_current = 'N'
-            WHERE sanger_id = ?
-            });
-        $update->execute($pdmp->sanger_id);
-        
         my $insert = $sub_db->prepare(q{
             INSERT INTO project_dump(is_current,}
             . join(',', @fields)
             . q{) VALUES ('Y',?,FROM_UNIXTIME(?),?,?)}
             );
         $insert->execute(map $pdmp->$_(), @fields);
+        
+        # Now unset is_current for previous rows
+        my $update = $sub_db->prepare(q{
+            UPDATE project_dump
+            SET is_current = 'N'
+            WHERE sanger_id = ?
+              AND seq_id != ?
+            });
+        $update->execute($pdmp->sanger_id, $pdmp->seq_id);
     }
 }
 
