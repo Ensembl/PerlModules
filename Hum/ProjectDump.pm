@@ -211,46 +211,52 @@ BEGIN {
 
 sub submission_time {
     my $pdmp = shift;
-    
+
     return $pdmp->_submission_data('submission_time', @_);
 }
 
 sub submission_type {
     my $pdmp = shift;
-    
+
     return $pdmp->_submission_data('submission_type', @_);
+}
+
+sub embl_file_md5_sum {
+    my $pdmp = shift;
+
+    return $pdmp->_submission_data('embl_file_md5_sum', @_);
 }
 
 sub is_htgs_draft {
     my( $pdmp ) = @_;
-    
+
     my $project = $pdmp->project_name;
     return is_shotgun_complete($project);
 }
 
 sub is_htgs_fulltop {
     my( $pdmp ) = @_;
-    
+
     my $project = $pdmp->project_name;
     return is_full_shotgun_complete($project);
 }
 
 sub is_htgs_activefin {
     my( $pdmp ) = @_;
-    
+
     my $project = $pdmp->project_name;
     return is_assigned_to_finisher($project);
 }
 
 sub is_cancelled {
     my( $pdmp ) = @_;
-    
+
     return ($pdmp->current_status_number == 24) ? 1 : 0;
 }
 
 sub current_status_number {
     my( $pdmp ) = @_;
-    
+
     unless (defined $pdmp->{'_current_status_number'}) {
         my $project = $pdmp->project_name;
         $pdmp->{'_current_status_number'}
@@ -276,15 +282,17 @@ sub _submission_data {
         my $sth = prepare_statement(qq{
             SELECT UNIX_TIMESTAMP(submission_time)
               , submission_type
+              , embl_file_md5_sum
             FROM submission
             WHERE seq_id = $seq_id
             ORDER BY submission_time DESC
             LIMIT 1
             });
         $sth->execute;
-        if (my($time, $type) = $sth->fetchrow) {
-            $data->{'submission_time'} = $time;
-            $data->{'submission_type'} = $type;
+        if (my($time, $type, $md5_sum) = $sth->fetchrow) {
+            $data->{'submission_time'}   = $time;
+            $data->{'submission_type'}   = $type;
+	    $data->{'embl_file_md5_sum'} = $md5_sum;
         }
         $pdmp->{'_submission_data'} = $data;
     }
@@ -721,7 +729,7 @@ sub read_embl_file {
 sub write_embl_file {
     my( $pdmp ) = @_;
 
-    my $file = $pdmp->embl_file_path;    
+    my $file = $pdmp->embl_file_path;
     my $embl = $pdmp->embl_file;
     
     my $fh = gensym();
@@ -944,6 +952,7 @@ sub ebi_submit {
         }
     }
 
+    my $md5_sum = $pdmp->embl_file_md5_sum;
     my $time = time;
 
     my $seq_name = $pdmp->sequence_name or confess "sequence_name not set";
@@ -956,8 +965,9 @@ sub ebi_submit {
     my $record_submission = prepare_statement(qq{
         INSERT submission( seq_id
                          , submission_time
-                         , submission_type )
-        VALUES ($seq_id, FROM_UNIXTIME($time), '$sub_type')
+                         , submission_type
+                         , embl_file_md5_sum)
+        VALUES ($seq_id, FROM_UNIXTIME($time), '$sub_type', '$md5_sum')
         });
     $record_submission->execute;
 
