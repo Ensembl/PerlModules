@@ -196,7 +196,7 @@ sub submit {
         
         unless ($default_wrapper) {
             my $command_dir = $0;
-            $command_dir =~ s{([^/]+)$}{};
+            $command_dir =~ s{/?([^/]+)$}{};
             $default_wrapper = "$command_dir/run_ana_job";
             confess "Default wrapper not executable : '$default_wrapper'"
                 unless -x $default_wrapper;
