@@ -5,37 +5,6 @@ use strict;
 use Carp;
 use Hum::EMBL::Line;
 
-=pod
-
-     ID - identification             (begins each entry; 1 per entry)
-     AC - accession number           (>=1 per entry)
-     SV - new sequence identifier    (>=1 per entry)
-     NI - old sequence identifier    (>=1 per entry)
-     DT - date                       (2 per entry)
-     DE - description                (>=1 per entry)
-     KW - keyword                    (>=1 per entry)
-     OS - organism species           (>=1 per entry)
-     OC - organism classification    (>=1 per entry)
-     OG - organelle                  (0 or 1 per entry)
-     RN - reference number           (>=1 per entry)
-     RC - reference comment          (>=0 per entry)
-     RP - reference positions        (>=1 per entry)
-     RX - reference cross-reference  (>=0 per entry)
-     RA - reference author(s)        (>=1 per entry)
-     RT - reference title            (>=1 per entry)
-     RL - reference location         (>=1 per entry)
-     DR - database cross-reference   (>=0 per entry)
-     FH - feature table header       (0 or 2 per entry)
-     FT - feature table data         (>=0 per entry)
-     CC - comments or notes          (>=0 per entry)
-     XX - spacer line                (many per entry)
-     SQ - sequence header            (1 per entry)
-     bb - (blanks) sequence data     (>=1 per entry)
-     // - termination line           (ends each entry; 1 per entry)
-
-=cut
-
-
 BEGIN {
 
     my %_handler = (
@@ -120,20 +89,20 @@ BEGIN {
     
     sub new {
         my( $proto ) = @_;
-        my($class, $handler);
+        my($class, %handler);
 
         if(ref($proto)) {
             # $proto is an object
             $class = ref($proto);
-            $handler = \%{$proto->{'handler'}};
+            %handler = %{$proto->{'handler'}};
         } else {
             # $proto is a package name
             $class = $proto;
-            $handler = {%_handler};
+            %handler = %_handler;
         }
 
         return bless {
-            handler => $handler,
+            handler => \%handler,
             _lines  => [],
         }, $class;
     }    
@@ -223,3 +192,130 @@ sub addLine {
 1;
 
 __END__
+
+
+=head1 NAME - Hum::EMBL
+
+=head1 SYNOPSIS
+
+
+    use Hum::EMBL;
+    
+    # Parse the entries supplied to the script.
+    # Equivalent to the "while (<>)" construct.
+    my $parser = 'Hum::EMBL'->new;
+    while (my $embl = $parser->parse(*ARGV)) {
+        # Get the accession number
+        my $acc = $embl->AC->primary;
+        
+        # Loop over the CDS objects in the feature table
+        foreach my $feat ($embl->FT) {
+            if ($feat->key eq 'CDS') {
+                # do something...
+            }
+        }
+    }
+
+=head1 DESCRIPTION
+
+This module is for parsing and generating files
+in the EMBL nucleotide database format
+(B<http://www.ebi.ac.uk/embl/Documentation/index.html>).
+
+It uses ideas from Matthew Pocock and Ewan
+Birney's B<Embl.pm> module.  In particular each
+EMBL line prefix is associated with a package,
+which contains parsing, formatting, and data
+access functions.
+
+The cardinality of EMBL line types in standard
+EMBL files are as follows:
+
+     ID - identification             (begins each entry; 1 per entry)
+     AC - accession number           (>=1 per entry)
+     SV - new sequence identifier    (>=1 per entry)
+     NI - old sequence identifier    (>=1 per entry)
+     DT - date                       (2 per entry)
+     DE - description                (>=1 per entry)
+     KW - keyword                    (>=1 per entry)
+     OS - organism species           (>=1 per entry)
+     OC - organism classification    (>=1 per entry)
+     OG - organelle                  (0 or 1 per entry)
+     RN - reference number           (>=1 per entry)
+     RC - reference comment          (>=0 per entry)
+     RP - reference positions        (>=1 per entry)
+     RX - reference cross-reference  (>=0 per entry)
+     RA - reference author(s)        (>=1 per entry)
+     RT - reference title            (>=1 per entry)
+     RL - reference location         (>=1 per entry)
+     DR - database cross-reference   (>=0 per entry)
+     FH - feature table header       (0 or 2 per entry)
+     FT - feature table data         (>=0 per entry)
+     CC - comments or notes          (>=0 per entry)
+     XX - spacer line                (many per entry)
+     SQ - sequence header            (1 per entry)
+     bb - (blanks) sequence data     (>=1 per entry)
+     // - termination line           (ends each entry; 1 per entry)
+
+The default mapping between EMBL line prefixes
+and packages which you get with:
+
+    use Hum::EMBL;
+
+is as follows:
+
+         ID => 'Hum::EMBL::Line::ID',
+         AC => 'Hum::EMBL::Line::AC',
+         SV => 'Hum::EMBL::Line::SV',
+         NI => 'Hum::EMBL::Line::NI',
+         DT => 'Hum::EMBL::Line::DT',
+         DE => 'Hum::EMBL::Line::DE',
+         KW => 'Hum::EMBL::Line::KW',
+         OS => 'Hum::EMBL::Line::Organism',
+         OC => 'Hum::EMBL::Line::Organism',
+         OG => 'Hum::EMBL::Line::OG',
+         RN => 'Hum::EMBL::Line::Reference',
+         RC => 'Hum::EMBL::Line::Reference',
+         RP => 'Hum::EMBL::Line::Reference',
+         RX => 'Hum::EMBL::Line::Reference',
+         RA => 'Hum::EMBL::Line::Reference',
+         RT => 'Hum::EMBL::Line::Reference',
+         RL => 'Hum::EMBL::Line::Reference',
+         DR => 'Hum::EMBL::Line::DR',
+         FH => 'Hum::EMBL::Line::FH',
+         FT => 'Hum::EMBL::Line::FT',
+         CC => 'Hum::EMBL::Line::CC',
+         XX => 'Hum::EMBL::Line::XX',
+         SQ => 'Hum::EMBL::Line::Sequence',
+       '  ' => 'Hum::EMBL::Line::Sequence',
+       '//' => 'Hum::EMBL::Line::End',
+
+
+Consecutive lines in the EMBL file which map to
+the same package are (usually) stored as a single
+line object.  'FT' lines are an exception,
+because they are split into separate feature
+objects.
+
+The method you call to access all the line
+objects from a particular package is named from
+the last element of the package name (see
+above).  For example:
+
+    my @refs = $embl->Reference;
+
+In scalar context you get the first line object
+of this type:
+
+    my $first_ref = $embl->Reference;
+
+This is useful for accessing a data element from
+a line object, which you know will have a
+cardinality of 1 in the file, in a single step:
+
+    my $accession = $embl->AC->primary;
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
