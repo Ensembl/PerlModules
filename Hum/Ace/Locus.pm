@@ -47,19 +47,30 @@ sub new_from_ace_tag {
 }
 
 sub new_from_Locus {
-    my( $old ) = @_;
-    
+    my ($old) = @_;
+
     my $new = ref($old)->new;
-    foreach my $method (qw{
+
+    $new->set_aliases( $old->list_aliases );
+    $new->set_remarks( $old->list_remarks );
+    $new->set_positive_SubSeq_names( $old->list_positive_SubSeq_names );
+
+    
+    foreach my $method ( qw{
         name
         description
         gene_type
-        }) {
-        $new->$method($old->$method());
+        gene_type_prefix
+        is_truncated
+        is_complete
+        is_new_format
+        }){
+        
+        $new->$method( $old->$method() );
     }
-    $new->set_aliases($old->list_aliases);
-    $new->set_remarks($old->list_remarks);
-    
+
+   
+
     return $new;
 }
 
@@ -357,6 +368,7 @@ sub make_Otter_Gene {
 
     my $gene_name = $self->name;
     
+    
     # Make a new Otter Gene object
     my $gene = Bio::Otter::AnnotatedGene->new;
 
@@ -460,10 +472,10 @@ sub make_transcript_sets {
             my $gene_method_name = $t->GeneMethod->name;
             
             # Ignore Gene ID transcripts
-            if ($gene_method_name =~ /^GD/) {
-                warn "Skipping Gene ID transcript '$t_name'\n";
-                next;
-            }
+            ####if ($gene_method_name =~ /^GD/) {
+####                warn "Skipping Gene ID transcript '$t_name'\n";
+####                next;
+####            },
             
             # Only get SubSeqs from this locus
             next unless $is_locus_seq{$t_name};
