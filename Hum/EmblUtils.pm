@@ -51,15 +51,27 @@ BEGIN {
     my %class = (
 
         human =>
-        [qw(Homo sapiens human
-            Eukaryota Metazoa Chordata Craniata Vertebrata Mammalia Eutheria
-            Primates Catarrhini Hominidae Homo
+        [qw(Homo sapiens  human
+            Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia
+            Eutheria Primates Catarrhini Hominidae Homo
+            )],
+
+        gibbon =>
+        [qw(Hylobates syndactylus  siamang
+            Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia
+            Eutheria Primates Catarrhini Hylobatidae Hylobates
             )],
 
         mouse =>
         [qw(Mus musculus), 'house mouse', qw(
-            Eukaryota Metazoa Chordata Craniata Vertebrata Mammalia Eutheria
-            Rodentia Sciurognathi Muridae Murinae Mus
+            Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia
+            Eutheria Rodentia Sciurognathi Muridae Murinae Mus
+            )],
+        
+        dog =>
+        [qw(Canis familiaris), 'dog', qw(
+            Eukaryota Metazoa Chordata Craniata Vertebrata Euteleostomi Mammalia
+            Eutheria Carnivora Fissipedia Canidae Canis
             )],
 
         chicken =>

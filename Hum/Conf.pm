@@ -58,6 +58,7 @@ my $ftp_structure = {
     #'Arabidopsis'   => [ 'arabidopsis'             ],
     'B.floridae'    => [ 'b_floridae'              ],
     'Gibbon'        => [ 'gibbon'                  ],
+    'Dog'           => [ 'dog'                     ],
     };
 
 my $humace_queue = "$humpub/humace/queue";
@@ -70,11 +71,11 @@ my $humace_queue = "$humpub/humace/queue";
 
     # FTP site variables
     HUMAN_SEQ_FTP_DIR   => "$ftp/pub/human/sequences",
-    FTP_GHOST => $ftp_ghost,
-    FTP_ATTIC => "$ftp_ghost/attic",
-    FTP_ROOT  => "$ftp/pub",
-    FTP_STRUCTURE => $ftp_structure,
-    SPECIES_LIST => [keys %$ftp_structure],
+    FTP_GHOST           =>  $ftp_ghost,
+    FTP_ATTIC           => "$ftp_ghost/attic",
+    FTP_ROOT            => "$ftp/pub",
+    FTP_STRUCTURE       =>  $ftp_structure,
+    SPECIES_LIST =>  [keys %$ftp_structure],
 
     PFETCH_SERVER_LIST => [
         [qw{ plato.sanger.ac.uk    22100 }],
