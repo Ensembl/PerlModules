@@ -137,7 +137,7 @@ sub add_Reference {
     my $date = EMBLdate();
     
     my $query_email = 'humquery';
-    if ($pdmp->species_name eq 'Zebrafish') {
+    if ($pdmp->species eq 'Zebrafish') {
         $query_email = 'zface';
     }
 
@@ -394,7 +394,7 @@ sub add_Headers {
         : 'unfinished';
 
     my $seq_centre = $pdmp->seq_center_lines;
-    if ($pdmp->species_name eq 'Zebrafish') {
+    if ($pdmp->species eq 'Zebrafish') {
         $seq_centre =~ s/humquery/zface/;
     }
 
