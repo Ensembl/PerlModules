@@ -420,19 +420,19 @@ sub add_keywords {
     my $kw = $embl->newKW;
     my @kw_list = ('HTG');
 
+    if ($contig_count == 1) {
+        push(@kw_list, 'HTGS_PHASE2');
+    } else {
+        push(@kw_list, 'HTGS_PHASE1');
+    }
+
     if ($pdmp->is_cancelled) {
         push( @kw_list, 'HTGS_CANCELLED' );
     } else {
-        if ($contig_count == 1) {
-            push(@kw_list, 'HTGS_PHASE2');
-        } else {
-            push(@kw_list, 'HTGS_PHASE1');
-        }
-
         if ($pdmp->is_htgs_draft) {
+            # Check that the project really is draft quality
             my ($contig_depth) = $pdmp->contig_and_agarose_depth_estimate;
 
-            # Check that the project really is draft quality
             if ($contig_depth >= 3) {
                 push( @kw_list, 'HTGS_DRAFT' );
             }
