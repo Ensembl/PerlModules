@@ -97,7 +97,7 @@ sub make_embl {
 
     # CC lines
     $pdmp->add_Headers($embl, $contig_map);
-    $embl->newXX;
+    #$embl->newXX; # this becomes redundant to the CC lines code of Factory.pm, otherwise 2 XX lines
 
     # Feature table header
     $embl->newFH;
