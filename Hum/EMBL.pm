@@ -82,7 +82,6 @@ BEGIN {
 
             # Don't redefine existing subroutines
             my $func = "${pkg}::$name";
-            warn "Defining '$func'";
             if (defined( &$func )) {
                 confess "sub '$func' already defined";
             } else {
