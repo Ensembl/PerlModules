@@ -453,6 +453,14 @@ sub get_all_Exons {
     return @{$self->{'_Exon_list'}};
 }
 
+sub get_all_Exons_in_transcript_order {
+    my( $self ) = @_;
+    
+    return $self->strand == 1 ?
+        $self->get_all_Exons
+      : reverse $self->get_all_Exons;
+}
+
 sub delete_Exon {
     my( $self, $gonner ) = @_;
     

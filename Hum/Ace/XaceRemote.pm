@@ -48,7 +48,8 @@ sub show_SubSeq {
     my( $self, $subseq, $pad ) = @_;
     
     unless (defined $pad) {
-        $pad = 1000;
+        $pad = int($subseq->subseq_length / 10);
+        $pad = 500 if $pad < 500;
     }
     my $seq     = $subseq->clone_Sequence or confess "No clone_Sequence";
     my $start   = $subseq->start - $pad;
@@ -83,7 +84,7 @@ sub show_sequence {
 sub save {
     my( $self ) = @_;
     
-    $self->send_command('save');
+    $self->send_command('save -regain');
 }
 
 sub load_ace {
