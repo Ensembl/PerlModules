@@ -49,17 +49,11 @@ use vars '@ISA';
         
         my $ref = $embl->newReference;
         $ref->number(1);
+        $ref->positions("1-$seqlength");
         $ref->comments('HGMP-RC part of the UK Mouse Sequencing Consortium');
         $ref->authors(@author_list);
         $ref->title("The sequence of $bi_nom clone $ext_clone");
-        $ref->locations('Unpublished');
-        $embl->newXX;
-
-        my $ref2 = $embl->newReference;
-        $ref2->number(2);
-        $ref->positions("1-$seqlength");
-        $ref2->authors('HGMP-RC');
-        $ref2->locations(
+        $ref->locations(
             "Submitted ($date) to the EMBL/Genbank/DDBJ databases.",
             'Mouse Sequencing Group, HGMP-RC, Hinxton, Cambridge, CB10 1SB, UK.',
             'E-mail enquiries:- mrbotche@hgmp.mrc.ac.uk or dclarke2@hgmp.mrc.ac.uk');
