@@ -1,5 +1,5 @@
 
-package Hum::Submission;
+package Hum::Acception;
 
 use strict;
 use DBI;
@@ -8,7 +8,7 @@ use Time::Local qw( timelocal );
 
 {
     my( $db );
-    my $host = 'caldy';
+    my $host = 'humsrv1';
 
     sub new {
         my( $pkg, $sanger_id ) = @_;
@@ -157,7 +157,7 @@ sub retrieve {
     
     my $sid = $sub->sanger_id
         or confess "Can't retrieve data without sanger_id";
-    $sub->_retrieve_project_acc;
+    $sub->_retrieve_project_acc or confess "";
     $sub->_retrieve_acception;
     $sub->_retrieve_secondary_acc;
 }
@@ -173,14 +173,19 @@ BEGIN {
     );
 
     my $insert = 'INSERT INTO acception('
-                 . join(', ', ('id', @fields))
-                 . q{) VALUES('NULL',?,FROM_UNIXTIME(?),?,?,?)};
+                 . join(', ', ('id', 'is_current', @fields))
+                 . q{) VALUES('NULL','Y',?,FROM_UNIXTIME(?),?,?,?)};
+
 
     sub _store_acception {
         my( $sub ) = @_;
 
         my $sth = $sub->db->prepare($insert);
         $sth->execute($sub->show_fields(@fields));
+    }
+
+    sub _retrieve_acception {
+        
     }
 
     sub _update_acception {
@@ -195,7 +200,13 @@ BEGIN {
                                          AND sequence_length = '$length'
                                          AND htgs_phase = '$phase'});
         my $ans = $sth->fetchall_arrayref;
-        $sub->_store_acception unless @$ans;
+        unless (@$ans) {
+            my $uns = $sub->db->prepare(q{UPDATE acception
+                                          SET is_current = 'N'
+                                          WHERE sanger_id = ?});
+            $uns->execute($sid);
+            $sub->_store_acception;
+        }
     }
 }
 
@@ -352,23 +363,23 @@ __END__
 
 =pod
 
-=head1 NAME - Hum::Submission
+=head1 NAME - Hum::Acception
 
 =head1 DESCRIPTION
 
 =head2 ACCEPTION TABLE
 
- +------------------+---------------+------+-----+---------------------+----------------+
- | Field            | Type          | Null | Key | Default             | Extra          |
- +------------------+---------------+------+-----+---------------------+----------------+
- | id               | int(11)       |      | PRI | 0                   | auto_increment |
- | sanger_id        | varchar(20)   |      | MUL |                     |                |
- | accept_date      | datetime      |      | MUL | 0000-00-00 00:00:00 |                |
- | sequence_version | int(11)       |      |     | 0                   |                |
- | sequence_length  | int(11)       |      |     | 0                   |                |
- | htgs_phase       | enum('1','3') |      |     | 1                   |                |
- +------------------+---------------+------+-----+---------------------+----------------+
-
+ +------------------+-----------------------------+------+-----+---------------------+----------------+
+ | Field            | Type                        | Null | Key | Default             | Extra          |
+ +------------------+-----------------------------+------+-----+---------------------+----------------+
+ | id               | int(11)                     |      | PRI | 0                   | auto_increment |
+ | sanger_id        | varchar(20)                 |      | MUL |                     |                |
+ | accept_date      | datetime                    |      | MUL | 0000-00-00 00:00:00 |                |
+ | sequence_version | int(11)                     |      |     | 0                   |                |
+ | sequence_length  | int(11)                     |      |     | 0                   |                |
+ | htgs_phase       | enum('1','2','3','4','UNK') |      |     | UNK                 |                |
+ | is_current       | enum('Y','N')               |      | MUL | N                   |                |
+ +------------------+-----------------------------+------+-----+---------------------+----------------+
 
 Each addition to EMBL generates a new entry in
 the ACCEPTION table.  ACCEPTION records data
@@ -398,7 +409,7 @@ piece, and are "A", "B", "C" etc...)
  +-----------+-------------+------+-----+---------+-------+
  | Field     | Type        | Null | Key | Default | Extra |
  +-----------+-------------+------+-----+---------+-------+
- | accession | varchar(10) |      | PRI |         |       |
+ | accession | varchar(10) |      | MUL |         |       |
  | secondary | varchar(10) |      | MUL |         |       |
  +-----------+-------------+------+-----+---------+-------+
 

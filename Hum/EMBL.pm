@@ -149,7 +149,7 @@ sub parse {
         push( @obj, @last ) if @last;
     }
     
-    # Return an new Entry object if we've got Line objects
+    # Return a new Entry object if we've got Line objects
     if (@obj) {
         $entry->lines( \@obj );
         return $entry;
@@ -162,8 +162,8 @@ sub compose {
     my( $embl ) = @_;
     
     my( @compose );
-    foreach my $line ($embl->lines()) {
-        push( @compose, $line->getString() );
+    foreach my $line ($embl->lines) {
+        push( @compose, $line->compose );
     }
     return @compose;
 }

@@ -55,7 +55,7 @@ sub parse {
     confess "parse method not implemented in package '$pkg'";
 }
 
-sub compose {
+sub _compose {
     my( $line ) = @_;
     
     my $pkg = ref($line);
@@ -104,6 +104,17 @@ sub makeListAccessFuncs {
     }
 }
 
+# Called by compose() in Hum::EMBL on each line
+sub compose {
+    my( $line ) = @_;
+    
+    if (my $string = $line->string) {
+        return $string;
+    } else {
+        return $line->string($line->_compose);
+    }
+}
+
 # Sets the string and empties the data hash
 # if called with arguments.
 # Returns the stored string
@@ -115,17 +126,6 @@ sub string {
         $line->{'_string'} = join '', @_;
     }
     return $line->{'_string'};
-}
-
-# Called by compose() in Hum::EMBL::Line on each line
-sub getString {
-    my( $line ) = @_;
-    
-    if (my $string = $line->string()) {
-        return $string;
-    } else {
-        return $line->compose();
-    }
 }
 
 sub data {
@@ -201,7 +201,7 @@ sub parse {
     $line->seqlength( $length    );
 }
 
-sub compose {
+sub _compose {
     my( $line ) = @_;
     
     my $entryname = $line->entryname();
@@ -210,7 +210,7 @@ sub compose {
     my $division  = $line->division ();
     my $length    = $line->seqlength();
     
-    return $line->string("ID   $entryname  $dataclass; $molecule; $division; $length BP.\n");
+    return "ID   $entryname  $dataclass; $molecule; $division; $length BP.\n";
 }
 
 ###############################################################################
@@ -240,12 +240,12 @@ sub parse {
     $line->secondaries( @ac );
 }
 
-sub compose {
+sub _compose {
     my( $line ) = @_;
     
     my $ac = join( ' ', map "$_;", ($line->primary(), $line->secondaries()) );
     
-    return $line->string($line->wrap('AC   ', $ac));
+    return $line->wrap('AC   ', $ac);
 }
 
 ###############################################################################
@@ -269,14 +269,14 @@ sub parse {
     $line->list($text);
 }
 
-sub compose {
+sub _compose {
     my( $line ) = @_;
     
     my( @compose );
     foreach my $txt ($line->list()) {
         push( @compose, $line->wrap('CC   ', $txt) );
     }
-    return $line->string(@compose);
+    return @compose;
 }
 
 ###############################################################################
@@ -305,12 +305,12 @@ sub parse {
     $line->list(@kw);
 }
 
-sub compose {
+sub _compose {
     my( $line ) = @_;
     
     my $kw = join('; ', $line->list()) . '.';
     
-    return $line->string($line->wrap('KW   ', $kw));
+    return $line->wrap('KW   ', $kw);
 }
 
 ###############################################################################
@@ -359,7 +359,7 @@ sub parse {
     $line->version       ($version       );
 }
 
-sub compose {
+sub _compose {
     my( $line ) = @_;
     
     my $createdDate    = $line->createdDate   ();
@@ -378,8 +378,8 @@ sub compose {
     
     # DT   07-NOV-1985 (Rel. 07, Created)
     # DT   20-FEB-1990 (Rel. 23, Last updated, Version 1)
-    return $line->string("DT   $createdDate (Rel. $createdRelease, Created)\n",
-                         "DT   $date (Rel. $release, Last updated, Version $version)\n");
+    return ("DT   $createdDate (Rel. $createdRelease, Created)\n",
+            "DT   $date (Rel. $release, Last updated, Version $version)\n");
 }
 
 ###############################################################################
@@ -403,14 +403,14 @@ sub parse {
     $line->list($text);
 }
 
-sub compose {
+sub _compose {
     my( $line ) = @_;
     
     my( @compose );
     foreach my $txt ($line->list()) {
         push( @compose, $line->wrap('DE   ', $txt) );
     }
-    return $line->string(@compose);
+    return @compose;
 }
 
 ###############################################################################
@@ -464,13 +464,13 @@ sub parse {
     $line->version  ( $version );
 }
 
-sub compose {
+sub _compose {
     my( $line ) = @_;
     
     my $acc     = $line->accession;
     my $version = $line->version;
     
-    return $line->string("SV   $acc.$version\n");
+    return "SV   $acc.$version\n";
 }
 
 ###############################################################################
@@ -494,11 +494,11 @@ sub parse {
     $line->identifier( $version );
 }
 
-sub compose {
+sub _compose {
     my( $line ) = @_;
     
     my $nuc = $line->identifier();
-    return $line->string("NI   $nuc\n");
+    return "NI   $nuc\n";
 }
 
 
@@ -582,7 +582,7 @@ sub parse {
     $line->locations( @locations );
 }
 
-sub compose {
+sub _compose {
     my( $line ) = @_;
     
     my( @compose );
@@ -616,7 +616,7 @@ sub compose {
         push( @compose, $line->wrap('RL   ', $loc) );
     }
     
-    return $line->string(@compose);
+    return @compose;
 }
 
 ###############################################################################
@@ -689,14 +689,14 @@ sub parse {
     $line->secondary( $sec );
 }
 
-sub compose {
+sub _compose {
     my( $line ) = @_;
     
     my $db   = $line->db();
     my $prim = $line->id();
     my $sec  = $line->secondary();
     
-    return $line->string("DR   $db; $prim; $sec.\n");
+    return "DR   $db; $prim; $sec.\n";
 }
 
 ###############################################################################
@@ -738,7 +738,7 @@ sub parse {
     $line->classification(@class);
 }
 
-sub compose {
+sub _compose {
     my( $line ) = @_;
     
     my $species = $line->species();
@@ -751,7 +751,7 @@ sub compose {
     $os .= "\n";
     
     my $class_string = join('; ', $line->classification()) . '.';
-    return $line->string($os, $line->wrap('OC   ', $class_string ));
+    return ($os, $line->wrap('OC   ', $class_string ));
 }
 
 ###############################################################################
@@ -777,11 +777,11 @@ sub parse {
     $line->organelle( $organelle );
 }
 
-sub compose {
+sub _compose {
     my( $line ) = @_;
     
     my $organelle = $line->organelle();
-    return $line->string("OG   $organelle\n");
+    return "OG   $organelle\n";
 }
 
 ###############################################################################
@@ -890,9 +890,17 @@ sub parse {
     
     # Make a new qualifier object from each string
     for (my $i = 0; $i < @qual; $i++) {
-        my $s = $qual[$i];
+        my $x = $qual[$i];
+        
+        # Fuse with next element of @qual if unbalanced quote
+        # (This only happens if a line began with '/')
+        while (($x =~ tr/"/"/) % 2) {
+            my $extra = splice(@qual, $i + 1, 1) or confess "Unbalanced quote in:\n'$$s'";
+            $x .= ($x =~ /\s/) ? " /$extra" : "/$extra";
+        }
+        
         my $n = 'Hum::EMBL::Qualifier'->new;
-        $n->parse(\$s);
+        $n->parse(\$x);
         $qual[$i] = $n;
     }
     
@@ -922,7 +930,7 @@ sub store {
     return( @features, $last );    
 }
 
-sub compose {
+sub _compose {
     my( $feat ) = @_;
     
     my $head = 'FT   '. $feat->key;
@@ -933,7 +941,7 @@ sub compose {
     foreach my $q ($feat->qualifiers) {
         push( @qual, $q->compose );
     }
-    return $feat->string($head, @qual);
+    return ($head, @qual);
 }
 
 ###############################################################################
@@ -959,13 +967,12 @@ sub parse {
 }
 
 BEGIN {
-    my $nuc = 60;                           # Number of nucleotides per line
-    my $whole_pat = 'a10' x int($nuc / 10); # Pattern for unpacking a whole line
+    my $nuc = 60;               # Number of nucleotides per line
+    my $whole_pat = 'a10' x 6;  # Pattern for unpacking a whole line
+    my $out_pat   = 'A11' x 6;  # Pattern for packing a line
 
-    sub compose {
+    sub _compose {
         my( $line ) = @_;
-
-        local $" = ' '; # Make sure no-one's messed with this
 
         my $seq = $line->seq();
         my $length = length($seq);
@@ -987,23 +994,23 @@ BEGIN {
         # Format the whole lines
         my( $i );
         for ($i = 0; $i < $whole; $i += $nuc) {
-            my @blocks = unpack $whole_pat, substr($seq, $i, $nuc);
-            $embl .= sprintf "     @blocks %9d\n", $i + $nuc;
+            my $blocks = pack $out_pat,
+                         unpack $whole_pat,
+                         substr($seq, $i, $nuc);
+            $embl .= sprintf "     $blocks%9d\n", $i + $nuc;
         }
         
         # Format the last line
         if (my $last = substr($seq, $i)) {
             my $last_len = length($last);
             my $last_pat = 'a10' x int($last_len / 10) .'a'. $last_len % 10;
-            my @blocks = unpack($last_pat, $last);
-            $last = "     @blocks";                 # Add the last sequence blocks
-            $last .= ' ' x (70 - length($last));    # Pad the line with whitespace
-            $last .=  sprintf( " %9d\n", $length ); # Add the length to the end
-            $embl .= $last;
+            my $blocks = pack $out_pat,
+                         unpack $last_pat, $last;
+            $embl .= sprintf "     $blocks%9d\n", $length;
         }
         
         # Return as a single string
-        return $line->string($embl);
+        return $embl;
     }
 }
 

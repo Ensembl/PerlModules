@@ -14,24 +14,18 @@ BEGIN {
 sub parse {
     my( $line, $s ) = @_;
     
-    my @lines = $$s =~ /^AC \* (.+)$/mg;
-    my( @ac );
-    foreach (@lines) {
-        push( @ac, split /;\s*/ );
-    }
-    my $primary = shift( @ac );
-    $line->primary    ( $primary );
-    $line->secondaries( @ac );
+    my ($id) = $$s =~ /^AC \* (\S+)$/mg;
+    $line->identifier( $id );
 }
 
-sub compose {
+sub _compose {
     my( $line ) = @_;
     
     my $identifier = $line->identifier;
     confess "Identifier '$identifier' too long"
         if length($identifier) > 75;
     
-    return $line->string("AC * $identifier\n");
+    return "AC * $identifier\n";
 }
 
 1;
