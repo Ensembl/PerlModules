@@ -66,6 +66,7 @@ use vars qw( @ISA @EXPORT_OK );
                 unfinished_accession
                 iso2time
                 time2iso
+                store_accession_data
                 );
 
 =head2 current_project_status_number( PROJECT )
@@ -1054,18 +1055,33 @@ more than one match in the project table.
     }
 }
 
-sub iso2time {
-    my $iso = shift || die "No iso time given";
-    
-    my ($year, $mon, $mday, $hour, $min, $sec)
-}
-
 sub time2iso {
     my $time = shift || time;
     
     my ($sec,$min,$hour,$mday,$mon,$year) = localtime($time);
     return sprintf("%04d-%02d-%02d %02d:%02d:%02d",
         $year+1900, $mon+1, $mday, $hour, $min, $sec);
+}
+
+sub iso2time {
+    my $iso = shift || die "No iso time given";
+    
+    my ($year, $mon, $mday, $hour, $min, $sec) = $iso
+        =~ /(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/
+        or confess "Can't parse ISO time string '$iso'";
+    $year -= 1900;
+    $mon--;
+    return timelocal($sec,$min,$hour,$mday,$mon,$year);
+}
+
+{
+    my( );
+
+    sub store_accession_data {
+        my( $project, $suffix, $phase, $acc, $embl_name) = @_;
+
+        
+    }
 }
 
 1;

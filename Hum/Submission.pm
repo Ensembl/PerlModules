@@ -16,6 +16,7 @@ use vars qw( @ISA @EXPORT_OK );
                  destroy_lock
                  die_if_dumped_recently
                  prepare_statement
+                 prepare_cached_statement
                  sanger_name
                  project_name_and_suffix_from_sequence_name
                  submission_disconnect
@@ -96,6 +97,14 @@ sub ref_from_query {
         my( $text ) = @_;
         
         my $sth = sub_db()->prepare($text);
+        push(@active_statement_handles, $sth);
+        return $sth;
+    }
+    
+    sub prepare_cached_statement {
+        my( $text ) = @_;
+        
+        my $sth = sub_db()->prepare_cached($text);
         push(@active_statement_handles, $sth);
         return $sth;
     }
