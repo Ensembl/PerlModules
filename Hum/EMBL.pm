@@ -44,7 +44,9 @@ BEGIN {
 
         if (@_) {
             confess "Odd number of agruments" if @_ % 2;
-            %_handler = @_;
+            for (my $i = 0; $i < @_; $i += 2) {
+                $_handler{$_[$i]} = $_[$i+1]
+            }
         }
 
         # Generate access methods for each line type package,

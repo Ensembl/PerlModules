@@ -11,7 +11,6 @@ use Hum::Tracking qw(
     is_shotgun_complete
     );
 use Hum::ProjectDump::EMBL;
-use Hum::EMBL;
 use Hum::EBI_FTP;
 use Hum::Conf qw( FTP_ROOT FTP_GHOST FTP_STRUCTURE );
 use File::Path;
