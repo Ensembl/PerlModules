@@ -142,7 +142,7 @@ sub add_Reference {
     $ref->number(1);
     $ref->authors($author);
     $ref->locations("Submitted ($date) to the EMBL/Genbank/DDBJ databases.",
-                    'Sanger Centre, Hinxton, Cambridgeshire, CB10 1SA, UK.',
+                    'Wellcome Trust Sanger Institute, Hinxton, Cambridgeshire, CB10 1SA, UK.',
                     'E-mail enquiries: humquery@sanger.ac.uk',
                     'Clone requests: clonerequest@sanger.ac.uk');
     $embl->newXX;
@@ -272,7 +272,7 @@ sub add_FT_assembly_fragments {
         );
 
     my %sequencing_center = (
-        5  => ['Center: Sanger Centre',
+        5  => ['Center: Wellcome Trust Sanger Institute',
                'Center code: SC',
                'Web site: http://www.sanger.ac.uk',
                'Contact: humquery@sanger.ac.uk',],
