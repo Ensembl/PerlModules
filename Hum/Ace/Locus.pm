@@ -858,7 +858,8 @@ sub get_unique_EnsEMBL_Exon {
     my( $self, $clone, $strand, $exon, $cds_exon, $evidence ) = @_;
     
     my $clone_name = $clone->accession;
-    my $ens_contig = $clone->EnsEMBL_Contig;
+    my $ens_contig = $clone->EnsEMBL_Contig
+        or confess "No Ensembl contig attached";
     my $ens_contig_id = $ens_contig->id;
     my $ens_contig_dbid = $ens_contig->internal_id;
     

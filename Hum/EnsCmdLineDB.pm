@@ -29,6 +29,7 @@ use Term::ReadKey qw{ ReadMode ReadLine };
             'dbname=s'      => \$dbname,
             'user=s'        => \$user,
             'password=s'    => \$password,
+            'nopassword'    => sub{ $password = undef; $prompt = 0 },
 
             'dnahost=s'     => \$dna_host,
             'dnadbname=s'   => \$dna_dbname,
