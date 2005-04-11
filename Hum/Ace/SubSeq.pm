@@ -222,7 +222,7 @@ sub process_ace_start_end_transcript_seq {
         my $list = [];
         foreach my $evidence ($t_seq->at('Annotation.Sequence_matches.' . $tag . '[1]')) {
             # print "Evidence row " . $evidence->asString . "\n";
-  	    my $id = $evidence->name;
+  	        my $id = $evidence->name;
             $id =~ s/^[a-zA-Z]{2}://;
             push(@$list, $id) if $id;
         }
@@ -261,7 +261,7 @@ sub process_ace_start_end_transcript_seq {
     if ($t_seq->at('Properties.End_not_found')) {
         $self->end_not_found(1);
     }
-
+ 
     $self->validate;
 }
 
@@ -432,9 +432,12 @@ sub add_evidence_list {
 }
 
 sub evidence_hash {
-    my( $self ) = @_;
+    my( $self, $evidence_hash ) = @_;
     
-    return $self->{'_evidence'} || {};
+    if ($evidence_hash) {
+        $self->{'_evidence_hash'} = $evidence_hash;
+    }
+    return $self->{'_evidence_hash'} || {};
 }
 
 sub clone_Sequence {
@@ -1091,6 +1094,7 @@ sub ace_string {
         
         . qq{-D Continued_from\n}
         . qq{-D Continues_as\n}
+        . qq{-D Sequence_matches\n}
         
         # New SubSequencce object starts here
         . qq{\nSequence "$name"\n}
@@ -1158,6 +1162,15 @@ sub ace_string {
         my $ln = $locus->name;
         $out .= qq{Locus "$ln"\n};
         $out .= $locus->ace_string;
+    }
+    
+    # Supporting evidence
+    my $evi = $self->evidence_hash;
+    foreach my $type (sort keys %$evi) {
+        my $id_list = $evi->{$type};
+        foreach my $name (@$id_list) {
+            $out .= qq{${type}_match "$name"\n};
+        }
     }
     
     $out .= "\n";
