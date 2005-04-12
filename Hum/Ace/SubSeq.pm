@@ -221,9 +221,9 @@ sub process_ace_start_end_transcript_seq {
         my $tag = "${type}_match";
         my $list = [];
         foreach my $evidence ($t_seq->at('Annotation.Sequence_matches.' . $tag . '[1]')) {
-            # print "Evidence row " . $evidence->asString . "\n";
   	        my $id = $evidence->name;
             $id =~ s/^[a-zA-Z]{2}://;
+            print STDERR qq{Got Evidence: $type "$id"\n};
             push(@$list, $id) if $id;
         }
         $self->add_evidence_list($type, $list) if @$list;
@@ -329,6 +329,12 @@ sub clone {
                 
         my $new_ex = $old_ex->clone;
         $new->add_Exon($new_ex);
+    }
+    
+    my $ev = $old->evidence_hash;
+    foreach my $type (keys %$ev) {
+        my $ev_list = $ev->{$type};
+        $new->add_evidence_list($type, [@$ev_list]);
     }
     
     return $new;
@@ -1158,11 +1164,6 @@ sub ace_string {
             }
         }
     }
-    if ($locus) {
-        my $ln = $locus->name;
-        $out .= qq{Locus "$ln"\n};
-        $out .= $locus->ace_string;
-    }
     
     # Supporting evidence
     my $evi = $self->evidence_hash;
@@ -1171,6 +1172,12 @@ sub ace_string {
         foreach my $name (@$id_list) {
             $out .= qq{${type}_match "$name"\n};
         }
+    }
+    
+    if ($locus) {
+        my $ln = $locus->name;
+        $out .= qq{Locus "$ln"\n};
+        $out .= $locus->ace_string;
     }
     
     $out .= "\n";
