@@ -51,7 +51,7 @@ $cgp_path{'EF'}="$ext_path/EF";
 
 my $ftp_structure = {
     #'Arabidopsis'   => [ 'arabidopsis'              ],
-    #'Drosophila'    => [ 'drosophila/sequences'     ],
+    'Drosophila'    => [ 'drosophila/sequences'     ],
     'B.floridae'    => [ 'b_floridae'               ],
     'Carp'          => [ 'carp'                     ],
     'Chicken'       => [ 'chicken'                  ],
