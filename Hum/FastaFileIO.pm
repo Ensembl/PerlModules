@@ -148,7 +148,7 @@ sub read_one_sequence {
     my $seq_string = '';
     my( $seq_obj );
     while ($_ = $ffio->_next_line) {
-        if (my ($name, $desc) = /^>(\S+)\s*(.*)/) {
+        if (my ($name, $desc) = /^>\s*(\S+)\s*(.*)/) {
             #warn "Got '$name'\n";
             if ($seq_obj) {
                 $ffio->_push_back($_);
