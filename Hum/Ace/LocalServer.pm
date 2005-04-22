@@ -101,6 +101,16 @@ sub default_server_executable {
 }
 
 sub timeout_string {
+    my( $self, $string ) = @_;
+    
+    if ($string) {
+        $self->{'_timeout_string'} = $string;
+    }
+    return $self->{'_timeout_string'}
+        || $self->default_timeout_string();
+
+}
+sub default_timeout_string{
     return '0:1:0';
 }
 
