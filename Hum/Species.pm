@@ -11,7 +11,28 @@ use Hum::Submission ("prepare_statement");
 {
 
   my $all_spec_info = [];
-  _fetch_species_data();
+  my ($hashref, $info);
+
+  # all species data returned are default to those with active column set to 'yes'
+
+  $info = prepare_statement("SELECT * FROM species where active = 'yes'");
+  $info->execute();
+
+  while ( $hashref = $info->fetchrow_hashref() ) {
+    my $spec = Hum::Species->new;
+
+    $spec->name           ($hashref->{species_name});
+    $spec->taxon_id       ($hashref->{taxon_id});
+    $spec->genus          ($hashref->{genus});
+    $spec->species        ($hashref->{species});
+    $spec->common_name    ($hashref->{common_name});
+    $spec->ftp_dir        ($hashref->{ftp_dir});
+    $spec->ftp_chr_prefix ($hashref->{ftp_chr_prefix});
+    $spec->active         ($hashref->{active});
+    $spec->division       ($hashref->{division});
+    $spec->lineage        ($hashref->{lineage});
+    push(@$all_spec_info, $spec);
+  }
 
   sub new {
     my( $pkg ) = @_;
@@ -84,89 +105,50 @@ use Hum::Submission ("prepare_statement");
     return $self->_filter("common_name", $common_name);
   }
 
-  sub fetch_Species_by_lineage {
-    my ( $self, $lineage ) = @_;
+  sub fetch_sll_Species_ftp_structure {
+    my ( $self ) = @_;
 
-    unless ( $lineage ){
-      confess "Missing lineage!";
-    }
+	my $ftp_structure = {};
+	foreach my $species (@$all_spec_info) {
+	  my $name = $species->name;
 
-    return $self->_filter("lineage", $lineage);
-  }
+	  if ( $species->ftp_chr_prefix ) {
+		push( @{$ftp_structure->{"\u$name"}}, $species->ftp_dir, $species->ftp_chr_prefix );
+	  } else {
+		push( @{$ftp_structure->{"\u$name"}}, $species->ftp_dir);
+	  }
+	}
 
-  sub fetch_Species_by_ftp_dir {
-    my ( $self, $ftp_dir ) = @_;
-
-    unless ( $ftp_dir ){
-      confess "Missing ftp_dir!";
-    }
-
-    return $self->_filter("ftp_dir", $ftp_dir);
-  }
-
-  sub fetch_Species_by_ftp_chr_prefix {
-    my ( $self, $ftp_chr_prefix ) = @_;
-
-    unless ( $ftp_chr_prefix ){
-      confess "Missing ftp_chr_prefix!";
-    }
-
-    return $self->_filter("ftp_chr_prefix", $ftp_chr_prefix);
-  }
-
-  sub _fetch_species_data {
-
-    my ($hashref, $info);
-
-    $info = prepare_statement("SELECT * FROM species");
-    $info->execute();
-
-    while ( $hashref = $info->fetchrow_hashref() ) {
-	  my $spec = Hum::Species->new;
-
-	  $spec->name           ($hashref->{species_name});
-	  $spec->taxon_id       ($hashref->{taxon_id});
-	  $spec->genus          ($hashref->{genus});
-	  $spec->species        ($hashref->{species});
-	  $spec->common_name    ($hashref->{common_name});
-	  $spec->lineage        ($hashref->{lineage});
-	  $spec->ftp_dir        ($hashref->{ftp_dir});
-	  $spec->ftp_chr_prefix ($hashref->{ftp_chr_prefix});
-      push(@$all_spec_info, $spec);
-    }
+	return $ftp_structure;
   }
 
   sub _filter {
     my ( $self, $method1, $val1, $method2, $val2 ) = @_;
 	
-	if ( $method1 and $val1 ){
+	if ( $method1 and $val1 ) {
 
 	  my $obj_count = 0;
 	  my $spec_list = [];
 	  my $spec;
 
-	  foreach my $e ( @$all_spec_info ){
-		if ( lc($e->$method1) eq lc("$val1") ){
+	  foreach my $e ( @$all_spec_info ) {
+		if ( lc($e->$method1) eq lc("$val1") ) {
 		  $obj_count++;
 		  $spec = Hum::Species->new;
 		  $spec = $self->_get_set_data($spec, $e);
 		  push(@$spec_list, $spec); 
 		}
 	  }
-	  if ( $obj_count > 1 ){
+	  if ( $obj_count > 1 ) {
 		return $spec_list;
-	  }
-	  elsif ( $obj_count == 1 ){
+	  } elsif ( $obj_count == 1 ) {
 		return $spec;
-	  }
-	  else {
+	  } else {
 		confess "Invalid arguments";
 	  }
-	}
-
-	elsif ( $method1 and $val1 and $method2 and $val2 ){
-	  foreach my $e ( @$all_spec_info ){
-		if ( lc($e->$method1) eq lc("$val1") and lc($e->$method2) eq lc("$val2") ){	
+	} elsif ( $method1 and $val1 and $method2 and $val2 ) {
+	  foreach my $e ( @$all_spec_info ) {
+		if ( lc($e->$method1) eq lc("$val1") and lc($e->$method2) eq lc("$val2") ) {	
 		  my $spec = Hum::Species->new;
 		  return $self->_get_set_data($spec, $e);
 		}
@@ -184,16 +166,18 @@ use Hum::Submission ("prepare_statement");
 	$new_spec->genus          ($wanted->genus);
 	$new_spec->species        ($wanted->species);
 	$new_spec->common_name    ($wanted->common_name);
-	$new_spec->lineage        ($wanted->lineage);
 	$new_spec->ftp_dir        ($wanted->ftp_dir);
 	$new_spec->ftp_chr_prefix ($wanted->ftp_chr_prefix);	
+	$new_spec->active         ($wanted->active);
+	$new_spec->division       ($wanted->division);
+	$new_spec->lineage        ($wanted->lineage);
 	return $new_spec;
   }
 
   sub name {
     my ( $self, $colval ) = @_;
 
-    if ( ! $self->{species_name} ){
+    if ( ! $self->{species_name} ) {
       $self->{species_name} = $colval;
     }
 
@@ -240,16 +224,6 @@ use Hum::Submission ("prepare_statement");
     return $self->{common_name};
   }
 
-  sub lineage {
-    my ( $self, $colvalue ) =@_;
-
-    unless ( $self->{lineage} ) {
-      $self->{lineage} = $colvalue;
-    }
-
-    return $self->{lineage};
-  }
-
   sub ftp_dir {
     my ( $self, $colvalue ) =@_;
 
@@ -269,6 +243,38 @@ use Hum::Submission ("prepare_statement");
 
     return $self->{ftp_chr_prefix};
   }
+
+  sub active {
+    my ( $self, $colvalue ) =@_;
+
+    unless ( $self->{active} ) {
+      $self->{active} = $colvalue;
+    }
+
+    return $self->{active};
+  }
+
+  sub division {
+  	my ( $self, $colvalue ) =@_;
+
+    unless ( $self->{division} ) {
+      $self->{division} = $colvalue;
+    }
+
+    return $self->{division};
+  }
+
+  sub lineage {
+    my ( $self, $colvalue ) =@_;
+
+    unless ( $self->{lineage} ) {
+      $self->{lineage} = $colvalue;
+    }
+
+    return $self->{lineage};
+  }
+
+
 }
 
 1;
