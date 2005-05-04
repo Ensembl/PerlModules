@@ -105,7 +105,7 @@ use Hum::Submission ("prepare_statement");
     return $self->_filter("common_name", $common_name);
   }
 
-  sub fetch_sll_Species_ftp_structure {
+  sub fetch_all_Species_ftp_structure {
     my ( $self ) = @_;
 
 	my $ftp_structure = {};
