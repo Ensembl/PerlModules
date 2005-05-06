@@ -2,6 +2,9 @@
 package Hum::Conf;
 
 use strict;
+use Hum::ProjectDump;
+use Hum::Species;
+
 use vars qw( %humConf );
 
 # Could change user in future
@@ -49,30 +52,7 @@ my %cgp_path=map {$_,"$sanger_path/$_"} qw ( SU SF );
 $cgp_path{'EU'}="$ext_path/EU";
 $cgp_path{'EF'}="$ext_path/EF";
 
-my $ftp_structure = {
-    #'Arabidopsis'   => [ 'arabidopsis'              ],
-    'Drosophila'    => [ 'drosophila/sequences'     ],
-    'B.floridae'    => [ 'b_floridae'               ],
-    'Carp'          => [ 'carp'                     ],
-    'Chicken'       => [ 'chicken'                  ],
-    'Chimp'         => [ 'chimp'                    ],
-    'Dog'           => [ 'dog'                      ],
-    'Fugu'          => [ 'fugu'                     ],
-    'Gibbon'        => [ 'gibbon'                   ],
-    'Gorilla'       => [ 'gorilla'                  ],
-    'Human'         => [ 'human',            'Chr_' ],
-    'Mouse'         => [ 'mouse',            'Chr_' ],
-    'Pig'           => [ 'pig'                      ],
-    'Platypus'      => [ 'platypus'                 ],
-    'Rat'           => [ 'rat'                      ],
-    'Rhesus'        => [ 'rhesus'                   ],
-    'Sminthopsis'   => [ 'sminthopsis'              ],
-    'Tetraodon'     => [ 'tetraodon'                ],
-    'Zebrafish'     => [ 'zebrafish',        'Chr_' ],
-    'M.truncatula'  => [ 'm_truncatula'             ],
-    'Wallaby'       => [ 'wallaby'                  ],
-    'Opossum'       => [ 'opossum'                  ],
-    };
+my $ftp_structure = Hum::Species->fetch_all_Species_ftp_structure;
 
 my $humace_queue = "$humpub/humace/queue";
 
