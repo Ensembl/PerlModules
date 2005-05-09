@@ -2,7 +2,6 @@
 package Hum::Conf;
 
 use strict;
-use Hum::ProjectDump;
 use Hum::Species;
 
 use vars qw( %humConf );
