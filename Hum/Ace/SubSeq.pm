@@ -326,16 +326,11 @@ sub clone {
 
     # Clone each exon, and add to new SubSeq
     foreach my $old_ex ($old->get_all_Exons) {
-                
         my $new_ex = $old_ex->clone;
         $new->add_Exon($new_ex);
     }
     
-    my $ev = $old->evidence_hash;
-    foreach my $type (keys %$ev) {
-        my $ev_list = $ev->{$type};
-        $new->add_evidence_list($type, [@$ev_list]);
-    }
+    $new->evidence_hash($old->clone_evidence_hash);
     
     return $new;
 }
@@ -434,7 +429,7 @@ sub annotation_remarks {
 sub add_evidence_list {
     my($self, $type, $list) = @_;
     
-    $self->{'_evidence'}{$type} = $list;
+    $self->{'_evidence_hash'}{$type} = $list;
 }
 
 sub evidence_hash {
@@ -444,6 +439,19 @@ sub evidence_hash {
         $self->{'_evidence_hash'} = $evidence_hash;
     }
     return $self->{'_evidence_hash'} || {};
+}
+
+sub clone_evidence_hash {
+    my( $self ) = @_;
+    
+    my $ev = $self->evidence_hash;
+    
+    my $new_hash = {};
+    foreach my $type (keys %$ev) {
+        my $ev_list = $ev->{$type};
+        $new_hash->{$type} = [@$ev_list];
+    }
+    return $new_hash
 }
 
 sub clone_Sequence {
