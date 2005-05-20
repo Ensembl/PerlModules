@@ -93,7 +93,10 @@ sub split_Features_by_strand {
         my $rev = $rev_set->[$i] = [];
         my $this = $feat_list->[$i];
         foreach my $feat (@$this) {
-            if ($feat->seq_strand == 1) {
+            # hit_strand is always 1 from StringMatch but
+            # seq_strand is always 1 from CrossMatch.
+            my $strand = $feat->seq_strand * $feat->hit_strand;
+            if ($strand == 1) {
                 push(@$fwd, $feat);
             }
             else {
