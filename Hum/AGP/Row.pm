@@ -22,6 +22,7 @@ sub remark {
     my( $self, $remark ) = @_;
     
     if ($remark) {
+        $remark =~ s/^\s*#\s*//;
         $self->{'_remark'} = $remark;
     }
     return $self->{'_remark'};

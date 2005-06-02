@@ -2,7 +2,6 @@
 package Hum::Conf;
 
 use strict;
-use Hum::Species;
 
 use vars qw( %humConf );
 
@@ -51,8 +50,6 @@ my %cgp_path=map {$_,"$sanger_path/$_"} qw ( SU SF );
 $cgp_path{'EU'}="$ext_path/EU";
 $cgp_path{'EF'}="$ext_path/EF";
 
-my $ftp_structure = Hum::Species->fetch_all_Species_ftp_structure;
-
 my $humace_queue = "$humpub/humace/queue";
 
 # Hash containing config info
@@ -66,8 +63,6 @@ my $humace_queue = "$humpub/humace/queue";
     FTP_GHOST           =>  $ftp_ghost,
     FTP_ATTIC           => "$ftp_ghost/attic",
     FTP_ROOT            => "$ftp/pub/sequences",
-    FTP_STRUCTURE       =>  $ftp_structure,
-    SPECIES_LIST =>  [keys %$ftp_structure],
 
     PFETCH_SERVER_LIST => [
         [qw{ cbi2.internal.sanger.ac.uk      22100 }],

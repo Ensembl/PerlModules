@@ -2,7 +2,7 @@
 package Hum::EMBL::FeatureSet;
 
 use strict;
-use Carp;
+#use Carp 'cluck';
 use Hum::EMBL::Line;
 
 sub new {
@@ -22,6 +22,8 @@ sub newFeature {
 
 sub sortByPosition {
     my( $set ) = @_;
+    
+    #cluck "called sort";
     
     # Get the start and end for each feature
     my @sort = map {[$_->location->start, $_->location->end, $_]} @$set;

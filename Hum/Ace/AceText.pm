@@ -41,20 +41,27 @@ sub get_values {
     return @matches;
 }
 
-sub get_single_value {
-    my $self = shift;
-    
-    my @matches = $self->get_values(@_);
-    if (@matches > 1) {
-        confess 'Got ', scalar(@matches), ' matches, not 1. Is tag "UNIQUE"?';
-    }
-    elsif (@matches == 1) {
-        return $matches[0][0];
-    }
-    else {
-        return;
-    }
-}
+### Not used - not as quick as get_values due to the checks it
+### does, but is nicer to use.
+#sub get_unique_value {
+#    my $self = shift;
+#    
+#    my @matches = $self->get_values(@_);
+#    if (@matches > 1) {
+#        confess 'Got ', scalar(@matches), ' matches, not 1. Is tag "UNIQUE"?';
+#    }
+#    elsif (@matches == 1) {
+#        if (@{$matches[0]} == 1) {
+#            return $matches[0][0];
+#        } else {
+#            confess "match is not a simple value:\n",
+#                join(', ', map "'$_'", @{$matches[0]});
+#        }
+#    }
+#    else {
+#        return;
+#    }
+#}
 
 sub count_tag {
     my( $self, $tag_path ) = @_;
@@ -82,6 +89,12 @@ sub add_tag_values {
     }
 }
 
+sub add_tag {
+    my $self = shift;
+    
+    $$self .= _quoted_ace_line(\@_);
+}
+
 sub _quoted_ace_line {
     my( $tv ) = @_;
     
@@ -98,18 +111,18 @@ sub _quoted_ace_line {
         # Don't quote elements which are numbers
         unless (/^[\.\d]+$/) {
 
-	    # Escape quotes, back and forward slashes,
-	    # percent signs, and semi-colons.
-	    s/([\/"%;\\])/\\$1/g;
+	        # Escape quotes, back and forward slashes,
+	        # percent signs, and semi-colons.
+	        s/([\/"%;\\])/\\$1/g;
 
-	    # Escape newlines and tabs
-	    s/\n/\\n/g;
-	    s/\n/\\t/g;
+	        # Escape newlines and tabs
+	        s/\n/\\n/g;
+	        s/\n/\\t/g;
 
-	    # Quote if tag unless it is entirely word characters
+	        # Quote if tag unless it is entirely word characters
             unless (/^\w+$/) {
-	        $_ = "\"$_\"";
-	    }
+	            $_ = "\"$_\"";
+	        }
         }
         
         $str .= " " . $_;

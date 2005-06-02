@@ -12,7 +12,6 @@ use vars qw( @EXPORT_OK @ISA );
 @ISA       = qw( Exporter );
 @EXPORT_OK = qw( extCloneName projectAndSuffix
                  add_source_FT add_Organism get_Organism
-                 species_binomial
                  );
 
 sub add_source_FT {
@@ -41,19 +40,6 @@ sub add_source_FT {
     return $ft;
 }
 
-=pod
-
-  Human        Homo         sapiens
-  Mouse        Mus          musculus
-  Chicken      Gallus       gallus
-  Drosophila   Drosophila   melanogaster
-  Fugu         Fugu         rubripes
-  Arabidopsis  Arabidopsis  thaliana
-
-  Zebrafish    Danio        rerio
-  Gibbon       Hylobates    syndactylus
-
-=cut
 
 BEGIN {
 
@@ -72,26 +58,12 @@ BEGIN {
 
         my( $og );
         unless ($og = $organism_cache{$speciesname}) {
-
-            #if (my $data = $class->{$speciesname}) {
-#                my( $genus, $species, $common, @classification ) = @$data;
-
-#                $og = Hum::EMBL::Line::Organism->new;
-#                $og->genus($genus);
-#                $og->species($species);
-#                $og->common($common) if $common;
-#                $og->classification(@classification);
-#            } else {
-#                confess "I don't know about '$speciesname'";
-#            }
-
-		
-		    if ( my $data = Hum::Species->fetch_Species_by_name($speciesname) ) {
+		    if (my $species = Hum::Species->fetch_Species_by_name($speciesname)) {
                 $og = Hum::EMBL::Line::Organism->new;
-                $og->genus($data->genus);
-                $og->species($data->species);
-                $og->common($data->common_name) if $data->common_name;
-                $og->classification($data->lineage);
+                $og->genus($species->genus);
+                $og->species($species->species);
+                $og->common($species->common_name) if $species->common_name;
+                $og->classification(split /\s+/, $species->lineage);
 			}
 		    else {
                 confess "I don't know about '$speciesname'";
@@ -99,23 +71,6 @@ BEGIN {
         }
 
         return $og;
-    }
-
-    sub species_binomial {
-        my $species = lc shift;
-
-       # if (my $latin = $class->{$species}) {
-#            return join(' ', $latin->[0], $latin->[1] );
-#        } else {
-#            confess "I don't know about '$species'";
-#        }
-
-		if ( my $spec = Hum::Species->fetch_Species_by_name($species) ){
-		    return $spec->genus . " " . $spec->species;
-		}
-		else {
-		    confess "I don't know about '$species'";
-		}
     }
 }
 

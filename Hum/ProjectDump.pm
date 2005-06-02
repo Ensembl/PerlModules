@@ -16,7 +16,8 @@ use Hum::Tracking qw(
     current_project_status_number
     );
 use Hum::EBI_FTP;
-use Hum::Conf qw( FTP_ROOT FTP_GHOST FTP_STRUCTURE );
+use Hum::Conf qw( FTP_ROOT FTP_GHOST );
+use Hum::Species;
 use Symbol 'gensym';
 use File::Path;
 
@@ -49,11 +50,11 @@ use File::Path;
         if ($count) {
             my $update = prepare_statement(qq{
                 UPDATE project_check
-                SET sequenced_by = $seq_by
-                  , funded_by = $fund_by
-                WHERE project_name = '$project'
+                SET sequenced_by = ?
+                  , funded_by = ?
+                WHERE project_name = ?
                 });
-            $update->execute;
+            $update->execute($seq_by, $fund_by, $project);
         } else {
             my $insert = prepare_statement(qq{
                 INSERT project_check (project_name
@@ -62,14 +63,14 @@ use File::Path;
                       , modify_time
                       , sequenced_by
                       , funded_by)
-                VALUES ('$project'
+                VALUES (?
                       , 'N'
                       , '0000-00-00 00:00:00'
                       , '0000-00-00 00:00:00'
-                      , $seq_by
-                      , $fund_by)
+                      , ?
+                      , ?)
                 });
-            $insert->execute;
+            $insert->execute($project, $seq_by, $fund_by);
         }
     }
 }
@@ -443,15 +444,15 @@ sub set_ghost_path {
         $base_dir ||= '.';
         my $species = $pdmp->species;
         my $phase   = $pdmp->htgs_phase;
-        my $p = $FTP_STRUCTURE->{$species}
+        my $sp = Hum::Species->fetch_Species_by_name($species)
             or confess "Don't know about '$species'";
 
-        my $path = "$base_dir/$p->[0]";
+        my $path = "$base_dir/" . $sp->ftp_dir;
         
         # Get the chromosome name if this species splits on chromosome
-        if ($p->[1]) {
+        if (my $prefix = $sp->ftp_chr_prefix) {
             my $chr = $pdmp->chromosome || 'UNKNOWN';
-            $path .= "/$p->[1]$chr";
+            $path .= "/$prefix$chr";
         }
         
         if ($phase != 3) {
@@ -483,8 +484,9 @@ sub set_ghost_path {
         confess("base_dir not supplied") unless $base_dir;
         
         my( @dirs );
-        foreach my $species (sort keys %$FTP_STRUCTURE) {
-            my($dir_name, $chr_prefix) = @{$FTP_STRUCTURE->{$species}};
+        foreach my $species (Hum::Species->fetch_all_Species) {
+            my $dir_name   = $species->ftp_dir;
+            my $chr_prefix = $species->ftp_chr_prefix;
             
             my $dir = "$base_dir/$dir_name";
             if ($chr_prefix) {

@@ -4,6 +4,7 @@ package Hum::ProjectDump::EMBL;
 use strict;
 use Carp;
 use Hum::ProjectDump;
+use Hum::Species;
 
 use vars qw( @ISA );
 
@@ -22,6 +23,7 @@ use Hum::EmblUtils qw( add_source_FT
 use Hum::EMBL;
 use Hum::EMBL::Utils qw( EMBLdate );
 use Hum::Ace::SubSeq;
+use Hum::Species;
 
 Hum::EMBL->import(
     'AC *' => 'Hum::EMBL::Line::AC_star',
@@ -133,16 +135,49 @@ sub species_binomial {
     my( $pdmp ) = @_;
     
     unless ($pdmp->{'_species_binomial'}) {
-        my $species = $pdmp->species;
-        my $bi = Hum::EmblUtils::species_binomial($species);
-        if ($bi) {
-            $pdmp->{'_species_binomial'} = $bi;
-        } else {
-            confess "Can't make species binomail for '$species'";
-        }
+        my $name = $pdmp->species;
+        my $species = Hum::Species->fetch_Species_by_name($name);
+        $pdmp->{'_species_binomial'} = $species->binomial;
     }
     return $pdmp->{'_species_binomial'};
 }
+
+=pod
+
+Do not put clonerequest email if library is one of:
+
+  LIBRARYNAME                     EXTERNAL_PREFIX
+  ------------------------------  ---------------
+  APD                             DAAP
+  CHORI-211                       CH211
+  CHORI-242                       CH242
+  CHORI-25                        CH25
+  CHORI-29                        CH29
+  CHORI-507-HSA21                 CH507
+  CHORI-73                        CH73
+  CHORI1073                       CH1073
+  DNA-Arts BAC library MANN.1     DAMA
+  DNA-Arts.org BAC library MCF.1  DAMC
+  DNA-arts-BAC.1-DBB.1            DADB
+  DNA-arts-BAC.1-QBL.1            DAQB
+  DNA-arts-BAC.1-SSTO.1           DASS
+  DanioKey                        DKEY
+  DanioKey BAC_end                DKEY
+  DanioKeypilot                   DKEYP
+  Gorilla CHORI-255 BACs          CH255
+  Graves Wallaby BAC library      GRWB
+  ME_KBa Wallaby Library          MEKBa
+  MtH2 Medicago truncatula BACs   MTH2
+  NOD mouse library               DN
+  PigE                            PigE
+  RPCI-23                         RP23
+  RPCI-24                         RP24
+  SBAB                            XX
+  SBAB bI Clones                  XX
+  WUABG-WL                        WAG
+
+=cut
+
 
 sub add_Reference {
     my( $pdmp, $embl, $seqlength ) = @_;

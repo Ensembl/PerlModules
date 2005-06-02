@@ -23,6 +23,7 @@ use Hum::EmblUtils qw{
     projectAndSuffix
     };
 use Bio::Otter::EMBL::Factory;
+use Hum::Species;
 
 use vars qw{ @ISA };
 @ISA = qw{ Hum::ProjectDump::EMBL };
@@ -31,57 +32,13 @@ use vars qw{ @ISA };
 ### These first subroutines override
 ### subroutines in Hum::ProjectDump::EMBL
 
-=pod
+sub EMBL_division {
+    my( $pdmp ) = @_;
 
-=head2 EMBL Database Divisions
-
-    Division                Code
-    -----------------       ----
-    ESTs                    EST
-    Bacteriophage           PHG
-    Fungi                   FUN
-    Genome survey           GSS
-    High Throughput cDNA    HTC
-    High Throughput Genome  HTG
-    Human                   HUM
-    Invertebrates           INV
-    Mus musculus            MUS
-    Organelles              ORG
-    Other Mammals           MAM
-    Other Vertebrates       VRT
-    Plants                  PLN
-    Prokaryotes             PRO
-    Rodents                 ROD
-    STSs                    STS
-    Synthetic               SYN
-    Unclassified            UNC
-    Viruses                 VRL
-
-=cut
-
-{
-    my %species_division = (
-        'Human'         => 'HUM',
-        'Gibbon'        => 'PRI',
-        'Mouse'         => 'MUS',
-        'Rat'           => 'ROD',
-        'Dog'           => 'MAM',
-
-        'Fugu'          => 'VRT',
-        'Zebrafish'     => 'VRT',
-        'B.floridae'    => 'VRT',
-
-        'Drosophila'    => 'INV',
-        
-        'Arabidopsis'   => 'PLN',
-        );
-
-    sub EMBL_division {
-        my( $pdmp ) = @_;
-
-        my $species = $pdmp->species;
-        return $species_division{$species} || 'VRT';
-    }
+    my $name = $pdmp->species;
+    my $species = Hum::Species->fetch_Species_by_name($name)
+        or confess "Can't fetch species '$name'";
+    return $species->division;
 }
 
 sub add_Description {

@@ -109,9 +109,16 @@ sub make_stats {
             confess sprintf "Gene '%s' does not have type '%s' but '%s'",
                 $gene->stable_id, $type, $gene->type;
         }
+        if ($gene->can('gene_info')) {
+            my $name = $gene->gene_info->name->name;
+            if ($name =~ /^[A-Z]+:/) {
+                warn "Skipping gene '$name'\n";
+                next;
+            }
+        }
 
         $gene_count++;
-            
+        
         # Stats from the gene
         push @$gene_lengths, $gene->length;
         $self->save_longest_gene($gene);
