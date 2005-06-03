@@ -6,7 +6,6 @@ use Carp;
 use Exporter;
 use File::Copy 'copy';
 use File::Path 'mkpath', 'rmtree';
-use Programs 'cksum';
 use Sys::Hostname 'hostname';
 use vars qw( @ISA @EXPORT_OK );
 
