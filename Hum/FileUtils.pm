@@ -7,6 +7,7 @@ use Exporter;
 use File::Copy 'copy';
 use File::Path 'mkpath', 'rmtree';
 use Sys::Hostname 'hostname';
+use Hum::Programs 'cksum';
 use vars qw( @ISA @EXPORT_OK );
 
 @ISA = ('Exporter');
