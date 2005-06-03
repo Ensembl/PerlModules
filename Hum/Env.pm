@@ -38,6 +38,7 @@ my (@libs, @path);
 # Set up @INC
 BEGIN {
     @libs = qw(
+        /nfs/disk100/humpub/otter/ensembl-otter/modules
         /nfs/disk100/humpub/modules/ensembl/modules
         /nfs/disk100/humpub/modules/bioperl
         /nfs/disk100/humpub/modules/PerlModules
