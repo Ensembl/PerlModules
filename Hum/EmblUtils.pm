@@ -45,6 +45,8 @@ BEGIN {
 
     my( %organism_cache );
 
+    ### Should probably change this to use a Hum::Species object
+    ### as its argument instead of fetching it.
     sub add_Organism {
         my( $embl, $speciesname ) = @_;
 
