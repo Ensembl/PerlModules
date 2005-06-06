@@ -104,7 +104,6 @@ sub make_ft_factory {
     my $ft_factory = Bio::Otter::EMBL::Factory->new;
     $ft_factory->DataSet($ds);
     return $ft_factory;
-
 }
 
 sub add_FT_entries {
