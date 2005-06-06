@@ -56,7 +56,7 @@ BEGIN {
     }
 
     sub get_Organism {
-        my $speciesname = lc shift;
+        my $speciesname = shift;
 
         my( $og );
         unless ($og = $organism_cache{$speciesname}) {
