@@ -52,7 +52,7 @@ sub list_all_species_names {
 sub fetch_Species_by_name {
     my( $pkg, $name ) = @_;
 
-    my ($species) = grep {lc($_->name) eq $name} $pkg->fetch_all_Species;
+    my ($species) = grep {$_->name eq $name} $pkg->fetch_all_Species;
     return $species;
 }
 
