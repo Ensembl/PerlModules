@@ -31,7 +31,9 @@ sub add_source_FT {
     # check point for $binomial ne 'Danio rerio' is now omitted
     # as it is agreed that linkage group = chromosome;
     # But check that chromosome isn't UNKNOWN
-    $ft->addQualifierStrings('chromosome', $chr) unless $chr =~ /u/i;
+    unless (! $chr or $chr =~ /u/i) {
+        $ft->addQualifierStrings('chromosome', $chr);
+    }
 
     $ft->addQualifierStrings('map',        $map)                if $map;
     $ft->addQualifierStrings('clone',      $external_clone)     if $external_clone;
