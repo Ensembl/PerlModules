@@ -46,7 +46,7 @@ sub make_embl {
 
     # Get the DNA, base quality string,
     # and map of contig positions.
-    my($dna, $base_quality, $contig_map) = $pdmp->embl_sequence_and_contig_map;
+    my ($dna, $base_quality, $contig_map) = $pdmp->embl_sequence_and_contig_map;
     my $seqlength = length($dna);
 
     # New embl file object
@@ -77,20 +77,12 @@ sub make_embl {
     my $ac_star = $embl->newAC_star;
     $ac_star->identifier($pdmp->sanger_id);
     $embl->newXX;
-
-    # Making Bio::Otter::EMBL::Factory object
-    # As required to be able to get DE and KW information for for clone
-    my $ft_factory = undef;
-    if ($ft_factory = $pdmp->make_ft_factory) {
-        $ft_factory->accession($acc);
-        $ft_factory->sequence_version($pdmp->sequence_version);
-    }
     
     # DE line
-    $pdmp->add_Description($embl, $ft_factory);
+    $pdmp->add_Description($embl);
     
     # KW line
-    $pdmp->add_Keywords($embl, $ft_factory);
+    $pdmp->add_Keywords($embl);
 
     # Organism
     add_Organism($embl, $species);
@@ -112,7 +104,7 @@ sub make_embl {
                    $chr, $map, $libraryname );
 
     # Feature table assembly fragments
-    $pdmp->add_FT_entries($embl, $ft_factory);
+    $pdmp->add_FT_entries($embl, $contig_map);
     $embl->newXX;
 
     # Sequence
@@ -350,13 +342,13 @@ sub add_FT_entries {
     );
 
     for (my $i = 0; $i < @$contig_map; $i++) {
-	my ($contig, $start, $end) = @{$contig_map->[$i]};
-	my $fragment = $embl->newFT;
-	$fragment->key('misc_feature');
-	my $loc = $fragment->newLocation;
-	$loc->exons([$start, $end]);
-	$loc->strand('W');
-	$fragment->addQualifierStrings('note', "assembly_fragment:$contig");
+	    my ($contig, $start, $end) = @{$contig_map->[$i]};
+	    my $fragment = $embl->newFT;
+	    $fragment->key('misc_feature');
+	    my $loc = $fragment->newLocation;
+	    $loc->exons([$start, $end]);
+	    $loc->strand('W');
+	    $fragment->addQualifierStrings('note', "assembly_fragment:$contig");
 
         # Add note if this is part of a group ordered by read-pairs
         if ($pdmp->can('contig_chain') and my $group = $pdmp->contig_chain($contig)) {
@@ -747,10 +739,6 @@ sub add_extra_headers {
     }
 }
 
-sub make_ft_factory {
-    # Only have features on Finished seqence
-    return;
-}
 
 1;
 

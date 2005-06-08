@@ -41,8 +41,30 @@ sub EMBL_division {
     return $species->division;
 }
 
+sub get_FT_Factory {
+    my( $pdmp ) = @_;
+
+    # Can't do this without an attached Otter database
+    # and the acc and sv to use to get the data from it
+    my $ds  = $pdmp->DataSet          or return;
+    my $acc = $pdmp->accession        or return;
+    my $sv  = $pdmp->sequence_version or return;
+    
+    my( $ft_factory );
+    unless ($ft_factory = $pdmp->{'_ft_factory'}) {
+    
+        my $ft_factory = Bio::Otter::EMBL::Factory->new;
+        $ft_factory->DataSet($ds);
+        $ft_factory->accession($acc);
+        $ft_factory->sequence_version($sv);
+
+        $pdmp->{'_ft_factory'} = $ft_factory;
+    }
+    return $ft_factory;
+}
+
 sub add_Description {
-    my( $pdmp, $embl, $ft_factory ) = @_;
+    my( $pdmp, $embl ) = @_;
     
     my $species   = $pdmp->species;
     my $ext_clone = $pdmp->external_clone_name;
@@ -59,7 +81,7 @@ sub add_Description {
     }
     
     my @desc = ($species_chr_desc);
-    if (my $ds = $pdmp->DataSet) {
+    if (my $ft_factory = $pdmp->get_FT_Factory) {
         push(@desc, $ft_factory->get_description_from_otter);
     }
     
@@ -69,10 +91,10 @@ sub add_Description {
 }
 
 sub add_Keywords {
-    my( $pdmp, $embl, $ft_factory ) = @_;
+    my( $pdmp, $embl ) = @_;
 
     my @key_words = ('HTG');
-    if (my $ds = $pdmp->DataSet) {
+    if (my $ft_factory = $pdmp->get_FT_Factory) {
         push(@key_words, $ft_factory->get_keywords_from_otter);
     }
     
@@ -82,7 +104,7 @@ sub add_Keywords {
 }
 
 sub add_Headers {
-    my( $pdmp, $embl ) = @_;
+    my( $pdmp, $embl, $contig_map ) = @_;
     
     $pdmp->add_standard_CC($embl);
     unless ($pdmp->add_MHC_Consortium_CC($embl)) {
@@ -95,25 +117,11 @@ sub add_Headers {
     $pdmp->add_extra_headers($embl, 'comment');
 }
 
-sub make_ft_factory {
-    my( $pdmp ) = @_;
-    
-    # Can't do this without an attached Otter database
-    my $ds  = $pdmp->DataSet or return;
-    
-    my $ft_factory = Bio::Otter::EMBL::Factory->new;
-    $ft_factory->DataSet($ds);
-    return $ft_factory;
-}
-
 sub add_FT_entries {
-    my( $pdmp, $embl, $ft_factory ) = @_;
+    my( $pdmp, $embl, $contig_map ) = @_;
     
-    # Can't do this without an attached Otter database
-    my $ds  = $pdmp->DataSet   or return;
-    my $acc = $pdmp->accession or return;
-    
-    $ft_factory->make_embl_ft($acc, $embl, $pdmp->sequence_version);
+    my $ft_factory = $self->get_FT_Factory or return;    
+    $ft_factory->make_embl_ft($embl);
 }
 
 sub DataSet {
