@@ -120,7 +120,7 @@ sub add_Headers {
 sub add_FT_entries {
     my( $pdmp, $embl, $contig_map ) = @_;
     
-    my $ft_factory = $self->get_FT_Factory or return;    
+    my $ft_factory = $pdmp->get_FT_Factory or return;    
     $ft_factory->make_embl_ft($embl);
 }
 

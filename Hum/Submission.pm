@@ -11,7 +11,7 @@ use Hum::SubmissionConf;
 
 @ISA = ('Exporter');
 @EXPORT_OK = qw( sub_db
-		 ref_from_query
+		         ref_from_query
                  acc_data
                  create_lock
                  destroy_lock
@@ -31,9 +31,9 @@ use Hum::SubmissionConf;
                  dateMySQL
                  MySQLdatetime
                  datetimeMySQL
-		 submission_user
-		 user_has_access
-		 get_user
+		         submission_user
+		         user_has_access
+		         get_user
                  header_supplement_code
                  );
 

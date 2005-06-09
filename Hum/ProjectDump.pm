@@ -293,7 +293,7 @@ sub _submission_data {
         if (my($time, $type, $md5_sum) = $sth->fetchrow) {
             $data->{'submission_time'}   = $time;
             $data->{'submission_type'}   = $type;
-	    $data->{'embl_file_md5_sum'} = $md5_sum;
+	        $data->{'embl_file_md5_sum'} = $md5_sum;
         }
         $pdmp->{'_submission_data'} = $data;
     }
@@ -959,9 +959,9 @@ sub ebi_submit {
                          , submission_time
                          , submission_type
                          , embl_file_md5_sum)
-        VALUES ($seq_id, FROM_UNIXTIME($time), '$sub_type', '$md5_sum')
+        VALUES (?, FROM_UNIXTIME(?), ?, ?)
         });
-    $record_submission->execute;
+    $record_submission->execute($seq_id, $time, $sub_type, $md5_sum);
 
     $pdmp->submission_time($time);
 }
