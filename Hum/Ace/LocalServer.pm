@@ -272,7 +272,7 @@ sub kill_server {
             #$SIG{CHLD} = \&REAPER;          # THIS DOESN'T WORK
             $SIG{CHLD} = \&{(caller(0))[3]}; # ODD BUT THIS DOES....still loathe sysV
         };
-        $SIG{CHLD} = \&REAPER;
+        $SIG{CHLD} = $REAPER;
 
         # BUILD exec_list early
         my $exe = $self->server_executable;
@@ -292,7 +292,7 @@ sub kill_server {
             close(STDERR) unless 1;
             { exec @exec_list; }
             warn "child: exec (@exec_list) FAILED\n ** ERRNO $!\n ** CHILD_ERROR $?\n";
-            CORE::exit;
+            CORE::exit( 1 );
         }
         else {
             confess "Can't fork server : $!";
