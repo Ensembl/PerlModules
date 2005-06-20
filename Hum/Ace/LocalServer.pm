@@ -8,6 +8,8 @@ use Carp;
 use Ace;
 use Socket; # For working out a port which is unused
 use Symbol 'gensym';
+use POSIX qw(:signal_h :sys_wait_h);
+use Digest::MD5 qw(md5_hex);
 
 sub new {
     my( $pkg, $path ) = @_;
@@ -41,7 +43,16 @@ sub port {
     }
     return $port;
 }
-
+sub user{
+    my( $self, $arg ) = @_;
+    $self->{'_user'} = $arg if $arg;
+    return $self->{'_user'} || 'localServer';
+}
+sub pass{
+    my( $self, $arg ) = @_;
+    $self->{'_pass'} = $arg if $arg;
+    return $self->{'_pass'} || 'password';
+}
 sub _reserve_random_port {
     my( $self ) = @_;
     
@@ -115,11 +126,11 @@ sub default_timeout_string{
 }
 
 sub additional_server_parameters {
-    return('-silent');
+    return('-readonly');
 }
 
 sub ace_handle {
-    my( $self ) = @_;
+    my( $self, $need_return ) = @_;
     
     # Get cached ace handle
     my $ace = $self->{'_ace_handle'};
@@ -127,7 +138,7 @@ sub ace_handle {
     # Test if it is valid
     my( $ping );
     eval{ $ping = $ace->ping; };
-    
+
     # Connect if invalid
     unless ($ping) {
         my @param = $self->connect_parameters;
@@ -141,11 +152,23 @@ sub ace_handle {
             } else {
                 sleep $try_interval;
             }
+            last if server_failed_to_start();
         }
         if ($ace) {
             $self->{'_ace_handle'} = $ace;
         } else {
-            confess("Can't connect to db with (@param) :\n", Ace->error);
+            my @FULL_INFO = qw(ARGV CHILD_ERROR ERRNO);
+            if(@FULL_INFO){
+                my %hash = %{$self->full_child_info()};
+                foreach my $pid(keys(%hash)){
+                    warn "************* FULL INFO FOR PID: $pid *****************\n";
+                    foreach (@FULL_INFO){
+                        warn $hash{$pid}{$_};
+                    }
+                    warn "*******************************************************\n";
+                }
+            }
+            confess("Can't connect to db with (@param) :\n", Ace->error) unless $need_return;
         }
     }
     return $ace;
@@ -156,11 +179,18 @@ sub connect_parameters {
     
     my $host = $self->host;
     my $port = $self->port;
-    return (
-        -HOST       => $host,
-        -PORT       => $port,
-        -TIMEOUT    => 60,
+    my @param = (
+                 -HOST       => $host,
+                 -PORT       => $port,
+                 -TIMEOUT    => 60,
         );
+    if(my $user = $self->user){
+        push(@param, (-USER => $user));
+    }
+    if(my $pass = $self->pass){
+        push(@param, (-PASS => $pass));
+    }
+    return @param;
 }
 
 sub disconnect_client {
@@ -201,71 +231,117 @@ sub kill_server {
 
     my $ace = $self->ace_handle;
     $ace->raw_query('shutdown now');
-    $ace = undef;
     $self->disconnect_client;
+    $ace = undef;
 }
 
-sub start_server {
-    my( $self ) = @_;
-    
-    $self->make_server_wrm;
-    
-    my $path = $self->path
-        or confess "path not set";
-    my $port = $self->port
-        or confess "no port number";
-    
-    if ($self->can('_release_reserved_port')) {
-        $self->_release_reserved_port;
+{
+    my $START = 1; # assume perfect conditions
+    my $INFO  = {};
+    sub server_failed_to_start{
+        warn "Start is $START\n";
+        return !$START;
     }
-    
-    if (my $pid = fork) {
-        $self->server_pid($pid);
-        return 1;
+    sub full_child_info{
+        return $INFO;
     }
-    elsif (defined $pid) {
+    sub start_server {
+        my( $self ) = @_;
+    
+        $self->make_server_wrm;
+    
+        my $path = $self->path
+            or confess "path not set";
+        my $port = $self->port
+            or confess "no port number";
+        
+        if ($self->can('_release_reserved_port')) {
+            $self->_release_reserved_port;
+        }
+        my $REAPER = sub {
+            my $child;
+            while (($child = waitpid(-1,WNOHANG)) > 0) {
+                $START = 0 if $!;
+                $INFO->{$child}->{'CHILD_ERROR'} = $?;
+                $INFO->{$child}->{'ERRNO'}       = $!;
+                $INFO->{$child}->{'ERRNO_HASH'}  = \%!;
+                $INFO->{$child}->{'ENV'}         = \%ENV;
+                $INFO->{$child}->{'EXTENDED_OS_ERROR'} = $^E;
+                
+            }
+            #$SIG{CHLD} = \&REAPER;          # THIS DOESN'T WORK
+            $SIG{CHLD} = \&{(caller(0))[3]}; # ODD BUT THIS DOES....still loathe sysV
+        };
+        $SIG{CHLD} = \&REAPER;
+
+        # BUILD exec_list early
         my $exe = $self->server_executable;
         my $tim = $self->timeout_string;
-        my @exec_list = ($exe, $path, $port, $tim);
-        if (my @param = $self->additional_server_parameters) {
-            push(@exec_list, @param);
+        my @param = $self->additional_server_parameters;
+        my @exec_list = ($exe, @param, $path, $port, $tim);
+
+        if (my $pid = fork) {
+            $self->server_pid($pid);
+            $INFO->{$pid}->{'ARGV'} = "@exec_list";
+            return 1;
         }
-        warn "Running (@exec_list)\n";
-        exec(@exec_list)
-            or confess("exec(",
-                join(', ', map "'$_'", @exec_list),
-                ") failed : $!");
-    }
-    else {
-        confess "Can't fork server : $!";
+        elsif (defined $pid) {
+            warn "child: Running (@exec_list)\n";
+            close(STDIN)  unless 1;
+            close(STDOUT) unless 1;
+            close(STDERR) unless 1;
+            { exec @exec_list; }
+            warn "child: exec (@exec_list) FAILED\n ** ERRNO $!\n ** CHILD_ERROR $?\n";
+            CORE::exit;
+        }
+        else {
+            confess "Can't fork server : $!";
+        }
+        return 0;
     }
 }
-
 sub make_server_wrm {
     my( $self ) = @_;
     
-    local *WRM;
+    local ( *WRM, *PWRM );
     
     my $path = $self->path
         or confess "path not set";
     my $wspec = "$path/wspec";
     confess "No wspec directory"
         unless -d $wspec;
-    my $server_wrm = "$wspec/serverconfig.wrm";
-    return if -e $server_wrm;
-    
-    open WRM, "> $server_wrm"
-        or die "Can't create '$server_wrm' : $!";
-    print WRM map "\n$_\n", 
+    my $server_wrm  = "$wspec/serverconfig.wrm";
+    my $serverp_wrm = "$wspec/serverpasswd.wrm";
+    unless(-e $server_wrm){
+        open WRM, "> $server_wrm"
+            or die "Can't create '$server_wrm' : $!";
+        print WRM map "\n$_\n", 
         'WRITE NONE',
         'READ WORLD';
-    close WRM;
+        close WRM;
+    }
+    unlink($serverp_wrm);
+    unless(-e $serverp_wrm){
+        my $user = $self->user;
+        my $pass = $self->pass;
+        my $userpass_hash = ($user && $pass ? "$user ".md5_hex("$user$pass"): '');
+        open PWRM, "> $serverp_wrm"
+            or die "Can't create '$serverp_wrm' : $!";
+        print PWRM map "\n$_\n", 
+        "admin: $user",
+        'write:',
+        'read:',
+        $userpass_hash;# password is 'password'
+        close PWRM;
+    }
+    return 1;
 }
 
 sub DESTROY {
     my( $self ) = @_;
-    
+    print "DESTROY $self\n";
     $self->kill_server;
+
 }
 
 1;
