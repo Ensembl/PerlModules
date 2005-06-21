@@ -157,7 +157,7 @@ sub ace_handle {
         if ($ace) {
             $self->{'_ace_handle'} = $ace;
         } else {
-            my @FULL_INFO = qw(ARGV CHILD_ERROR ERRNO);
+            my @FULL_INFO = qw(); #qw(ARGV CHILD_ERROR ERRNO);
             if(@FULL_INFO){
                 my %hash = %{$self->full_child_info()};
                 foreach my $pid(keys(%hash)){
@@ -238,8 +238,9 @@ sub kill_server {
 {
     my $START = 1; # assume perfect conditions
     my $INFO  = {};
+    my $DEBUG_THIS = 0;
     sub server_failed_to_start{
-        warn "Start is $START\n";
+        warn "Start is $START\n" if $DEBUG_THIS;
         return !$START;
     }
     sub full_child_info{
@@ -247,7 +248,7 @@ sub kill_server {
     }
     sub start_server {
         my( $self ) = @_;
-    
+        
         $self->make_server_wrm;
     
         my $path = $self->path
@@ -258,21 +259,31 @@ sub kill_server {
         if ($self->can('_release_reserved_port')) {
             $self->_release_reserved_port;
         }
+
+        my $attempting_server_start = sub {
+            warn "Server $$ STARTING\n" if $DEBUG_THIS; 
+            $START = 1;
+        };
+        my $server_died = sub {
+            warn "Server $$ DIED\n" if $DEBUG_THIS; 
+            $START = 0;
+        };
+        my $REAPER_REF = undef;
         my $REAPER = sub {
             my $child;
             while (($child = waitpid(-1,WNOHANG)) > 0) {
-                $START = 0 if $!;
+                $server_died->() if $!;
                 $INFO->{$child}->{'CHILD_ERROR'} = $?;
                 $INFO->{$child}->{'ERRNO'}       = $!;
                 $INFO->{$child}->{'ERRNO_HASH'}  = \%!;
                 $INFO->{$child}->{'ENV'}         = \%ENV;
                 $INFO->{$child}->{'EXTENDED_OS_ERROR'} = $^E;
-                
             }
-            #$SIG{CHLD} = \&REAPER;          # THIS DOESN'T WORK
-            $SIG{CHLD} = \&{(caller(0))[3]}; # ODD BUT THIS DOES....still loathe sysV
+            #$SIG{CHLD} = \&REAPER;    # THIS DOESN'T WORK
+            $SIG{CHLD} = $$REAPER_REF; # ODD BUT THIS DOES....still loathe sysV
         };
-        $SIG{CHLD} = $REAPER;
+        $REAPER_REF = \$REAPER;
+        $SIG{CHLD}  = $REAPER;
 
         # BUILD exec_list early
         my $exe = $self->server_executable;
@@ -283,16 +294,17 @@ sub kill_server {
         if (my $pid = fork) {
             $self->server_pid($pid);
             $INFO->{$pid}->{'ARGV'} = "@exec_list";
+            $attempting_server_start->();
             return 1;
         }
         elsif (defined $pid) {
-            warn "child: Running (@exec_list)\n";
-            close(STDIN)  unless 1;
-            close(STDOUT) unless 1;
-            close(STDERR) unless 1;
+            warn "child: Running (@exec_list)\n" if $DEBUG_THIS;
+            close(STDIN)  unless $DEBUG_THIS;
+            close(STDOUT) unless $DEBUG_THIS;
+            close(STDERR) unless $DEBUG_THIS;
             { exec @exec_list; }
             warn "child: exec (@exec_list) FAILED\n ** ERRNO $!\n ** CHILD_ERROR $?\n";
-            CORE::exit( 1 );
+            CORE::exit( 255 );
         }
         else {
             confess "Can't fork server : $!";
@@ -339,9 +351,9 @@ sub make_server_wrm {
 
 sub DESTROY {
     my( $self ) = @_;
-    print "DESTROY $self\n";
+    print "DESTROY $self and reset SIGCHLD\n";
     $self->kill_server;
-
+    $SIG{CHLD} = 'DEFAULT';
 }
 
 1;
