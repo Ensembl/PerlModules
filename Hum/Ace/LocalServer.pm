@@ -236,11 +236,11 @@ sub kill_server {
 }
 
 {
-    my $START = 1; # assume perfect conditions
+    my $START = 0; # ONLY MODIFIED using closures in start_server
     my $INFO  = {};
     my $DEBUG_THIS = 0;
     sub server_failed_to_start{
-        warn "Start is $START\n" if $DEBUG_THIS;
+        warn "\$START is $START\n" if $DEBUG_THIS;
         return !$START;
     }
     sub full_child_info{
@@ -261,12 +261,12 @@ sub kill_server {
         }
 
         my $attempting_server_start = sub {
-            warn "Server $$ STARTING\n" if $DEBUG_THIS; 
             $START = 1;
+            warn "Server $$ STARTING, \$START $START\n" if $DEBUG_THIS; 
         };
         my $server_died = sub {
-            warn "Server $$ DIED\n" if $DEBUG_THIS; 
             $START = 0;
+            warn "Server $$ DIED, \$START $START\n" if $DEBUG_THIS; 
         };
         my $REAPER_REF = undef;
         my $REAPER = sub {
@@ -298,6 +298,7 @@ sub kill_server {
             return 1;
         }
         elsif (defined $pid) {
+            $SIG{CHLD} = 'DEFAULT'; # Child DOESN'T need this!!
             warn "child: Running (@exec_list)\n" if $DEBUG_THIS;
             close(STDIN)  unless $DEBUG_THIS;
             close(STDOUT) unless $DEBUG_THIS;
@@ -351,9 +352,19 @@ sub make_server_wrm {
 
 sub DESTROY {
     my( $self ) = @_;
-    print "DESTROY $self and reset SIGCHLD\n";
-    $self->kill_server;
-    $SIG{CHLD} = 'DEFAULT';
+    warn "DESTROY $self and reset SIGCHLD in PID $$";
+    if($self->server_pid){
+        $self->kill_server;
+        $SIG{CHLD} = 'DEFAULT';
+    }else{
+        # When the fork occurs everything gets copied.
+        # This includes the reference to the $self
+        # which is likely to be held in the calling module.
+        # If the exec fails then the reference STILL exists.
+        # The DESTROY is then called during global destruction.
+        # Trying to kill a failed to exec server is silly
+        # So ... we don't ...
+    }
 }
 
 1;
