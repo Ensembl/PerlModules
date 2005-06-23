@@ -131,7 +131,10 @@ sub additional_server_parameters {
 
 sub ace_handle {
     my( $self, $need_return ) = @_;
-    
+
+    my $spid = $self->server_pid();
+    return unless $spid;
+
     # Get cached ace handle
     my $ace = $self->{'_ace_handle'};
     
@@ -152,7 +155,9 @@ sub ace_handle {
             } else {
                 sleep $try_interval;
             }
-            last if server_failed_to_start();
+            # tests if the server's still alive.
+            # This is better than previous version with flag.
+            last unless(kill 0, $spid);
         }
         if ($ace) {
             $self->{'_ace_handle'} = $ace;
@@ -218,6 +223,15 @@ sub server_pid {
     return $self->{'_server_pid'};
 }
 
+sub origin_pid {
+    my( $self, $pid ) = @_;
+    
+    if ($pid) {
+        $self->{'_origin_pid'} = $pid;
+    }
+    return $self->{'_origin_pid'};
+}
+
 sub restart_server {
     my( $self ) = @_;
     
@@ -236,13 +250,8 @@ sub kill_server {
 }
 
 {
-    my $START = 0; # ONLY MODIFIED using closures in start_server
     my $INFO  = {};
     my $DEBUG_THIS = 0;
-    sub server_failed_to_start{
-        warn "\$START is $START\n" if $DEBUG_THIS;
-        return !$START;
-    }
     sub full_child_info{
         return $INFO;
     }
@@ -250,7 +259,7 @@ sub kill_server {
         my( $self ) = @_;
         
         $self->make_server_wrm;
-    
+        
         my $path = $self->path
             or confess "path not set";
         my $port = $self->port
@@ -260,19 +269,10 @@ sub kill_server {
             $self->_release_reserved_port;
         }
 
-        my $attempting_server_start = sub {
-            $START = 1;
-            warn "Server $$ STARTING, \$START $START\n" if $DEBUG_THIS; 
-        };
-        my $server_died = sub {
-            $START = 0;
-            warn "Server $$ DIED, \$START $START\n" if $DEBUG_THIS; 
-        };
         my $REAPER_REF = undef;
         my $REAPER = sub {
             my $child;
             while (($child = waitpid(-1,WNOHANG)) > 0) {
-                $server_died->() if $!;
                 $INFO->{$child}->{'CHILD_ERROR'} = $?;
                 $INFO->{$child}->{'ERRNO'}       = $!;
                 $INFO->{$child}->{'ERRNO_HASH'}  = \%!;
@@ -293,8 +293,9 @@ sub kill_server {
 
         if (my $pid = fork) {
             $self->server_pid($pid);
+            $self->origin_pid($$);
             $INFO->{$pid}->{'ARGV'} = "@exec_list";
-            $attempting_server_start->();
+            $INFO->{$pid}->{'PID'}  = $pid;
             return 1;
         }
         elsif (defined $pid) {
@@ -353,9 +354,14 @@ sub make_server_wrm {
 sub DESTROY {
     my( $self ) = @_;
     warn "DESTROY $self and reset SIGCHLD in PID $$";
-    if($self->server_pid){
-        $self->kill_server;
-        $SIG{CHLD} = 'DEFAULT';
+    if(my $spid = $self->server_pid){
+        my $opid = $self->origin_pid;
+        if($opid && $opid == $$){
+            $self->kill_server;
+            $SIG{CHLD} = 'DEFAULT';
+        }else{
+            warn "Not killing server with pid $spid (not server leader '$opid' != '$$').\n";
+        }
     }else{
         # When the fork occurs everything gets copied.
         # This includes the reference to the $self
@@ -364,6 +370,7 @@ sub DESTROY {
         # The DESTROY is then called during global destruction.
         # Trying to kill a failed to exec server is silly
         # So ... we don't ...
+        # Although I've fixed this a bit with the kill 0, $pid.
     }
 }
 
