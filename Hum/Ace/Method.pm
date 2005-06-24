@@ -29,12 +29,14 @@ sub new_from_AceText {
         $self->cds_color($c->[0]);
     }
     
-    $self->show_up_strand(1)   if $txt->count_tag('Show_up_strand');
-    $self->strand_sensitive(1) if $txt->count_tag('Strand_sensitive');
-    $self->frame_sensitive(1)  if $txt->count_tag('Frame_sensitive');
-    $self->show_text(1)        if $txt->count_tag('Show_text');
-    $self->percent(1)          if $txt->count_tag('Percent');
-    $self->blastn(1)           if $txt->count_tag('BlastN');
+    $self->show_up_strand(1)    if $txt->count_tag('Show_up_strand');
+    $self->strand_sensitive(1)  if $txt->count_tag('Strand_sensitive');
+    $self->frame_sensitive(1)   if $txt->count_tag('Frame_sensitive');
+    $self->show_text(1)         if $txt->count_tag('Show_text');
+    $self->percent(1)           if $txt->count_tag('Percent');
+    $self->blastn(1)            if $txt->count_tag('BlastN');
+    $self->gapped(1)            if $txt->count_tag('Gapped');
+    $self->no_display(1)        if $txt->count_tag('No_display');
 
     # Score method
     $self->score_method('width')     if $txt->count_tag('Score_by_width');
@@ -51,6 +53,9 @@ sub new_from_AceText {
     $self->overlap_mode('cluster')  if $txt->count_tag('Cluster');
     
     # Single float values
+    if (my ($n) = $txt->get_values('Group_number')) {
+        $self->group_number($n->[0]);
+    }
     if (my ($off) = $txt->get_values('Right_priority')) {
         $self->right_priority($off->[0]);
     }
@@ -82,16 +87,18 @@ sub ace_string {
         $txt->add_tag('Colour', $c)
     }
     if (my $c = $self->cds_color) {
-        $txt->add_tag('CDS_colour', $c);
+        $txt->add_tag('CDS_Colour', $c);
     }
     
     foreach my $tag (qw{
-        Show_up_strand  
+        Show_up_strand
         Strand_sensitive
-        Frame_sensitive 
-        Show_text       
-        Percent         
-        Blastn          
+        Frame_sensitive
+        Show_text
+        Percent
+        BlastN
+        Gapped
+        No_display
         })
     {
         my $tag_method = lc $tag;
@@ -103,7 +110,7 @@ sub ace_string {
     }
     
     if (my @bounds = $self->score_bounds) {
-        
+        $txt->add_tag('Score_bounds', @bounds);
     }
     
     if (my $over = $self->overlap_mode) {
@@ -111,6 +118,7 @@ sub ace_string {
     }
     
     foreach my $tag (qw{
+        Group_number
         Right_priority
         Max_mag
         Min_mag
@@ -147,17 +155,18 @@ sub new_from_ace {
     return $self;
 }
 
-sub process_ace_method {
-    my( $self, $ace ) = @_;
-    
-    $self->name($ace->name);
-    my $color = $ace->at('Display.Colour[1]')
-        or confess "No color";
-    $self->color($color->name);
-    if (my $cds_color = $ace->at('Display.CDS_Colour[1]')) {
-        $self->cds_color($cds_color->name);
-    }
-}
+# Commented out because it is now very incomplete compared to new_from_AceText
+#sub process_ace_method {
+#    my( $self, $ace ) = @_;
+#    
+#    $self->name($ace->name);
+#    my $color = $ace->at('Display.Colour[1]')
+#        or confess "No color";
+#    $self->color($color->name);
+#    if (my $cds_color = $ace->at('Display.CDS_Colour[1]')) {
+#        $self->cds_color($cds_color->name);
+#    }
+#}
 
 sub name {
     my( $self, $name ) = @_;
@@ -184,6 +193,15 @@ sub cds_color {
         $self->{'_cds_color'} = $cds_color;
     }
     return $self->{'_cds_color'};
+}
+
+sub group_number {
+    my( $self, $group_number ) = @_;
+    
+    if ($group_number) {
+        $self->{'_group_number'} = $group_number;
+    }
+    return $self->{'_group_number'};
 }
 
 sub right_priority {
@@ -232,7 +250,11 @@ sub score_bounds {
         }
         $self->{'_score_bounds'} = [@bounds];
     }
-    return @{$self->{'_score_bounds'}};
+    if (my $sb = $self->{'_score_bounds'}) {
+        return @$sb;
+    } else {
+        return;
+    }
 }
 
 sub hex_color {
@@ -352,6 +374,23 @@ sub blastn {
     return $self->{'_blastn'} || 0;
 }
 
+sub gapped {
+    my( $self, $gapped ) = @_;
+    
+    if ($gapped) {
+        $self->{'_gapped'} = $gapped ? 1 : 0;
+    }
+    return $self->{'_gapped'};
+}
+
+sub no_display {
+    my( $self, $no_display ) = @_;
+    
+    if ($no_display) {
+        $self->{'_no_display'} = $no_display ? 1 : 0;
+    }
+    return $self->{'_no_display'};
+}
 
 1;
 

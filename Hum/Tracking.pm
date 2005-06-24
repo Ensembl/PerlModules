@@ -34,8 +34,8 @@ use vars qw( @ISA @EXPORT_OK );
 @EXPORT_OK = qw(
                 clone_from_project
                 current_project_status_number
-		set_project_status
-		session_id
+		        set_project_status
+		        session_id
                 chromosome_from_project
                 entry_name
                 expand_project_name
@@ -427,7 +427,7 @@ block, to ensure a graceful exit.
         #warn $query;
         
         my $sth = track_db()->prepare($query);
-        push( @active_statements, $sth );
+        push( @active_statements, $sth );   ### Could be cause of open cursors error?
         #warn "Now ", scalar(@active_statements), " active statements\n";
         return $sth;
     }

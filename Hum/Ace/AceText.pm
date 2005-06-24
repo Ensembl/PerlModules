@@ -109,7 +109,7 @@ sub _quoted_ace_line {
         #unless (/^[\.\d]+$/ or /^:$/) {
 
         # Don't quote elements which are numbers
-        unless (/^[\.\d]+$/) {
+        unless (/^[\+\-]?[\.\d]+$/) {
 
 	        # Escape quotes, back and forward slashes,
 	        # percent signs, and semi-colons.

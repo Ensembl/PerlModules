@@ -43,7 +43,6 @@ sub has_parent{
         $self->{'_has_parent'} = $flag ;
     }
     return  $self->{'_has_parent'};
-    
 }
 
 1;
