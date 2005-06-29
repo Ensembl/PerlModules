@@ -22,6 +22,7 @@ sub new_from_AceText {
         or confess "Not a Method:\n$$txt";
     $self->name($n->[0] eq ':' ? $n->[1] : $n->[0]);
     
+    # Display colours
     if (my ($c) = $txt->get_values('Colour')) {
         $self->color($c->[0]);
     }
@@ -52,9 +53,14 @@ sub new_from_AceText {
     $self->overlap_mode('bumpable') if $txt->count_tag('Bumpable');
     $self->overlap_mode('cluster')  if $txt->count_tag('Cluster');
     
+    # Methods with the same column_name get the same right_priority
+    if (my ($name) = $txt->get_values('Column_name')) {
+        $self->Column_name($name->[0]);
+    }
+    
     # Single float values
-    if (my ($n) = $txt->get_values('Group_number')) {
-        $self->group_number($n->[0]);
+    if (my ($n) = $txt->get_values('Zone_number')) {
+        $self->zone_number($n->[0]);
     }
     if (my ($off) = $txt->get_values('Right_priority')) {
         $self->right_priority($off->[0]);
@@ -118,7 +124,8 @@ sub ace_string {
     }
     
     foreach my $tag (qw{
-        Group_number
+        Zone_number
+        Column_name
         Right_priority
         Max_mag
         Min_mag
@@ -195,13 +202,22 @@ sub cds_color {
     return $self->{'_cds_color'};
 }
 
-sub group_number {
-    my( $self, $group_number ) = @_;
+sub coluumn_name {
+    my( $self, $coluumn_name ) = @_;
     
-    if ($group_number) {
-        $self->{'_group_number'} = $group_number;
+    if ($coluumn_name) {
+        $self->{'_coluumn_name'} = $coluumn_name;
     }
-    return $self->{'_group_number'};
+    return $self->{'_coluumn_name'};
+}
+
+sub zone_number {
+    my( $self, $zone_number ) = @_;
+    
+    if ($zone_number) {
+        $self->{'_zone_number'} = $zone_number;
+    }
+    return $self->{'_zone_number'};
 }
 
 sub right_priority {
@@ -380,7 +396,7 @@ sub gapped {
     if ($gapped) {
         $self->{'_gapped'} = $gapped ? 1 : 0;
     }
-    return $self->{'_gapped'};
+    return $self->{'_gapped'} || 0;
 }
 
 sub no_display {
@@ -389,7 +405,7 @@ sub no_display {
     if ($no_display) {
         $self->{'_no_display'} = $no_display ? 1 : 0;
     }
-    return $self->{'_no_display'};
+    return $self->{'_no_display'} || 0;
 }
 
 1;
