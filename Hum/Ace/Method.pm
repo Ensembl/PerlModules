@@ -30,14 +30,25 @@ sub new_from_AceText {
         $self->cds_color($c->[0]);
     }
     
-    $self->show_up_strand(1)    if $txt->count_tag('Show_up_strand');
-    $self->strand_sensitive(1)  if $txt->count_tag('Strand_sensitive');
-    $self->frame_sensitive(1)   if $txt->count_tag('Frame_sensitive');
-    $self->show_text(1)         if $txt->count_tag('Show_text');
-    $self->percent(1)           if $txt->count_tag('Percent');
-    $self->blastn(1)            if $txt->count_tag('BlastN');
-    $self->gapped(1)            if $txt->count_tag('Gapped');
-    $self->no_display(1)        if $txt->count_tag('No_display');
+    # True/false tags
+    $self->show_up_strand(1)        if $txt->count_tag('Show_up_strand');
+    $self->strand_sensitive(1)      if $txt->count_tag('Strand_sensitive');
+    $self->frame_sensitive(1)       if $txt->count_tag('Frame_sensitive');
+    $self->show_text(1)             if $txt->count_tag('Show_text');
+    $self->percent(1)               if $txt->count_tag('Percent');
+    $self->blastn(1)                if $txt->count_tag('BlastN');
+    $self->gapped(1)                if $txt->count_tag('Gapped');
+    $self->right_priority_fixed(1)  if $txt->count_tag('Right_priority_fixed');
+    $self->no_display(1)            if $txt->count_tag('No_display');
+
+    # Tags used by otterlace
+    $self->mutable(1)           if $txt->count_tag('Mutable');
+    $self->has_parent(1)        if $txt->count_tag('Has_parent');
+    
+    # Coding or non-coding transcript methods
+    $self->transcript_type('coding')     if $txt->count_tag('Coding');
+    $self->transcript_type('non_coding') if $txt->count_tag('Non_coding');
+    $self->transcript_type('transcript') if $txt->count_tag('Transcript');
 
     # Score method
     $self->score_method('width')     if $txt->count_tag('Score_by_width');
@@ -55,7 +66,7 @@ sub new_from_AceText {
     
     # Methods with the same column_name get the same right_priority
     if (my ($name) = $txt->get_values('Column_name')) {
-        $self->Column_name($name->[0]);
+        $self->column_name($name->[0]);
     }
     
     # Single float values
@@ -105,6 +116,10 @@ sub ace_string {
         BlastN
         Gapped
         No_display
+        Right_priority_fixed
+
+        Mutable
+        Has_parent
         })
     {
         my $tag_method = lc $tag;
@@ -121,6 +136,10 @@ sub ace_string {
     
     if (my $over = $self->overlap_mode) {
         $txt->add_tag(ucfirst $over);
+    }
+    
+    if (my $type = $self->transcript_type) {
+        $txt->add_tag(ucfirst $type);
     }
     
     foreach my $tag (qw{
@@ -202,29 +221,29 @@ sub cds_color {
     return $self->{'_cds_color'};
 }
 
-sub coluumn_name {
-    my( $self, $coluumn_name ) = @_;
+sub column_name {
+    my( $self, $column_name ) = @_;
     
-    if ($coluumn_name) {
-        $self->{'_coluumn_name'} = $coluumn_name;
+    if ($column_name) {
+        $self->{'_column_name'} = $column_name;
     }
-    return $self->{'_coluumn_name'};
+    return $self->{'_column_name'} || '';
 }
 
 sub zone_number {
     my( $self, $zone_number ) = @_;
     
-    if ($zone_number) {
+    if (defined $zone_number) {
         $self->{'_zone_number'} = $zone_number;
     }
-    return $self->{'_zone_number'};
+    return $self->{'_zone_number'} || 1;
 }
 
 sub right_priority {
     my( $self, $right_priority ) = @_;
     
-    if ($right_priority) {
-        $self->{'_right_priority'} = $right_priority;
+    if (defined $right_priority) {
+        $self->{'_right_priority'} = sprintf "%.3f", $right_priority;
     }
     return $self->{'_right_priority'};
 }
@@ -232,7 +251,7 @@ sub right_priority {
 sub max_mag {
     my( $self, $max_mag ) = @_;
     
-    if ($max_mag) {
+    if (defined $max_mag) {
         $self->{'_max_mag'} = $max_mag;
     }
     return $self->{'_max_mag'};
@@ -241,7 +260,7 @@ sub max_mag {
 sub min_mag {
     my( $self, $min_mag ) = @_;
     
-    if ($min_mag) {
+    if (defined $min_mag) {
         $self->{'_min_mag'} = $min_mag;
     }
     return $self->{'_min_mag'};
@@ -250,7 +269,7 @@ sub min_mag {
 sub width {
     my( $self, $width ) = @_;
     
-    if ($width) {
+    if (defined $width) {
         $self->{'_width'} = $width;
     }
     return $self->{'_width'};
@@ -286,6 +305,7 @@ sub hex_cds_color {
     my $color = $self->cds_color;
     return Hum::Ace::Colors::acename_to_webhex($color);
 }
+
 
 # enum methods
 
@@ -334,78 +354,123 @@ sub overlap_mode {
     return $self->{'_overlap_mode'};
 }
 
+sub transcript_type {
+    my( $self, $transcript_type ) = @_;
+    
+    if ($transcript_type) {
+        if ($transcript_type ne 'coding' and
+            $transcript_type ne 'non_coding' and
+            $transcript_type ne 'transcript'
+        ) {
+            confess "Unrecognized transcript type '$transcript_type'";
+        }
+        $self->{'_transcript_type'} = $transcript_type;
+    }
+    return $self->{'_transcript_type'};
+}
+
 # true/false methods
 
 sub show_up_strand {
-    my( $self, $show_up_strand ) = @_;
+    my( $self, $flag ) = @_;
     
-    if ($show_up_strand) {
-        $self->{'_show_up_strand'} = $show_up_strand ? 1 : 0;
+    if (defined $flag) {
+        $self->{'_show_up_strand'} = $flag ? 1 : 0;
     }
     return $self->{'_show_up_strand'} || 0;
 }
 
 sub strand_sensitive {
-    my( $self, $strand_sensitive ) = @_;
+    my( $self, $flag ) = @_;
     
-    if ($strand_sensitive) {
-        $self->{'_strand_sensitive'} = $strand_sensitive ? 1 : 0;
+    if (defined $flag) {
+        $self->{'_strand_sensitive'} = $flag ? 1 : 0;
     }
     return $self->{'_strand_sensitive'} || 0;
 }
 
 sub frame_sensitive {
-    my( $self, $frame_sensitive ) = @_;
+    my( $self, $flag ) = @_;
     
-    if ($frame_sensitive) {
-        $self->{'_frame_sensitive'} = $frame_sensitive ? 1 : 0;
+    if (defined $flag) {
+        $self->{'_frame_sensitive'} = $flag ? 1 : 0;
     }
     return $self->{'_frame_sensitive'} || 0;
 }
 
 sub show_text {
-    my( $self, $show_text ) = @_;
+    my( $self, $flag ) = @_;
     
-    if ($show_text) {
-        $self->{'_show_text'} = $show_text ? 1 : 0;
+    if (defined $flag) {
+        $self->{'_show_text'} = $flag ? 1 : 0;
     }
     return $self->{'_show_text'} || 0;
 }
 
 sub percent {
-    my( $self, $percent ) = @_;
+    my( $self, $flag ) = @_;
     
-    if ($percent) {
-        $self->{'_percent'} = $percent ? 1 : 0;
+    if (defined $flag) {
+        $self->{'_percent'} = $flag ? 1 : 0;
     }
     return $self->{'_percent'} || 0;
 }
 
 sub blastn {
-    my( $self, $blastn ) = @_;
+    my( $self, $flag ) = @_;
     
-    if ($blastn) {
-        $self->{'_blastn'} = $blastn ? 1 : 0;
+    if (defined $flag) {
+        $self->{'_blastn'} = $flag ? 1 : 0;
     }
     return $self->{'_blastn'} || 0;
 }
 
 sub gapped {
-    my( $self, $gapped ) = @_;
+    my( $self, $flag ) = @_;
     
-    if ($gapped) {
-        $self->{'_gapped'} = $gapped ? 1 : 0;
+    if (defined $flag) {
+        $self->{'_gapped'} = $flag ? 1 : 0;
     }
     return $self->{'_gapped'} || 0;
 }
 
 sub no_display {
-    my( $self, $no_display ) = @_;
+    my( $self, $flag ) = @_;
     
-    if ($no_display) {
-        $self->{'_no_display'} = $no_display ? 1 : 0;
+    if (defined $flag) {
+        $self->{'_no_display'} = $flag ? 1 : 0;
     }
     return $self->{'_no_display'} || 0;
+}
+
+sub right_priority_fixed {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_right_priority_fixed'} = $flag ? 1 : 0;
+    }
+    return $self->{'_right_priority_fixed'} || 0;
+}
+
+
+# Otter gene true/false methods
+
+sub mutable {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_mutable'} = $flag ? 1 : 0;
+    }
+    return $self->{'_mutable'} || 0;
+}
+
+sub has_parent {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_has_parent'} = $flag ? 1 : 0;
+    }
+    return $self->{'_has_parent'} || 0;
 }
 
 1;

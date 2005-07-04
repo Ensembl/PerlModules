@@ -5,6 +5,9 @@ package Hum::Ace::GeneMethod;
 
 use strict;
 use Carp;
+
+confess "use Hum::Ace::Method instead";
+
 use Hum::Ace::Colors;
 
 use base 'Hum::Ace::Method';
