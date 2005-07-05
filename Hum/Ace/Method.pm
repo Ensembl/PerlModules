@@ -201,36 +201,6 @@ sub ace_string {
     return $txt->ace_string;
 }
 
-
-sub new_from_ace_tag {
-    my( $pkg, $tag ) = @_;
-    
-    my $self = $pkg->new;
-    $self->process_ace_method($tag->fetch);
-    return $self;
-}
-
-sub new_from_ace {
-    my( $pkg, $ace ) = @_;
-    
-    my $self = $pkg->new;
-    $self->process_ace_method($ace);
-    return $self;
-}
-
-# Commented out because it is now very incomplete compared to new_from_AceText
-#sub process_ace_method {
-#    my( $self, $ace ) = @_;
-#    
-#    $self->name($ace->name);
-#    my $color = $ace->at('Display.Colour[1]')
-#        or confess "No color";
-#    $self->color($color->name);
-#    if (my $cds_color = $ace->at('Display.CDS_Colour[1]')) {
-#        $self->cds_color($cds_color->name);
-#    }
-#}
-
 sub name {
     my( $self, $name ) = @_;
     

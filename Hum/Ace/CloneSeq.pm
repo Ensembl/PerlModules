@@ -8,7 +8,7 @@ use Carp;
 
 use Hum::Sequence::DNA;
 use Hum::Ace::Locus;
-use Hum::Ace::GeneMethod;
+use Hum::Ace::Method;
 use Hum::Ace::SubSeq;
 use Hum::Ace::AceText;
 use Bio::Otter::Keyword;
@@ -416,7 +416,9 @@ sub express_data_fetch {
                 my $meth_name = $meth_tag->name;
                 my $meth = $name_method{$meth_name};
                 unless ($meth) {
-                    $meth = Hum::Ace::GeneMethod->new_from_ace_tag($meth_tag);
+                    $ace->raw_query("find Method $meth_name");
+                    my $txt = Hum::Ace::AceText->new($ace->raw_query('show -a'));
+                    $meth = Hum::Ace::Method->new_from_AceText($txt);
                     $name_method{$meth_name} = $meth;
                 }
                 $sub->GeneMethod($meth);

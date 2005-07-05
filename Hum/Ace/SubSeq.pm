@@ -758,7 +758,7 @@ sub is_mutable {
             return 0;
         }
     }
-    return $self->GeneMethod->is_mutable;
+    return $self->GeneMethod->mutable;
 }
 
 ### Methods to record type?
@@ -1123,7 +1123,8 @@ sub ace_string {
     if ($method) {
         my $mn = $method->name;
         $out .= qq{Method "$mn"\n};
-        if ($method->is_coding) {
+        my $type = $method->transcript_type;
+        if ($type and $type eq 'coding') {
             my( $cds_start, $cds_end ) = $self->cds_coords;
             $out .= qq{CDS  $cds_start $cds_end\n};
         }
