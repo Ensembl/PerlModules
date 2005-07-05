@@ -94,6 +94,43 @@ sub new_from_AceText {
     return $self;
 }
 
+sub clone {
+    my( $self ) = @_;
+    
+    my $new = ref($self)->new;
+    foreach my $method (qw{
+        name
+        color
+        cds_color
+        column_name
+        zone_number
+        right_priority
+        max_mag
+        min_mag
+        width
+        score_bounds
+        score_method
+        blixem_type
+        overlap_mode
+        transcript_type
+        show_up_strand
+        strand_sensitive
+        frame_sensitive
+        show_text
+        percent
+        blastn
+        gapped
+        no_display
+        right_priority_fixed
+        mutable
+        has_parent
+        }
+    ) {
+        $new->$method($self->$method());
+    }
+    return $new;
+}
+
 sub ace_string {
     my( $self ) = @_;
     

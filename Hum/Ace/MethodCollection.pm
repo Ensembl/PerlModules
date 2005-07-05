@@ -5,6 +5,7 @@ package Hum::Ace::MethodCollection;
 
 use strict;
 use Carp;
+use Symbol 'gensym';
 
 use Hum::Ace::Method;
 use Hum::Ace::AceText;
@@ -20,7 +21,7 @@ sub new_from_string {
     
     my $self = $pkg->new;
 
-    # Split text into paragraphs of two or more lines
+    # Split text into paragraphs (which are separated by two or more blank lines).
     foreach my $para (split /\n{2,}/, $str) {
         # Create Method object from paragraphs that have
         # any lines that begin with a word character.
@@ -43,12 +44,41 @@ sub ace_string {
     return $str;
 }
 
+sub new_from_file {
+    my( $pkg, $file ) = @_;
+    
+    local $/ = undef;
+    
+    my $fh = gensym();
+    open $fh, $file or die "Can't read '$file' : $!";
+    my $str = <$fh>;
+    close $fh or die "Error reading '$file' : $!";
+    return $pkg->new_from_string($str);
+}
+
+sub write_to_file {
+    my( $self, $file ) = @_;
+    
+    my $fh = gensym();
+    open $fh, "> $file" or confess "Can't write to '$file' : $!";
+    print $fh $self->ace_string;
+    close $fh or confess "Error writing to '$file' : $!";
+}
+
 sub add_Method {
     my( $self, $method ) = @_;
     
     if ($method) {
+        my $name = $method->name
+            or confess "Can't add un-named method";
+        if (my $existing = $self->{'_method_by_name'}{$name}) {
+            confess "Already have method called '$name':\n",
+                $existing->ace_string;
+        }
         my $lst = $self->get_all_Methods;
         push @$lst, $method;
+        $self->{'_method_by_name'}{$name} = $method;
+        
     } else {
         confess "missing Hum::Ace::Method argument";
     }
@@ -61,16 +91,32 @@ sub get_all_Methods {
     return $lst;
 }
 
+sub get_Method_by_name {
+    my( $self, $name ) = @_;
+    
+    confess "Missing name argument" unless $name;
+    
+    return $self->{'_method_by_name'}{$name};
+}
+
 sub flush_Methods {
     my( $self ) = @_;
     
     $self->{'_method_list'} = [];
+    $self->{'_method_by_name'} = {};
 }
 
-sub order {
+sub process_for_otterlace {
     my( $self ) = @_;
     
+    $self->create_trunc_gene_Methods;
     $self->cluster_Methods_with_same_column_name;
+    $self->order_by_zone;
+    $self->assign_right_priorities;
+}
+
+sub order_by_zone {
+    my( $self ) = @_;
     
     my $lst = $self->get_all_Methods;
     
@@ -153,6 +199,30 @@ sub assign_right_priorities {
         }
 
         $method->right_priority($pos);
+    }
+}
+
+sub create_trunc_gene_Methods {
+    my( $self ) = @_;
+    
+    my $meth_list = $self->get_all_Methods;
+    $self->flush_Methods;
+    foreach my $method (@$meth_list) {
+        my $name = $method->name;
+        
+        # Skip existing _trunc methods - we are making new ones
+        next if $name =~ /_trunc$/;
+        
+        $self->add_Method($method);
+        if (my $type = $method->transcript_type) {
+            my $new = $method->clone;
+            my $new_name = $name . '_trunc';
+            $new->name($new_name);
+            $new->mutable(0);
+            $new->color('GRAY');
+            $new->cds_color('BLACK') if $type eq 'coding';
+            $self->add_Method($new);
+        }
     }
 }
 
