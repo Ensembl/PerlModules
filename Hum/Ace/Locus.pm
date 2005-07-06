@@ -247,7 +247,11 @@ sub set_remarks {
 sub list_remarks {
     my( $self ) = @_;
     
-    return @{$self->{'_remark_list'}};
+    if (my $rl = $self->{'_remark_list'}) {
+        return @$rl;
+    } else {
+        return;
+    }
 }
 
 sub set_positive_SubSeq_names {
@@ -1170,7 +1174,7 @@ sub extract_transcript_remarks {
     
     my $i = keys %$remarks_hash;
     my @remarks = (
-        $subseq->remarks,
+        $subseq->list_remarks,
         map("Annotation_remark- $_", $subseq->annotation_remarks),
         );
     foreach my $remark (@remarks) {
@@ -1357,6 +1361,8 @@ sub ace_string {
     $ace .= qq{\nLocus : "$name"\n}
         . qq{-D Type_prefix\n}
         . qq{-D Type\n}
+        . qq{-D Full_name\n}
+        . qq{-D Remark\n}
         . qq{\nLocus : "$name"\n};
 
     ### Need to add locus type and positive sequences
@@ -1374,21 +1380,31 @@ sub ace_string {
         }
         $ace .= qq{$type\n};
     }
+    if (my $desc = $self->description) {
+        $ace .= qq{Full_name "$desc"\n};
+    }
+    foreach my $remark ($self->list_remarks) {
+        $ace .= qq{Remark "$remark"\n};
+    }
 
     $ace .= "\n";
 
     return $ace;
 }
 
-
-
-sub clone {
-    my ($self) = @_ ;
-    require Storable;
-    my $new = Storable::dclone($self);
-    $new->name($self->name.'_clone') ;
-    return $new;
-}
+#sub clone {
+#    my( $old ) = @_;
+#
+#    my $new = ref($old)->new;
+#    foreach my $field (qw{
+#        name
+#        otter_id
+#        })
+#    {
+#        $new->$field($old->$field());
+#    }
+#    
+#}
 
 #sub DESTROY {
 #    my( $self ) = @_;
