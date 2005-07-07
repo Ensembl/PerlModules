@@ -278,6 +278,14 @@ sub take_otter_ids {
     my( $self, $old ) = @_;
     
     $self->otter_id($old->otter_id);
+
+    # Copy locus otter_id if present
+    if ($self->Locus and $old->Locus) {
+        if (my $old_otter = $old->Locus->otter_id) {
+            $self->Locus->otter_id($old_otter);
+        }
+    }
+
     my @new_exons = $self->get_all_Exons;
     my @old_exons =  $old->get_all_Exons;
     my $j = 0;
@@ -701,6 +709,9 @@ sub Locus {
     my( $self, $Locus ) = @_;
     
     if ($Locus) {
+        unless (ref($Locus) and $Locus->isa('Hum::Ace::Locus')) {
+            confess "Wrong kind of thing '$Locus'";
+        }
         $self->{'_Locus'} = $Locus;
     }
     return $self->{'_Locus'};
