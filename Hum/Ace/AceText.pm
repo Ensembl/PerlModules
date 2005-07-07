@@ -108,8 +108,8 @@ sub _quoted_ace_line {
         ## Don't quote elements which are numbers or just ':'
         #unless (/^[\.\d]+$/ or /^:$/) {
 
-        # Don't quote elements which are numbers
-        unless (/^[\+\-]?[\.\d]+$/) {
+        # Don't quote elements which are numbers or just ':'
+        unless (/^[\+\-]?[\.\d]+$/ or $_ eq ':') {
 
 	        # Escape quotes, back and forward slashes,
 	        # percent signs, and semi-colons.
@@ -119,7 +119,7 @@ sub _quoted_ace_line {
 	        s/\n/\\n/g;
 	        s/\n/\\t/g;
 
-	        # Quote if tag unless it is entirely word characters
+	        # Quote tag unless it is entirely word characters
             unless (/^\w+$/) {
 	            $_ = "\"$_\"";
 	        }

@@ -1196,9 +1196,12 @@ sub ace_string {
         }
     }
     
+    # Need to use AceText quoting because anything can be in the remark!
+    my $txt = Hum::Ace::AceText->new;
     foreach my $remark ($self->list_remarks) {
-        $out .= qq{Remark "$remark"\n};
+        $txt->add_tag_values(['Remark', $remark]);
     }
+    $out .= $txt->ace_string;
 
 ### Commented out for tropicalis cDNA annotation workshop    
 #    # Supporting evidence

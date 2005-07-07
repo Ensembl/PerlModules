@@ -1347,9 +1347,55 @@ sub get_unique_EnsEMBL_Exon {
     return $ens_exon;
 }
 
+sub ace_string {
+    my( $self, $old_name ) = @_;
+
+    my $name = $self->name;
+    my $ace = '';
+    if ($old_name){
+        $ace .= qq{-R Locus "$old_name" "$name"\n};
+    }
+
+    $ace .= qq{\nLocus : "$name"\n}
+        . qq{-D Type_prefix\n}
+        . qq{-D Type\n}
+        . qq{-D Full_name\n}
+        . qq{-D Remark\n}
+        . qq{\n};
+
+    my $txt = Hum::Ace::AceText->new;
+    $txt->add_tag_values(['Locus', ':', $name]);
+
+    ### Need to add locus type and positive sequences
+    ### Are the ?Seqence tags pointing to Clone or SubSeqences?
+
+    if (my $ott = $self->otter_id) {
+        $txt->add_tag_values(['Locus_id', $ott]);
+    }
+    if (my $prefix = $self->gene_type_prefix) {
+        $txt->add_tag_values(['Type_prefix', $prefix]);
+    }
+    if (my $type = $self->gene_type) {
+        if ($type =~ /^((Unp|P)rocessed)_pseuodgene$/) {
+            $type = $1;
+        }
+        $txt->add_tag($type);
+    }
+    if (my $desc = $self->description) {
+        $txt->add_tag_values(['Full_name', $desc]);
+    }
+    foreach my $remark ($self->list_remarks) {
+        $txt->add_tag_values(['Remark', $remark]);
+    }
+
+    $ace .= $txt->ace_string . "\n";
+
+    return $ace;
+}
+
 # Needed to preserve otter_id?
 # If locus is renamed twice, then otter
-sub ace_string {
+sub old_ace_string {
     my( $self, $old_name ) = @_;
 
     my $name = $self->name ;
