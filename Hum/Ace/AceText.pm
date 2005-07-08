@@ -11,6 +11,8 @@ use Text::ParseWords 'quotewords';
 sub new {
     my( $pkg, $txt ) = @_;
 
+    $txt = '' unless defined $txt;
+
     # Trim trailing empty lines so that it
     # is safe to add data onto the end.
     $txt =~ s/\s+$/\n/s;

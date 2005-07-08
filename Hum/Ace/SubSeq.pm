@@ -216,19 +216,18 @@ sub process_ace_start_end_transcript_seq {
     }
     $self->annotation_remarks(@annotation_remarks);
 
-### Commented out for tropicalis cDNA annotation workshop
-#    # Parse Supporting evidence tags
-#    foreach my $type (qw{ Protein EST cDNA Genomic }) {
-#        my $tag = "${type}_match";
-#        my $list = [];
-#        foreach my $evidence ($t_seq->at('Annotation.Sequence_matches.' . $tag . '[1]')) {
-#  	        my $id = $evidence->name;
-#            $id =~ s/^[a-zA-Z]{2}://;
-#            print STDERR qq{Got Evidence: $type "$id"\n};
-#            push(@$list, $id) if $id;
-#        }
-#        $self->add_evidence_list($type, $list) if @$list;
-#    }
+    # Parse Supporting evidence tags
+    foreach my $type (qw{ Protein EST cDNA Genomic }) {
+        my $tag = "${type}_match";
+        my $list = [];
+        foreach my $evidence ($t_seq->at('Annotation.Sequence_matches.' . $tag . '[1]')) {
+           my $id = $evidence->name;
+            $id =~ s/^[a-zA-Z]{2}://;
+            #print STDERR qq{Got Evidence: $type "$id"\n};
+            push(@$list, $id) if $id;
+        }
+        $self->add_evidence_list($type, $list) if @$list;
+    }
     
     my @exons = $self->get_all_Exons
         or confess "No exons in '", $self->name, "'";
@@ -341,8 +340,7 @@ sub clone {
         $new->add_Exon($new_ex);
     }
  
-### Commented out for tropicalis cDNA annotation workshop   
-#    $new->evidence_hash($old->clone_evidence_hash);
+    $new->evidence_hash($old->clone_evidence_hash);
     
     return $new;
 }
@@ -415,7 +413,8 @@ sub otter_id {
 sub set_remarks {
     my( $self, @remarks ) = @_;
     
-    $self->{'_remark_list'} = [@remarks];
+    # The grep ensures that empty remarks are ingored
+    $self->{'_remark_list'} = [grep $_, @remarks];
 }
 
 sub list_remarks {
@@ -453,8 +452,10 @@ sub evidence_hash {
     
     if ($evidence_hash) {
         $self->{'_evidence_hash'} = $evidence_hash;
+    } else {
+        $self->{'_evidence_hash'} ||= {};
     }
-    return $self->{'_evidence_hash'} || {};
+    return $self->{'_evidence_hash'};
 }
 
 sub clone_evidence_hash {
@@ -1129,8 +1130,7 @@ sub ace_string {
         . qq{-D Continues_as\n}
         . qq{-D Remark\n}
 
-### Commented out for tropicalis cDNA annotation workshop
-#        . qq{-D Sequence_matches\n}
+        . qq{-D Sequence_matches\n}
         
         # New SubSequencce object starts here
         . qq{\nSequence "$name"\n}
@@ -1203,15 +1203,14 @@ sub ace_string {
     }
     $out .= $txt->ace_string;
 
-### Commented out for tropicalis cDNA annotation workshop    
-#    # Supporting evidence
-#    my $evi = $self->evidence_hash;
-#    foreach my $type (sort keys %$evi) {
-#        my $id_list = $evi->{$type};
-#        foreach my $name (@$id_list) {
-#            $out .= qq{${type}_match "$name"\n};
-#        }
-#    }
+    # Supporting evidence
+    my $evi = $self->evidence_hash;
+    foreach my $type (sort keys %$evi) {
+        my $id_list = $evi->{$type};
+        foreach my $name (@$id_list) {
+            $out .= qq{${type}_match "$name"\n};
+        }
+    }
     
     if ($locus) {
         my $ln = $locus->name;
