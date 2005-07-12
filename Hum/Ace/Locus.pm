@@ -1361,6 +1361,7 @@ sub ace_string {
         . qq{-D Type\n}
         . qq{-D Full_name\n}
         . qq{-D Remark\n}
+        . qq{-D Alias\n}
         . qq{\n};
 
     my $txt = Hum::Ace::AceText->new;
@@ -1380,6 +1381,9 @@ sub ace_string {
             $type = $1;
         }
         $txt->add_tag($type);
+    }
+    foreach my $alias ($self->list_aliases) {
+        $txt->add_tag_values(['Alias', $alias]);
     }
     if (my $desc = $self->description) {
         $txt->add_tag_values(['Full_name', $desc]);
