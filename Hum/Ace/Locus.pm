@@ -235,7 +235,11 @@ sub set_aliases {
 sub list_aliases {
     my( $self ) = @_;
     
-    return @{$self->{'_Alias_name_list'}};
+    if (my $al = $self->{'_Alias_name_list'}) {
+        return @$al;
+    } else {
+        return;
+    }
 }
 
 sub set_remarks {
