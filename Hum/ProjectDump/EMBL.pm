@@ -730,12 +730,18 @@ sub make_q20_depth_report {
 }
 
 sub add_extra_headers {
-    my( $pdmp, $embl, $key ) = @_;
+    my( $pdmp, $embl, $key, $seqlength ) = @_;
     
     confess "No key given" unless $key;
     
-    foreach my $code (header_supplement_code($key, $pdmp->sanger_id)) {
-        $code->($pdmp, $embl);
+    my @subs = header_supplement_code($key, $pdmp->sanger_id);
+    for (my $i = 0; $i < @subs; $i++) {
+        my $code = $subs[$i];
+        # If we are adding references they need to be numbered.
+        # We have always added a sequence reference, hence the
+        # number of the reference is $i + 2
+        # (If it isn't a reference this parameter can be ignored.)
+        $code->($pdmp, $embl, $seqlength, $i + 2);
     }
 }
 
