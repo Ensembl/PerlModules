@@ -207,7 +207,14 @@ sub is_truncated {
         }
         $self->set_remarks(@remarks);
 
-
+        my( @annotation_remarks );
+        foreach my $rem ($ace_locus->at('Annotation_remark[1]')) {
+            my $txt = $rem->name;
+            $txt =~ s/\s+$//;
+            $txt =~ s/\n/ /g;
+            push(@annotation_remarks, $txt);
+        }
+        $self->set_annotation_remarks(@annotation_remarks);
 
         my( $gene_type );
         foreach my $t (@type_map) {
@@ -252,6 +259,22 @@ sub list_remarks {
     my( $self ) = @_;
     
     if (my $rl = $self->{'_remark_list'}) {
+        return @$rl;
+    } else {
+        return;
+    }
+}
+
+sub set_annotation_remarks {
+    my( $self, @annotation_remarks ) = @_;
+    
+    $self->{'_annotation_remark_list'} = [@annotation_remarks];
+}
+
+sub list_annotation_remarks {
+    my( $self ) = @_;
+    
+    if (my $rl = $self->{'_annotation_remark_list'}) {
         return @$rl;
     } else {
         return;
@@ -1365,6 +1388,7 @@ sub ace_string {
         . qq{-D Type\n}
         . qq{-D Full_name\n}
         . qq{-D Remark\n}
+        . qq{-D Annotation_remark\n}
         . qq{-D Alias\n}
         . qq{\n};
 
@@ -1377,14 +1401,14 @@ sub ace_string {
     if (my $ott = $self->otter_id) {
         $txt->add_tag_values(['Locus_id', $ott]);
     }
-    if (my $prefix = $self->gene_type_prefix) {
-        $txt->add_tag_values(['Type_prefix', $prefix]);
-    }
     if (my $type = $self->gene_type) {
         if ($type =~ /^((Unp|P)rocessed)_pseuodgene$/) {
             $type = $1;
         }
         $txt->add_tag($type);
+    }
+    if (my $prefix = $self->gene_type_prefix) {
+        $txt->add_tag_values(['Type_prefix', $prefix]);
     }
     foreach my $alias ($self->list_aliases) {
         $txt->add_tag_values(['Alias', $alias]);
@@ -1394,6 +1418,9 @@ sub ace_string {
     }
     foreach my $remark ($self->list_remarks) {
         $txt->add_tag_values(['Remark', $remark]);
+    }
+    foreach my $remark ($self->list_annotation_remarks) {
+        $txt->add_tag_values(['Annotation_remark', $remark]);
     }
 
     $ace .= $txt->ace_string . "\n";

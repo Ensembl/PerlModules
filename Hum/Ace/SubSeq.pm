@@ -214,7 +214,7 @@ sub process_ace_start_end_transcript_seq {
     foreach my $rem ($t_seq->at('Annotation.Annotation_remark[1]')) {
         push(@annotation_remarks, $rem->name);
     }
-    $self->annotation_remarks(@annotation_remarks);
+    $self->set_annotation_remarks(@annotation_remarks);
 
     # Parse Supporting evidence tags
     foreach my $type (qw{ Protein EST cDNA Genomic }) {
@@ -278,21 +278,16 @@ sub take_otter_ids {
     
     $self->otter_id($old->otter_id);
 
-    # Copy locus otter_id if present
-    if ($self->Locus and $old->Locus) {
-        if (my $old_otter = $old->Locus->otter_id) {
-            $self->Locus->otter_id($old_otter);
-        }
-    }
-
     my @new_exons = $self->get_all_Exons;
     my @old_exons =  $old->get_all_Exons;
-    my $j = 0;
+    # Loop through all the new exons
     for (my $i = 0; $i < @new_exons; $i++) {
         my $n_ex = $new_exons[$i];
         for (my $j = 0; $j < @old_exons; ) {
             my $o_ex = $old_exons[$j];
             if ($n_ex->overlaps($o_ex)) {
+                # Remove old exons from the list as
+                # they are matched with a new exon
                 $n_ex->otter_id($o_ex->otter_id);
                 splice(@old_exons, $j, 1);
             } else {
@@ -333,6 +328,7 @@ sub clone {
     }
 
     $new->set_remarks($old->list_remarks);
+    $new->set_annotation_remarks($old->list_annotation_remarks);
 
     # Clone each exon, and add to new SubSeq
     foreach my $old_ex ($old->get_all_Exons) {
@@ -427,15 +423,17 @@ sub list_remarks {
     }
 }
 
-### Need to change to set/list pair as above for remarks
-sub annotation_remarks {
+sub set_annotation_remarks {
     my( $self, @annotation_remarks ) = @_;
     
-    if (@annotation_remarks) {
-        $self->{'_annotation_remarks'} = [@annotation_remarks];
-    }
-    if (my $rem = $self->{'_annotation_remarks'}) {
-        return @$rem;
+    $self->{'_annotation_remark_list'} = [@annotation_remarks];
+}
+
+sub list_annotation_remarks {
+    my( $self ) = @_;
+    
+    if (my $rl = $self->{'_annotation_remark_list'}) {
+        return @$rl;
     } else {
         return;
     }
@@ -1129,6 +1127,7 @@ sub ace_string {
         . qq{-D Continued_from\n}
         . qq{-D Continues_as\n}
         . qq{-D Remark\n}
+        . qq{-D Annotation_remark\n}
 
         . qq{-D Sequence_matches\n}
         
@@ -1200,6 +1199,9 @@ sub ace_string {
     my $txt = Hum::Ace::AceText->new;
     foreach my $remark ($self->list_remarks) {
         $txt->add_tag_values(['Remark', $remark]);
+    }
+    foreach my $remark ($self->list_annotation_remarks) {
+        $txt->add_tag_values(['Annotation_remark', $remark]);
     }
     $out .= $txt->ace_string;
 
