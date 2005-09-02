@@ -165,7 +165,8 @@ sub assign_right_priorities {
     my @oligo_zone = (3.2, 3.9);
     
     my $meth_list = $self->get_all_Methods;
-    my $pos = 0;
+    # Must start at 0.1 or objects get drawn left of the ruler in fMap
+    my $pos = 0.1;
     for (my $i = 0; $i < @$meth_list; $i++) {
         my $method = $meth_list->[$i];
         next if $method->right_priority_fixed;

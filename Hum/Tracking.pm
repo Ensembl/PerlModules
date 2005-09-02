@@ -48,6 +48,7 @@ use vars qw( @ISA @EXPORT_OK );
                 is_assigned_to_finisher
                 is_finished
                 is_full_shotgun_complete
+                is_private
                 is_shotgun_complete
                 library_and_vector
                 library_from_clone
@@ -187,7 +188,7 @@ statuses.
 
     sub is_finished {
         my( $project ) = @_;
-        print "!!";
+
         $sth ||= prepare_track_statement(q{
             SELECT status
             FROM project_status
@@ -198,6 +199,23 @@ statuses.
         $sth->execute($project);
         my ($status) = $sth->fetchrow;
         return $status;
+    }
+}
+
+{
+    my( $sth );
+
+    sub is_private {
+        my( $project ) = @_;
+
+        $sth ||= prepare_track_statement(q{
+            SELECT isprivate
+            FROM project
+            WHERE projectname = ?
+            });
+        $sth->execute($project);
+        my ($is_private) = $sth->fetchrow;
+        return $is_private;
     }
 }
 

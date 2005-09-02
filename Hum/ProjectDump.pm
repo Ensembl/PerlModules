@@ -255,6 +255,12 @@ sub is_cancelled {
     return ($pdmp->current_status_number == 24) ? 1 : 0;
 }
 
+sub is_private {
+    my( $pdmp ) = @_;
+    
+    return Hum::Tracking::is_private($pdmp->project_name);
+}
+
 sub current_status_number {
     my( $pdmp ) = @_;
 
