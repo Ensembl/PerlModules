@@ -2,7 +2,7 @@
 package Hum::EMBL;
 
 use strict;
-use Carp;
+use Carp qw{ cluck confess };
 use Hum::EMBL::Line;    # Contains most of the line handling packages
 use Hum::EMBL::Handle;
 use Hum::Sequence::DNA;
