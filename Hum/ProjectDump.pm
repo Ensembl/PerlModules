@@ -163,6 +163,34 @@ sub new_from_sequence_name {
     }
 }
 
+sub new_from_accession {
+    my( $pkg, $acc ) = @_;
+
+	my $sth = prepare_statement(qq{
+       SELECT d.sanger_id
+	   FROM project_acc a
+         , project_dump d
+       WHERE a.accession = '$acc'
+   	   AND a.sanger_id = d.sanger_id
+       AND d.is_current = 'Y'
+       });
+
+    $sth->execute;
+
+	my( @sid );
+    while (my ($s) = $sth->fetchrow) {
+        push(@sid, $s);
+    }
+
+    if (@sid == 1) {
+        return $pkg->new_from_sanger_id($sid[0]);
+    } else {
+        confess "Looking for the sanger_id corresponding to sequence '$acc' I got (",
+            join(', ', map "'$_'", @sid), ')';
+    }
+
+}
+
 sub new_from_sanger_id {
     my( $pkg, $sanger_id ) = @_;
     
