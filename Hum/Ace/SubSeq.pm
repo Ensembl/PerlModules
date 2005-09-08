@@ -1107,7 +1107,9 @@ sub ace_string {
             $out .= qq{SubSequence "$name"  $end $start\n};
         }
     }
-    
+
+    ### This "-R" rename is no longer needed if everything
+    ### we edit is now in the interface.
     $out .= qq{\n-R Sequence "$old_name" "$name"\n}
         if $old_name;
     
@@ -1121,7 +1123,7 @@ sub ace_string {
         #. qq{-D Start_not_found\n}
         #. qq{-D End_not_found\n}
         #. qq{-D Predicted_gene\n}
-        # Commented out above block and replaced with:
+        # Commented out block above and replaced with:
         . qq{-D Properties\n}
         
         . qq{-D Continued_from\n}

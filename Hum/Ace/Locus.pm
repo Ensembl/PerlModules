@@ -84,6 +84,26 @@ sub name {
     return $self->{'_name'} || confess "name not set";
 }
 
+sub previous_name {
+    my( $self, $previous_name ) = @_;
+    
+    if ($previous_name) {
+        $self->{'_previous_name'} = $previous_name;
+    }
+    return $self->{'_previous_name'};
+}
+
+sub drop_previous_name {
+    my( $self ) = @_;
+    
+    if (my $prev = $self->{'_previous_name'}) {
+        $self->{'_previous_name'} = undef;
+        return $prev;
+    } else {
+        return;
+    }
+}
+
 sub description {
     my( $self, $description ) = @_;
     
@@ -102,6 +122,17 @@ sub otter_id {
     return $self->{'_otter_id'};
 }
 
+sub drop_otter_id {
+    my( $self, $otter_id ) = @_;
+    
+    if (my $ott = $self->{'_otter_id'}) {
+        $self->{'_otter_id'} = undef;
+        return $ott;
+    } else {
+        return;
+    }
+}
+
 sub gene_type {
     my( $self, $gene_type ) = @_;
     
@@ -113,7 +144,7 @@ sub gene_type {
 
 sub unset_gene_type{
     my ($self ) = @_ ;
-    $self->{'_gene_type'} = undef ;
+    $self->{'_gene_type'} = undef;
 }
 
 
@@ -1375,14 +1406,23 @@ sub get_unique_EnsEMBL_Exon {
 }
 
 sub ace_string {
-    my( $self, $old_name ) = @_;
+    my( $self ) = @_;
 
-    my $name = $self->name;
-    my $ace = '';
-    if ($old_name){
-        $ace .= qq{-R Locus "$old_name" "$name"\n};
+    # Trap for $old_name parameter that we have removed in case anything still calls it
+    if (@_ > 1) {
+        confess "unexpected argument to ace_string";
     }
 
+    my $ace = '';
+    
+    if ($self->otter_id and my $prev = $self->previous_name) {
+        # Rename operation - we are taking the otter_id away
+        # from the old locus.
+        $ace .= qq{\nLocus : "$prev"\n}
+            . qq{-D Locus_id\n};
+    }
+
+    my $name = $self->name;
     $ace .= qq{\nLocus : "$name"\n}
         . qq{-D Type_prefix\n}
         . qq{-D Type\n}
@@ -1472,20 +1512,6 @@ sub old_ace_string {
 
     return $ace;
 }
-
-#sub clone {
-#    my( $old ) = @_;
-#
-#    my $new = ref($old)->new;
-#    foreach my $field (qw{
-#        name
-#        otter_id
-#        })
-#    {
-#        $new->$field($old->$field());
-#    }
-#    
-#}
 
 #sub DESTROY {
 #    my( $self ) = @_;
