@@ -20,6 +20,7 @@ sub new_from_AceText {
     
     my ($n) = $txt->get_values('Method')
         or confess "Not a Method:\n$$txt";
+    # Is there a colon between "Method" and the name?
     $self->name($n->[0] eq ':' ? $n->[1] : $n->[0]);
     
     # Display colours

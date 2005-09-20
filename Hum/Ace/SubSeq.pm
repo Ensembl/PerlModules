@@ -1145,16 +1145,20 @@ sub ace_string {
     
     if ($method) {
         my $mn = $method->name;
-        $out .= qq{Method "$mn"\n};
+        my $prefix = '';
+        if ($locus and my $pre = $locus->gene_type_prefix) {
+            $prefix = "$pre:";
+        }
+        $out .= qq{Method "$prefix$mn"\n};
         my $type = $method->transcript_type;
         if ($type and $type eq 'coding') {
-            my( $cds_start, $cds_end ) = $self->cds_coords;
+            my ($cds_start, $cds_end) = $self->cds_coords;
             $out .= qq{CDS  $cds_start $cds_end\n};
         }
         elsif ($mn =~ /pseudo/i) {
             $out .= qq{CDS\nPseudogene\n};
         }
-        
+
         if ($mn =~ /mRNA/i) {
             $out .= qq{Processed_mRNA\n};
         }

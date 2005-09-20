@@ -414,6 +414,9 @@ sub express_data_fetch {
             # Is there a Method attached?
             if (my $meth_tag = $t_seq->at('Method[1]')) {
                 my $meth_name = $meth_tag->name;
+                # We treat "GD:", "MPI:" etc... prefixed methods
+                # the same as the non-prefixed methods.
+                $meth_name =~ s/^[A-Z_]+://;
                 my $meth = $name_method{$meth_name};
                 unless ($meth) {
                     $ace->raw_query("find Method $meth_name");

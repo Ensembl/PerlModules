@@ -109,7 +109,7 @@ sub flush_Methods {
 sub process_for_otterlace {
     my( $self ) = @_;
     
-    $self->create_trunc_gene_Methods;
+    $self->create_full_gene_Methods;
     $self->cluster_Methods_with_same_column_name;
     $self->order_by_zone;
     $self->assign_right_priorities;
@@ -203,28 +203,61 @@ sub assign_right_priorities {
     }
 }
 
-sub create_trunc_gene_Methods {
+sub create_full_gene_Methods {
     my( $self ) = @_;
     
     my $meth_list = $self->get_all_Methods;
     $self->flush_Methods;
+    
+    # Take the skeleton prefix methods out of the list
+    my @prefix_methods;
+    for (my $i = 0; $i < @$meth_list;) {
+        my $meth = $meth_list->[$i];
+        if ($meth->name =~ /^[A-Z_]+:$/) {
+            splice(@$meth_list, $i, 1);
+            push(@prefix_methods, $meth);
+        } else {
+            $i++;
+        }
+    }
+    
+    my @transcript_methods;
     foreach my $method (@$meth_list) {
-        my $name = $method->name;
-        
-        # Skip existing _trunc methods - we are making new ones
-        next if $name =~ /_trunc$/;
+        # Skip existing _trunc methods - we will make new ones
+        next if $method->name =~ /_trunc$/;
         
         $self->add_Method($method);
         if (my $type = $method->transcript_type) {
-            my $new = $method->clone;
-            my $new_name = $name . '_trunc';
-            $new->name($new_name);
-            $new->mutable(0);
-            $new->color('GRAY');
-            $new->cds_color('BLACK') if $type eq 'coding';
-            $self->add_Method($new);
+            push(@transcript_methods, $method);
+            $self->add_Method($self->make_trunc_Method($method));
         }
     }
+
+    # Make copies of all the transcript methods for each prefix
+    foreach my $prefix (@prefix_methods) {
+        foreach my $method (@transcript_methods) {
+            my $new = $method->clone;
+            $new->mutable(0);
+            $new->name($prefix->name . $method->name);
+            $new->color($prefix->color);
+            if ($method->cds_color) {
+                $new->cds_color($prefix->cds_color);
+            }
+            $self->add_Method($new);
+            $self->add_Method($self->make_trunc_Method($new));
+        }
+    }
+}
+
+sub make_trunc_Method {
+    my( $self, $method ) = @_;
+    
+    my $new = $method->clone;
+    $new->name($method->name . '_trunc');
+    $new->mutable(0);
+    $new->color('GRAY');
+    $new->cds_color('BLACK') if $method->cds_color;
+    return $new;
 }
 
 1;
