@@ -469,6 +469,12 @@ sub clone_evidence_hash {
     return $new_hash
 }
 
+sub empty_evidence_hash {
+    my( $self ) = @_;
+    
+    $self->{'_evidence_hash'} = {};
+}
+
 sub clone_Sequence {
     my( $self, $seq ) = @_;
     

@@ -221,21 +221,21 @@ sub create_full_gene_Methods {
         }
     }
     
-    my @transcript_methods;
+    my @mutable_methods;
     foreach my $method (@$meth_list) {
         # Skip existing _trunc methods - we will make new ones
         next if $method->name =~ /_trunc$/;
         
         $self->add_Method($method);
-        if (my $type = $method->transcript_type) {
-            push(@transcript_methods, $method);
+        if (my $type = $method->mutable) {
+            push(@mutable_methods, $method);
             $self->add_Method($self->make_trunc_Method($method));
         }
     }
 
-    # Make copies of all the transcript methods for each prefix
+    # Make copies of all the editable transcript methods for each prefix
     foreach my $prefix (@prefix_methods) {
-        foreach my $method (@transcript_methods) {
+        foreach my $method (@mutable_methods) {
             my $new = $method->clone;
             $new->mutable(0);
             $new->name($prefix->name . $method->name);
