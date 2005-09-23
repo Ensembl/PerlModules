@@ -41,6 +41,7 @@ sub new_from_AceText {
     $self->gapped(1)                if $txt->count_tag('Gapped');
     $self->right_priority_fixed(1)  if $txt->count_tag('Right_priority_fixed');
     $self->no_display(1)            if $txt->count_tag('No_display');
+    $self->built_in(1)              if $txt->count_tag('Built_in');
 
     # Tags used by otterlace
     $self->mutable(1)           if $txt->count_tag('Mutable');
@@ -155,6 +156,7 @@ sub ace_string {
         Gapped
         No_display
         Right_priority_fixed
+        Built_in
 
         Mutable
         Has_parent
@@ -244,7 +246,7 @@ sub zone_number {
     if (defined $zone_number) {
         $self->{'_zone_number'} = $zone_number;
     }
-    return $self->{'_zone_number'} || 1;
+    return $self->{'_zone_number'} || 0;
 }
 
 sub right_priority {
@@ -253,7 +255,7 @@ sub right_priority {
     if (defined $right_priority) {
         $self->{'_right_priority'} = sprintf "%.3f", $right_priority;
     }
-    return $self->{'_right_priority'};
+    return $self->{'_right_priority'} || 0;
 }
 
 sub max_mag {
@@ -458,6 +460,15 @@ sub right_priority_fixed {
         $self->{'_right_priority_fixed'} = $flag ? 1 : 0;
     }
     return $self->{'_right_priority_fixed'} || 0;
+}
+
+sub built_in {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_built_in'} = $flag ? 1 : 0;
+    }
+    return $self->{'_built_in'} || 0;
 }
 
 

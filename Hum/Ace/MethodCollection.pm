@@ -125,6 +125,14 @@ sub order_by_zone {
     @$lst = sort {$a->zone_number <=> $b->zone_number} @$lst;
 }
 
+sub order_by_right_priority {
+    my( $self ) = @_;
+    
+    my $lst = $self->get_all_Methods;
+    @$lst = sort {$a->right_priority <=> $b->right_priority} @$lst;
+}
+
+
 sub cluster_Methods_with_same_column_name {
     my( $self ) = @_;
     
