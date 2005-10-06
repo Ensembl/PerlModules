@@ -103,14 +103,22 @@ sub make_stats {
     my $test_count = $self->test_count;
     my $gene_i = 0;
     my $gene_count = 0;
-    foreach my $gene (@{$slice->get_all_Genes_by_type($type)}) {
-        
+    
+    my $gene_aptr = $slice->adaptor->db->get_GeneAdaptor;
+    # list_current_dbIDs_for_Slice_by_type is otter API only:
+    my $id_list = $gene_aptr->list_current_dbIDs_for_Slice_by_type($slice, $type);
+    my $i = 0;
+    foreach my $id (@$id_list) {
+        my $gene = $gene_aptr->fetch_by_dbID($id);
+        $gene->transform($slice);
+
         unless ($gene->type eq $type) {
             confess sprintf "Gene '%s' does not have type '%s' but '%s'",
                 $gene->stable_id, $type, $gene->type;
         }
+        my $name;
         if ($gene->can('gene_info')) {
-            my $name = $gene->gene_info->name->name;
+            $name = $gene->gene_info->name->name;
             if ($name =~ /^[A-Z]+:/) {
                 warn "Skipping gene '$name'\n";
                 next;
@@ -120,7 +128,13 @@ sub make_stats {
         $gene_count++;
         
         # Stats from the gene
-        push @$gene_lengths, $gene->length;
+        eval { push @$gene_lengths, $gene->length; };
+        
+        if ($@) {
+            warn "Error with gene '$name': $@";
+            next;
+        }
+        
         $self->save_longest_gene($gene);
         $self->save_shortest_gene($gene);
         $self->save_most_transcripts($gene);
