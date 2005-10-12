@@ -423,6 +423,12 @@ sub list_remarks {
     }
 }
 
+sub empty_remarks {
+    my( $self ) = @_;
+    
+    $self->{'_remark_list'} = undef;
+}
+
 sub set_annotation_remarks {
     my( $self, @annotation_remarks ) = @_;
     
@@ -437,6 +443,12 @@ sub list_annotation_remarks {
     } else {
         return;
     }
+}
+
+sub empty_annotation_remarks {
+    my( $self ) = @_;
+    
+    $self->{'_annotation_remark_list'} = undef;
 }
 
 sub add_evidence_list {
