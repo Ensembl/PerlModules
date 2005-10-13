@@ -221,8 +221,7 @@ sub process_ace_start_end_transcript_seq {
         my $tag = "${type}_match";
         my $list = [];
         foreach my $evidence ($t_seq->at('Annotation.Sequence_matches.' . $tag . '[1]')) {
-           my $id = $evidence->name;
-            $id =~ s/^[a-zA-Z]{2}://;
+            my $id = $evidence->name;
             #print STDERR qq{Got Evidence: $type "$id"\n};
             push(@$list, $id) if $id;
         }

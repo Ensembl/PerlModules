@@ -96,7 +96,7 @@ sub fork_dotter {
 
             # Run dotter
             my $offset = $start - 1;
-            my $dotter_command = "dotter -q $offset $query_file $subject_file ; rm $query_file $subject_file";
+            my $dotter_command = "dotter -q $offset $query_file $subject_file ; rm $query_file $subject_file ; echo 'Dotter finished'";
             warn "RUNNING: $dotter_command\n";
             exec($dotter_command) or warn "Failed to exec '$dotter_command' : $!";
         };
