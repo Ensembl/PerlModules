@@ -58,8 +58,9 @@ $ENV{LOGDIR} = $ENV{HOME};
 $ENV{PERL5LIB} = join ':', @libs;
 
 my $staden_home = '/usr/local/badger/staden';
-$ENV{'STADENROOT'} = $staden_home;
-$ENV{'TAGDB'}     = "$staden_home/tables/TAGDB";
+$ENV{'STADENROOT'} =  $staden_home;
+$ENV{'STADTABL'}   = "$staden_home/tables";
+$ENV{'TAGDB'}      = "$staden_home/tables/TAGDB";
 
 # For Staden programs
 {
