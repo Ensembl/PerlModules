@@ -84,8 +84,8 @@ sub show_sequence {
 sub save {
     my( $self ) = @_;
     
-    #$self->send_command('save -regain');
-    $self->send_command('save');
+    $self->send_command('save -regain');
+    #$self->send_command('save');
 }
 
 sub load_ace {
