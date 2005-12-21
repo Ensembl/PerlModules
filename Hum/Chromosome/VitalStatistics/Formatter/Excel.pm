@@ -127,16 +127,17 @@ sub write_gene_exon_intron_counts {
 
     # Exons
     my $exon_lengths = $stats->exon_lengths;
-    my $exon_count   = scalar @$exon_lengths;
-    my $total_exon_length = 0;
-    for (my $i = 0; $i < @$exon_lengths; $i++) {
-        $total_exon_length += $exon_lengths->[$i];
+    if (my $exon_count   = scalar @$exon_lengths) {
+        my $total_exon_length = 0;
+        for (my $i = 0; $i < @$exon_lengths; $i++) {
+            $total_exon_length += $exon_lengths->[$i];
+        }
+        $sheet->write_string(++$row, $col, 'Exons', $right);
+        $sheet->write_number($row, $col+1, $exon_count, $thousands);
+        $sheet->write_number($row, $col+2, $total_exon_length, $thousands);
+        $sheet->write_number($row, $col+3, $total_exon_length / $exon_count, $thousands);
+        $sheet->write_number($row, $col+4, $stats->median($exon_lengths), $thousands);
     }
-    $sheet->write_string(++$row, $col, 'Exons', $right);
-    $sheet->write_number($row, $col+1, $exon_count, $thousands);
-    $sheet->write_number($row, $col+2, $total_exon_length, $thousands);
-    $sheet->write_number($row, $col+3, $total_exon_length / $exon_count, $thousands);
-    $sheet->write_number($row, $col+4, $stats->median($exon_lengths), $thousands);
 
     # Introns
     $row++;

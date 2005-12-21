@@ -115,17 +115,18 @@ sub html_table_gene_exon_intron_counts {
 
     # Exons
     my $exon_lengths = $stats->exon_lengths;
-    my $exon_count   = scalar @$exon_lengths;
-    my $total_exon_length = 0;
-    for (my $i = 0; $i < @$exon_lengths; $i++) {
-        $total_exon_length += $exon_lengths->[$i];
+    if (my $exon_count   = scalar @$exon_lengths) {
+        my $total_exon_length = 0;
+        for (my $i = 0; $i < @$exon_lengths; $i++) {
+            $total_exon_length += $exon_lengths->[$i];
+        }
+        $html .= sprintf $row_pattern,
+            'Exons',
+            $exon_count,
+            $total_exon_length,
+            $total_exon_length / $exon_count,
+            $stats->median($exon_lengths);
     }
-    $html .= sprintf $row_pattern,
-        'Exons',
-        $exon_count,
-        $total_exon_length,
-        $total_exon_length / $exon_count,
-        $stats->median($exon_lengths);
 
     # Introns
     my $intron_lengths = $stats->intron_lengths;
