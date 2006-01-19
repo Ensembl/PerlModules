@@ -122,14 +122,7 @@ sub order_by_zone {
     
     # Multiple methods with the same zone_number will
     # be left in their original order by sort.
-    ##
-    ## HOWEVER, in order to make '3 Frame Translation' work
-    ## the two columns, '3 Frame Translation' and 'Down Gene Translation'
-    ## must appear in the given order.
-    @$lst = sort {
-            ($a->keep_priority_order <=> $b->keep_priority_order)
-            || ($a->zone_number <=> $b->zone_number)
-        } @$lst;
+    @$lst = sort { $a->zone_number <=> $b->zone_number } @$lst;
 }
 
 sub order_by_right_priority {

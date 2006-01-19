@@ -115,6 +115,16 @@ sub compose {
     }
 }
 
+# Allows some line types to override this
+# so that we can ignore data such as the
+# RL submission date when comparing EMBL
+# entries.
+sub string_for_checksum {
+    my $line = shift;
+    
+    return join '', $line->compose;
+}
+
 # Sets the string and empties the data hash
 # if called with arguments.
 # Returns the stored string
@@ -566,7 +576,7 @@ sub parse {
     $line->title( $title );
     
     # Locations are actually quite complex, and may refer
-    # to papers, books, patents, or the addresses of the 
+    # to papers, books, patents, or the addresses of the
     # authors.  I decided to just store them verbatim,
     # until it is deemed necessary to do something more
     # sophisticated.
@@ -609,6 +619,24 @@ sub _compose {
     }
     
     return @compose;
+}
+
+sub string_for_checksum {
+    my( $line ) = @_;
+    
+    my @compose = $line->_compose;
+    for (my $i = 0; $i < @compose;) {
+        my $str = $compose[$i];
+        # Don't return the Submitted date line
+        # for inclusion in the checksum.
+        if ($str =~ /^RL    Submitted /) {
+            splice(@compose, $i, 1);
+        } else {
+            $i++;
+        }
+    }
+    
+    return join('', @compose);
 }
 
 ###############################################################################

@@ -59,10 +59,10 @@ __END__
     use Hum::Sort 'ace_sort';
     
     # Sorting strings
-    @sorted = { ace_sort($a, $b) } @un_sorted;
+    @sorted = sort { ace_sort($a, $b) } @un_sorted;
     
     # Sorting objects
-    @sorted_obj = { ace_sort($a->name, $b->name) } @objects;
+    @sorted_obj = sort { ace_sort($a->name, $b->name) } @objects;
 
 =head2 ace_sort
 

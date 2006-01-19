@@ -3,11 +3,13 @@ package Hum::EMBL;
 
 use strict;
 use Carp qw{ cluck confess };
+use Digest::MD5;
+use Symbol 'gensym';
+
 use Hum::EMBL::Line;    # Contains most of the line handling packages
 use Hum::EMBL::Handle;
 use Hum::Sequence::DNA;
 use Hum::Sequence::Peptide;
-use Symbol 'gensym';
 
 BEGIN {
 
@@ -237,6 +239,18 @@ sub lines {
     } else {
         return @{$embl->{'_lines'}};
     }
+}
+
+sub md5_checksum {
+    my( $embl ) = @_;
+    
+    my $md5 = Digest::MD5->new;
+    foreach my $line ($embl->lines) {
+        # Each Line type can decide what it puts
+        # in the string for the checksum.
+        $md5->data($line->string_for_checksum);
+    }
+    return $md5->b64digest;
 }
 
 sub addLine {

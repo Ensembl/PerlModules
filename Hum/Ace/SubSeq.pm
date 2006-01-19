@@ -1262,6 +1262,15 @@ __END__
 
 =head1 NAME - Hum::Ace::SubSeq
 
+=head1 DESCRIPTION
+
+This object is used extensively in the otter
+system and represents a SubSequence object
+(Transcrpt) in an acedb database.
+
+It has methods for converting to and from ace
+format strings/ acedb databases.
+
 =head1 AUTHOR
 
 James Gilbert B<email> jgrg@sanger.ac.uk

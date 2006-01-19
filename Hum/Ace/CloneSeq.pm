@@ -416,7 +416,7 @@ sub express_data_fetch {
                 my $meth_name = $meth_tag->name;
                 # We treat "GD:", "MPI:" etc... prefixed methods
                 # the same as the non-prefixed methods.
-                $meth_name =~ s/^[A-Z_]+://;
+                $meth_name =~ s/^[^:]+://;
                 my $meth = $name_method{$meth_name};
                 unless ($meth) {
                     $ace->raw_query("find Method $meth_name");

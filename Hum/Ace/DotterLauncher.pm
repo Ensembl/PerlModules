@@ -77,6 +77,11 @@ sub fork_dotter {
         eval{
             my $query_seq = $seq->sub_sequence($start, $end);
             $query_seq->name($seq->name);
+            
+            # Gaps between clones are emitted as dashes by acedb but dotter
+            # splcies them out, which affects the coordinates, so we must
+            # change them to "n"s.
+            $self->change_dashes_to_n($query_seq);
 
             # Write the subject with pfetch
             my ($subject_seq) = Hum::Pfetch::get_Sequences($subject_name);
@@ -102,8 +107,9 @@ sub fork_dotter {
         };
         if ($@) {
             warn $@;
-            # Execing rm here ensures that the perl
-            # DESTROY methods in the child aren't called
+            # Exec'ing rm here, which replaces the perl process
+            # with rm, ensures that the perl DESTROY methods
+            # don't get called by this child.
             exec("rm -f $query_file $subject_file");
         }
         exit(0);
@@ -111,6 +117,14 @@ sub fork_dotter {
     else {
         confess "Can't fork: $!";
     }
+}
+
+sub change_dashes_to_n {
+    my( $self, $seq ) = @_;
+    
+    my $str = $seq->sequence_string;
+    $str =~ tr/-/n/;
+    $seq->sequence_string($str);
 }
 
 1;

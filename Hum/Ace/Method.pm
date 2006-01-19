@@ -7,16 +7,6 @@ use strict;
 use Carp;
 use Hum::Ace::Colors;
 
-# FMap won't show 3 translations unless certain columns are in correct order:
-sub keep_priority_order {
-    my $self = shift @_;
-
-    my $name = $self->name();
-    if(($name eq '3 Frame Translation') or($name eq 'Down Gene Translation')) {
-        return $self->right_priority();
-    }
-    return 0;
-}
 
 sub new {
     my( $pkg ) = @_;
