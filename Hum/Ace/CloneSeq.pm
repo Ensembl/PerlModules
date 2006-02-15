@@ -186,6 +186,8 @@ sub make_Otter_Clone {
     return $clone;
 }
 
+# lg4, 10.Feb'2006:  is this an unused method?
+#
 # Create simple features to represent polyA signals and sites
 sub make_EnsEMBL_PolyA_Features {
     my ($self) = @_; 
@@ -196,7 +198,8 @@ sub make_EnsEMBL_PolyA_Features {
 
     my @ens_polyAs;
     my %anahash;
-    foreach my $polyA ($self->get_all_PolyAs) {
+    # foreach my $polyA ($self->get_all_PolyAs()) {
+    foreach my $polyA ($self->get_SimpleFeatures('polyA')) {
       if (scalar(@$polyA) == 5) {
         my $start = $polyA->[1];
         my $end   = $polyA->[2];
@@ -364,9 +367,10 @@ sub express_data_fetch {
     my $polyA_list = $ace->raw_query('show -a Feature');
     my $polyAtxt = Hum::Ace::AceText->new($polyA_list);
     foreach my $polyA ($polyAtxt->get_values('Feature')) {
-      if ($polyA->[0] =~ /^polyA/) {
-        $self->add_PolyA($polyA);
-      }
+      # if ($polyA->[0] =~ /^polyA/) {
+      #  $self->add_PolyA($polyA);
+      # }
+      $self->add_SimpleFeature($polyA);
     } 
 
     # Store clone spans.  These are used to show the annotator
@@ -522,18 +526,34 @@ sub get_all_Remarks {
     }
 }
 
-sub add_PolyA {
-    my($self,$polyAref)=@_;
-    push(@{$self->{'_PolyAs'}},$polyAref);
+sub add_SimpleFeature {
+    my ($self, $simple) = @_;
+    push @{$self->{_SimpleFeatures}}, $simple;
 }
-sub get_all_PolyAs {
-    my($self)=@_;
-    if($self->{'_PolyAs'}){
-        return @{$self->{'_PolyAs'}};
-    }else{
-        return ();
+
+sub get_SimpleFeatures {
+    my ($self, $type) = @_;
+
+    if($type) {
+        return grep { $_->[0]=~/$type/; } @{$self->{_SimpleFeatures}};
+    } else {
+        return @{$self->{_SimpleFeatures}};
     }
 }
+
+# sub add_PolyA {
+#    my($self,$polyAref)=@_;
+#    push(@{$self->{'_PolyAs'}},$polyAref);
+# }
+
+# sub get_all_PolyAs {
+#    my($self)=@_;
+#    if($self->{'_PolyAs'}){
+#        return @{$self->{'_PolyAs'}};
+#    }else{
+#        return ();
+#    }
+# }
 
 sub add_clone_span {
     my( $self, $name, $start, $end ) = @_;

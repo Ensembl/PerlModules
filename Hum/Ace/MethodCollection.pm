@@ -195,9 +195,9 @@ sub assign_right_priorities {
             if ($pri >= 5 and $pos < 5) {
                 $pos = 5;
             }
-            # Keep values greater than 4 greater than 4
+            # Keep values greater than 4 greater than what was set
             elsif ($pri >= 4 and $pos < 4) {
-                $pos = 4;
+                $pos = $pri;
             }
             else {
                 $pos += $incr;
