@@ -166,7 +166,7 @@ sub cluster_Methods_with_same_column_name {
 sub assign_right_priorities {
     my( $self ) = @_;
     
-    my $incr = 0.020000;
+    my $incr = 0.001;
     
     # The "oligo zone" is a region of the fMap where weird things
     # happen due to the special oligo drawing code.
