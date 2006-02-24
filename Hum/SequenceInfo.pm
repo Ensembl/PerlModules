@@ -54,7 +54,6 @@ sub _embl_sequence_get {
     my ($embl) = get_EMBL_entries($acc);
     return unless $embl;
 
-    my $seq = $embl->hum_sequence;
     my $sv  = $embl->SV->version;
     
     my( $self );
@@ -81,8 +80,7 @@ sub _embl_sequence_get {
     }
     $self->htgs_phase($htgs_phase);
 
-    $seq->name("$acc.$sv");
-    $self->Sequence($seq);
+    $self->Sequence($embl->hum_sequence);
     return $self;
 }
 

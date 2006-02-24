@@ -317,14 +317,16 @@ sub hum_sequence {
     
     my $seq = Hum::Sequence::DNA->new;
     my $acc = $embl->AC->primary;
+    my $name = $acc;
     my( @desc_list );
     if (my ($sv_line) = $embl->SV) {
-        push(@desc_list, "$acc." . $sv_line->version);
+        $name = "$acc." . $sv_line->version;
+        push(@desc_list, $acc);
     }
     push(@desc_list, $embl->DE->list);
     my $desc = join('  ', @desc_list);
     $seq->sequence_string( $embl->Sequence->seq );
-    $seq->name           ( $acc );
+    $seq->name           ( $name );
     $seq->description($desc);
     return $seq;
 }
