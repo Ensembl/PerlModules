@@ -20,7 +20,8 @@ sub wwwfetch {
     warn "get=$get\n";
 
     my $ua = LWP::UserAgent->new;
-    $ua->proxy(http  => 'http://webcache.sanger.ac.uk');
+    $ua->env_proxy;
+    #$ua->proxy(http  => 'http://webcache.sanger.ac.uk:3128');
     my $req = HTTP::Request->new(GET => $get);        
     my $embl =  $ua->request($req)->content;
 
