@@ -364,14 +364,10 @@ sub express_data_fetch {
       }
     }
 
-    my $polyA_list = $ace->raw_query('show -a Feature');
-    my $polyAtxt = Hum::Ace::AceText->new($polyA_list);
-    foreach my $polyA ($polyAtxt->get_values('Feature')) {
-      # if ($polyA->[0] =~ /^polyA/) {
-      #  $self->add_PolyA($polyA);
-      # }
-      $self->add_SimpleFeature($polyA);
-    } 
+    my $feature_list = $ace->raw_query('show -a Feature');
+    print STDERR "<FEATURE_LIST>$feature_list\n</FEATURE_LIST>\n\n";
+    my $feature_txt = Hum::Ace::AceText->new($feature_list);
+    $self->set_SimpleFeatures( $feature_txt->get_values('Feature') );
 
     # Store clone spans.  These are used to show the annotator
     # the borders between clones in the fMap display, and to
@@ -526,9 +522,23 @@ sub get_all_Remarks {
     }
 }
 
-sub add_SimpleFeature {
-    my ($self, $simple) = @_;
-    push @{$self->{_SimpleFeatures}}, $simple;
+sub clear_SimpleFeatures {
+    my ($self) = @_;
+
+    $self->{_SimpleFeatures} = [];
+}
+
+sub add_SimpleFeatures {
+    my $self = shift @_;
+
+    push @{$self->{_SimpleFeatures}}, @_;
+}
+
+sub set_SimpleFeatures {
+    my $self = shift @_;
+
+    $self->clear_SimpleFeatures();
+    $self->add_SimpleFeatures( @_ );
 }
 
 sub get_SimpleFeatures {
