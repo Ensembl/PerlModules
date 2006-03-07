@@ -365,7 +365,6 @@ sub express_data_fetch {
     }
 
     my $feature_list = $ace->raw_query('show -a Feature');
-    print STDERR "<FEATURE_LIST>$feature_list\n</FEATURE_LIST>\n\n";
     my $feature_txt = Hum::Ace::AceText->new($feature_list);
     $self->set_SimpleFeatures( $feature_txt->get_values('Feature') );
 
