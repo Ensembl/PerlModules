@@ -676,6 +676,7 @@ sub get_all_CDS_Exons {
         my $cds = Hum::Ace::Exon->new;
         $cds->start($start);
         $cds->end($end);
+        $cds->otter_id($exon->otter_id);
         push(@cds_exons, $cds);
     }
     
