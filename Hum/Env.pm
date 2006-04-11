@@ -37,15 +37,19 @@ my (@libs, @path);
 
 # Set up @INC
 BEGIN {
-    @libs = qw(
-        /nfs/disk100/humpub/otter_production_main/ensembl-otter/modules
-        /nfs/disk100/humpub/otter_production_main/ensembl/modules
-        /nfs/disk100/humpub/otter_production_main/bioperl-1.2.3-patched
-        /nfs/disk100/humpub/otter_production_main/bioperl-0.7.2
-        /nfs/disk100/humpub/otter_production_main/PerlModules
+        # taken out:
+        #
         # /nfs/disk100/humpub/modules/ensembl/modules
         # /nfs/disk100/humpub/modules/bioperl
         # /nfs/disk100/humpub/modules/PerlModules
+    @libs = qw(
+        /nfs/disk100/humpub/otter_production_main/ensembl-otter/modules
+        /nfs/disk100/humpub/otter_production_main/ensembl/modules
+        /nfs/disk100/humpub/otter_production_main/ensembl-pipeline/modules
+        /nfs/disk100/humpub/otter_production_main/bioperl-1.2.3-patched
+        /nfs/disk100/humpub/otter_production_main/bioperl-0.7.2
+        /nfs/disk100/humpub/otter_production_main/PerlModules
+        /nfs/disk100/humpub/otter_production_main/ensembl-ace
         /nfs/disk100/humpub/scripts/tk
         /nfs/disk100/humpub/modules
         /usr/local/badger/bin
