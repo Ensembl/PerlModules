@@ -192,8 +192,8 @@ sub assign_right_priorities {
         }
         elsif (my $pri = $method->right_priority) {
             # Keep values greater than 5 greater than 5
-            if ($pri >= 5 and $pos < 5) {
-                $pos = 5;
+            if ($pri >= 6 and $pos < 6) {
+                $pos = 6;
             }
             # Keep values greater than 4 greater than what was set
             elsif ($pri >= 4 and $pos < 4) {
