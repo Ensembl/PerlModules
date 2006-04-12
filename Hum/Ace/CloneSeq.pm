@@ -186,59 +186,6 @@ sub make_Otter_Clone {
     return $clone;
 }
 
-# lg4, 10.Feb'2006:  is this an unused method?
-#
-# Create simple features to represent polyA signals and sites
-sub make_EnsEMBL_PolyA_Features {
-    my ($self) = @_; 
-
-    my $ana_adaptor = $self->EnsEMBL_Contig->adaptor->db->get_AnalysisAdaptor;
-
-    confess "No analysis adaptor for PolyA conversion" unless $ana_adaptor;
-
-    my @ens_polyAs;
-    my %anahash;
-    # foreach my $polyA ($self->get_all_PolyAs()) {
-    foreach my $polyA ($self->get_SimpleFeatures('polyA')) {
-      if (scalar(@$polyA) == 5) {
-        my $start = $polyA->[1];
-        my $end   = $polyA->[2];
-        my $sf;
-        if ($start > $end) {
-          $sf = new Bio::EnsEMBL::SimpleFeature(-start       => $end,
-                                                -end         => $start,
-                                                -strand      => -1,
-                                                -score       => $polyA->[3],
-                                                );
-        } else {
-          $sf = new Bio::EnsEMBL::SimpleFeature(-start       => $start,
-                                                -end         => $end,
-                                                -strand      => 1,
-                                                -score       => $polyA->[3],
-                                                );
-        }
-        my $type  = $polyA->[0];
-        my $ana = $anahash{$type};
-        unless ($ana) {
-          $ana = $ana_adaptor->fetch_by_logic_name($type);
-          unless ($ana) {
-            $ana = Bio::EnsEMBL::Analysis->new(
-                -LOGIC_NAME => $type,
-                );
-            $ana_adaptor->store($ana);
-          }
-          $anahash{$type} = $ana;
-        }
-        $sf->analysis($ana);
-        $sf->contig($self->EnsEMBL_Contig);
-        $sf->display_label($polyA->[4]);
-  
-        push @ens_polyAs, $sf;
-      }
-    }
-    return \@ens_polyAs;
-}
-
 sub EnsEMBL_Contig {
     my( $self, $ens_contig ) = @_;
     
@@ -541,28 +488,16 @@ sub set_SimpleFeatures {
 }
 
 sub get_SimpleFeatures {
-    my ($self, $type) = @_;
+    my ($self, $types) = @_;
 
-    if($type) {
-        return grep { $_->[0]=~/$type/; } @{$self->{_SimpleFeatures}};
+    if($types) {
+        my %valid_type = map { $_ => 1 } @$types;
+
+        return grep { $valid_type{ $_->[0] } } @{$self->{_SimpleFeatures}};
     } else {
         return @{$self->{_SimpleFeatures}};
     }
 }
-
-# sub add_PolyA {
-#    my($self,$polyAref)=@_;
-#    push(@{$self->{'_PolyAs'}},$polyAref);
-# }
-
-# sub get_all_PolyAs {
-#    my($self)=@_;
-#    if($self->{'_PolyAs'}){
-#        return @{$self->{'_PolyAs'}};
-#    }else{
-#        return ();
-#    }
-# }
 
 sub add_clone_span {
     my( $self, $name, $start, $end ) = @_;
