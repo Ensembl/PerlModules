@@ -168,6 +168,10 @@ sub assign_right_priorities {
     
     my $incr = 0.001;
     
+    # This is a bit bigger than the hard-coded
+    # value for right_priority of DNA in fMap: 
+    my $dna_pos = 6.3;
+    
     # The "oligo zone" is a region of the fMap where weird things
     # happen due to the special oligo drawing code.
     my @oligo_zone = (3.2, 3.9);
@@ -192,8 +196,8 @@ sub assign_right_priorities {
         }
         elsif (my $pri = $method->right_priority) {
             # Keep values greater than 5 greater than 5
-            if ($pri >= 6 and $pos < 6) {
-                $pos = 6;
+            if ($pri >= $dna_pos and $pos < $dna_pos) {
+                $pos = $dna_pos;
             }
             # Keep values greater than 4 greater than what was set
             elsif ($pri >= 4 and $pos < 4) {
@@ -273,6 +277,77 @@ sub make_trunc_Method {
 __END__
 
 =head1 NAME - Hum::Ace::MethodCollection
+
+Hard coded values in fMap:
+
+        static FeatureMapColSettingsStruct defaultMapColumns[] =
+        {
+          /* all column position 100, -90 ... should be different */
+        #define STL_STATUS_0
+          {-100.0, TRUE, "Locator", fMapShowMiniSeq},
+          {-90.0, TRUE, "Sequences & ends", fMapShowCanonical},
+
+        #ifdef STL_STATUS  /* mike holman status column */
+          {-89.0, TRUE, "Cosmids by group", fMapShowOrigin},
+        #endif
+
+          {-2.1, FALSE, "Up Gene Translation", fMapShowUpGeneTranslation},
+          {-1.9,  TRUE, "-Confirmed introns", fMapShowSoloConfirmed},
+          {-0.1,  TRUE, "Restriction map", fMapShowCptSites},
+
+        #ifdef ACEMBLY
+          /* Contig bar supersedes locator */
+          {0.0, FALSE, "Summary bar", fMapShowSummary},
+        #else
+          {0.0,  TRUE, "Summary bar", fMapShowSummary},
+        #endif
+
+          {0.1,  TRUE, "Scale", fMapShowScale},
+          {1.9,  TRUE, "Confirmed introns", fMapShowSoloConfirmed},
+          {3.0,  TRUE, "EMBL features", fMapShowEmblFeatures},
+
+        #ifdef STL_STATUS
+          {3.1,  TRUE, "Cosmid Status", fMapShowStatus},
+        #endif
+
+          {3.2, FALSE, "CDS Lines", fMapShowCDSLines},
+          {3.25, FALSE, "CDS Boxes", fMapShowCDSBoxes},
+          {3.3,  TRUE, "Alleles", fMapShowAlleles},
+          {3.4, FALSE, "cDNAs", fMapShowcDNAs},
+          {3.5, FALSE, "Gene Names", fMapShowGeneNames},
+          {3.7,  TRUE, "Assembly Tags", fMapShowAssemblyTags},
+          {3.8, TRUE, "Oligos", fMapOspShowOligo},
+          {3.82, TRUE, "Oligo_pairs", fMapOspShowOligoPairs},
+        /* isFrame starts if either of next 2 are On */
+          {4.0, FALSE, "3 Frame Translation", fMapShow3FrameTranslation},
+          {4.05, FALSE, "ORF's", fMapShowORF},
+          {4.1, TRUE, "Coding Frame", fMapShowCoding},	/* only shows if isFrame */
+          {4.2, FALSE, "ATG", fMapShowATG},
+        /* frame dependent stuff ends */
+          /* {4.98, FALSE, "Gene Translation", fMapShowGeneTranslation}, */
+          {4.99, FALSE, "Down Gene Translation", fMapShowDownGeneTranslation},
+
+        #ifdef ACEMBLY
+          {5.5,  TRUE, "Alignements", fMapShowAlignments},
+          {5.6,  TRUE, "Previous Contigs", fMapShowPreviousContigs},
+          {5.7,  TRUE, "Contigs", fMapShowContig},
+          {5.8,  TRUE, "Trace Assembly", fMapShowTraceAssembly},
+          {5.9,  TRUE, "Multiplets", fMapShowVirtualMultiplets},
+        #endif
+
+          {6.0, FALSE, "Coords", fMapShowCoords},
+          {6.1, FALSE, "DNA Sequence", fMapShowDNA},
+
+        #ifdef ACEMBLY
+          {6.2, FALSE, "Assembly DNA", fMapShowVirtualDna},
+        #endif
+
+          {6.5, FALSE, "Brief Identifications", fMapShowBriefID},
+          {7.0, TRUE, "Text Features", fMapShowText},
+          {0.0, FALSE, NULL, NULL}
+
+        } ;
+
 
 =head1 AUTHOR
 
