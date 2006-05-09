@@ -235,7 +235,6 @@ sub origin_pid {
 sub restart_server {
     my( $self ) = @_;
     
-    $self->disconnect_client;
     $self->kill_server;
     $self->start_server;
 }
@@ -269,21 +268,21 @@ sub kill_server {
             $self->_release_reserved_port;
         }
 
-        my $REAPER_REF = undef;
-        my $REAPER = sub {
-            my $child;
-            while (($child = waitpid(-1,WNOHANG)) > 0) {
-                $INFO->{$child}->{'CHILD_ERROR'} = $?;
-                $INFO->{$child}->{'ERRNO'}       = $!;
-                $INFO->{$child}->{'ERRNO_HASH'}  = \%!;
-                $INFO->{$child}->{'ENV'}         = \%ENV;
-                $INFO->{$child}->{'EXTENDED_OS_ERROR'} = $^E;
-            }
-            #$SIG{CHLD} = \&REAPER;    # THIS DOESN'T WORK
-            $SIG{CHLD} = $$REAPER_REF; # ODD BUT THIS DOES....still loathe sysV
-        };
-        $REAPER_REF = \$REAPER;
-        $SIG{CHLD}  = $REAPER;
+        #my $REAPER_REF = undef;
+        #my $REAPER = sub {
+        #    my $child;
+        #    while (($child = waitpid(-1,WNOHANG)) > 0) {
+        #        $INFO->{$child}->{'CHILD_ERROR'} = $?;
+        #        $INFO->{$child}->{'ERRNO'}       = $!;
+        #        $INFO->{$child}->{'ERRNO_HASH'}  = \%!;
+        #        $INFO->{$child}->{'ENV'}         = \%ENV;
+        #        $INFO->{$child}->{'EXTENDED_OS_ERROR'} = $^E;
+        #    }
+        #    #$SIG{CHLD} = \&REAPER;    # THIS DOESN'T WORK
+        #    $SIG{CHLD} = $$REAPER_REF; # ODD BUT THIS DOES....still loathe sysV
+        #};
+        #$REAPER_REF = \$REAPER;
+        #$SIG{CHLD}  = $REAPER;
 
         # BUILD exec_list early
         my $exe = $self->server_executable;
