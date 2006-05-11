@@ -1253,19 +1253,19 @@ sub zmap_delete_xml_string {
     my ($self) = @_;
     
     return qq{<zmap action="delete_feature">\n}
-        . qq{\t<feature_set>\n}
+        . qq{\t<featureset>\n}
         . qq{\t\t} . $self->zmap_xml_feature_tag
-        . qq{\t</feature_set>\n}
+        . qq{\t</featureset>\n}
         . qq{</zmap>\n};
 }
 
 sub zmap_create_xml_string {
     my ($self) = @_;
     
-    ### feature_set tag will require "align" and "block" attributes
+    ### featureset tag will require "align" and "block" attributes
     ### if there is more than one in the Zmap. Can probably be
     ### taken from the attached clone_Sequence.
-    my $xml = qq{<zmap action="create_feature">\n\t<feature_set>\n};
+    my $xml = qq{<zmap action="create_feature">\n\t<featureset>\n};
     
     $xml .= qq{\t\t} . $self->zmap_xml_feature_tag;
     
@@ -1291,7 +1291,7 @@ sub zmap_create_xml_string {
         $xml .= qq{\t\t\t<subfeature ontology="cds" start="$cds_start" end="$cds_end" />\n};
     }
     
-    $xml .= qq{\t\t<feature>\n\t</feature_set>\n</zmap>\n};
+    $xml .= qq{\t\t<feature>\n\t</featureset>\n</zmap>\n};
     
     return $xml;
 }
@@ -1299,7 +1299,7 @@ sub zmap_create_xml_string {
 sub zmap_xml_feature_tag {
     my ($self) = @_;
     
-    return sprintf qq{<feature name="%s" start="%d" end="%d" strand="%s" style="%s">\n},
+    return sprintf qq{<feature name="%s" start="%d" end="%d" strand="%s" style="%s" />\n},
         $self->name,
         $self->start,
         $self->end,
