@@ -1249,6 +1249,64 @@ sub ace_string {
     return $out;
 }
 
+sub zmap_delete_xml_string {
+    my ($self) = @_;
+    
+    return qq{<zmap action="delete_feature">\n}
+        . qq{\t<feature_set>\n}
+        . qq{\t\t} . $self->zmap_xml_feature_tag
+        . qq{\t</feature_set>\n}
+        . qq{</zmap>\n};
+}
+
+sub zmap_create_xml_string {
+    my ($self) = @_;
+    
+    ### feature_set tag will require "align" and "block" attributes
+    ### if there is more than one in the Zmap. Can probably be
+    ### taken from the attached clone_Sequence.
+    my $xml = qq{<zmap action="create_feature">\n\t<feature_set>\n};
+    
+    $xml .= qq{\t\t} . $self->zmap_xml_feature_tag;
+    
+    my @exons = $self->get_all_Exons
+        or confess "No exons";
+    for (my $i = 0; $i < @exons; $i++) {
+        my $ex = $exons[$i];
+        if ($i > 0) {
+            my $pex = $exons[$i - 1];
+            # get intron info
+            $xml .= sprintf(qq{\t\t\t<subfeature ontology="intron" start="%d" end="%d" />\n},
+                            $pex->end,
+                            $ex->start);
+        }
+        $xml .= sprintf(qq{\t\t\t<subfeature ontology="exon" start="%d" end="%d" />\n},
+                        $ex->start,
+                        $ex->end);
+    }
+
+    ## these are correct for zmap
+    my ($cds_start, $cds_end) = $self->cds_coords;
+    if ($cds_start and $cds_end) {
+        $xml .= qq{\t\t\t<subfeature ontology="cds" start="$cds_start" end="$cds_end" />\n};
+    }
+    
+    $xml .= qq{\t\t<feature>\n\t</feature_set>\n</zmap>\n};
+    
+    return $xml;
+}
+
+sub zmap_xml_feature_tag {
+    my ($self) = @_;
+    
+    return sprintf qq{<feature name="%s" start="%d" end="%d" strand="%s" style="%s">\n},
+        $self->name,
+        $self->start,
+        $self->end,
+        $self->strand == -1 ? '-' : '+',
+        $self->GeneMethod->name;
+}
+
 
 #sub DESTROY {
 #    my( $self ) = @_;
