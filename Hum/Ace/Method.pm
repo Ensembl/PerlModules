@@ -39,6 +39,7 @@ sub new_from_AceText {
     $self->show_text(1)             if $txt->count_tag('Show_text');
     $self->percent(1)               if $txt->count_tag('Percent');
     $self->blastn(1)                if $txt->count_tag('BlastN');
+    $self->outline(1)               if $txt->count_tag('Outline');
     $self->gapped(1)                if $txt->count_tag('Gapped');
     $self->right_priority_fixed(1)  if $txt->count_tag('Right_priority_fixed');
     $self->no_display(1)            if $txt->count_tag('No_display');
@@ -123,6 +124,7 @@ sub clone {
         percent
         blastn
         gapped
+        outline
         no_display
         right_priority_fixed
         mutable
@@ -155,6 +157,7 @@ sub ace_string {
         Percent
         BlastN
         Gapped
+        Outline
         No_display
         Right_priority_fixed
         Built_in
@@ -443,6 +446,15 @@ sub gapped {
         $self->{'_gapped'} = $flag ? 1 : 0;
     }
     return $self->{'_gapped'} || 0;
+}
+
+sub outline {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_outline'} = $flag ? 1 : 0;
+    }
+    return $self->{'_outline'} || 0;
 }
 
 sub no_display {
