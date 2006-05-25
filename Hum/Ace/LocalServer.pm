@@ -299,6 +299,9 @@ sub kill_server {
         }
         elsif (defined $pid) {
             $SIG{CHLD} = 'DEFAULT'; # Child DOESN'T need this!!
+
+            print STDERR "Starting up ".`which $exe`."\n";
+
             warn "child: Running (@exec_list)\n" if $DEBUG_THIS;
             close(STDIN)  unless $DEBUG_THIS;
             close(STDOUT) unless $DEBUG_THIS;
