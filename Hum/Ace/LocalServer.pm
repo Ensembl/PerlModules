@@ -122,7 +122,7 @@ sub timeout_string {
 
 }
 sub default_timeout_string{
-    return '0:1:0';
+    return '0:0:100:0';
 }
 
 sub additional_server_parameters {
@@ -303,10 +303,10 @@ sub kill_server {
             print STDERR "Starting up ".`which $exe`."\n";
 
             warn "child: Running (@exec_list)\n" if $DEBUG_THIS;
-            close(STDIN)  unless $DEBUG_THIS;
-            close(STDOUT) unless $DEBUG_THIS;
-            close(STDERR) unless $DEBUG_THIS;
-            { exec @exec_list; }
+            #close(STDIN)  unless $DEBUG_THIS;
+            #close(STDOUT) unless $DEBUG_THIS;
+            #close(STDERR) unless $DEBUG_THIS;
+            exec @exec_list;
             warn "child: exec (@exec_list) FAILED\n ** ERRNO $!\n ** CHILD_ERROR $?\n";
             CORE::exit( 255 );
         }

@@ -68,9 +68,9 @@ sub new_from_AceText {
     $self->overlap_mode('bumpable') if $txt->count_tag('Bumpable');
     $self->overlap_mode('cluster')  if $txt->count_tag('Cluster');
     
-    # Methods with the same column_name get the same right_priority
-    if (my ($name) = $txt->get_values('Column_name')) {
-        $self->column_name($name->[0]);
+    # Methods with the same column_group get the same right_priority
+    if (my ($name) = $txt->get_values('Column_group')) {
+        $self->column_group($name->[0]);
     }
     
     # Single float values
@@ -106,7 +106,7 @@ sub clone {
         name
         color
         cds_color
-        column_name
+        column_group
         zone_number
         right_priority
         max_mag
@@ -188,7 +188,7 @@ sub ace_string {
     
     foreach my $tag (qw{
         Zone_number
-        Column_name
+        Column_group
         Right_priority
         Max_mag
         Min_mag
@@ -235,13 +235,13 @@ sub cds_color {
     return $self->{'_cds_color'};
 }
 
-sub column_name {
-    my( $self, $column_name ) = @_;
+sub column_group {
+    my( $self, $column_group ) = @_;
     
-    if ($column_name) {
-        $self->{'_column_name'} = $column_name;
+    if ($column_group) {
+        $self->{'_column_group'} = $column_group;
     }
-    return $self->{'_column_name'} || '';
+    return $self->{'_column_group'} || '';
 }
 
 sub zone_number {

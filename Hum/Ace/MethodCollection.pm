@@ -110,7 +110,7 @@ sub process_for_otterlace {
     my( $self ) = @_;
     
     $self->create_full_gene_Methods;
-    $self->cluster_Methods_with_same_column_name;
+    $self->cluster_Methods_with_same_column_group;
     $self->order_by_zone;
     $self->assign_right_priorities;
 }
@@ -133,20 +133,20 @@ sub order_by_right_priority {
 }
 
 
-sub cluster_Methods_with_same_column_name {
+sub cluster_Methods_with_same_column_group {
     my( $self ) = @_;
     
     my @all_meth = @{$self->get_all_Methods};
     $self->flush_Methods;
     my %column_cluster = ();
     foreach my $meth (@all_meth) {
-        if (my $col = $meth->column_name) {
+        if (my $col = $meth->column_group) {
             my $cluster = $column_cluster{$col} ||= [];
             push(@$cluster, $meth);
         }
     }
     while (my $meth = shift @all_meth) {
-        if (my $col = $meth->column_name) {
+        if (my $col = $meth->column_group) {
             # Add the whole cluster where we find its first
             # member in the list.
             if (my $cluster = delete $column_cluster{$col}) {
@@ -187,7 +187,7 @@ sub assign_right_priorities {
 
         # Don't increase right_priority if we are
         # in the same column as the previous method
-        if  ($prev and $prev->column_name and $prev->column_name eq $method->column_name) {
+        if  ($prev and $prev->column_group and $prev->column_group eq $method->column_group) {
             $method->right_priority($prev->right_priority);
         }
         elsif ($pos >= $oligo_zone[0] and $pos <= $oligo_zone[1]) {
