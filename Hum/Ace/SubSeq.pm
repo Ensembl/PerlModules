@@ -1291,7 +1291,7 @@ sub zmap_create_xml_string {
         $xml .= qq{\t\t\t<subfeature ontology="cds" start="$cds_start" end="$cds_end" />\n};
     }
     
-    $xml .= qq{\t\t<feature>\n\t</featureset>\n</zmap>\n};
+    $xml .= qq{\t\t</feature>\n\t</featureset>\n</zmap>\n};
     
     return $xml;
 }
@@ -1299,7 +1299,7 @@ sub zmap_create_xml_string {
 sub zmap_xml_feature_tag {
     my ($self) = @_;
     
-    return sprintf qq{<feature name="%s" start="%d" end="%d" strand="%s" style="%s" />\n},
+    return sprintf qq{<feature name="%s" start="%d" end="%d" strand="%s" style="%s">\n},
         $self->name,
         $self->start,
         $self->end,
