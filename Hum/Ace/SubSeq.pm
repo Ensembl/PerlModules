@@ -1254,7 +1254,7 @@ sub zmap_delete_xml_string {
     
     return qq{<zmap action="delete_feature">\n}
         . qq{\t<featureset>\n}
-        . qq{\t\t} . $self->zmap_xml_feature_tag
+        . qq{\t\t} . $self->zmap_xml_feature_tag . qq{</feature>}
         . qq{\t</featureset>\n}
         . qq{</zmap>\n};
 }
