@@ -26,7 +26,12 @@ sub add_source_FT {
     $loc->strand('W');
 
     $ft->addQualifierStrings('mol_type',   'genomic DNA');
-    $ft->addQualifierStrings('organism',   $binomial)           if $binomial;
+    if ($binomial) {
+        $ft->addQualifierStrings('organism',   $binomial);
+        if ($binomial eq 'Solanum lycopersicum') {
+            $ft->addQualifierStrings('cultivar', 'Heinz 1706');
+        }
+    }
 
     # check point for $binomial ne 'Danio rerio' is now omitted
     # as it is agreed that linkage group = chromosome;
