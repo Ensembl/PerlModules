@@ -289,9 +289,9 @@ sub kill_server {
         my $tim = $self->timeout_string;
         my @param = $self->additional_server_parameters;
         
-        # Redirect STDERR from server into a log file.
+        # Redirect STDOUT and STDERR from server into a log file.
         my $log_file = "$path/server.log";
-        my $exec_list = "$exe @param $path $port $tim 2>> $log_file";
+        my $exec_list = "$exe @param $path $port $tim >> $log_file 2>&1";
 
         if (my $pid = fork) {
             $self->server_pid($pid);
