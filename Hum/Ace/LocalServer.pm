@@ -309,7 +309,7 @@ sub kill_server {
             #close(STDIN)  unless $DEBUG_THIS;
             #close(STDOUT) unless $DEBUG_THIS;
             #close(STDERR) unless $DEBUG_THIS;
-            exec @exec_list;
+            exec $exec_list;
             warn "child: exec ($exec_list) FAILED\n ** ERRNO $!\n ** CHILD_ERROR $?\n";
             CORE::exit( 255 );
         }
