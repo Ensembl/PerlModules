@@ -288,12 +288,15 @@ sub kill_server {
         my $exe = $self->server_executable;
         my $tim = $self->timeout_string;
         my @param = $self->additional_server_parameters;
-        my @exec_list = ($exe, @param, $path, $port, $tim);
+        
+        # Redirect STDERR from server into a log file.
+        my $log_file = "$path/server.log";
+        my $exec_list = "$exe @param $path $port $tim 2>> $log_file";
 
         if (my $pid = fork) {
             $self->server_pid($pid);
             $self->origin_pid($$);
-            $INFO->{$pid}->{'ARGV'} = "@exec_list";
+            $INFO->{$pid}->{'ARGV'} = $exec_list;
             $INFO->{$pid}->{'PID'}  = $pid;
             return 1;
         }
@@ -302,12 +305,12 @@ sub kill_server {
 
             print STDERR "Starting up ".`which $exe`."\n";
 
-            warn "child: Running (@exec_list)\n" if $DEBUG_THIS;
+            warn "child: Running ($exec_list)\n" if $DEBUG_THIS;
             #close(STDIN)  unless $DEBUG_THIS;
             #close(STDOUT) unless $DEBUG_THIS;
             #close(STDERR) unless $DEBUG_THIS;
             exec @exec_list;
-            warn "child: exec (@exec_list) FAILED\n ** ERRNO $!\n ** CHILD_ERROR $?\n";
+            warn "child: exec ($exec_list) FAILED\n ** ERRNO $!\n ** CHILD_ERROR $?\n";
             CORE::exit( 255 );
         }
         else {
