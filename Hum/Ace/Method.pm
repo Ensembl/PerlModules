@@ -69,8 +69,9 @@ sub new_from_AceText {
     $self->overlap_mode('cluster')  if $txt->count_tag('Cluster');
     
     # Methods with the same column_group get the same right_priority
-    if (my ($name) = $txt->get_values('Column_group')) {
-        $self->column_group($name->[0]);
+    if (my ($grp) = $txt->get_values('Column_group')) {
+        $self->column_group(       $grp->[0]);
+        $self->column_group_method($grp->[1]);
     }
     
     # Single float values
@@ -107,6 +108,7 @@ sub clone {
         color
         cds_color
         column_group
+        column_group_method
         zone_number
         right_priority
         max_mag
@@ -188,7 +190,6 @@ sub ace_string {
     
     foreach my $tag (qw{
         Zone_number
-        Column_group
         Right_priority
         Max_mag
         Min_mag
@@ -199,6 +200,10 @@ sub ace_string {
         if (my $val = $self->$tag_method()) {
             $txt->add_tag($tag, $val);
         }
+    }
+    
+    if (my $group = $self->column_group) {
+        $txt->add_tag('Column_group', $group, $self->column_group_method);
     }
     
     if (my $type = $self->blixem_type) {
@@ -242,6 +247,17 @@ sub column_group {
         $self->{'_column_group'} = $column_group;
     }
     return $self->{'_column_group'} || '';
+}
+
+sub column_group_method {
+    my( $self, $column_group_method ) = @_;
+    
+    if ($column_group_method) {
+        $self->{'_column_group_method'} = $column_group_method;
+    }
+    # The Method on the end of the column group line
+    # defaults to the name of the method.
+    return $self->{'_column_group_method'} || $self->name;
 }
 
 sub zone_number {

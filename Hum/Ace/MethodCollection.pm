@@ -225,7 +225,7 @@ sub create_full_gene_Methods {
     my @prefix_methods;
     for (my $i = 0; $i < @$meth_list;) {
         my $meth = $meth_list->[$i];
-        if ($meth->name =~ /^[A-Z_]+:$/) {
+        if ($meth->name =~ /^\w+:$/) {
             splice(@$meth_list, $i, 1);
             push(@prefix_methods, $meth);
         } else {
