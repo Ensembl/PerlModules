@@ -1,4 +1,9 @@
 
+
+# Used as a placeholder where elements aren't known in ID and AC lines.
+my $UNK_STR = 'XXX';
+
+
 =pod
 
 =head1 NAME - Hum::EMBL::Line
@@ -299,8 +304,8 @@ sub parse {
             $division,  $taxon_grp,
             $length
         )
-        = $$s =~
-          /^ID   (\S+);\s+SV\s+(\d+);\s+(linear|circular);\s+([^;]+);\s+(\S+);\s+(\S+);\s+(\d+)/
+        = map $_ eq $UNK_STR ? undef : $_
+          $$s =~ /^ID   (\S+);\s+SV\s+(\d+);\s+(linear|circular);\s+([^;]+);\s+(\S+);\s+(\S+);\s+(\d+)/
       )
     {
         $line->accession  ( $accession              );
@@ -320,12 +325,12 @@ sub parse {
 sub _compose {
     my( $line ) = @_;
     
-    my $accession = $line->accession;
-    my $version   = $line->version;
+    my $accession = $line->accession    || $UNK_STR;
+    my $version   = $line->version      || $UNK_STR;
     my $topology  = $line->is_circular ? 'circular ' : 'linear';
-    my $molecule  = $line->molecule;
-    my $division  = $line->division || 'STD';
-    my $taxon_grp = $line->taxonomy;
+    my $molecule  = $line->molecule     || $UNK_STR;
+    my $division  = $line->division     || $UNK_STR;
+    my $taxon_grp = $line->taxonomy     || $UNK_STR;
     my $length    = $line->seqlength;
     
     return "ID   $accession; SV $version; $topology; $molecule; $division; $taxon_grp; $length BP.\n";
@@ -400,14 +405,17 @@ sub parse {
         push( @ac, split /;\s*/ );
     }
     my $primary = shift( @ac );
-    $line->primary    ( $primary );
+    $line->primary    ( $primary eq $UNK_STR ? undef : $primary );
     $line->secondaries( @ac );
 }
 
 sub _compose {
     my( $line ) = @_;
     
-    my $ac = join( ' ', map "$_;", ($line->primary(), $line->secondaries()) );
+    my $primary = $line->primary;
+    my @second  = $line->secondaries;
+
+    my $ac = join( ' ', map "$_;", ($primary || $UNK_STR, @second) );
     
     return $line->wrap('AC   ', $ac);
 }
