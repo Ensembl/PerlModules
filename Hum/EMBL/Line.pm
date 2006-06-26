@@ -180,6 +180,92 @@ sub data {
 
 ###############################################################################
 
+=pod
+
+ID   CD789012; SV 4; linear; genomic DNA; HTG; MAM; 500 BP.
+       (1)     (2)     (3)      (4)       (5)  (6)   (7)
+
+Tokens:
+
+   1. Primary accession number.
+   2. 'SV' + sequence version number.
+   3. Topology: 'circular' or 'linear'.
+   4. Molecule type.
+   5. Data class (ANN, CON, PAT, EST, GSS, HTC, HTG, MGA,
+      WGS, TPA, STS, STD,
+      "normal" entries will have STD for standard).
+   6. Taxonomic division (HUM, MUS, ROD, PRO, MAM, VRT,
+      FUN, PLN, ENV, INV, SYN, UNC, VRL, PHG)."
+   7. Sequence length + 'BP.'.
+
+
+For a new submission, all tokens apart from number
+3 (topology) and 7 (length) are non-mandatory; for
+new submissions that are EST, GSS, HTC, HTG, and
+STS, correct dataclass (5) is also mandatory
+
+For the updates, mandatory tokens are 1
+(accession), 3 (topology), 7 (length) and for EST,
+GSS, HTC, HTG, and STS correct dataclass (5) is
+mandatory
+
+All tokens that are non-mandatory can be
+represented by a universal placeholder "XXX", so
+in the ID line in the new submission can look as
+follows
+
+ID   XXX; XXX; linear; XXX; XXX; XXX; 500 BP.
+
+or, for EST, GSS, HTC, HTG, and STS :
+
+ID   XXX; XXX; linear; XXX; HTG; XXX; 500 BP.
+
+For the updates, the first token must be the
+primary accession number, so the least defined ID
+line can look
+
+ID   YY010101; XXX; linear; XXX; XXX; XXX; 500 BP.
+
+(again, for EST, GSS, HTC, HTG, and STS 5th token
+must also be specified)
+
+
+Change to AC line
+----
+NOTE: you only need to read the following it you
+have to specify secondary accession numbers in the
+AC line from time to time
+
+The new ID line format affects the AC line format
+in new submissions. Currently, the AC line format
+for new submissions without and with a secondary
+accession number CT999999 is:
+
+AC   ;
+AC   ACCESSION; CT999999;
+
+Instead of the word 'ACCESSION' the new AC line
+format uses the universal placeholder 'XXX':
+
+AC   ;
+AC   XXX;
+AC   XXX; CT999999;
+
+Please note that we continue to accept 'AC   ;'
+and that it is functionally equivalent to
+'AC   XXX;'.
+
+For updates the assigned accession number should
+be given as the first token in the AC line, like:
+
+AC   YY010101;
+AC   YY010101; CT999999;
+
+Mixtures (i.e. old style ID line + new style AC
+line) will not be allowed.
+
+=cut
+
 package Hum::EMBL::Line::ID;
 
 use strict;
@@ -187,14 +273,83 @@ use Carp;
 use vars qw( @ISA );
 
 @ISA = qw( Hum::EMBL::Line );
-Hum::EMBL::Line::ID->makeFieldAccessFuncs(qw(
-                                             entryname
-                                             dataclass
-                                             is_circular
-                                             molecule
-                                             division
-                                             seqlength
-                                             ));
+Hum::EMBL::Line::ID->makeFieldAccessFuncs(
+    qw(
+      accesssion
+      version
+      is_circular
+      dataclass
+      molecule
+      division
+      taxon
+      seqlength
+      )
+);
+
+sub parse {
+    my( $line, $s ) = @_;
+    
+    # ID   CD789012; SV 4; linear; genomic DNA; HTG; MAM; 500 BP.
+    #      1         2     3       4            5    6    7
+    
+    if (
+        my (
+            $accession, $version,
+            $topology,  $moltype,
+            $division,  $taxon_grp,
+            $length
+        )
+        = $$s =~
+          /^ID   (\S+);\s+SV\s+(\d+);\s+(linear|circular);\s+([^;]+);\s+(\S+);\s+(\S+);\s+(\d+)/
+      )
+    {
+        $line->accession  ( $accession              );
+        $line->version    ( $version                );
+        $line->is_circular( $topology eq 'circular' );
+        $line->molecule   ( $moltype                );
+        $line->division   ( $division               );
+        $line->taxon      ( $taxon_grp              );
+        $line->seqlength  ( $length                 );
+    } else {
+        # It is an old format line
+        bless $line, 'Hum::EMBL::Line::ID1';
+        $line->parse($s);
+    }
+}
+
+sub _compose {
+    my( $line ) = @_;
+    
+    my $accession = $line->accession;
+    my $version   = $line->version;
+    my $topology  = $line->is_circular ? 'circular ' : 'linear';
+    my $molecule  = $line->molecule;
+    my $division  = $line->division || 'STD';
+    my $taxon_grp = $line->taxonomy;
+    my $length    = $line->seqlength;
+    
+    return "ID   $accession; SV $version; $topology; $molecule; $division; $taxon_grp; $length BP.\n";
+}
+
+###############################################################################
+
+package Hum::EMBL::Line::ID1;
+
+use strict;
+use Carp;
+use vars qw( @ISA );
+
+@ISA = qw( Hum::EMBL::Line );
+Hum::EMBL::Line::ID1->makeFieldAccessFuncs(
+    qw(
+      entryname
+      dataclass
+      is_circular
+      molecule
+      division
+      seqlength
+      )
+);
 
 sub parse {
     my( $line, $s ) = @_;
