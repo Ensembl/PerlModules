@@ -266,45 +266,31 @@ sub addLine {
 sub bio_primary_seq {
     my( $embl ) = @_;
     
-    require Bio::PrimarySeq;
-    
-    my $id_line = $embl->ID;
-    my $name =    $id_line->entryname;
-    my $type = lc $id_line->molecule;
-    my $seq  = $embl->Sequence->seq;
-    
-    my $acc = $embl->AC->primary;
-    
-    # changes from 'genomic DNA' to 'dna' for bioperl Bio::PrimarySeq
-    $type = 'dna' if $type =~ /DNA/i;
-    
-    return Bio::PrimarySeq->new(
-        -id        => $name,
-        -accession => $acc,
-        -moltype   => $type,
-        -seq       => $seq,
-    );
+    return $embl->_make_bio_seq('Bio::PrimarySeq');
 }
 
 sub bio_seq {
     my( $embl ) = @_;
     
-    require Bio::Seq;
+    return $embl->_make_bio_seq('Bio::Seq');
+}
 
+sub _make_bio_seq {
+    my ($embl, $class) = @_;
+    
+    require $class;
+    
     my $id_line = $embl->ID;
-    my $name =    $id_line->entryname;
-    my $type = lc $id_line->molecule;
-    my $seq  = $embl->Sequence->seq;
-    
-    my $acc = $embl->AC->primary;
-    
-    # changes from 'genomic DNA' to 'dna' for bioperl Bio::Seq
-    $type = 'dna' if $type =~ /DNA/i;
-    
-    return Bio::Seq->new(
+    my $acc = $id_line->accession;
+    my $sv  = $id_line->version;
+    my $seq = $embl->Sequence->seq;
+
+    my $name = $sv ? "$acc.$sv" : $acc;
+
+    return $class->new(
         -id        => $name,
         -accession => $acc,
-        -moltype   => $type,
+        -moltype   => 'dna',
         -seq       => $seq,
     );
 }
@@ -312,22 +298,19 @@ sub bio_seq {
 sub hum_sequence {
     my( $embl ) = @_;
     
-    #my $id_line = $embl->ID;
-    #my $name = $id_line->entryname;
-    
-    my $seq = Hum::Sequence::DNA->new;
-    my $acc = $embl->AC->primary;
-    my $name = $acc;
-    my( @desc_list );
-    if (my ($sv_line) = $embl->SV) {
-        $name = "$acc." . $sv_line->version;
-        push(@desc_list, $acc);
-    }
-    push(@desc_list, $embl->DE->list);
+    my $id_line = $embl->ID;
+    my $acc = $id_line->accession;
+    my $sv  = $id_line->version;
+    my $name = $sv ? "$acc.$sv" : $acc;
+
+    my @desc_list = $embl->DE->list;
     my $desc = join('  ', @desc_list);
-    $seq->sequence_string( $embl->Sequence->seq );
-    $seq->name           ( $name );
+
+    my $seq = Hum::Sequence::DNA->new;
+    $seq->name($name);
     $seq->description($desc);
+    $seq->sequence_string($embl->Sequence->seq);
+
     return $seq;
 }
 

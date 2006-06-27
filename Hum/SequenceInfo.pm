@@ -54,7 +54,7 @@ sub _embl_sequence_get {
     my ($embl) = get_EMBL_entries($acc);
     return unless $embl;
 
-    my $sv  = $embl->SV->version;
+    my $sv  = $embl->ID->version;
     
     my( $self );
     unless ($self = $pkg->fetch_by_accession_sv($acc, $sv)) {

@@ -338,6 +338,8 @@ sub _compose {
 
 ###############################################################################
 
+# This is the obsolete format of EMBL ID line.
+
 package Hum::EMBL::Line::ID1;
 
 use strict;

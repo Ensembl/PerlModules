@@ -37,7 +37,6 @@ sub make_embl {
     my $project     = $pdmp->project_name;
     my $acc         = $pdmp->accession || '';
     my @sec         = $pdmp->secondary;
-    my $embl_id     = $pdmp->embl_name || 'ENTRYNAME';
     my $species     = $pdmp->species;
     my $chr         = $pdmp->chromosome;
     my $map         = $pdmp->fish_map;
@@ -55,7 +54,7 @@ sub make_embl {
 
     # ID line
     my $id = $embl->newID;
-    $id->entryname($embl_id);
+    $id->accession($acc);
     $id->dataclass('standard');
     $id->molecule('genomic DNA');
     $id->division($division);
@@ -64,14 +63,8 @@ sub make_embl {
 
     # AC line
     my $ac = $embl->newAC;
-    if (@sec) {
-        $ac->secondaries(@sec);
-        # We need the placeholder "ACCESSION"
-        # if we don't have an accession
-        $ac->primary($acc || 'ACCESSION');
-    } else {
-        $ac->primary($acc);
-    }
+    $ac->primary($acc);
+    $ac->secondaries(@sec);
     $embl->newXX;
 
     # AC * line
