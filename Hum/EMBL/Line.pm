@@ -399,8 +399,9 @@ sub parse {
     foreach (@lines) {
         push( @ac, split /;\s*/ );
     }
-    my $primary = shift( @ac );
-    $line->primary    ( $primary eq $UNK_STR ? undef : $primary );
+    if (my $primary = shift @ac) {
+        $line->primary( $primary eq $UNK_STR ? undef : $primary );
+    }
     $line->secondaries( @ac );
 }
 
