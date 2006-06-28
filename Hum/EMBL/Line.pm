@@ -280,10 +280,9 @@ use vars qw( @ISA );
 @ISA = qw( Hum::EMBL::Line );
 Hum::EMBL::Line::ID->makeFieldAccessFuncs(
     qw(
-      accesssion
+      accession
       version
       is_circular
-      dataclass
       molecule
       division
       taxon
