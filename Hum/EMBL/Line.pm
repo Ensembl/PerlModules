@@ -356,7 +356,7 @@ sub parse {
     
     my( $entryname, $dataclass, $is_circular, $molecule, $division, $length ) =
         $$s =~ /^ID   (\S+)\s+(\S+);\s+(circular\s+)?([\w ]+);\s+(\S+);\s+(\d+)/
-        or confess( "Can't parse ID line: $$s" );
+        or confess( "Can't parse ID1 line: $$s" );
     
     $line->entryname( $entryname );
     $line->dataclass( $dataclass );
