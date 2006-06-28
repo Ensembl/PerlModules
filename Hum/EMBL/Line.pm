@@ -297,29 +297,22 @@ sub parse {
     # ID   CD789012; SV 4; linear; genomic DNA; HTG; MAM; 500 BP.
     #      1         2     3       4            5    6    7
     
-    if (
-        my (
-            $accession, $version,
-            $topology,  $moltype,
-            $division,  $taxon_grp,
-            $length
-        )
-        = map $_ eq $UNK_STR ? undef : $_
-          $$s =~ /^ID   (\S+);\s+SV\s+(\d+);\s+(linear|circular);\s+([^;]+);\s+(\S+);\s+(\S+);\s+(\d+)/
-      )
-    {
-        $line->accession  ( $accession              );
-        $line->version    ( $version                );
-        $line->is_circular( $topology eq 'circular' );
-        $line->molecule   ( $moltype                );
-        $line->division   ( $division               );
-        $line->taxon      ( $taxon_grp              );
-        $line->seqlength  ( $length                 );
-    } else {
-        # It is an old format line
-        bless $line, 'Hum::EMBL::Line::ID1';
-        $line->parse($s);
-    }
+    my (
+        $accession, $version,
+        $topology,  $moltype,
+        $division,  $taxon_grp,
+        $length
+    )
+    = map { $_ eq $UNK_STR ? undef : $_ }
+      $$s =~ /^ID   (\S+);\s+SV\s+(\d+);\s+(linear|circular);\s+([^;]+);\s+(\S+);\s+(\S+);\s+(\d+)/;
+
+    $line->accession  ( $accession              );
+    $line->version    ( $version                );
+    $line->is_circular( $topology eq 'circular' );
+    $line->molecule   ( $moltype                );
+    $line->division   ( $division               );
+    $line->taxon      ( $taxon_grp              );
+    $line->seqlength  ( $length                 );
 }
 
 sub _compose {
