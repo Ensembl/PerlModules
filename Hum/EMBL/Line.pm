@@ -284,8 +284,8 @@ Hum::EMBL::Line::ID->makeFieldAccessFuncs(
       version
       is_circular
       molecule
+      dataclass
       division
-      taxon
       seqlength
       )
 );
@@ -299,18 +299,19 @@ sub parse {
     my (
         $accession, $version,
         $topology,  $moltype,
-        $division,  $taxon_grp,
+        $dataclass, $division,
         $length
     )
     = map { $_ eq $UNK_STR ? undef : $_ }
-      $$s =~ /^ID   (\S+);\s+SV\s+(\d+);\s+(linear|circular);\s+([^;]+);\s+(\S+);\s+(\S+);\s+(\d+)/;
+      $$s =~ /^ID   (\S+);\s+SV\s+(\d+);\s+(linear|circular);\s+([^;]+);\s+(\S+);\s+(\S+);\s+(\d+)/
+        or confess "Can't parse ID line: $$s";
 
     $line->accession  ( $accession              );
     $line->version    ( $version                );
     $line->is_circular( $topology eq 'circular' );
     $line->molecule   ( $moltype                );
+    $line->dataclass  ( $dataclass              );
     $line->division   ( $division               );
-    $line->taxon      ( $taxon_grp              );
     $line->seqlength  ( $length                 );
 }
 
@@ -321,11 +322,11 @@ sub _compose {
     my $version   = $line->version      || $UNK_STR;
     my $topology  = $line->is_circular ? 'circular ' : 'linear';
     my $molecule  = $line->molecule     || $UNK_STR;
+    my $dataclass = $line->dataclass    || $UNK_STR;
     my $division  = $line->division     || $UNK_STR;
-    my $taxon_grp = $line->taxonomy     || $UNK_STR;
     my $length    = $line->seqlength;
     
-    return "ID   $accession; SV $version; $topology; $molecule; $division; $taxon_grp; $length BP.\n";
+    return "ID   $accession; SV $version; $topology; $molecule; $dataclass; $division; $length BP.\n";
 }
 
 ###############################################################################
