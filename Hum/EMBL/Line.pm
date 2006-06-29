@@ -303,7 +303,7 @@ sub parse {
         $length
     )
     = map { $_ eq $UNK_STR ? undef : $_ }
-      $$s =~ /^ID   (\S+);\s+SV\s+(\d+);\s+(linear|circular);\s+([^;]+);\s+(\S+);\s+(\S+);\s+(\d+)/
+      $$s =~ /^ID   (\S+);\s+SV\s+(\S+);\s+(linear|circular);\s+([^;]+);\s+(\S+);\s+(\S+);\s+(\d+)/
         or confess "Can't parse ID line: $$s";
 
     $line->accession  ( $accession              );
