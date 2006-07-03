@@ -42,6 +42,7 @@ sub make_embl {
     my $map         = $pdmp->fish_map;
     my $ext_clone   = $pdmp->external_clone_name;
     my $binomial    = $pdmp->species_binomial;
+    my $dataclass   = $pdmp->EMBL_dataclass;
     my $division    = $pdmp->EMBL_division;
 
     # Get the DNA, base quality string,
@@ -55,8 +56,8 @@ sub make_embl {
     # ID line
     my $id = $embl->newID;
     $id->accession($acc);
-    $id->dataclass('standard');
     $id->molecule('genomic DNA');
+    $id->dataclass($dataclass);
     $id->division($division);
     $id->seqlength($seqlength);
     $embl->newXX;
@@ -121,11 +122,22 @@ sub make_embl {
     return $embl;
 }
 
+
 sub EMBL_division {
     my( $pdmp ) = @_;
-    
-    ### I assume this is the same for other organisms
-    return 'HTG';
+
+    my $name = $pdmp->species;
+    my $species = Hum::Species->fetch_Species_by_name($name)
+        or confess "Can't fetch species '$name'";
+    return $species->division;
+}
+
+sub EMBL_dataclass {
+    my( $pdmp ) = @_;
+
+    # Unfinished entries are 'HTG'
+    # Finsihed entries are 'STD'
+    return $pdmp->htgs_phase > 2 ? 'STD' : 'HTG';
 }
 
 sub species_binomial {

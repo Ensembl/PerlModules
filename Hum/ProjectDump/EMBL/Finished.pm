@@ -32,15 +32,6 @@ use vars qw{ @ISA };
 ### These first subroutines override
 ### subroutines in Hum::ProjectDump::EMBL
 
-sub EMBL_division {
-    my( $pdmp ) = @_;
-
-    my $name = $pdmp->species;
-    my $species = Hum::Species->fetch_Species_by_name($name)
-        or confess "Can't fetch species '$name'";
-    return $species->division;
-}
-
 sub get_FT_Factory {
     my( $pdmp ) = @_;
 
