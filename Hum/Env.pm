@@ -104,9 +104,11 @@ $ENV{'TAGDB'}      = "$staden_home/tables/TAGDB";
 
 if ($^O eq 'dec_osf') {
     unshift(@path, '/nfs/disk100/humpub/OSFbin');
+    unshift(@path, '/nfs/disk100/humpub/otter_production_main/bin/OSFbin');
 }
 elsif ($^O eq 'linux') {
     unshift(@path, '/nfs/disk100/humpub/LINUXbin');
+    unshift(@path, '/nfs/disk100/humpub/otter_production_main/bin/LINUXbin');
 }
 else {
     confess "Unknown operating system '$^O'";
