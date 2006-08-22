@@ -242,10 +242,9 @@ sub restart_server {
 sub kill_server {
     my( $self ) = @_;
 
-    my $ace = $self->ace_handle;
+    my $ace = $self->ace_handle or return;
     $ace->raw_query('shutdown now');
     $self->disconnect_client;
-    $ace = undef;
 }
 
 {
