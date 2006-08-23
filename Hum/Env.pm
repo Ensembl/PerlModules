@@ -52,6 +52,7 @@ BEGIN {
         /nfs/disk100/humpub/otter_production_main/ensembl-ace
         /nfs/disk100/humpub/scripts/tk
         /nfs/disk100/humpub/modules
+        /usr/local/badger/lib/perl5
         /usr/local/badger/bin
         /usr/local/badger/staden/alpha-bin
         );

@@ -130,7 +130,7 @@ sub additional_server_parameters {
 }
 
 sub ace_handle {
-    my( $self, $need_return ) = @_;
+    my( $self ) = @_;
 
     my $spid = $self->server_pid();
     return unless $spid;
@@ -162,18 +162,7 @@ sub ace_handle {
         if ($ace) {
             $self->{'_ace_handle'} = $ace;
         } else {
-            my @FULL_INFO = qw(); #qw(ARGV CHILD_ERROR ERRNO);
-            if(@FULL_INFO){
-                my %hash = %{$self->full_child_info()};
-                foreach my $pid(keys(%hash)){
-                    warn "************* FULL INFO FOR PID: $pid *****************\n";
-                    foreach (@FULL_INFO){
-                        warn $hash{$pid}{$_};
-                    }
-                    warn "*******************************************************\n";
-                }
-            }
-            confess("Can't connect to db with (@param) :\n", Ace->error) unless $need_return;
+            confess("Can't connect to db with (@param) :\n", Ace->error);
         }
     }
     return $ace;
@@ -266,22 +255,6 @@ sub kill_server {
         if ($self->can('_release_reserved_port')) {
             $self->_release_reserved_port;
         }
-
-        #my $REAPER_REF = undef;
-        #my $REAPER = sub {
-        #    my $child;
-        #    while (($child = waitpid(-1,WNOHANG)) > 0) {
-        #        $INFO->{$child}->{'CHILD_ERROR'} = $?;
-        #        $INFO->{$child}->{'ERRNO'}       = $!;
-        #        $INFO->{$child}->{'ERRNO_HASH'}  = \%!;
-        #        $INFO->{$child}->{'ENV'}         = \%ENV;
-        #        $INFO->{$child}->{'EXTENDED_OS_ERROR'} = $^E;
-        #    }
-        #    #$SIG{CHLD} = \&REAPER;    # THIS DOESN'T WORK
-        #    $SIG{CHLD} = $$REAPER_REF; # ODD BUT THIS DOES....still loathe sysV
-        #};
-        #$REAPER_REF = \$REAPER;
-        #$SIG{CHLD}  = $REAPER;
 
         # BUILD exec_list early
         my $exe = $self->server_executable;
