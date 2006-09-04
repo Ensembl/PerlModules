@@ -232,7 +232,7 @@ sub kill_server {
     my( $self ) = @_;
 
     my $ace = $self->ace_handle or return;
-    $ace->raw_query('shutdown now');
+    $ace->raw_query('shutdown');
     $self->disconnect_client;
 }
 
