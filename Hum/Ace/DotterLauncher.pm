@@ -99,7 +99,8 @@ sub fork_dotter {
             $query_out->write_sequences($query_seq);
             $query_out = undef;
 
-            # Run dotter
+            # Run dotter. Offset ensures that annotators see the global
+            # coordinates of the whole assembly in dotter.
             my $offset = $start - 1;
             my $dotter_command = "dotter -q $offset $query_file $subject_file ; rm $query_file $subject_file ; echo 'Dotter finished'";
             warn "RUNNING: $dotter_command\n";
@@ -112,7 +113,7 @@ sub fork_dotter {
             # don't get called by this child.
             exec("rm -f $query_file $subject_file");
         }
-        exit(0);
+        confess "THINGS WILL NOW GO BADLY WRONG";
     }
     else {
         confess "Can't fork: $!";
