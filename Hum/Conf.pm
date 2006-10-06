@@ -2,6 +2,7 @@
 package Hum::Conf;
 
 use strict;
+use Carp;
 
 use vars qw( %humConf );
 
@@ -52,6 +53,26 @@ $cgp_path{'EF'}="$ext_path/EF";
 
 my $humace_queue = "$humpub/humace/queue";
 
+my $pfetch_server_list;
+if ($ENV{'PFETCH_SERVER_LIST'}) {
+    $pfetch_server_list = parse_servers($ENV{'PFETCH_SERVER_LIST'});
+} else {
+    $pfetch_server_list = [
+        [qw{ cbi2.internal.sanger.ac.uk      22100 }],
+        [qw{ pubseq.internal.sanger.ac.uk    22100 }],
+        ];
+}
+
+my $pfetch_archive_server_list;
+if ($ENV{'PFETCH_ARCHIVE_SERVER_LIST'}) {
+    $pfetch_archive_server_list = parse_servers($ENV{'PFETCH_ARCHIVE_SERVER_LIST'});
+} else {
+    $pfetch_archive_server_list = [
+        [qw{ cbi2.internal.sanger.ac.uk      23100 }],
+        [qw{ pubseq.internal.sanger.ac.uk    23100 }],
+        ];
+}
+
 # Hash containing config info
 %humConf = (
     ACESERVER_HOST  => \%ace_host,
@@ -64,15 +85,8 @@ my $humace_queue = "$humpub/humace/queue";
     FTP_ATTIC           => "$ftp_ghost/attic",
     FTP_ROOT            => "$ftp/pub/sequences",
 
-    PFETCH_SERVER_LIST => [
-        [qw{ cbi2.internal.sanger.ac.uk      22100 }],
-        [qw{ pubseq.internal.sanger.ac.uk    22100 }],
-        ],
-
-    PFETCH_ARCHIVE_SERVER_LIST => [
-        [qw{ cbi2.internal.sanger.ac.uk      23100 }],
-        [qw{ pubseq.internal.sanger.ac.uk    23100 }],
-        ],
+    PFETCH_SERVER_LIST         => $pfetch_server_list,
+    PFETCH_ARCHIVE_SERVER_LIST => $pfetch_archive_server_list,
 
     HUMACE_DIR    => "/nfs/humace/humpub/humace",
     HUMACE_RO_DIR => '/nfs/humace/humpub/humace-live-ro',
@@ -162,6 +176,23 @@ sub import {
 	    die "Error: Hum::Conf : $_ not known\n";
 	}
     }
+}
+
+sub parse_servers {
+    my ($str) = @_;
+    
+    my $list = [];
+    foreach my $serv_port (split /[\s,]+/, $str) {
+        my ($server, $port) = $serv_port =~ /^([\w\.\-]+):(\d+)$/
+            or confess "Can't parser server:port from '$serv_port' from '$str'";
+        push @$list, [$server, $port];
+    }
+    
+    unless (@$list) {
+        confess "Failed to parse any server:port information from '$str'";
+    }
+    
+    return $list;
 }
 
 1;
