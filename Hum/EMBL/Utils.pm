@@ -82,6 +82,7 @@ BEGIN {
             $crc = (($crc >> 8) & 0x00FFFFFF) ^ $crcTable[ ($crc ^ $int) & 0xFF ];
         }
         #return sprintf "%X", $crc; # SwissProt format
+        
         return $crc;
     }
 }

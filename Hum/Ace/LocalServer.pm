@@ -5,7 +5,7 @@ package Hum::Ace::LocalServer;
 
 use strict;
 use Carp;
-use Ace;
+use Hum::Ace::AcePerlText;
 use Socket; # For working out a port which is unused
 use Symbol 'gensym';
 use POSIX qw(:signal_h :sys_wait_h);
@@ -148,7 +148,7 @@ sub ace_handle {
         my $max_time = 5 * 60;
         my $try_interval = 2;
         for (my $i = 0; $i < $max_time; $i += $try_interval) {
-            $ace = Ace->connect(@param);
+            $ace = Hum::Ace::AcePerlText->connect(@param);
             if ($ace) {
                 $ace->auto_save(0);
                 last;

@@ -248,7 +248,7 @@ sub md5_checksum {
     foreach my $line ($embl->lines) {
         # Each Line type can decide what it puts
         # in the string for the checksum.
-        $md5->data($line->string_for_checksum);
+        $md5->add($line->string_for_checksum);
     }
     return $md5->b64digest;
 }

@@ -1,4 +1,8 @@
 
+
+# This module has now been split into Hum::Ace::Clone and Hum::Ace::Assembly
+# I've left it here for the final fox to otter conversion of Jena chr 8 data.
+
 ### Hum::Ace::CloneSeq
 
 package Hum::Ace::CloneSeq;
@@ -16,7 +20,6 @@ use Bio::Otter::CloneRemark;
 use Bio::Otter::Author;
 use Bio::Otter::CloneInfo;
 use Bio::Otter::AnnotatedClone;
-use Bio::EnsEMBL::SimpleFeature;
 
 sub new {
     my( $pkg ) = shift;

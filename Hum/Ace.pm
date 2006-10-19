@@ -4,9 +4,12 @@
 package Hum::Ace;
 
 use strict;
+
 use Hum::Ace::Exon;
 use Hum::Ace::SubSeq;
 use Hum::Ace::CloneSeq;
+use Hum::Ace::Assembly;
+use Hum::Ace::Clone;
 use Hum::Ace::Locus;
 use Hum::Ace::LocalServer;
 use Hum::Ace::LocalServer::RPC;
