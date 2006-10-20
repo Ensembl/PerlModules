@@ -49,6 +49,9 @@ sub new_from_AceText {
     $self->mutable(1)           if $txt->count_tag('Mutable');
     $self->has_parent(1)        if $txt->count_tag('Has_parent');
     
+    # Zmap text tag
+    $self->zmap_mode_text(1)    if $txt->count_tag('ZMap_mode_text');
+    
     # Coding or non-coding transcript methods
     $self->transcript_type('coding')     if $txt->count_tag('Coding');
     $self->transcript_type('non_coding') if $txt->count_tag('Non_coding');
@@ -131,6 +134,7 @@ sub clone {
         right_priority_fixed
         mutable
         has_parent
+        zmap_mode_text
         }
     ) {
         $new->$method($self->$method());
@@ -166,6 +170,8 @@ sub ace_string {
 
         Mutable
         Has_parent
+        
+        ZMap_mode_text
         })
     {
         my $tag_method = lc $tag;
@@ -498,6 +504,15 @@ sub built_in {
         $self->{'_built_in'} = $flag ? 1 : 0;
     }
     return $self->{'_built_in'} || 0;
+}
+
+sub zmap_mode_text {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_zmap_mode_text'} = $flag ? 1 : 0;
+    }
+    return $self->{'_zmap_mode_text'} || 0;
 }
 
 
