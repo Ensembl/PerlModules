@@ -49,8 +49,9 @@ sub new_from_AceText {
     $self->mutable(1)           if $txt->count_tag('Mutable');
     $self->has_parent(1)        if $txt->count_tag('Has_parent');
     
-    # Zmap text tag
+    # Tags use by Zmap
     $self->zmap_mode_text(1)    if $txt->count_tag('ZMap_mode_text');
+    $self->init_hidden(1)       if $txt->count_tag('Init_hidden');
     
     # Coding or non-coding transcript methods
     $self->transcript_type('coding')     if $txt->count_tag('Coding');
@@ -135,6 +136,7 @@ sub clone {
         mutable
         has_parent
         zmap_mode_text
+        init_hidden
         }
     ) {
         $new->$method($self->$method());
@@ -172,6 +174,7 @@ sub ace_string {
         Has_parent
         
         ZMap_mode_text
+        Init_hidden
         })
     {
         my $tag_method = lc $tag;
@@ -513,6 +516,15 @@ sub zmap_mode_text {
         $self->{'_zmap_mode_text'} = $flag ? 1 : 0;
     }
     return $self->{'_zmap_mode_text'} || 0;
+}
+
+sub init_hidden {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_init_hidden'} = $flag ? 1 : 0;
+    }
+    return $self->{'_init_hidden'} || 0;
 }
 
 
