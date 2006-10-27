@@ -131,6 +131,7 @@ sub _fetch_generic {
     $sth->execute(@data);
     my ($db_id, $entry_date, $prog, $operator,
         $subregion, $species, $chr) = $sth->fetchrow;
+    $sth->finish;
     
     confess "No tpf found" unless $db_id;
     
