@@ -192,7 +192,10 @@ sub express_data_fetch {
     }
     warn $err if $err;
 
+    warn "Now fetching Clones";
+
     # Store the information from the clones
+    $ace->raw_query("find Sequence $name");
     foreach my $frag ($ace->values_from_tag('AGP_Fragment')) {
         my ($clone_name, $start, $end) = @{$frag}[0,1,2];
         my $strand = 1;
@@ -207,6 +210,7 @@ sub express_data_fetch {
         $clone->assembly_start($start);
         $clone->assembly_end($end);
         $clone->assembly_strand($strand);
+        
         $self->add_Clone($clone);
     }
 }

@@ -9,8 +9,11 @@ use Ace;
 use Hum::Ace::AceText;
 
 ###  I could not get inheritance from Ace to work due
-###  to problems with AutoLoader.  So I just inject
-###  this code into the Ace package:
+###  to problems with AutoLoader.  It can't find the
+###  *.al files for each method because it is looking
+###  for them in the "auto/Hum/Ace/AcePerlText" directory
+###  instead of "auto/Ace".
+###  So I just inject this code into the Ace package:
 
 package Ace;
 
@@ -19,6 +22,7 @@ sub AceText_from_tag {
     my( $self, $tag ) = @_;
     
     my $str = $self->raw_query("show -a $tag");
+    #warn "show -a $tag = <$str>";
     return Hum::Ace::AceText->new($str);
 }
 
