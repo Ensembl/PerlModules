@@ -5,6 +5,8 @@ package Hum::Ace::Assembly;
 
 use strict;
 
+use Carp;
+
 use Hum::Ace::Locus;
 use Hum::Ace::Method;
 use Hum::Ace::SubSeq;
@@ -23,11 +25,19 @@ sub new_from_name_and_db_handle {
     my( $pkg, $name, $db ) = @_;
     
     my $self = $pkg->new;
-    $self->ace_name($name);
+    $self->name($name);
     $self->express_data_fetch($db);
     return $self;
 }
 
+sub name {
+    my( $self, $name ) = @_;
+    
+    if ($name) {
+        $self->{'_name'} = $name;
+    }
+    return $self->{'_name'};
+}
 
 sub Sequence {
     my( $self, $seq ) = @_;
@@ -120,11 +130,14 @@ sub get_SimpleFeatures {
 sub express_data_fetch {
     my( $self, $ace ) = @_;
 
-    my $clone_name = $self->ace_name;
+    my $name = $self->name;
+    
+    # To save memory we only store the DNA from this top level sequence object.
+    $self->store_Sequence_from_ace_handle($ace);
     
     # These raw_queries are much faster than
     # fetching the whole Genome_Sequence object!
-    $ace->raw_query("find Sequence $clone_name");
+    $ace->raw_query("find Sequence $name");
 
     # The SimpleFeatures we are intersted in (polyA etc...)
     # are only present on the top level assembly object.
@@ -178,12 +191,9 @@ sub express_data_fetch {
         $err .= $@ if $@;
     }
     warn $err if $err;
-    
-    # To save memory we only store the DNA from this top level sequence object.
-    $self->store_Sequence_from_ace_handle($ace);
 
     # Store the information from the clones
-    foreach my $frag ($agp_frag_txt->values_from_tag('AGP_Fragment')) {
+    foreach my $frag ($ace->values_from_tag('AGP_Fragment')) {
         my ($clone_name, $start, $end) = @{$frag}[0,1,2];
         my $strand = 1;
         if ($start > $end) {
@@ -192,7 +202,7 @@ sub express_data_fetch {
         }
 
         my $clone = Hum::Ace::Clone->new;
-        $clone->ace_name($clone_name);
+        $clone->name($clone_name);
         $clone->express_data_fetch($ace);
         $clone->assembly_start($start);
         $clone->assembly_end($end);
@@ -211,7 +221,7 @@ sub store_Sequence_from_ace_handle {
 sub new_Sequence_from_ace_handle {
     my( $self, $ace ) = @_;
     
-    my $name = $self->ace_name;
+    my $name = $self->name;
     my $seq = Hum::Sequence::DNA->new;
     $seq->name($name);
     my ($dna_obj) = $ace->fetch(DNA => $name);
@@ -249,6 +259,13 @@ sub add_Clone {
     
     my $list = $self->{'_clone_list'} ||= [];
     push @$list, $clone;
+}
+
+sub get_all_Clones {
+    my ($self) = @_;
+    
+    my $list = $self->{'_clone_list'} or return;
+    return @$list;
 }
 
 sub clone_name_overlapping {

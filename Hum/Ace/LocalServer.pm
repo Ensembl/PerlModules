@@ -148,7 +148,7 @@ sub ace_handle {
         my $max_time = 5 * 60;
         my $try_interval = 2;
         for (my $i = 0; $i < $max_time; $i += $try_interval) {
-            $ace = Hum::Ace::AcePerlText->connect(@param);
+            $ace = Ace->connect(@param);
             if ($ace) {
                 $ace->auto_save(0);
                 last;

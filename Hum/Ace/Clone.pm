@@ -104,33 +104,6 @@ sub golden_end {
     return $self->{'_golden_end'} || confess "golden_end not set";
 }
 
-sub add_Keyword {
-    my($self,$keyword)=@_;
-    push(@{$self->{'_Keywords'}},$keyword);
-}
-
-sub get_all_Keywords {
-    my($self)=@_;
-    if($self->{'_Keywords'}){
-        return @{$self->{'_Keywords'}};
-    }else{
-        return ();
-    }
-}
-
-sub add_Remark {
-    my($self,$remark)=@_;
-    push(@{$self->{'_Remarks'}},$remark);
-}
-sub get_all_Remarks {
-    my($self)=@_;
-    if($self->{'_Remarks'}){
-        return @{$self->{'_Remarks'}};
-    }else{
-        return ();
-    }
-}
-
 sub description {
     my( $self, $description ) = @_;
     
@@ -138,6 +111,64 @@ sub description {
         $self->{'_description'} = $description;
     }
     return $self->{'_description'};
+}
+
+sub add_keyword {
+    my($self,$keyword)=@_;
+    push(@{$self->{'_keywords'}},$keyword);
+}
+
+sub get_all_keywords {
+    my($self)=@_;
+    if($self->{'_keywords'}){
+        return @{$self->{'_keywords'}};
+    }else{
+        return ();
+    }
+}
+
+sub add_remark {
+    my($self,$remark)=@_;
+    push(@{$self->{'_remarks'}},$remark);
+}
+sub get_all_remarks {
+    my($self)=@_;
+    if($self->{'_remarks'}){
+        return @{$self->{'_remarks'}};
+    }else{
+        return ();
+    }
+}
+
+sub clone {
+    my ($self) = @_;
+    
+    my $new = ref($self)->new;
+    foreach my $method (qw{
+        name
+        clone_name
+        sequence_length
+        accession
+        sequence_version
+        assembly_start
+        assembly_end
+        assembly_strand
+        golden_start
+        golden_end
+        description
+        })
+    {
+        $new->$method($self->$method());
+    }
+    
+    foreach my $keyword ($self->get_all_keywords) {
+        $new->add_keyword($keyword);
+    }
+    foreach my $remark ($self->get_all_remarks) {
+        $new->add_remark($remark);
+    }
+    
+    return $new;
 }
 
 sub ace_string {
@@ -148,7 +179,7 @@ sub ace_string {
     
     my $str = $obj_start;
     foreach my $tag (qw{
-        Keyword
+        keyword
         Annotation_remark
         EMBL_dump_info
         })
@@ -157,13 +188,13 @@ sub ace_string {
     }
     
     $str .= $obj_start;
-    foreach my $kw ($self->get_all_Keywords) {
-    	$str .= qq{Keyword "$kw"\n};
+    foreach my $kw ($self->get_all_keywords) {
+    	$str .= qq{keyword "$kw"\n};
     }
     if (my $de = $self->description) {
         $str .= qq{EMBL_dump_info DE_line "$de"\n};
     }
-    foreach my $rem ($self->get_all_Remarks) {
+    foreach my $rem ($self->get_all_remarks) {
         $str .= qq{Annotation_remark "$rem"\n};
     }
     
@@ -180,10 +211,10 @@ sub express_data_fetch {
     $ace->raw_query("find Sequence $name");
 
     # This is a clone component, so we only store the sequence length
-    my $name = $self->name;
     my ($dna_txt) = $ace->values_from_tag('DNA');
     my $length = $dna_txt->[1];
     $self->sequence_length($length);
+    warn "Clone sequence '$name' is '$length' bp long";
 
     # But we also record the accession and sv
     if (my ($acc) = $ace->values_from_tag('Accession')) {
@@ -202,13 +233,13 @@ sub express_data_fetch {
 
     foreach my $keyword ($ace->values_from_tag('Keyword')) {
         if (defined($keyword->[0])) {
-            $self->add_Keyword($keyword->[0]);
+            $self->add_keyword($keyword->[0]);
         }
     }
 
     foreach my $remark ($ace->values_from_tag('Annotation_remark')) {
         if (defined($remark->[0])) {
-            $self->add_Remark("Annotation_remark- " . $remark->[0]);
+            $self->add_remark($remark->[0]);
         }
     }
 
