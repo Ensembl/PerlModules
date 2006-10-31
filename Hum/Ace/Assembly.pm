@@ -192,8 +192,6 @@ sub express_data_fetch {
     }
     warn $err if $err;
 
-    warn "Now fetching Clones";
-
     # Store the information from the clones
     $ace->raw_query("find Sequence $name");
     foreach my $frag ($ace->values_from_tag('AGP_Fragment')) {
