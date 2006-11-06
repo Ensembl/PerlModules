@@ -712,6 +712,14 @@ sub get_all_exon_Sequences {
     return @ex_seq;
 }
 
+sub drop_all_exon_otter_id {
+    my ($self) = @_;
+    
+    foreach my $exon ($self->get_all_Exons) {
+        $exon->drop_otter_id;
+    }
+}
+
 sub GeneMethod {
     my( $self, $GeneMethod ) = @_;
     

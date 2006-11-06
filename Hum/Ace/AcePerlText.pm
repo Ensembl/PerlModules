@@ -5,6 +5,7 @@ package Hum::Ace::AcePerlText;
 
 use strict;
 use Carp;
+#use base 'Ace';
 use Ace;
 use Hum::Ace::AceText;
 

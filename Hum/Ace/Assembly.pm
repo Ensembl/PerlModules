@@ -48,7 +48,6 @@ sub Sequence {
     return $self->{'_sequence_dna_object'};
 }
 
-
 sub add_SubSeq {
     my( $self, $SubSeq ) = @_;
     
@@ -70,7 +69,7 @@ sub replace_SubSeq {
             return 1;
         }
     }
-    confess "No such SubSeq to replace '$name'";
+    confess "No such SubSeq '$name' to replace";
 }
 
 sub delete_SubSeq {
@@ -259,15 +258,45 @@ sub add_Clone {
     
     #print STDERR "Adding: $self, $name, $start, $end\n";
     
-    my $list = $self->{'_clone_list'} ||= [];
+    my $list = $self->{'_Clone_list'} ||= [];
     push @$list, $clone;
 }
 
 sub get_all_Clones {
     my ($self) = @_;
     
-    my $list = $self->{'_clone_list'} or return;
+    my $list = $self->{'_Clone_list'} or return;
     return @$list;
+}
+
+sub get_Clone {
+    my ($self, $clone_name) = @_;
+    
+    my $clone;
+    foreach my $this ($self->get_all_Clones) {
+        if ($this->name eq $clone_name) {
+            $clone = $this;
+            last;
+        }
+    }
+    confess "Can't find clone '$clone_name' in list"
+      unless $clone;
+}
+
+sub replace_Clone {
+    my( $self, $clone ) = @_;
+    
+    my $name = $clone->clone_name;
+    my $clone_list = $self->{'_Clone_list'}
+        or confess "No Clone list";
+    for (my $i = 0; $i < @$clone_list; $i++) {
+        my $this = $clone_list->[$i];
+        if ($this->name eq $name) {
+            splice(@$clone_list, $i, 1, $clone);
+            return 1;
+        }
+    }
+    confess "No such Clone '$name' to replace";
 }
 
 sub clone_name_overlapping {
@@ -275,10 +304,10 @@ sub clone_name_overlapping {
     
     #print STDERR "Getting: $self, $pos\n";
     
-    my $list = $self->{'_clone_list'} or return;
+    my $list = $self->{'_Clone_list'} or return;
     foreach my $clone (@$list) {
         if ($pos >= $clone->assembly_start and $pos <= $clone->assembly_end) {
-            return $clone->name;
+            return $clone->clone_name;
         }
     }
 }

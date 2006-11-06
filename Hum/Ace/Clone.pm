@@ -57,6 +57,15 @@ sub sequence_version {
     return $self->{'_sequence_version'};
 }
 
+sub accession_version {
+    my $self = shift;
+    
+    if (@_) {
+        confess "read-only method - got arguments: @_";
+    }
+    return $self->accession . "." . $self->sequence_version;
+}
+
 sub assembly_start {
     my( $self, $assembly_start ) = @_;
     
@@ -84,6 +93,15 @@ sub assembly_strand {
         $self->{'_assembly_strand'} = $assembly_strand
     }
     return $self->{'_assembly_strand'} || confess "assembly_strand not set";
+}
+
+sub display_assembly_strand {
+    my $self = shift;
+    
+    if (@_) {
+        confess "read-only method - got arguments: @_";
+    }
+    return $self->assembly_strand == 1 ? 'Fwd' : 'Rev';
 }
 
 sub golden_start {

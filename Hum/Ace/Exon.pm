@@ -37,6 +37,12 @@ sub otter_id {
     return $self->{'_otter_id'};
 }
 
+sub drop_otter_id {
+    my ($self) = @_;
+    
+    $self->{'_otter_id'} = undef;
+}
+
 sub start {
     my( $self, $start ) = @_;
     
