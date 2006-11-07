@@ -286,7 +286,7 @@ sub get_Clone {
 sub replace_Clone {
     my( $self, $clone ) = @_;
     
-    my $name = $clone->clone_name;
+    my $name = $clone->name;
     my $clone_list = $self->{'_Clone_list'}
         or confess "No Clone list";
     for (my $i = 0; $i < @$clone_list; $i++) {

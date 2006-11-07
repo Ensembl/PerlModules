@@ -5,6 +5,7 @@ package Hum::Ace::Clone;
 
 use strict;
 use Carp;
+use Hum::Sort 'ace_sort';
 
 sub new {
     my ($pkg) = @_;
@@ -132,30 +133,61 @@ sub description {
 }
 
 sub add_keyword {
-    my($self,$keyword)=@_;
-    push(@{$self->{'_keywords'}},$keyword);
+    my ($self, $keyword) = @_;
+
+    $self->{'_keywords_are_sorted'} = 0;
+    push(@{ $self->{'_keywords'} }, $keyword);
 }
 
 sub get_all_keywords {
-    my($self)=@_;
-    if($self->{'_keywords'}){
-        return @{$self->{'_keywords'}};
-    }else{
-        return ();
+    my ($self) = @_;
+
+    if ($self->{'_keywords'}) {
+        my $key = $self->{'_keywords'};
+        unless ($self->{'_keywords_are_sorted'}) {
+            @$key = sort { ace_sort($a, $b) } @$key;
+            $self->{'_keywords_are_sorted'} = 1;
+        }
+        return @$key;
+    }
+    else {
+        return;
     }
 }
 
-sub add_remark {
-    my($self,$remark)=@_;
-    push(@{$self->{'_remarks'}},$remark);
+sub drop_all_keywords {
+    my ($self) = @_;
+    
+    $self->{'_keywords'} = undef;
 }
+
+sub add_remark {
+    my ($self, $remark) = @_;
+
+    $self->{'_remarks_are_sorted'} = 0;
+    push(@{ $self->{'_remarks'} }, $remark);
+}
+
 sub get_all_remarks {
-    my($self)=@_;
-    if($self->{'_remarks'}){
-        return @{$self->{'_remarks'}};
-    }else{
-        return ();
+    my ($self) = @_;
+
+    if ($self->{'_remarks'}) {
+        my $rem = $self->{'_remarks'};
+        unless ($self->{'_remarks_are_sorted'}) {
+            @$rem = sort { ace_sort($a, $b) } @$rem;
+            $self->{'_remarks_are_sorted'} = 1;
+        }
+        return @$rem;
     }
+    else {
+        return;
+    }
+}
+
+sub drop_all_remarks {
+    my ($self) = @_;
+    
+    $self->{'_remarks'} = undef;
 }
 
 sub clone {
