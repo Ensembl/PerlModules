@@ -55,10 +55,6 @@ sub pass{
 }
 sub _reserve_random_port {
     my( $self ) = @_;
-    
-    my $tcp = getprotobyname('tcp');
-    my $sock = gensym();
-    socket($sock, PF_INET, SOCK_STREAM, $tcp);
 
     # Choose an unoccupied port at random
     my $base        = 55000;
@@ -69,7 +65,7 @@ sub _reserve_random_port {
         $tries++;
         $port = $base + int(rand 5000);
         print STDERR "\nTrying port '$port' ...";
-        if (bind($sock, sockaddr_in($port, INADDR_ANY))) {
+        if ($self->_reserve_port($port)) {
             print STDERR " Free\n";
             last;
         } else {
@@ -83,9 +79,38 @@ sub _reserve_random_port {
         }
     }
     
-    $self->{'_reserved_socket'} = $sock;
-    
     return $port;
+}
+
+sub _reserve_port {
+    my ($self, $port) = @_;
+    
+    my $tcp = getprotobyname('tcp');
+    my $sock = gensym();
+    socket($sock, PF_INET, SOCK_STREAM, $tcp);
+
+    if (bind($sock, sockaddr_in($port, INADDR_ANY))) {
+        $self->{'_reserved_socket'} = $sock;
+        return 1;
+    } else {
+        return;
+    }
+}
+
+sub wait_for_port_release {
+    my ($self) = @_;
+    
+    my $timeout = 240;
+    my $port = $self->port
+      or confess "port not set. server not started?";
+    for (my $t = 0; $t < $timeout; $t++) {
+        if ($self->_reserve_port($port)) {
+            warn "Port was released after $t seconds\n";
+            return 1;
+        }
+        sleep 1;
+    }
+    confess "Port was not released after waiting for $timeout seconds.";
 }
 
 # Call before starting server to free the port.
@@ -234,6 +259,7 @@ sub kill_server {
     my $ace = $self->ace_handle or return;
     $ace->raw_query('shutdown');
     $self->disconnect_client;
+    $self->wait_for_port_release;
 }
 
 {

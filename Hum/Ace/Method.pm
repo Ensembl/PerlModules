@@ -36,6 +36,7 @@ sub new_from_AceText {
     $self->show_up_strand(1)        if $txt->count_tag('Show_up_strand');
     $self->strand_sensitive(1)      if $txt->count_tag('Strand_sensitive');
     $self->frame_sensitive(1)       if $txt->count_tag('Frame_sensitive');
+    $self->show_only_as_3_frame(1)  if $txt->count_tag('Show_only_as_3_frame');
     $self->show_text(1)             if $txt->count_tag('Show_text');
     $self->percent(1)               if $txt->count_tag('Percent');
     $self->blastn(1)                if $txt->count_tag('BlastN');
@@ -126,6 +127,7 @@ sub clone {
         show_up_strand
         strand_sensitive
         frame_sensitive
+        show_only_as_3_frame
         show_text
         percent
         blastn
@@ -161,6 +163,7 @@ sub ace_string {
         Show_up_strand
         Strand_sensitive
         Frame_sensitive
+        Show_only_as_3_frame
         Show_text
         Percent
         BlastN
@@ -435,6 +438,15 @@ sub frame_sensitive {
         $self->{'_frame_sensitive'} = $flag ? 1 : 0;
     }
     return $self->{'_frame_sensitive'} || 0;
+}
+
+sub show_only_as_3_frame {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_show_only_as_3_frame'} = $flag ? 1 : 0;
+    }
+    return $self->{'_show_only_as_3_frame'} || 0;
 }
 
 sub show_text {
