@@ -91,6 +91,16 @@ sub get_all_Methods {
     return $lst;
 }
 
+sub get_all_transcript_Methods {
+    my ($self) = @_;
+    
+    if (my $lst = $self->{'_method_list'}) {
+        return grep $_->transcript_type, @$lst;
+    } else {
+        return;
+    }
+}
+
 sub get_Method_by_name {
     my( $self, $name ) = @_;
     

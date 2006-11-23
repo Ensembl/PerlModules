@@ -14,6 +14,31 @@ sub new {
     return bless {}, $pkg;
 }
 
+my @boolean_tags = qw{
+
+    Show_up_strand
+    Strand_sensitive
+    Frame_sensitive
+    Show_only_as_3_frame
+    Show_text
+    Percent
+    BlastN
+    Outline
+    Gapped
+    Right_priority_fixed
+    No_display
+    Built_in
+    
+    Mutable
+    Has_parent
+    Edit_score
+    Edit_display_label
+    
+    ZMap_mode_text
+    Init_hidden
+    
+    };
+
 sub new_from_AceText {
     my( $pkg, $txt ) = @_;
     
@@ -33,26 +58,12 @@ sub new_from_AceText {
     }
     
     # True/false tags
-    $self->show_up_strand(1)        if $txt->count_tag('Show_up_strand');
-    $self->strand_sensitive(1)      if $txt->count_tag('Strand_sensitive');
-    $self->frame_sensitive(1)       if $txt->count_tag('Frame_sensitive');
-    $self->show_only_as_3_frame(1)  if $txt->count_tag('Show_only_as_3_frame');
-    $self->show_text(1)             if $txt->count_tag('Show_text');
-    $self->percent(1)               if $txt->count_tag('Percent');
-    $self->blastn(1)                if $txt->count_tag('BlastN');
-    $self->outline(1)               if $txt->count_tag('Outline');
-    $self->gapped(1)                if $txt->count_tag('Gapped');
-    $self->right_priority_fixed(1)  if $txt->count_tag('Right_priority_fixed');
-    $self->no_display(1)            if $txt->count_tag('No_display');
-    $self->built_in(1)              if $txt->count_tag('Built_in');
-
-    # Tags used by otterlace
-    $self->mutable(1)           if $txt->count_tag('Mutable');
-    $self->has_parent(1)        if $txt->count_tag('Has_parent');
-    
-    # Tags use by Zmap
-    $self->zmap_mode_text(1)    if $txt->count_tag('ZMap_mode_text');
-    $self->init_hidden(1)       if $txt->count_tag('Init_hidden');
+    foreach my $tag (@boolean_tags) {
+        my $method = lc $tag;
+        if ($txt->count_tag($tag)) {
+            $self->$method(1);
+        }
+    }
     
     # Coding or non-coding transcript methods
     $self->transcript_type('coding')     if $txt->count_tag('Coding');
@@ -101,49 +112,56 @@ sub new_from_AceText {
     $self->blixem_type('X') if $txt->count_tag('Blixem_X');
     $self->blixem_type('P') if $txt->count_tag('Blixem_P');
     
+    # Correct length for feature
+    if (my ($len) = $txt->get_values('Valid_length')) {
+        $self->valid_length($len->[0]);
+    }
+    
+    # Remarks, which are used to display a little more information
+    # than the name alone in parts of otterlace and zmap.
+    if (my ($rem) = $txt->get_values('Remark')) {
+        $self->remark($rem->[0]);
+    }
+    
     return $self;
 }
 
-sub clone {
-    my( $self ) = @_;
-    
-    my $new = ref($self)->new;
-    foreach my $method (qw{
-        name
-        color
-        cds_color
-        column_group
-        column_group_method
-        zone_number
-        right_priority
-        max_mag
-        min_mag
-        width
-        score_bounds
-        score_method
-        blixem_type
-        overlap_mode
-        transcript_type
-        show_up_strand
-        strand_sensitive
-        frame_sensitive
-        show_only_as_3_frame
-        show_text
-        percent
-        blastn
-        gapped
-        outline
-        no_display
-        right_priority_fixed
-        mutable
-        has_parent
-        zmap_mode_text
-        init_hidden
+{
+    my @boolean_methods = map lc, @boolean_tags;
+
+    sub clone {
+        my( $self ) = @_;
+
+        my $new = ref($self)->new;
+
+        foreach my $method (qw{
+            name
+            color
+            cds_color
+            column_group
+            column_group_method
+            zone_number
+            right_priority
+            max_mag
+            min_mag
+            width
+            score_bounds
+            score_method
+            blixem_type
+            overlap_mode
+            transcript_type
+            valid_length
+            }
+        ) {
+            $new->$method($self->$method());
         }
-    ) {
-        $new->$method($self->$method());
+
+        foreach my $method (@boolean_methods) {
+            $new->$method($self->$method());
+        }
+
+        return $new;
     }
-    return $new;
 }
 
 sub ace_string {
@@ -159,26 +177,7 @@ sub ace_string {
         $txt->add_tag('CDS_Colour', $c);
     }
     
-    foreach my $tag (qw{
-        Show_up_strand
-        Strand_sensitive
-        Frame_sensitive
-        Show_only_as_3_frame
-        Show_text
-        Percent
-        BlastN
-        Gapped
-        Outline
-        No_display
-        Right_priority_fixed
-        Built_in
-
-        Mutable
-        Has_parent
-        
-        ZMap_mode_text
-        Init_hidden
-        })
+    foreach my $tag (@boolean_tags)
     {
         my $tag_method = lc $tag;
         $txt->add_tag($tag) if $self->$tag_method();
@@ -206,6 +205,7 @@ sub ace_string {
         Max_mag
         Min_mag
         Width
+        Valid_length
         })
     {
         my $tag_method = lc $tag;
@@ -334,6 +334,15 @@ sub score_bounds {
     }
 }
 
+sub valid_length {
+    my( $self, $valid_length ) = @_;
+    
+    if ($valid_length) {
+        $self->{'_valid_length'} = $valid_length;
+    }
+    return $self->{'_valid_length'};
+}
+
 sub hex_color {
     my( $self ) = @_;
     
@@ -411,7 +420,8 @@ sub transcript_type {
     return $self->{'_transcript_type'};
 }
 
-# true/false methods
+
+# True / false methods:
 
 sub show_up_strand {
     my( $self, $flag ) = @_;
@@ -419,7 +429,7 @@ sub show_up_strand {
     if (defined $flag) {
         $self->{'_show_up_strand'} = $flag ? 1 : 0;
     }
-    return $self->{'_show_up_strand'} || 0;
+    return $self->{'_show_up_strand'};
 }
 
 sub strand_sensitive {
@@ -428,7 +438,7 @@ sub strand_sensitive {
     if (defined $flag) {
         $self->{'_strand_sensitive'} = $flag ? 1 : 0;
     }
-    return $self->{'_strand_sensitive'} || 0;
+    return $self->{'_strand_sensitive'};
 }
 
 sub frame_sensitive {
@@ -437,7 +447,7 @@ sub frame_sensitive {
     if (defined $flag) {
         $self->{'_frame_sensitive'} = $flag ? 1 : 0;
     }
-    return $self->{'_frame_sensitive'} || 0;
+    return $self->{'_frame_sensitive'};
 }
 
 sub show_only_as_3_frame {
@@ -446,7 +456,7 @@ sub show_only_as_3_frame {
     if (defined $flag) {
         $self->{'_show_only_as_3_frame'} = $flag ? 1 : 0;
     }
-    return $self->{'_show_only_as_3_frame'} || 0;
+    return $self->{'_show_only_as_3_frame'};
 }
 
 sub show_text {
@@ -455,7 +465,7 @@ sub show_text {
     if (defined $flag) {
         $self->{'_show_text'} = $flag ? 1 : 0;
     }
-    return $self->{'_show_text'} || 0;
+    return $self->{'_show_text'};
 }
 
 sub percent {
@@ -464,7 +474,7 @@ sub percent {
     if (defined $flag) {
         $self->{'_percent'} = $flag ? 1 : 0;
     }
-    return $self->{'_percent'} || 0;
+    return $self->{'_percent'};
 }
 
 sub blastn {
@@ -473,16 +483,7 @@ sub blastn {
     if (defined $flag) {
         $self->{'_blastn'} = $flag ? 1 : 0;
     }
-    return $self->{'_blastn'} || 0;
-}
-
-sub gapped {
-    my( $self, $flag ) = @_;
-    
-    if (defined $flag) {
-        $self->{'_gapped'} = $flag ? 1 : 0;
-    }
-    return $self->{'_gapped'} || 0;
+    return $self->{'_blastn'};
 }
 
 sub outline {
@@ -491,16 +492,16 @@ sub outline {
     if (defined $flag) {
         $self->{'_outline'} = $flag ? 1 : 0;
     }
-    return $self->{'_outline'} || 0;
+    return $self->{'_outline'};
 }
 
-sub no_display {
+sub gapped {
     my( $self, $flag ) = @_;
     
     if (defined $flag) {
-        $self->{'_no_display'} = $flag ? 1 : 0;
+        $self->{'_gapped'} = $flag ? 1 : 0;
     }
-    return $self->{'_no_display'} || 0;
+    return $self->{'_gapped'};
 }
 
 sub right_priority_fixed {
@@ -509,7 +510,16 @@ sub right_priority_fixed {
     if (defined $flag) {
         $self->{'_right_priority_fixed'} = $flag ? 1 : 0;
     }
-    return $self->{'_right_priority_fixed'} || 0;
+    return $self->{'_right_priority_fixed'};
+}
+
+sub no_display {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_no_display'} = $flag ? 1 : 0;
+    }
+    return $self->{'_no_display'};
 }
 
 sub built_in {
@@ -518,29 +528,8 @@ sub built_in {
     if (defined $flag) {
         $self->{'_built_in'} = $flag ? 1 : 0;
     }
-    return $self->{'_built_in'} || 0;
+    return $self->{'_built_in'};
 }
-
-sub zmap_mode_text {
-    my( $self, $flag ) = @_;
-    
-    if (defined $flag) {
-        $self->{'_zmap_mode_text'} = $flag ? 1 : 0;
-    }
-    return $self->{'_zmap_mode_text'} || 0;
-}
-
-sub init_hidden {
-    my( $self, $flag ) = @_;
-    
-    if (defined $flag) {
-        $self->{'_init_hidden'} = $flag ? 1 : 0;
-    }
-    return $self->{'_init_hidden'} || 0;
-}
-
-
-# Otter gene true/false methods
 
 sub mutable {
     my( $self, $flag ) = @_;
@@ -548,7 +537,7 @@ sub mutable {
     if (defined $flag) {
         $self->{'_mutable'} = $flag ? 1 : 0;
     }
-    return $self->{'_mutable'} || 0;
+    return $self->{'_mutable'};
 }
 
 sub has_parent {
@@ -557,7 +546,25 @@ sub has_parent {
     if (defined $flag) {
         $self->{'_has_parent'} = $flag ? 1 : 0;
     }
-    return $self->{'_has_parent'} || 0;
+    return $self->{'_has_parent'};
+}
+
+sub zmap_mode_text {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_zmap_mode_text'} = $flag ? 1 : 0;
+    }
+    return $self->{'_zmap_mode_text'};
+}
+
+sub init_hidden {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_init_hidden'} = $flag ? 1 : 0;
+    }
+    return $self->{'_init_hidden'};
 }
 
 1;
