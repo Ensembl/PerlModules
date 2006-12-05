@@ -11,6 +11,7 @@ use Hum::Ace::Locus;
 use Hum::Ace::Method;
 use Hum::Ace::SubSeq;
 use Hum::Ace::Clone;
+use Hum::Ace::SeqFeature::Simple;
 use Hum::Sequence::DNA;
 
 sub new {
@@ -19,15 +20,6 @@ sub new {
     return bless {
         '_SubSeq_list'  => [],
         }, $pkg;
-}
-
-sub new_from_name_and_db_handle {
-    my( $pkg, $name, $db ) = @_;
-    
-    my $self = $pkg->new;
-    $self->name($name);
-    $self->express_data_fetch($db);
-    return $self;
 }
 
 sub name {
@@ -46,6 +38,15 @@ sub Sequence {
         $self->{'_sequence_dna_object'} = $seq;
     }
     return $self->{'_sequence_dna_object'};
+}
+
+sub MethodCollection {
+    my( $self, $MethodCollection ) = @_;
+    
+    if ($MethodCollection) {
+        $self->{'_MethodCollection'} = $MethodCollection;
+    }
+    return $self->{'_MethodCollection'};
 }
 
 sub add_SubSeq {
@@ -97,33 +98,103 @@ sub get_all_SubSeqs {
 sub clear_SimpleFeatures {
     my ($self) = @_;
 
-    $self->{_SimpleFeatures} = [];
+    $self->{'_SimpleFeature_list'} = [];
 }
 
 sub add_SimpleFeatures {
-    my $self = shift @_;
+    my $self = shift;
 
-    push @{$self->{_SimpleFeatures}}, @_;
+    push @{ $self->{'_SimpleFeature_list'} }, @_;
+    $self->{'_SimpleFeatures_are_sorted'} = 0;
 }
 
-sub set_SimpleFeatures {
-    my $self = shift @_;
+sub set_SimpleFeature_list {
+    my $self = shift;
 
-    $self->clear_SimpleFeatures();
-    $self->add_SimpleFeatures( @_ );
+    $self->clear_SimpleFeatures;
+    $self->add_SimpleFeature_list( @_ );
 }
 
-sub get_SimpleFeatures {
-    my ($self, $types) = @_;
+sub get_all_SimpleFeatures {
+    my ($self) = @_;
 
-    if($types) {
-        my %valid_type = map { $_ => 1 } @$types;
+    my $feat_list = $self->{'_SimpleFeature_list'}
+      or return;
+    unless ($self->{'_SimpleFeatures_are_sorted'}) {
+        @$feat_list = sort {
+            $a->start <=> $b->start
+            || $a->end <=> $b->end
+            || $a->method_name cmp $b->method_name
+            || $a->score <=> $b->score
+            || $a->strand <=> $b->strand
+            || $a->text cmp $b->text
+          } @$feat_list;
+        $self->{'_SimpleFeatures_are_sorted'} = 1;
+    }
 
-        return grep { $valid_type{ $_->[0] } } @{$self->{_SimpleFeatures}};
-    } else {
-        return @{$self->{_SimpleFeatures}};
+    return @$feat_list;
+}
+
+sub filter_SimpleFeature_list_from_ace_handle {
+    my ($self, $ace) = @_;
+
+    my $coll = $self->MethodCollection
+      or confess "No MethodCollection attached";
+
+    # We are only interested in the "editable" features on the Assembly.
+    my %mutable_method =
+      map { lc $_->name, $_ } $coll->get_all_mutable_non_transcript_Methods;
+
+    my $name = $self->name;
+    my $seq  = $self->Sequence;
+    $ace->raw_query("find Sequence $name");
+    my $sf_list = $self->{'_SimpleFeature_list'} ||= [];
+    foreach my $row ($ace->values_from_tag('Feature')) {
+        my ($method_name, $start, $end, $score, $text) = @$row;
+        my $method = $mutable_method{$method_name}
+          or next;
+
+        my $feat = Hum::Ace::SeqFeature::Simple->new;
+        $feat->seq_Sequence($seq);
+        $feat->seq_name($name);
+        if ($start <= $end) {
+            $feat->seq_start($start);
+            $feat->seq_end($end);
+            $feat->seq_strand(1);
+        }
+        else {
+            $feat->seq_start($end);
+            $feat->seq_end($start);
+            $feat->seq_strand(-1);
+        }
+        $feat->score($score);
+        $feat->text($text);
+
+        push @$sf_list, $feat;
     }
 }
+
+sub ace_string {
+    my ($self) = @_;
+    
+    my $name = $self->name;
+    
+    my $ace = qq{\nSequence "$name"\n};
+    my $coll = $self->MethodCollection
+      or confess "No MethodCollection attached";
+    foreach my $method ($coll->get_all_mutable_non_transcript_Methods) {
+        $ace .= sprintf q{-D Feature "%s"\n}, $method->name;
+    }
+    
+    $ace .= qq{\nSequence "$name"\n};
+    
+    foreach my $feat ($self->get_all_SimpleFeatures) {
+        $ace .= $feat->ace_string;
+    }
+    
+    return $ace;
+}
+
 
 
 sub express_data_fetch {
@@ -140,7 +211,7 @@ sub express_data_fetch {
 
     # The SimpleFeatures we are intersted in (polyA etc...)
     # are only present on the top level assembly object.
-    $self->set_SimpleFeatures( $ace->values_from_tag('Feature') );
+    $self->filter_SimpleFeature_list_from_ace_handle($ace);
 
     my( $err, %name_method, %name_locus );
     foreach my $sub_txt ($ace->values_from_tag('Subsequence')) {

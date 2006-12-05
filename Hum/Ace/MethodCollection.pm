@@ -101,6 +101,26 @@ sub get_all_transcript_Methods {
     }
 }
 
+sub get_all_mutable_Methods {
+    my ($self) = @_;
+    
+    if (my $lst = $self->{'_method_list'}) {
+        return grep $_->mutable, @$lst;
+    } else {
+        return;
+    }
+}
+
+sub get_all_mutable_non_transcript_Methods {
+    my ($self) = @_;
+    
+    if (my $lst = $self->{'_method_list'}) {
+        return grep {$_->mutable and ! $_->transcript_type} @$lst;
+    } else {
+        return;
+    }
+}
+
 sub get_Method_by_name {
     my( $self, $name ) = @_;
     
@@ -132,14 +152,14 @@ sub order_by_zone {
     
     # Multiple methods with the same zone_number will
     # be left in their original order by sort.
-    @$lst = sort { $a->zone_number <=> $b->zone_number } @$lst;
+    @$lst = sort { ($a->zone_number || 0) <=> ($b->zone_number || 0) } @$lst;
 }
 
 sub order_by_right_priority {
     my( $self ) = @_;
     
     my $lst = $self->get_all_Methods;
-    @$lst = sort {$a->right_priority <=> $b->right_priority} @$lst;
+    @$lst = sort { ($a->right_priority || 0) <=> ($b->right_priority || 0) } @$lst;
 }
 
 

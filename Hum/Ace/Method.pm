@@ -24,7 +24,6 @@ my @boolean_tags = qw{
     Percent
     BlastN
     Outline
-    Gapped
     Right_priority_fixed
     No_display
     Built_in
@@ -106,6 +105,12 @@ sub new_from_AceText {
     if (my ($w) = $txt->get_values('Width')) {
         $self->width($w->[0]);
     }
+    if (my ($g) = $txt->get_values('Gapped')) {
+        $self->gapped($g->[0] || 0);
+    }
+    if (my ($j) = $txt->get_values('Join_aligns')) {
+        $self->join_aligns($j->[0] || 0);
+    }
     
     # Blixem types
     $self->blixem_type('N') if $txt->count_tag('Blixem_N');
@@ -151,6 +156,8 @@ sub new_from_AceText {
             overlap_mode
             transcript_type
             valid_length
+            gapped
+            join_aligns
             }
         ) {
             $new->$method($self->$method());
@@ -206,10 +213,12 @@ sub ace_string {
         Min_mag
         Width
         Valid_length
+        Gapped
+        Join_aligns
         })
     {
         my $tag_method = lc $tag;
-        if (my $val = $self->$tag_method()) {
+        if (defined (my $val = $self->$tag_method())) {
             $txt->add_tag($tag, $val);
         }
     }
@@ -278,7 +287,7 @@ sub zone_number {
     if (defined $zone_number) {
         $self->{'_zone_number'} = $zone_number;
     }
-    return $self->{'_zone_number'} || 0;
+    return $self->{'_zone_number'};
 }
 
 sub right_priority {
@@ -287,7 +296,7 @@ sub right_priority {
     if (defined $right_priority) {
         $self->{'_right_priority'} = sprintf "%.3f", $right_priority;
     }
-    return $self->{'_right_priority'} || 0;
+    return $self->{'_right_priority'};
 }
 
 sub max_mag {
@@ -341,6 +350,33 @@ sub valid_length {
         $self->{'_valid_length'} = $valid_length;
     }
     return $self->{'_valid_length'};
+}
+
+sub gapped {
+    my( $self, $gapped ) = @_;
+    
+    if (defined $gapped) {
+        $self->{'_gapped'} = $gapped;
+    }
+    return $self->{'_gapped'};
+}
+
+sub join_aligns {
+    my( $self, $join_aligns ) = @_;
+    
+    if (defined $join_aligns) {
+        $self->{'_join_aligns'} = $join_aligns;
+    }
+    return $self->{'_join_aligns'};
+}
+
+sub remark {
+    my( $self, $remark ) = @_;
+    
+    if ($remark) {
+        $self->{'_remark'} = $remark;
+    }
+    return $self->{'_remark'};
 }
 
 sub hex_color {
@@ -495,15 +531,6 @@ sub outline {
     return $self->{'_outline'};
 }
 
-sub gapped {
-    my( $self, $flag ) = @_;
-    
-    if (defined $flag) {
-        $self->{'_gapped'} = $flag ? 1 : 0;
-    }
-    return $self->{'_gapped'};
-}
-
 sub right_priority_fixed {
     my( $self, $flag ) = @_;
     
@@ -565,6 +592,24 @@ sub init_hidden {
         $self->{'_init_hidden'} = $flag ? 1 : 0;
     }
     return $self->{'_init_hidden'};
+}
+
+sub edit_score {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_edit_score'} = $flag ? 1 : 0;
+    }
+    return $self->{'_edit_score'};
+}
+
+sub edit_display_label {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_edit_display_label'} = $flag ? 1 : 0;
+    }
+    return $self->{'_edit_display_label'};
 }
 
 1;
