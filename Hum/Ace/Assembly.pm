@@ -197,7 +197,40 @@ sub ace_string {
     return $ace;
 }
 
-
+sub zmap_SimpleFeature_xml {
+    my ($self, $old) = @_;
+    
+    if ($old and $self == $old) {
+        confess "Old and new assemblies are the same object!";
+    }
+    
+    # If $old is supplied, we create the minimum update transaction.
+    
+    my %new_feat = map {$_->zmap_xml_feature_tag, $_} $self->get_all_SimpleFeatures;
+    my %old_feat;
+    if ($old) {
+        %old_feat = map {$_->zmap_xml_feature_tag, $_} $old->get_all_SimpleFeatures;
+    } else {
+        %old_feat = ();
+    }
+    
+    ### Should the deletes and creates be grouped inside featuresets?
+    
+    my $xml = '';
+    foreach my $str (keys %old_feat) {
+        # Delete if feature in old set is not in the new
+        unless ($new_feat{$str}) {
+            $xml .= $old_feat{$str}->zmap_delete_xml_string;
+        }
+    }
+    foreach my $str (keys %new_feat) {
+        # Create if feature in new set is not in the old
+        unless ($old_feat{$str}) {
+            $xml .= $new_feat{$str}->zmap_create_xml_string;
+        }
+    }
+    return $xml;
+}
 
 sub express_data_fetch {
     my( $self, $ace ) = @_;
