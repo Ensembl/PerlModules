@@ -112,7 +112,7 @@ sub set_SimpleFeature_list {
     my $self = shift;
 
     $self->clear_SimpleFeatures;
-    $self->add_SimpleFeature_list( @_ );
+    $self->add_SimpleFeatures( @_ );
 }
 
 sub get_all_SimpleFeatures {
@@ -122,11 +122,11 @@ sub get_all_SimpleFeatures {
       or return;
     unless ($self->{'_SimpleFeatures_are_sorted'}) {
         @$feat_list = sort {
-            $a->start <=> $b->start
-            || $a->end <=> $b->end
+            $a->seq_start <=> $b->seq_start
+            || $a->seq_end <=> $b->seq_end
             || $a->method_name cmp $b->method_name
             || $a->score <=> $b->score
-            || $a->strand <=> $b->strand
+            || $a->seq_strand <=> $b->seq_strand
             || $a->text cmp $b->text
           } @$feat_list;
         $self->{'_SimpleFeatures_are_sorted'} = 1;
@@ -151,12 +151,13 @@ sub filter_SimpleFeature_list_from_ace_handle {
     my $sf_list = $self->{'_SimpleFeature_list'} ||= [];
     foreach my $row ($ace->values_from_tag('Feature')) {
         my ($method_name, $start, $end, $score, $text) = @$row;
-        my $method = $mutable_method{$method_name}
+        my $method = $mutable_method{lc $method_name}
           or next;
 
         my $feat = Hum::Ace::SeqFeature::Simple->new;
         $feat->seq_Sequence($seq);
         $feat->seq_name($name);
+        $feat->Method($method);
         if ($start <= $end) {
             $feat->seq_start($start);
             $feat->seq_end($end);
@@ -172,6 +173,7 @@ sub filter_SimpleFeature_list_from_ace_handle {
 
         push @$sf_list, $feat;
     }
+    #printf STDERR "Found %d editable SimpleFeatures\n", scalar @$sf_list;
 }
 
 sub ace_string {
@@ -183,7 +185,7 @@ sub ace_string {
     my $coll = $self->MethodCollection
       or confess "No MethodCollection attached";
     foreach my $method ($coll->get_all_mutable_non_transcript_Methods) {
-        $ace .= sprintf q{-D Feature "%s"\n}, $method->name;
+        $ace .= sprintf qq{-D Feature "%s"\n}, $method->name;
     }
     
     $ace .= qq{\nSequence "$name"\n};

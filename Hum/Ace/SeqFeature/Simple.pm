@@ -38,13 +38,13 @@ sub ace_string {
     my ($self) = @_;
 
     my ($start, $end);
-    if ($self->strand == 1) {
-        $start = $self->start;
-        $end   = $self->end;
+    if ($self->seq_strand == 1) {
+        $start = $self->seq_start;
+        $end   = $self->seq_end;
     }
     else {
-        $start = $self->end;
-        $end   = $self->start;
+        $start = $self->seq_end;
+        $end   = $self->seq_start;
     }
 
     return sprintf qq{Feature "%s" %d %d %.3f "%s"\n},
