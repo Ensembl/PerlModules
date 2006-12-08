@@ -120,6 +120,21 @@ sub get_all_SimpleFeatures {
 
     my $feat_list = $self->{'_SimpleFeature_list'}
       or return;
+    
+    # Set seq_name in features to our own
+    if (my $name = $self->name) {
+        foreach my $feat (@$feat_list) {
+            $feat->seq_name($name);
+        }
+    }
+
+    # Attach genomic sequence object to features
+    if (my $seq = $self->Sequence) {
+        foreach my $feat (@$feat_list) {
+            $feat->seq_Sequence($seq);
+        }
+    }
+
     unless ($self->{'_SimpleFeatures_are_sorted'}) {
         @$feat_list = sort {
             $a->seq_start <=> $b->seq_start

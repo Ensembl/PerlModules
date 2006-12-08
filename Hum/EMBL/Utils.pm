@@ -59,7 +59,6 @@ BEGIN {
                 }
             }
             $crcTable[$i] = $crc;
-            warn "  $crc\n";
         }
     }
 
