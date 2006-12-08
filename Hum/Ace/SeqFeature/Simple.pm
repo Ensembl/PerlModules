@@ -53,29 +53,10 @@ sub ace_string {
       $self->score, $self->text;
 }
 
-sub zmap_delete_xml_string {
-    my ($self) = @_;
-    
-    return qq{<zmap action="delete_feature">\n}
-        . qq{\t<featureset>\n}
-        . qq{\t\t} . $self->zmap_xml_feature_tag
-        . qq{\t\t</feature>}
-        . qq{\t</featureset>\n}
-        . qq{</zmap>\n};
-}
-
-sub zmap_create_xml_string {
-    my ($self) = @_;
-    
-    return qq{<zmap action="create_feature">\n\t<featureset>\n}
-      . qq{\t\t} . $self->zmap_xml_feature_tag
-      . qq{\t\t</feature>\n\t</featureset>\n</zmap>\n};
-}
-
 sub zmap_xml_feature_tag {
     my ($self) = @_;
     
-    return sprintf qq{<feature name="%s" start="%d" end="%d" strand="%s" style="%s" score="%s">\n},
+    return sprintf qq{<feature name="%s" start="%d" end="%d" strand="%s" style="%s" score="%.3f"></feature>\n},
         $self->text,    # Should XML escape!
         $self->seq_start,
         $self->seq_end,

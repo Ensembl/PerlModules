@@ -206,31 +206,58 @@ sub zmap_SimpleFeature_xml {
     
     # If $old is supplied, we create the minimum update transaction.
     
-    my %new_feat = map {$_->zmap_xml_feature_tag, $_} $self->get_all_SimpleFeatures;
+    my %new_feat = map {$_->zmap_xml_feature_tag, 1} $self->get_all_SimpleFeatures;
     my %old_feat;
     if ($old) {
-        %old_feat = map {$_->zmap_xml_feature_tag, $_} $old->get_all_SimpleFeatures;
+        %old_feat = map {$_->zmap_xml_feature_tag, 1} $old->get_all_SimpleFeatures;
     } else {
         %old_feat = ();
     }
-    
-    ### Should the deletes and creates be grouped inside featuresets?
-    
-    my $xml = '';
+
+    my( $del_xml, $cre_xml, @xml);
     foreach my $str (keys %old_feat) {
         # Delete if feature in old set is not in the new
         unless ($new_feat{$str}) {
-            $xml .= $old_feat{$str}->zmap_delete_xml_string;
+            $del_xml .= $str;
         }
     }
+    if ($del_xml) {
+        push(@xml, $self->zmap_delete_xml_string($del_xml));
+    }
+        
     foreach my $str (keys %new_feat) {
         # Create if feature in new set is not in the old
         unless ($old_feat{$str}) {
-            $xml .= $new_feat{$str}->zmap_create_xml_string;
+            $cre_xml .= $str;
         }
     }
-    return $xml;
+    if ($cre_xml) {
+        push(@xml, $self->zmap_create_xml_string($cre_xml));
+    }
+    
+    return @xml;
 }
+
+sub zmap_delete_xml_string {
+    my ($self, $xml) = @_;
+    
+    return qq{<zmap action="delete_feature">\n}
+      . qq{\t<featureset>\n}
+      . qq{\t\t} . $xml
+      . qq{\t</featureset>\n}
+      . qq{</zmap>\n};
+}
+
+sub zmap_create_xml_string {
+    my ($self, $xml) = @_;
+    
+    return qq{<zmap action="create_feature">\n}
+      . qq{\t<featureset>\n}
+      . qq{\t\t} . $xml
+      . qq{\t</featureset>\n}
+      . qq{</zmap>\n};
+}
+
 
 sub express_data_fetch {
     my( $self, $ace ) = @_;
