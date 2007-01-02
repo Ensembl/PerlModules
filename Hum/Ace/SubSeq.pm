@@ -312,18 +312,17 @@ sub clone {
         GeneMethod
         Locus
         strand
-        translation_region
         start_not_found
           end_not_found
         upstream_subseq_name
         downstream_subseq_name
         })
     {
-        if ( $meth eq 'translation_region' && (! $old->translation_region_is_set)  ) {
-            # If values are not set this method returns defaults - which are the start and end
-            next ;
-        }
         $new->$meth($old->$meth());
+    }
+    
+    if ($old->translation_region_is_set) {
+        $new->translation_region($old->translation_region);
     }
 
     $new->set_remarks($old->list_remarks);
@@ -1294,9 +1293,9 @@ sub zmap_create_xml_string {
     }
 
     ## these are correct for zmap
-    my ($cds_start, $cds_end) = $self->cds_coords;
-    if ($cds_start and $cds_end) {
-        $xml .= qq{\t\t\t<subfeature ontology="cds" start="$cds_start" end="$cds_end" />\n};
+    if ($self->translation_region_is_set) {
+        $xml .= sprintf qq{\t\t\t<subfeature ontology="cds" start="%d" end="%d" />\n},
+            $self->translation_region;
     }
     
     $xml .= qq{\t\t</feature>\n\t</featureset>\n</zmap>\n};
