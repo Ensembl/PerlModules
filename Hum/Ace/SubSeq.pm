@@ -1261,7 +1261,8 @@ sub zmap_delete_xml_string {
     
     return qq{<zmap action="delete_feature">\n}
         . qq{\t<featureset>\n}
-        . qq{\t\t} . $self->zmap_xml_feature_tag . qq{</feature>}
+        . qq{\t\t} . $self->zmap_xml_feature_tag
+        . qq{\t\t</feature>\n}
         . qq{\t</featureset>\n}
         . qq{</zmap>\n};
 }
@@ -1281,18 +1282,17 @@ sub zmap_create_xml_string {
     for (my $i = 0; $i < @exons; $i++) {
         my $ex = $exons[$i];
         if ($i > 0) {
+            # Set intron span from end of previous exon to start of current
             my $pex = $exons[$i - 1];
-            # get intron info
             $xml .= sprintf(qq{\t\t\t<subfeature ontology="intron" start="%d" end="%d" />\n},
-                            $pex->end,
-                            $ex->start);
+                            $pex->end + 1,
+                            $ex->start - 1);
         }
         $xml .= sprintf(qq{\t\t\t<subfeature ontology="exon" start="%d" end="%d" />\n},
                         $ex->start,
                         $ex->end);
     }
 
-    ## these are correct for zmap
     if ($self->translation_region_is_set) {
         $xml .= sprintf qq{\t\t\t<subfeature ontology="cds" start="%d" end="%d" />\n},
             $self->translation_region;
