@@ -215,7 +215,10 @@ sub connect_parameters {
 sub disconnect_client {
     my( $self ) = @_;
     
-    $self->{'_ace_handle'} = undef;
+    # We do a bad thing, and mess with the AcePerl
+    # object hash:
+    $self->{'_ace_handle'}{'database'} = undef;
+    $self->{'_ace_handle'}             = undef;
 }
 
 sub server_executable {

@@ -41,7 +41,6 @@ sub count_from_tag {
     return $text->count_tag($tag);
 }
 
-
 1;
 
 __END__
