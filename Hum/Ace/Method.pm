@@ -33,7 +33,6 @@ my @boolean_tags = qw{
     Edit_score
     Edit_display_label
     
-    ZMap_mode_text
     Init_hidden
     
     };
@@ -82,6 +81,24 @@ sub new_from_AceText {
     $self->overlap_mode('overlap')  if $txt->count_tag('Overlap');
     $self->overlap_mode('bumpable') if $txt->count_tag('Bumpable');
     $self->overlap_mode('cluster')  if $txt->count_tag('Cluster');
+    
+    # Zmap display mode
+    foreach my $mode (qw{
+        text
+        graph
+        basic
+        alignemnt
+        transcript
+        allele
+        graph
+        })
+    {
+        my $tag = "Zmap_mode_$mode";
+        if ($txt->count_tag($tag)) {
+            $self->zmap_mode($mode);
+            last;
+        }
+    }
     
     # Methods with the same column_group get the same right_priority
     if (my ($grp) = $txt->get_values('Column_group')) {
@@ -158,6 +175,7 @@ sub new_from_AceText {
             valid_length
             gapped
             join_aligns
+            zmap_mode
             }
         ) {
             $new->$method($self->$method());
@@ -200,6 +218,10 @@ sub ace_string {
     
     if (my $over = $self->overlap_mode) {
         $txt->add_tag(ucfirst $over);
+    }
+    
+    if (my $mode = $self->zmap_mode) {
+        $txt->add_tag("Zmap_mode_$mode");
     }
     
     if (my $type = $self->transcript_type) {
@@ -441,6 +463,25 @@ sub overlap_mode {
     return $self->{'_overlap_mode'};
 }
 
+sub zmap_mode {
+    my( $self, $zmap_mode ) = @_;
+    
+    if ($zmap_mode) {
+        if ($zmap_mode ne 'text'        and
+            $zmap_mode ne 'graph'       and
+            $zmap_mode ne 'basic'       and
+            $zmap_mode ne 'alignment'   and
+            $zmap_mode ne 'transcript'  and
+            $zmap_mode ne 'allele'
+        ) {
+            confess "Unrecognized zmap mode '$zmap_mode'";
+        }
+        $self->{'_zmap_mode'} = $zmap_mode;
+    }
+    return $self->{'_zmap_mode'};
+}
+
+
 sub transcript_type {
     my( $self, $transcript_type ) = @_;
     
@@ -574,15 +615,6 @@ sub has_parent {
         $self->{'_has_parent'} = $flag ? 1 : 0;
     }
     return $self->{'_has_parent'};
-}
-
-sub zmap_mode_text {
-    my( $self, $flag ) = @_;
-    
-    if (defined $flag) {
-        $self->{'_zmap_mode_text'} = $flag ? 1 : 0;
-    }
-    return $self->{'_zmap_mode_text'};
 }
 
 sub init_hidden {
