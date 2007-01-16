@@ -1306,12 +1306,17 @@ sub zmap_create_xml_string {
 sub zmap_xml_feature_tag {
     my ($self) = @_;
     
+    my $style = $self->GeneMethod->name;
+    if (my $pre = $self->Locus->gene_type_prefix) {
+        $style = "$pre:$style";
+    }
+    
     return sprintf qq{<feature name="%s" start="%d" end="%d" strand="%s" style="%s">\n},
         $self->name,
         $self->start,
         $self->end,
         $self->strand == -1 ? '-' : '+',
-        $self->GeneMethod->name;
+        $style;
 }
 
 
