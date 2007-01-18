@@ -12,6 +12,7 @@ use Hum::Ace::Method;
 use Hum::Ace::SubSeq;
 use Hum::Ace::Clone;
 use Hum::Ace::SeqFeature::Simple;
+use Hum::Ace::MethodCollection;
 use Hum::Sequence::DNA;
 
 sub new {
@@ -276,6 +277,10 @@ sub zmap_create_xml_string {
 
 sub express_data_fetch {
     my( $self, $ace ) = @_;
+    
+    # Get Methods first, since they are used by other objects
+    $self->store_MethodCollection_from_ace_handle($ace);
+    my %name_method = map {$_->name, $_} $self->MethodCollection->get_all_transcript_Methods;
 
     my $name = $self->name;
     
@@ -290,7 +295,7 @@ sub express_data_fetch {
     # are only present on the top level assembly object.
     $self->filter_SimpleFeature_list_from_ace_handle($ace);
 
-    my( $err, %name_method, %name_locus );
+    my( $err, %name_locus );
     foreach my $sub_txt ($ace->values_from_tag('Subsequence')) {
         eval{
             my($name, $start, $end) = @$sub_txt;
@@ -314,10 +319,7 @@ sub express_data_fetch {
                 $meth_name =~ s/^[^:]+://;
                 my $meth = $name_method{$meth_name};
                 unless ($meth) {
-                    $ace->raw_query("find Method $meth_name");
-                    my $txt = Hum::Ace::AceText->new($ace->raw_query('show -a'));
-                    $meth = Hum::Ace::Method->new_from_AceText($txt);
-                    $name_method{$meth_name} = $meth;
+                    confess "No transcript Method called '$meth_name'";
                 }
                 $sub->GeneMethod($meth);
             }
@@ -358,6 +360,14 @@ sub express_data_fetch {
         
         $self->add_Clone($clone);
     }
+}
+
+sub store_MethodCollection_from_ace_handle {
+    my ($self, $ace) = @_;
+    
+    my $coll = Hum::Ace::MethodCollection->new_from_ace_handle($ace);
+    $coll->order_by_right_priority;
+    $self->MethodCollection($coll);
 }
 
 sub store_Sequence_from_ace_handle {

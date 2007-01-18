@@ -176,6 +176,7 @@ sub new_from_AceText {
             gapped
             join_aligns
             zmap_mode
+            remark
             }
         ) {
             $new->$method($self->$method());
@@ -237,6 +238,7 @@ sub ace_string {
         Valid_length
         Gapped
         Join_aligns
+        Remark
         })
     {
         my $tag_method = lc $tag;

@@ -21,7 +21,7 @@ sub new_from_string {
     
     my $self = $pkg->new;
 
-    # Split text into paragraphs (which are separated by two or more blank lines).
+    # Split text into paragraphs (which are separated by one or more blank lines).
     foreach my $para (split /\n{2,}/, $str) {
         # Create Method object from paragraphs that have
         # any lines that begin with a word character.
@@ -33,6 +33,16 @@ sub new_from_string {
     }
     return $self;
 }
+
+sub new_from_ace_handle {
+    my ($pkg, $ace) = @_;
+    
+    $ace->raw_query('find Method *');
+    # Using the AceText object strips out any server comments and nulls
+    my $meths = Hum::Ace::AceText->new($ace->raw_query('show -a'));
+    return $pkg->new_from_string($meths->ace_string);
+}
+
 
 sub ace_string {
     my( $self ) = @_;
