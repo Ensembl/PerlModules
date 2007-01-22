@@ -58,18 +58,7 @@ if ($ENV{'PFETCH_SERVER_LIST'}) {
     $pfetch_server_list = parse_servers($ENV{'PFETCH_SERVER_LIST'});
 } else {
     $pfetch_server_list = [
-        [qw{ cbi2.internal.sanger.ac.uk      22100 }],
-        [qw{ pubseq.internal.sanger.ac.uk    22100 }],
-        ];
-}
-
-my $pfetch_archive_server_list;
-if ($ENV{'PFETCH_ARCHIVE_SERVER_LIST'}) {
-    $pfetch_archive_server_list = parse_servers($ENV{'PFETCH_ARCHIVE_SERVER_LIST'});
-} else {
-    $pfetch_archive_server_list = [
-        [qw{ cbi2.internal.sanger.ac.uk      23100 }],
-        [qw{ pubseq.internal.sanger.ac.uk    23100 }],
+        [qw{ cbi3.internal.sanger.ac.uk      22400 }],
         ];
 }
 

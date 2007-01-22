@@ -6,7 +6,7 @@ package Hum::Pfetch;
 use strict;
 use Carp;
 use Hum::EMBL;
-use Hum::Conf qw{ PFETCH_SERVER_LIST PFETCH_ARCHIVE_SERVER_LIST };
+use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use IO::Socket;
 use Exporter;
 
@@ -23,12 +23,6 @@ sub get_server {
     return _connect_to_server(
         'pfetch',
         $PFETCH_SERVER_LIST);
-}
-
-sub get_archive_server {
-    return _connect_to_server(
-        'pfetch arvhive',
-        $PFETCH_ARCHIVE_SERVER_LIST);
 }
 
 sub _connect_to_server {
@@ -71,22 +65,6 @@ sub get_Sequences {
             $seq->name($id_list[$i]);
             $seq->sequence_string($seq_string);
             $seq_list[$i] = $seq;
-        }
-    }
-    
-    # Try for any missing sequences from the archive server.
-    if (@missing_i) {
-        $server = get_archive_server();
-        print $server "-q @id_list[@missing_i]\n";
-        for (my $i = 0; $i < @missing_i; $i++) {
-            my $id_index = $missing_i[$i];
-            chomp( my $seq_string = <$server> );
-            if ($seq_string ne 'no match') {
-                my $seq = Hum::Sequence->new;
-                $seq->name($id_list[$id_index]);
-                $seq->sequence_string($seq_string);
-                $seq_list[$id_index] = $seq;
-            }
         }
     }
     
