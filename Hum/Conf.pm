@@ -75,7 +75,6 @@ if ($ENV{'PFETCH_SERVER_LIST'}) {
     FTP_ROOT            => "$ftp/pub/sequences",
 
     PFETCH_SERVER_LIST         => $pfetch_server_list,
-    PFETCH_ARCHIVE_SERVER_LIST => $pfetch_archive_server_list,
 
     HUMACE_DIR    => "/nfs/humace/humpub/humace",
     HUMACE_RO_DIR => '/nfs/humace/humpub/humace-live-ro',
