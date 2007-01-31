@@ -441,7 +441,7 @@ sub add_FT_entries {
                'Contact: vega@sanger.ac.uk',],
         57 => ['Center: UK Medical Research Council',
                'Center code: UK-MRC',
-               'Web site: http://mrcseq.har.mrc.ac.uk',],
+               'Web site: http://mrcseq.har.mrc.ac.uk',],  # contact is removed as it became obsolete
         );
 
     # So that the UK-MRC funded sequences end up in the correct
