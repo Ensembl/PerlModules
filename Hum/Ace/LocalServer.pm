@@ -43,16 +43,25 @@ sub port {
     }
     return $port;
 }
+
+sub forget_port {
+    my ($self) = @_;
+
+    $self->{'_port'} = undef;
+}
+
 sub user{
     my( $self, $arg ) = @_;
     $self->{'_user'} = $arg if $arg;
     return $self->{'_user'} || 'localServer';
 }
+
 sub pass{
     my( $self, $arg ) = @_;
     $self->{'_pass'} = $arg if $arg;
     return $self->{'_pass'} || 'password';
 }
+
 sub _reserve_random_port {
     my( $self ) = @_;
 
@@ -259,10 +268,11 @@ sub restart_server {
 sub kill_server {
     my( $self ) = @_;
 
-    my $ace = $self->ace_handle or return;
-    $ace->raw_query('shutdown');
+    if (my $ace = $self->ace_handle) {
+        $ace->raw_query('shutdown');
+    }
     $self->disconnect_client;
-    $self->wait_for_port_release;
+    $self->forget_port;
 }
 
 {
