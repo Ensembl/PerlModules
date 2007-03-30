@@ -347,7 +347,7 @@ sub width {
     if (defined $width) {
         $self->{'_width'} = $width;
     }
-    return $self->{'_width'};
+    return $self->{'_width'} || 2;
 }
 
 sub score_bounds {
