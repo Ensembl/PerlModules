@@ -226,7 +226,7 @@ sub disconnect_client {
     
     # We do a bad thing, and mess with the AcePerl
     # object hash:
-    #$self->{'_ace_handle'}{'database'} = undef;
+    $self->{'_ace_handle'}{'database'} = undef;
     $self->{'_ace_handle'}             = undef;
 }
 
