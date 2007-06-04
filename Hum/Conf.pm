@@ -7,51 +7,9 @@ use Carp;
 use vars qw( %humConf );
 
 # Could change user in future
-# _home alternates are to avoid warnings outside the sanger
-my $humpub = ( getpwnam('humpub') )[7] || 'humpub_home';
-my $badger = ( getpwnam('badger') )[7] || 'badger_home';
-my $ftp    = ( getpwnam('ftp')    )[7] || 'ftp_home';
-my $humace = ( getpwnam('humace') )[7] || 'humace_home';
+my $humpub = '/lustre/cbi4/work1/humpub';
 
-# List of acedb servers and ports
-my %ace_server = (
-    'humace'            => [qw( humsrv1   210000 )],
-    'humace-live-ro'    => [qw( humsrv1   310000 )],
-    'humace-query'      => [qw( humsrv1   410000 )],
-    '1ace'              => [qw( socrates  100201 )],
-    '6ace'              => [qw( socrates  100206 )],
-    '9ace'              => [qw( socrates  100209 )],
-    '10ace'             => [qw( socrates  100210 )],
-    '11ace'             => [qw( socrates  100211 )],
-    '13ace'             => [qw( socrates  100213 )],
-    '20ace'             => [qw( socrates  100220 )],
-    '22ace'             => [qw( socrates  100222 )],
-    'Xace'              => [qw( socrates  100224 )],
-    );
-
-my %chr_path = map { $_, "$humace/databases/$_" } qw( 1ace 6ace 9ace 10ace 11ace 13ace 20ace 22ace Xace );
-
-my %ace_host = map { $_, $ace_server{$_}->[0] } keys %ace_server;
-my %ace_port = map { $_, $ace_server{$_}->[1] } keys %ace_server;
-
-my $humpub_disk1  = "${humpub}1" ;
-my $humpub_disk1a = "${humpub}1a";
-my $humpub_disk2  = "${humpub}2" ;
-my $humpub_disk2a = "${humpub}2a";
-my $humpub_disk3  = "${humpub}3" ;
-my $humpub_disk3a = "${humpub}3a";
-my $humpub_disk4a = "${humpub}4a";
-my $humpub_disk5a = "${humpub}5a";
-my $ftp_ghost     = "$humpub_disk3/data/ftp_ghost";
-
-# TimDB legacy system
-my $sanger_path="/nfs/disk100/humpub1a/unfinished_ana";
-my $ext_path="/nfs/disk100/humpub2a/unfinished_ana";
-my %cgp_path=map {$_,"$sanger_path/$_"} qw ( SU SF );
-$cgp_path{'EU'}="$ext_path/EU";
-$cgp_path{'EF'}="$ext_path/EF";
-
-my $humace_queue = "$humpub/humace/queue";
+my $ftp_ghost     = "$humpub/ftp_ghost";
 
 my $pfetch_server_list;
 if ($ENV{'PFETCH_SERVER_LIST'}) {
@@ -64,78 +22,31 @@ if ($ENV{'PFETCH_SERVER_LIST'}) {
 
 # Hash containing config info
 %humConf = (
-    ACESERVER_HOST  => \%ace_host,
-    ACESERVER_PORT  => \%ace_port,
-    CHR_DB_PATH     => \%chr_path,
 
     # FTP site variables
-    HUMAN_SEQ_FTP_DIR   => "$ftp/pub/sequences/human",
     FTP_GHOST           =>  $ftp_ghost,
     FTP_ATTIC           => "$ftp_ghost/attic",
-    FTP_ROOT            => "$ftp/pub/sequences",
+    FTP_ROOT            => "/nfs/disk69/ftp/pub/sequences",
 
     PFETCH_SERVER_LIST         => $pfetch_server_list,
 
-    HUMACE_DIR    => "/nfs/humace/humpub/humace",
-    HUMACE_RO_DIR => '/nfs/humace/humpub/humace-live-ro',
-
     # The humpub disks
-    HUMPUB_ROOT   => $humpub       ,
-    HUMPUB_DISK1  => $humpub_disk1 ,
-    HUMPUB_DISK1A => $humpub_disk1a,
-    HUMPUB_DISK2  => $humpub_disk2 ,
-    HUMPUB_DISK2A => $humpub_disk2a,
-    HUMPUB_DISK3  => $humpub_disk3 ,
-    HUMPUB_DISK3A => $humpub_disk3a,
-    HUMPUB_DISK4A => $humpub_disk4a,
-    HUMPUB_DISK5A => $humpub_disk5a,
+    HUMPUB_ROOT   => $humpub,
 
-    HUMPUB_BLAST  => "$humpub_disk3/data/blast",
+    HUMPUB_BLAST  => "$humpub/data/blast",
 
     PUBLIC_HUMAN_DISK => '/nfs/repository/p100',
-    HUMACE_DUMP   => '/nfs/humace/humpub/backup',
-    HUMACE_QUEUE => $humace_queue,
-    HUMACESERVER_HOST     => $ace_host{'humace'},
-    HUMACESERVER_PORT     => $ace_port{'humace'},
-    HUMGIFACESERVER_PORT  => $ace_port{'humace-live-ro'},
-    HUMQUERYSERVER_PORT   => $ace_port{'humace-query'},
-    HUMACE_CLIENT_TIMEOUT => 1200,
-    HUMACE_INCREMENTAL     => "$humpub/data/Humace_Incremental/CURRENT",
-    HUMACE_INCREMENTAL_DIR => "$humpub/data/Humace_Incremental",
 
     SPECIES_ANALYSIS_ROOT => {
         'Human'         => "$humpub/analysis/projects",
-        'Mouse'         => "$humpub_disk1/analysis/mouse",
-        'Zebrafish'     => "$humpub_disk1/analysis/zebrafish",
-        'Gibbon'        => "$humpub_disk1/analysis/gibbon",
-        },
-    SPECIES_ACE_QUEUE => {
-        'Human'         => $humace_queue,
-        'Mouse'         => "/nfs/humace/humpub/musace/queue",
-        'Zebrafish'     => "/nfs/humace/humpub/zface/queue",
-        'Gibbon'        => "/nfs/humace/humpub/gibbace/queue",
+        'Mouse'         => "$humpub/analysis/mouse",
+        'Zebrafish'     => "$humpub/analysis/zebrafish",
+        'Gibbon'        => "$humpub/analysis/gibbon",
         },
     ANALYSIS_ROOT => "$humpub/analysis/projects",
-    LINK_ANALYSIS_ROOT => "$humpub/analysis/links",
 
     EMBL_FILE_DIR => "$humpub/data/EMBL",
-    EMBL_SUMMARY_EMAIL => "$humpub/data/EMBL_summary_email",
     CONFIG_DEFAULT => "$humpub/scripts/haceprep.cfg",
-    BADGER_ROOT => $badger,
-    PACE_DIR   => "$badger/pace",
-    PACE_QUEUE => "$badger/pace/queue",
-    FGENESH_DIR => "$humpub/solovyev/fgenesh_run",
-    GF_DATA     => "$humpub/solovyev/fgenes_run",
-    DBM_FILES   =>  "$humpub/data/DBMfiles",
-    IMAGES      =>  "$humpub/data/images",
-    ANALYSIS_PEOPLE => [ qw( humpub th michele jgrg ak1 lw2 jla1 cas eah ) ],
-    HP_TRANSACTION => "$humpub/data/hp_transaction",
-    HP_TRANSACTION_LOG => "$humpub/logs/hp_transaction.log",
-    DELETE_DUMP_DIR => "$humpub/data/deleted",
-    WWW_CHECKING => "/nfs/intweb/server/htdocs/LocalUsers/humpub/autostatus/checking",
-    WWW_SPANGLE => "/nfs/intweb/server/htdocs/LocalUsers/humpub/annotation/evidence",
-    UNFIN_DATA_ROOT => $sanger_path,
-    UNFIN_DATA_ROOT_CGP => \%cgp_path,
     );
 
 sub import {
