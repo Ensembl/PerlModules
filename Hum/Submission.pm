@@ -25,6 +25,7 @@ use Net::Netrc;
   project_name_from_accession
   submission_disconnect
   acetime
+  acedate
   timeace
   ghost_path
   MySQLdate
@@ -310,6 +311,24 @@ a time string as input, or defaulting to current time.
         $year += 1900;
 
         return "$year-$mon-${mday}_$hour:$min:$sec";
+    }
+
+    sub acedate {
+        my ($time) = @_;
+
+        $time ||= time;
+
+        # Get time info
+        my ($mday, $mon, $year) =
+          (localtime($time))[ 3 .. 5 ];
+
+        # Change numbers to double-digit format
+        ($mon, $mday) = @two_figure[ ($mon + 1), $mday ];
+
+        # Make year
+        $year += 1900;
+
+        return "$year-$mon-$mday";
     }
 
     # Convert unix time int to MySQL date
