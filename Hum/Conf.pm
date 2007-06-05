@@ -9,7 +9,7 @@ use vars qw( %humConf );
 # Could change user in future
 my $humpub = '/lustre/cbi4/work1/humpub';
 
-my $ftp_ghost     = "$humpub/ftp_ghost";
+my $ftp_ghost = "$humpub/ftp_ghost";
 
 my $pfetch_server_list;
 if ($ENV{'PFETCH_SERVER_LIST'}) {

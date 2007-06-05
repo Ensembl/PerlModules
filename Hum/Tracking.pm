@@ -106,20 +106,22 @@ Updates project_status table with the status value specified
 
 
 {
+    my ($set_not_current, $set_status);
+
     sub set_project_status {
         my( $project_name, $status, $remark ) = @_;
 
         $remark ||= '';
-	my $operator = getpwuid(($<)[0]);
-	my ($program) = $0 =~ m{([^/]+)$};
+	    my $operator = getpwuid(($<)[0]);
+	    my ($program) = $0 =~ m{([^/]+)$};
 
-        my $set_not_current ||= prepare_track_statement(q{
+        $set_not_current ||= prepare_track_statement(q{
             UPDATE project_status
             SET iscurrent = 0
             WHERE projectname = ?
             });
 
-        my $set_status ||= prepare_track_statement(qq{
+        $set_status ||= prepare_track_statement(qq{
             INSERT INTO project_status( projectname
                   , status
                   , statusdate
