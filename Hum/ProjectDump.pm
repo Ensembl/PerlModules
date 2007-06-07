@@ -363,6 +363,24 @@ sub online_path {
     return $pdmp->{'_online_path'};
 }
 
+sub online_cluster {
+    my( $self ) = @_;
+    
+    unless (exists $self->{'_online_cluster'}) {
+        my $sth = prepare_statement(q{
+            SELECT cluster_name
+            FROM project_path_cluster
+            WHERE project_name = ?
+            });
+        $sth->execute($self->project_name);
+        
+        my ($cluster) = $sth->fetchrow;
+
+        $self->{'_online_cluster'} = $cluster;
+    }
+    return $self->{'_online_cluster'};
+}
+
 sub species {
     my( $pdmp ) = @_;
     

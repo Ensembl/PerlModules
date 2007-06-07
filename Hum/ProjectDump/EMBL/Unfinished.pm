@@ -54,8 +54,10 @@ sub store_draft_info {
 
 sub read_gap_contigs {
     my( $pdmp ) = @_;
+    
     my $db_name          = uc $pdmp->project_name;
     my $db_dir              = $pdmp->online_path || confess "No online path";
+    my $cluster             = $pdmp->online_cluster;
     my $contam_report_file  = $pdmp->contamination_report_file;
     
     local *GAP2CAF;
@@ -64,7 +66,7 @@ sub read_gap_contigs {
     my $contig_prefix = "Contig_prefix_ezelthrib";
 
     $pdmp->dump_time(time); # Record the time of the dump
-    my $gaf_pipe = "cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $contig_prefix | caf_depad | caftagfeature -tagid CONT -clean -vector /nfs/disk100/humpub3/data/blast/contamdb 2>>$contam_report_file |";
+    my $gaf_pipe = "ssh -v -x -o 'StrictHostKeyChecking no' $cluster 'cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $contig_prefix | caf_depad | caftagfeature -tagid CONT -clean -vector /nfs/disk100/humpub3/data/blast/contamdb' |";
     warn "gap2caf pipe: $gaf_pipe\n";
     open(GAP2CAF, $gaf_pipe)
 	|| die "COULDN'T OPEN PIPE FROM GAP2CAF : $!\n";
@@ -185,7 +187,7 @@ sub cleanup_contigs {
         }
 
         # Filter out contigs shorter than minimum contig length
-	if (length($$dna) < $cutoff) {
+	    if (length($$dna) < $cutoff) {
             $pdmp->delete_contig($contig);
         }
     }
@@ -201,10 +203,15 @@ sub validate_contig_lengths {
     foreach my $contig ($pdmp->contig_list) {
         my $dna  = $pdmp->DNA($contig);
         my $qual = $pdmp->BaseQuality($contig);
-        my $dna_len  = length($dna);
-        my $qual_len = length($qual);
-        confess "Differing DNA ($dna_len) and BaseQuality ($qual_len) lengths detected in contig '$contig'"
-            unless $qual_len == $dna_len;
+        my $dna_len  = length($$dna);
+        my $qual_len = length($$qual);
+        if ($qual_len != $dna_len) {
+            my $msg = "Differing DNA ($dna_len) and BaseQuality ($qual_len) lengths detected in contig '$contig'";
+            if ($dna >= 1000) {
+                $msg .= "\nDNA = '$dna'";
+            }
+            confess $msg;
+        }
     }
 }
 
