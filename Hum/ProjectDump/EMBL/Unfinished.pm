@@ -69,42 +69,42 @@ sub read_gap_contigs {
     my $gaf_pipe = "ssh -v -x -o 'StrictHostKeyChecking no' $cluster 'cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $contig_prefix | caf_depad | caftagfeature -tagid CONT -clean -vector /nfs/disk100/humpub3/data/blast/contamdb' |";
     warn "gap2caf pipe: $gaf_pipe\n";
     open(GAP2CAF, $gaf_pipe)
-	|| die "COULDN'T OPEN PIPE FROM GAP2CAF : $!\n";
+        || die "COULDN'T OPEN PIPE FROM GAP2CAF : $!\n";
     
     while (<GAP2CAF>) {
-	my ($object, $value) = split("\n", $_, 2);
-	
-	# Read contig DNA BaseQuality and Sequence objects.
-	# We know which ones the contigs are without looking for Is_contig
-	# tags as gap2caf was told to put $contig_prefix in front of the
-	# contig staden id.
-	
-	if (my ($class, $name) = $object =~ /(DNA|BaseQuality|Sequence)\s+\:\s+(\S+)/) {
+        my ($object, $value) = split("\n", $_, 2);
+        
+        # Read contig DNA BaseQuality and Sequence objects.
+        # We know which ones the contigs are without looking for Is_contig
+        # tags as gap2caf was told to put $contig_prefix in front of the
+        # contig staden id.
+        
+        if (my ($class, $name) = $object =~ /(DNA|BaseQuality|Sequence)\s+\:\s+(\S+)/) {
 
-	    if (my ($contig) = $name =~ /$contig_prefix(\d+)/o) {
-		# It's a Contig object
-		if ($class eq 'DNA') {
-		    $value =~ s/\s+//g;
-		    $value = lc $value;
-		    $pdmp->DNA($contig, \$value);
-		}
+            if (my ($contig) = $name =~ /$contig_prefix(\d+)/o) {
+                # It's a Contig object
+                if ($class eq 'DNA') {
+                    $value =~ s/\s+//g;
+                    $value = lc $value;
+                    $pdmp->DNA($contig, \$value);
+                }
                 elsif ($class eq 'BaseQuality') {
                     my $qual = pack('C*', split(/\s+/, $value));
-		    $pdmp->BaseQuality($contig, \$qual);
-		}
+                    $pdmp->BaseQuality($contig, \$qual);
+                }
                 elsif ($class eq 'Sequence') {
-		    $pdmp->parse_contig_tags($contig, \$value);
-		}
-	    } else {
-		# It's a Read object
-		if ($class eq 'Sequence' && $value =~ /Is_read/) {
-		    $pdmp->parse_read_sequence($name, \$value);
-		}
+                    $pdmp->parse_contig_tags($contig, \$value);
+                }
+            } else {
+                # It's a Read object
+                if ($class eq 'Sequence' && $value =~ /Is_read/) {
+                    $pdmp->parse_read_sequence($name, \$value);
+                }
                 elsif ($class eq 'BaseQuality') {
-		    $pdmp->read_quality($name, pack('C*', split(/\s+/, $value)));
-		}
-	    }
-	}
+                    $pdmp->read_quality($name, pack('C*', split(/\s+/, $value)));
+                }
+            }
+        }
     }
     close(GAP2CAF) || confess "ERROR RUNNING GAP2CAF : exit status '$?' : '$!'\n";
 }
@@ -187,7 +187,7 @@ sub cleanup_contigs {
         }
 
         # Filter out contigs shorter than minimum contig length
-	    if (length($$dna) < $cutoff) {
+            if (length($$dna) < $cutoff) {
             $pdmp->delete_contig($contig);
         }
     }
@@ -232,10 +232,10 @@ sub parse_read_sequence {
     # which the read is from.
     my $template;
     if ($$seq =~ /Template\s+(\S+)/) {
-	$template = $1;
+        $template = $1;
     } else {
-	$template = $name;
-	$template =~ s/\..*//;
+        $template = $name;
+        $template =~ s/\..*//;
     }
     $pdmp->read_template($name, $template);
 
@@ -297,7 +297,7 @@ sub read_quality {
     my ($pdmp, $name, $qual) = @_;
 
     if (defined $qual) {
-	$pdmp->{'_read_quality'}{$name} = $qual;
+        $pdmp->{'_read_quality'}{$name} = $qual;
     }
 
     return $pdmp->{'_read_quality'}{$name};
@@ -338,24 +338,24 @@ sub parse_contig_tags {
 
     foreach my $line (split(/\n/, $$seq)) {
         my ($key, @values) = split(" ", $line);
-	if ($key eq "Assembled_from") {
+        if ($key eq "Assembled_from") {
             my ($read, $cs, $ce, $rs, $re) = @values;
-	    push(@af, [$read, $cs, $ce, $rs, $re]);
-	    my $reverse = ($cs > $ce);
-	    if ($reverse) { ($cs, $ce) = ($ce, $cs); }
-	    if (my $extent = $pdmp->read_extent($read)) {
+            push(@af, [$read, $cs, $ce, $rs, $re]);
+            my $reverse = ($cs > $ce);
+            if ($reverse) { ($cs, $ce) = ($ce, $cs); }
+            if (my $extent = $pdmp->read_extent($read)) {
 
-		my ($contig, $ecs, $ece, $ers, $ere) = @{$extent};
+                my ($contig, $ecs, $ece, $ers, $ere) = @{$extent};
 
-		if ($cs > $ecs) { $cs = $ecs; }
-		if ($ce < $ece) { $ce = $ece; }
-		if ($rs > $ers) { $rs = $ers; }
-		if ($re < $ere) { $re = $ere; }
-	    }
+                if ($cs > $ecs) { $cs = $ecs; }
+                if ($ce < $ece) { $ce = $ece; }
+                if ($rs > $ers) { $rs = $ers; }
+                if ($re < $ere) { $re = $ere; }
+            }
 
             # Store read extent
             $pdmp->read_extent($read, [$name, $cs, $ce, $rs, $re, $reverse]);
-	}
+        }
         elsif ($key eq "Tag") {
             my ($tag, $from, $to) = @values;
             if ($tag eq "CONT") {
@@ -375,7 +375,7 @@ sub parse_contig_tags {
 {
     my %vector_string = (
         m13mp18 => 'M13; M77815;',
-	puc18   => 'plasmid; L08752;',
+        puc18   => 'plasmid; L08752;',
     );
 
     sub count_vector {
@@ -398,8 +398,8 @@ sub contig_and_agarose_depth_estimate {
         my $q20_bases  = 0;
 
         foreach my $contig ($pdmp->contig_list) {
-	    $contig_len += $pdmp->contig_length       ($contig);
-	    $q20_bases  += $pdmp->count_q20_for_contig($contig);
+            $contig_len += $pdmp->contig_length       ($contig);
+            $q20_bases  += $pdmp->count_q20_for_contig($contig);
         }
         confess "No contig length!" unless $contig_len;
         
@@ -422,21 +422,21 @@ sub count_q20_for_contig {
     my $q20_count = 0;
     
     foreach my $af (@$afs) {
-	
+        
         # Get the quality string for the current read
         if ($read ne $af->[0]) {
-	    $read = $af->[0];
-	    $quals = $pdmp->read_quality($read);
-	}
+            $read = $af->[0];
+            $quals = $pdmp->read_quality($read);
+        }
 
-	my ($start, $end) = ($af->[3], $af->[4]);
-	if ($start > $end) { ($start, $end) = ($end, $start); }
-	my $part = substr($quals, $start - 1, $end - $start + 1);
+        my ($start, $end) = ($af->[3], $af->[4]);
+        if ($start > $end) { ($start, $end) = ($end, $start); }
+        my $part = substr($quals, $start - 1, $end - $start + 1);
         
         # ascii 023 = decimal 19
         # This counts the number of characters which are not
         # in the range 0-19
-	$q20_count += $part =~ tr/\000-\023//c;
+        $q20_count += $part =~ tr/\000-\023//c;
     }
 
     return $q20_count;
@@ -446,7 +446,7 @@ sub record_vector_end_reads {
     my ($pdmp, $name, $read) = @_;
 
     my ($start, $end, $vec_end)
-	= $$read =~ /Clone_vec\s+CVEC\s+(\d+)\s+(\d+)\s+\"CAF\:End\=(Left|Right)/;
+        = $$read =~ /Clone_vec\s+CVEC\s+(\d+)\s+(\d+)\s+\"CAF\:End\=(Left|Right)/;
 
     return unless ($vec_end);
 
@@ -474,44 +474,44 @@ sub vector_ends {
 
             my @ends = $pdmp->get_vector_end_reads($vec_end) or next;
 
-	    my $contig;
-	    my $contig_end;
+            my $contig;
+            my $contig_end;
 
-	    foreach my $found_vec (@ends) {
-	        my ($read, $start, $end) = @$found_vec;
+            foreach my $found_vec (@ends) {
+                my ($read, $start, $end) = @$found_vec;
 
                 my $extent = $pdmp->read_extent($read) or next;
 
                 my ($name, $cs, $ce, $rs, $re, $dirn) = @$extent;
 
-	        $contig ||= $name;
-	        if ($contig ne $name) {
+                $contig ||= $name;
+                if ($contig ne $name) {
                     # Contradictory vector end info
-		    next VECTOR_END;
-	        }
+                    next VECTOR_END;
+                }
 
-	        my $rcontig_end;
+                my $rcontig_end;
 
                 #warn "Looking at: $dirn\tvec_end[$start,$end]\tread[$rs,$re]\n";
 
                 # rmd wrote this, and I don't understand it. -- jgrg
-	        if ($dirn) {
-		    # Reverse read
-		    if    ($end   < $rs) { $rcontig_end = "right"; }
-		    elsif ($start > $re) { $rcontig_end = "left";  }
-	        } else {
-		    # Forward read
-		    if    ($end   < $rs) { $rcontig_end = "left";  }
-		    elsif ($start > $re) { $rcontig_end = "right"; }
-	        }
+                if ($dirn) {
+                    # Reverse read
+                    if    ($end   < $rs) { $rcontig_end = "right"; }
+                    elsif ($start > $re) { $rcontig_end = "left";  }
+                } else {
+                    # Forward read
+                    if    ($end   < $rs) { $rcontig_end = "left";  }
+                    elsif ($start > $re) { $rcontig_end = "right"; }
+                }
                 next unless $rcontig_end;
 
                 $contig_end ||= $rcontig_end;
-	        if ($contig_end ne $rcontig_end) {
+                if ($contig_end ne $rcontig_end) {
                     # Contradictory vector end info
-		    next VECTOR_END;
-	        }
-	    }
+                    next VECTOR_END;
+                }
+            }
             
             $pdmp->{'_vector_ends'}{$contig}{$vec_end} = $contig_end
                 if $contig_end; # $contig_end is sometimes not set
@@ -539,24 +539,24 @@ sub order_contigs {
     # First find reads which point out from the ends of the contigs.
     foreach my $read (@read_names) {
         my $extent      = $pdmp->read_extent($read) or next;
-	my $template    = $pdmp->read_template($read);
-	my $insert_size = $pdmp->insert_size($template);
+        my $template    = $pdmp->read_template($read);
+        my $insert_size = $pdmp->insert_size($template);
 
-	my ($contig, $cs, $ce, $rs, $re, $reverse) = @$extent;
-	next unless (exists($contig_lengths{$contig}));
-	my $clen = $contig_lengths{$contig};
+        my ($contig, $cs, $ce, $rs, $re, $reverse) = @$extent;
+        next unless (exists($contig_lengths{$contig}));
+        my $clen = $contig_lengths{$contig};
 
-	if ($reverse) {
-	    if ($ce < $insert_size) {
-		$overhanging_templates{$template}->{$contig} =
-		    [$read, 'L', $ce, $insert_size - $ce];
-	    }
-	} else {
-	    if (($clen - $cs) < $insert_size) {
-		$overhanging_templates{$template}->{$contig} =
-		    [$read, 'R', $clen - $cs, $insert_size - ($clen - $cs)];
-	    }
-	}
+        if ($reverse) {
+            if ($ce < $insert_size) {
+                $overhanging_templates{$template}->{$contig} =
+                    [$read, 'L', $ce, $insert_size - $ce];
+            }
+        } else {
+            if (($clen - $cs) < $insert_size) {
+                $overhanging_templates{$template}->{$contig} =
+                    [$read, 'R', $clen - $cs, $insert_size - ($clen - $cs)];
+            }
+        }
     }
 
     # Next make a graph of which contigs are joined by read pairs.
@@ -564,128 +564,128 @@ sub order_contigs {
     my @anomalies;
 
     while (my ($template, $contigs) = each %overhanging_templates) {
-	my $count = scalar(keys %$contigs);
+        my $count = scalar(keys %$contigs);
 
-	next unless ($count == 2);
-	my ($contig1, $contig2) = keys %$contigs;
-	my ($read1, $dirn1, $in_contig1, $overhang1) = @{$contigs->{$contig1}};
-	my ($read2, $dirn2, $in_contig2, $overhang2) = @{$contigs->{$contig2}};
+        next unless ($count == 2);
+        my ($contig1, $contig2) = keys %$contigs;
+        my ($read1, $dirn1, $in_contig1, $overhang1) = @{$contigs->{$contig1}};
+        my ($read2, $dirn2, $in_contig2, $overhang2) = @{$contigs->{$contig2}};
 
-	next if ($overhang1 < $in_contig2);
-	next if ($overhang2 < $in_contig1);
+        next if ($overhang1 < $in_contig2);
+        next if ($overhang2 < $in_contig1);
 
-	# $joined_contigs{$contig1}->{$contig2} = [values %$contigs];
-	push(@{$joined_contigs{$contig1}->{$dirn1}->{$contig2}}, $dirn2);
-	push(@{$joined_contigs{$contig2}->{$dirn2}->{$contig1}}, $dirn1);
+        # $joined_contigs{$contig1}->{$contig2} = [values %$contigs];
+        push(@{$joined_contigs{$contig1}->{$dirn1}->{$contig2}}, $dirn2);
+        push(@{$joined_contigs{$contig2}->{$dirn2}->{$contig1}}, $dirn1);
 
-	# Look for contig pairs where the joined ends are inconsistent
-	if ($dirn2 ne $joined_contigs{$contig1}->{$dirn1}->{$contig2}->[0]
-	    || $dirn1 ne $joined_contigs{$contig2}->{$dirn2}->{$contig1}->[0]){
-	    push(@anomalies, [$contig1, $contig2]);
-	}
+        # Look for contig pairs where the joined ends are inconsistent
+        if ($dirn2 ne $joined_contigs{$contig1}->{$dirn1}->{$contig2}->[0]
+            || $dirn1 ne $joined_contigs{$contig2}->{$dirn2}->{$contig1}->[0]){
+            push(@anomalies, [$contig1, $contig2]);
+        }
     }
 
     # Remove joins where joined ends are inconsistent
     foreach my $anomaly (@anomalies) {
-	my ($contig1, $contig2) = @$anomaly;
-	delete($joined_contigs{$contig1}->{'L'}->{$contig2});
-	delete($joined_contigs{$contig1}->{'R'}->{$contig2});
-	delete($joined_contigs{$contig2}->{'L'}->{$contig1});
-	delete($joined_contigs{$contig2}->{'R'}->{$contig1});
+        my ($contig1, $contig2) = @$anomaly;
+        delete($joined_contigs{$contig1}->{'L'}->{$contig2});
+        delete($joined_contigs{$contig1}->{'R'}->{$contig2});
+        delete($joined_contigs{$contig2}->{'L'}->{$contig1});
+        delete($joined_contigs{$contig2}->{'R'}->{$contig1});
     }
 
     # Deal with branches.  If one scores better than the rest, use it
     # else delete all the possible branches
     while (my ($contig1, $dirns) = each %joined_contigs) {
-	while (my ($dirn, $contigs) = each %$dirns) {
-	    my @scores = ( 0, 0 );
-	    while (my ($contig2, $joins) = each %$contigs) {
-		push(@scores, scalar(@$joins));
-	    }
-	    my ($best_score, $next_best) = sort { $b <=> $a } @scores;
-	    if ($next_best) {
-		# Have found a branch
-		if ($next_best == $best_score) {
-		    # Don't know which one is best, so get rid of all of them
-		    $best_score = 0;
-		}
-		foreach my $contig2 (keys %$contigs) {
-		    my $score = scalar(@{$contigs->{$contig2}});
-		    if ($score == $best_score) { next; }
+        while (my ($dirn, $contigs) = each %$dirns) {
+            my @scores = ( 0, 0 );
+            while (my ($contig2, $joins) = each %$contigs) {
+                push(@scores, scalar(@$joins));
+            }
+            my ($best_score, $next_best) = sort { $b <=> $a } @scores;
+            if ($next_best) {
+                # Have found a branch
+                if ($next_best == $best_score) {
+                    # Don't know which one is best, so get rid of all of them
+                    $best_score = 0;
+                }
+                foreach my $contig2 (keys %$contigs) {
+                    my $score = scalar(@{$contigs->{$contig2}});
+                    if ($score == $best_score) { next; }
 
-		    my $dirn2 = $contigs->{$contig2}->[0];
-		    delete($joined_contigs{$contig2}->{$dirn2}->{$contig1});
-		    delete($joined_contigs{$contig1}->{$dirn}->{$contig2});
-		}
-	    }
-	}
+                    my $dirn2 = $contigs->{$contig2}->[0];
+                    delete($joined_contigs{$contig2}->{$dirn2}->{$contig1});
+                    delete($joined_contigs{$contig1}->{$dirn}->{$contig2});
+                }
+            }
+        }
     }
 #    while (my ($contig1, $dirns) = each %joined_contigs) {
-#	print STDERR "$contig1 joins to:\n";
-#	while (my ($dirn, $contigs) = each %$dirns) {
-#	    while (my ($contig2, $joins) = each %$contigs) {
-#		print STDERR "    $dirn $contig2 @$joins\n";
-#	    }
-#	}
+#        print STDERR "$contig1 joins to:\n";
+#        while (my ($dirn, $contigs) = each %$dirns) {
+#            while (my ($contig2, $joins) = each %$contigs) {
+#                print STDERR "    $dirn $contig2 @$joins\n";
+#            }
+#        }
 #    }
 
     # Make chains of contigs based on the remaining read pair links
     my( %visited, @group );
     foreach my $contig ($pdmp->contig_list()) {
-	next if ($visited{$contig});
-	if (exists($joined_contigs{$contig})) {
-	    my @chain;
+        next if ($visited{$contig});
+        if (exists($joined_contigs{$contig})) {
+            my @chain;
 
-	    # Look for links to left of current contig
-	    my $c_dirn = 'L';
-	    my $c_contig = $contig;
-	    while ($c_contig) {
-		last if (exists $visited{$c_contig});
+            # Look for links to left of current contig
+            my $c_dirn = 'L';
+            my $c_contig = $contig;
+            while ($c_contig) {
+                last if (exists $visited{$c_contig});
                 
                 unless ($c_dirn eq 'L') {
                     $pdmp->revcomp_contig($c_contig);
                 }
                 unshift(@chain, $c_contig);
                 
-		$visited{$c_contig} = 1;
-		last unless (exists($joined_contigs{$c_contig}->{$c_dirn}));
-		my ($n_contig) = keys %{$joined_contigs{$c_contig}->{$c_dirn}};
-		last unless ($n_contig);
-		my ($n_dirn)
-		    = @{$joined_contigs{$c_contig}->{$c_dirn}->{$n_contig}};
-		last unless ($n_dirn);
-		$c_contig = $n_contig;
-		$c_dirn = ($n_dirn eq 'R') ? 'L' : 'R';
-	    }
+                $visited{$c_contig} = 1;
+                last unless (exists($joined_contigs{$c_contig}->{$c_dirn}));
+                my ($n_contig) = keys %{$joined_contigs{$c_contig}->{$c_dirn}};
+                last unless ($n_contig);
+                my ($n_dirn)
+                    = @{$joined_contigs{$c_contig}->{$c_dirn}->{$n_contig}};
+                last unless ($n_dirn);
+                $c_contig = $n_contig;
+                $c_dirn = ($n_dirn eq 'R') ? 'L' : 'R';
+            }
 
-	    # Look for links to right of current contig
-	    $c_dirn = 'R';
-	    $c_contig = $contig;
-	    pop(@chain);
-	    delete($visited{$contig});
-	    while ($c_contig) {
-		last if (exists $visited{$c_contig});
+            # Look for links to right of current contig
+            $c_dirn = 'R';
+            $c_contig = $contig;
+            pop(@chain);
+            delete($visited{$contig});
+            while ($c_contig) {
+                last if (exists $visited{$c_contig});
                 
                 unless ($c_dirn eq 'R') {
                     $pdmp->revcomp_contig($c_contig);
                 }
                 push(@chain, $c_contig);
                 
-		$visited{$c_contig} = 1;
-		last unless (exists($joined_contigs{$c_contig}->{$c_dirn}));
-		my ($n_contig) = keys %{$joined_contigs{$c_contig}->{$c_dirn}};
-		last unless ($n_contig);
-		my ($n_dirn)
-		    = @{$joined_contigs{$c_contig}->{$c_dirn}->{$n_contig}};
-		last unless ($n_dirn);
-		$c_contig = $n_contig;
-		$c_dirn = ($n_dirn eq 'R') ? 'L' : 'R';
-	    }
-	    push(@group, \@chain);
-	} else {
-	    push(@group, [$contig]);
-	    $visited{$contig} = 1;
-	}
+                $visited{$c_contig} = 1;
+                last unless (exists($joined_contigs{$c_contig}->{$c_dirn}));
+                my ($n_contig) = keys %{$joined_contigs{$c_contig}->{$c_dirn}};
+                last unless ($n_contig);
+                my ($n_dirn)
+                    = @{$joined_contigs{$c_contig}->{$c_dirn}->{$n_contig}};
+                last unless ($n_dirn);
+                $c_contig = $n_contig;
+                $c_dirn = ($n_dirn eq 'R') ? 'L' : 'R';
+            }
+            push(@group, \@chain);
+        } else {
+            push(@group, [$contig]);
+            $visited{$contig} = 1;
+        }
     }
     
     # Find contigs which are at left and right, because
@@ -902,7 +902,7 @@ sub write_quality_file {
                                "Contig_ID: $contig",
                                "acc=$accno",
                                "Length: $len bp");
-	print QUAL ">$header\n" or confess "Can't print to '$file' : $!";
+        print QUAL ">$header\n" or confess "Can't print to '$file' : $!";
         my $whole_lines = int( $len / $N );
 
         for (my $l = 0; $l < $whole_lines; $l++) {
@@ -927,9 +927,9 @@ sub write_quality_file {
 {
     my %chem_name = (
         'ABI'         => ' ABI',
-	'DYEnamic_ET' => ' ET',
-	'BigDye'      => ' Big Dye',
-	'MegaBace_ET' => ' ET',
+        'DYEnamic_ET' => ' ET',
+        'BigDye'      => ' Big Dye',
+        'MegaBace_ET' => ' ET',
     );
 
     my( %suffix_chem_map );
@@ -949,24 +949,24 @@ sub write_quality_file {
             $get_chem->execute;
 
             while (my ($suffix, $is_primer, $dyeset) = $get_chem->fetchrow_array()) {
-	        $suffix =~ s/^\.//;
+                $suffix =~ s/^\.//;
 
-	        unless ($suffix_chem_map{$suffix}) {
-	            my $chem = ($is_primer ? "Dye-primer" : "Dye-terminator");
-	            my $chem2 = $chem_name{$dyeset} || "";
-	            if ($chem2 eq ' ET') {
-		        $chem2 = ($is_primer ? "-amersham" : " ET-amersham");
-	            }
-	            $suffix_chem_map{$suffix} = "$chem$chem2";
-	        }
+                unless ($suffix_chem_map{$suffix}) {
+                    my $chem = ($is_primer ? "Dye-primer" : "Dye-terminator");
+                    my $chem2 = $chem_name{$dyeset} || "";
+                    if ($chem2 eq ' ET') {
+                        $chem2 = ($is_primer ? "-amersham" : " ET-amersham");
+                    }
+                    $suffix_chem_map{$suffix} = "$chem$chem2";
+                }
             }
             $get_chem->finish();
         }
 
         if (my ($suffix) = $name =~ /\.(...)/) {
-	    if (my $c = $suffix_chem_map{$suffix}) {
-	        $pdmp->{'_chem_count'}{$c}++;
-	    }
+            if (my $c = $suffix_chem_map{$suffix}) {
+                $pdmp->{'_chem_count'}{$c}++;
+            }
         }
     }
 }
