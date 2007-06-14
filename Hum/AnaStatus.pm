@@ -141,7 +141,8 @@ sub make_ana_dir_from_species_chr_seqname_time {
     $chr     ||= 'UNKNOWN';
     
     my $ana_root = $SPECIES_ANALYSIS_ROOT->{$species}
-        || '/nfs/disk100/humpub/analysis/misc';
+      #  || '/nfs/disk100/humpub/analysis/misc';
+	|| $HUMPUB_ROOT
 
     $chr = "Chr_$chr";
     
@@ -152,6 +153,7 @@ sub make_ana_dir_from_species_chr_seqname_time {
     
     my $ana_dir = "$ana_root/$chr/$seq_name/$date_dir";
     my $rawdata = "$ana_dir/rawdata";
+    warn "RAWDATA: $rawdata\n";	
     mkpath($rawdata);
     
     # Make ana_dir owned by group vertann
