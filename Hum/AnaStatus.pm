@@ -8,7 +8,7 @@ use vars qw{ @ISA @EXPORT_OK };
 use Carp;
 use Exporter;
 use File::Path 'mkpath';
-use Hum::Conf 'SPECIES_ANALYSIS_ROOT';
+use Hum::Conf qw(HUMPUB_ROOT SPECIES_ANALYSIS_ROOT);
 use Hum::Submission qw{ prepare_statement };
 
 @ISA = ('Exporter');
