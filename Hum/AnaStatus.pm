@@ -142,7 +142,7 @@ sub make_ana_dir_from_species_chr_seqname_time {
     
     my $ana_root = $SPECIES_ANALYSIS_ROOT->{$species}
       #  || '/nfs/disk100/humpub/analysis/misc';
-	|| $HUMPUB_ROOT
+	|| $HUMPUB_ROOT;
 
     $chr = "Chr_$chr";
     

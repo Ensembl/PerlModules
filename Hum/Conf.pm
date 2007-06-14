@@ -43,7 +43,9 @@ if ($ENV{'PFETCH_SERVER_LIST'}) {
         'Zebrafish'     => "$humpub/analysis/zebrafish",
         'Gibbon'        => "$humpub/analysis/gibbon",
         },
+    # hardly used	
     ANALYSIS_ROOT => "$humpub/analysis/projects",
+    
 
     EMBL_FILE_DIR => "$humpub/data/EMBL",
     CONFIG_DEFAULT => "$humpub/scripts/haceprep.cfg",
