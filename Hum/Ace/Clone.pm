@@ -264,7 +264,7 @@ sub express_data_fetch {
     my ($dna_txt) = $ace->values_from_tag('DNA');
     my $length = $dna_txt->[1];
     $self->sequence_length($length);
-    warn "Clone sequence '$name' is '$length' bp long";
+    warn "Clone sequence '$name' is '$length' bp long\n";
 
     # But we also record the accession and sv
     if (my ($acc) = $ace->values_from_tag('Accession')) {

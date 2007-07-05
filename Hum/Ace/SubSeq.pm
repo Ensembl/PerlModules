@@ -162,7 +162,7 @@ sub process_ace_start_end_transcript_seq {
     }
     $self->strand($strand);
     
-    if (my $otter_id = $t_seq->at('Otter_id[1]')) {
+    if (my $otter_id = $t_seq->at('Transcript_id[1]')) {
         $self->otter_id($otter_id->name);
     }
     
@@ -1165,7 +1165,7 @@ sub ace_string {
         ;
     
     if ($ott) {
-        $out .= qq{Otter_id "$ott"\n};
+        $out .= qq{Transcript_id "$ott"\n};
     }
     
     if ($method) {

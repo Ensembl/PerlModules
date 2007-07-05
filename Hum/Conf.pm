@@ -16,7 +16,7 @@ if ($ENV{'PFETCH_SERVER_LIST'}) {
     $pfetch_server_list = parse_servers($ENV{'PFETCH_SERVER_LIST'});
 } else {
     $pfetch_server_list = [
-        [qw{ cbi3.internal.sanger.ac.uk      22400 }],
+        [qw{ cbi3.internal.sanger.ac.uk  22400 }],
         ];
 }
 

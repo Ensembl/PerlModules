@@ -313,14 +313,7 @@ sub kill_server {
             return 1;
         }
         elsif (defined $pid) {
-            $SIG{CHLD} = 'DEFAULT'; # Child DOESN'T need this!!
-
-            print STDERR "Starting up ".`which $exe`."\n";
-
             warn "child: Running ($exec_list)\n" if $DEBUG_THIS;
-            #close(STDIN)  unless $DEBUG_THIS;
-            #close(STDOUT) unless $DEBUG_THIS;
-            #close(STDERR) unless $DEBUG_THIS;
             exec $exec_list;
             warn "child: exec ($exec_list) FAILED\n ** ERRNO $!\n ** CHILD_ERROR $?\n";
             CORE::exit( 255 );
@@ -370,12 +363,11 @@ sub make_server_wrm {
 
 sub DESTROY {
     my( $self ) = @_;
-    warn "DESTROY $self and reset SIGCHLD in PID $$";
+
     if(my $spid = $self->server_pid){
         my $opid = $self->origin_pid;
         if($opid && $opid == $$){
             $self->kill_server;
-            $SIG{CHLD} = 'DEFAULT';
         }else{
             warn "Not killing server with pid $spid (not server leader '$opid' != '$$').\n";
         }
