@@ -44,7 +44,7 @@ sub get_FT_Factory {
     my( $ft_factory );
     unless ($ft_factory = $pdmp->{'_ft_factory'}) {
     
-        my $ft_factory = Bio::Otter::EMBL::Factory->new;
+ 	$ft_factory = Bio::Otter::EMBL::Factory->new;	
         $ft_factory->DataSet($ds);
         $ft_factory->accession($acc);
         $ft_factory->sequence_version($sv);
