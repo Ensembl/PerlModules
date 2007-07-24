@@ -44,7 +44,7 @@ sub get_FT_Factory {
     my( $ft_factory );
     unless ($ft_factory = $pdmp->{'_ft_factory'}) {
     
- 	$ft_factory = Bio::Otter::EMBL::Factory->new;	
+        my $ft_factory = Bio::Otter::EMBL::Factory->new;
         $ft_factory->DataSet($ds);
         $ft_factory->accession($acc);
         $ft_factory->sequence_version($sv);
@@ -334,21 +334,21 @@ X chromosome cosmid library LL0XNC01";
         $lib_comments{$_} =
 "is from the library $_ constructed by the group of 
 Pieter de Jong. For further details see 
-http://www.chori.org/bacpac/home.htm"
+http://bacpac.chori.org/"
     }
 
     # RPCI-21 is PAC
     $lib_comments{'RPCI-21'} =
 "is from the RPCI-21 Mouse PAC Library
 constructed by the group of Pieter de Jong.
-For further details see http://www.chori.org/bacpac/home.htm";
+For further details see http://bacpac.chori.org/";
 
     # ... but RPCI-22 and 23 are BAC
     foreach (qw( RPCI-22 RPCI-23 )) {
         $lib_comments{$_} =
 "is from the $_ Mouse BAC Library
 constructed by the group of Pieter de Jong.
-For further details see http://www.chori.org/bacpac/home.htm"
+For further details see http://bacpac.chori.org/"
     }
 
     $lib_comments{'CITB-CJ7-B'} =
