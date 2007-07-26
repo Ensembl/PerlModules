@@ -243,7 +243,7 @@ sub lines {
 
 sub md5_checksum {
     my( $embl ) = @_;
-    
+
     my $md5 = Digest::MD5->new;
     foreach my $line ($embl->lines) {
         # Each Line type can decide what it puts
@@ -253,9 +253,26 @@ sub md5_checksum {
     return $md5->b64digest;
 }
 
+sub region_start_end {
+
+  # start/end of annotated region
+  my $embl = shift;
+
+  my $se = [];
+  foreach my $line ($embl->lines) {
+    if ( ref($line) eq "Hum::EMBL::Line::FT" and $line->key eq 'misc_feature' ){
+      my @lns = split(/\n/, $line->compose);
+      $lns[0] =~ /^FT   \S+\s+(.+)$/;
+      my ($start, $end) = split(/\.\./, $1);
+      push( @$se, $start, $end);
+      return $se;
+    }
+  }
+}
+
 sub addLine {
     my( $embl, $line ) = @_;
-    
+
     if ($line) {
         push @{$embl->{'_lines'}}, $line;
     } else {
@@ -265,7 +282,7 @@ sub addLine {
 
 sub bio_primary_seq {
     my( $embl ) = @_;
-    
+
     return $embl->_make_bio_seq('Bio::PrimarySeq');
 }
 

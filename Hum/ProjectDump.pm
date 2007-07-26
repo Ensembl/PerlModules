@@ -256,6 +256,18 @@ sub embl_file_md5_sum {
     return $pdmp->_submission_data('embl_file_md5_sum', @_);
 }
 
+sub region_start {
+    my $pdmp = shift;
+
+    return $pdmp->_submission_data('region_start', @_);
+}
+
+sub region_end {
+    my $pdmp = shift;
+
+    return $pdmp->_submission_data('region_end', @_);
+}
+
 sub is_htgs_draft {
     my( $pdmp ) = @_;
 
@@ -285,7 +297,7 @@ sub is_cancelled {
 
 sub is_private {
     my( $pdmp ) = @_;
-    
+
     return Hum::Tracking::is_private($pdmp->project_name);
 }
 
@@ -318,16 +330,20 @@ sub _submission_data {
             SELECT UNIX_TIMESTAMP(submission_time)
               , submission_type
               , embl_file_md5_sum
+              , region_start
+              , region_end
             FROM submission
             WHERE seq_id = $seq_id
             ORDER BY submission_time DESC
             LIMIT 1
             });
         $sth->execute;
-        if (my($time, $type, $md5_sum) = $sth->fetchrow) {
+        if (my($time, $type, $md5_sum, $start, $end) = $sth->fetchrow) {
             $data->{'submission_time'}   = $time;
             $data->{'submission_type'}   = $type;
 	        $data->{'embl_file_md5_sum'} = $md5_sum;
+            $data->{'region_start'}      = $start;
+            $data->{'region_end'}        = $end;
         }
         $pdmp->{'_submission_data'} = $data;
     }
@@ -607,7 +623,7 @@ sub read_submission_data {
         });
     $get_dump->execute;
     if (my $ans = $get_dump->fetchrow_hashref) {
-        map $pdmp->$_($ans->{$_}), keys %$ans; 
+        map $pdmp->$_($ans->{$_}), keys %$ans;
     } else {
         confess("No data for sanger_id '$sid'");
     }
@@ -996,7 +1012,9 @@ sub ebi_submit {
         }
     }
 
-    my $md5_sum = $pdmp->embl_file_md5_sum;
+    my $md5_sum      = $pdmp->embl_file_md5_sum;
+    my $region_start = $pdmp->region_start;
+    my $region_end   = $pdmp->region_end;
     my $time = time;
 
     my $seq_name = $pdmp->sequence_name or confess "sequence_name not set";
@@ -1010,10 +1028,13 @@ sub ebi_submit {
         INSERT submission( seq_id
                          , submission_time
                          , submission_type
-                         , embl_file_md5_sum)
-        VALUES (?, FROM_UNIXTIME(?), ?, ?)
+                         , embl_file_md5_sum
+                         , region_start
+                         , region_end
+                         )
+        VALUES (?, FROM_UNIXTIME(?), ?, ?, ? ,?)
         });
-    $record_submission->execute($seq_id, $time, $sub_type, $md5_sum);
+    $record_submission->execute($seq_id, $time, $sub_type, $md5_sum, $region_start, $region_end);
 
     $pdmp->submission_time($time);
 }
