@@ -264,9 +264,11 @@ sub region_start_end {
     # want the first Hum::EMBL::Line::FT line as it appears so in Bio::Otter::EMBL::Factory 	
     if ( ref($line) eq "Hum::EMBL::Line::FT" and $line->key eq 'misc_feature' ){
       my @lns = split(/\n/, $line->compose);
-      $lns[0] =~ /^FT   \S+\s+(.+)$/;
-      my ($start, $end) = split(/\.\./, $1);
-      push( @$se, $start, $end);
+      if ($lns[1] =~ /annotated region of clone/) {
+        $lns[0] =~ /^FT   \S+\s+(.+)$/;
+        my ($start, $end) = split(/\.\./, $1);
+        push( @$se, $start, $end);
+      }
       return $se;
     }
   }
