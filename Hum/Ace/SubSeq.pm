@@ -1310,13 +1310,15 @@ sub zmap_xml_feature_tag {
     if (my $pre = $self->Locus->gene_type_prefix) {
         $style = "$pre:$style";
     }
-    
-    return sprintf qq{<feature name="%s" start="%d" end="%d" strand="%s" style="%s">\n},
-        $self->name,
-        $self->start,
-        $self->end,
-        $self->strand == -1 ? '-' : '+',
-        $style;
+
+    return sprintf qq{<feature name="%s" start="%d" end="%d" strand="%s" style="%s" start_not_found="%s" end_not_found="%s">\n},
+    $self->name,
+    $self->start,
+    $self->end,
+    $self->strand == -1 ? '-' : '+',
+    $style,
+    $self->start_not_found(),
+    $self->end_not_found() ? "true" : "false";
 }
 
 
