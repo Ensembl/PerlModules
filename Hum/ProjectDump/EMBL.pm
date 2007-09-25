@@ -27,7 +27,7 @@ use Hum::Species;
 
 Hum::EMBL->import(
     'AC *' => 'Hum::EMBL::Line::AC_star',
-    'HD *' => 'Hum::EMBL::Line::HD_star',
+    'ST *' => 'Hum::EMBL::Line::ST_star',
     'BQ *' => 'Hum::EMBL::Line::BQ_star',
     );
 
@@ -81,7 +81,7 @@ sub make_embl {
         $hd->hold_date($hold_date);
         $embl->newXX;
     }
-    
+
     # DE line
     $pdmp->add_Description($embl);
     
