@@ -36,7 +36,7 @@ sub _compose {
 
 __END__
 
-=head1 NAME - Hum::EMBL::Line::HD_star
+=head1 NAME - Hum::EMBL::Line::ST_star
 
 =head1 AUTHOR
 

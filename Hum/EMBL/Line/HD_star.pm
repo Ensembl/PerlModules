@@ -15,7 +15,7 @@ Hum::EMBL::Line::HD_star->makeFieldAccessFuncs(qw( hold_date ));
 sub parse {
     my( $line, $s ) = @_;
     
-    my ($date) = $$s =~ /^HD \* confidential (\S+)$/mg;
+    my ($date) = $$s =~ /^ST \* confidential (\S+)$/mg;
     $date = dateEMBL($date);
     $line->hold_date($date);
 }
@@ -27,7 +27,7 @@ sub _compose {
         or confess "Missing hold_date";
     $date = EMBLdate($date);
     
-    return "HD * confidential $date\n";
+    return "ST * confidential $date\n";
 }
 
 
