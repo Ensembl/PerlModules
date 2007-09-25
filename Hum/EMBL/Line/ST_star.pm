@@ -11,7 +11,7 @@ use Hum::EMBL::Utils qw( EMBLdate dateEMBL );
 use vars qw( @ISA );
 
 @ISA = qw( Hum::EMBL::Line );
-Hum::EMBL::Line::HD_star->makeFieldAccessFuncs(qw( hold_date ));
+Hum::EMBL::Line::ST_star->makeFieldAccessFuncs(qw( hold_date ));
 
 sub parse {
     my( $line, $s ) = @_;

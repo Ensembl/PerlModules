@@ -73,11 +73,11 @@ sub make_embl {
     $ac_star->identifier($pdmp->sanger_id);
     $embl->newXX;
 
-    # HD * line
+    # ST * line (was HD * line)
     if ($pdmp->is_private) {
         # Hold date of half a year from now
         my $hold_date = time + (0.5 * 365 * 24 * 60 * 60);
-        my $hd = $embl->newHD_star;
+        my $hd = $embl->newST_star;
         $hd->hold_date($hold_date);
         $embl->newXX;
     }
