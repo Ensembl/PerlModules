@@ -33,6 +33,7 @@ use vars qw( @ISA @EXPORT_OK );
 
 @EXPORT_OK = qw(
                 clone_from_project
+                clone_from_accession
                 current_project_status_number
 		        set_project_status
 		        session_id
@@ -498,6 +499,39 @@ sub expand_project_name {
         return $ans->[0][0];
     } else {
         return $name;
+    }
+}
+
+=pod
+
+=head2 clone_from_accession
+
+Returns the corresponding clone name for the
+given accession, or undef.
+
+=cut
+
+{
+    my( $get_clone );
+
+    sub clone_from_accession {
+        my( $accession ) = @_;
+
+        $get_clone ||= prepare_track_statement(q{
+            SELECT cs.clonename
+            FROM sequence s
+              , clone_sequence cs
+            WHERE s.seq_id = cs.seq_id
+              AND cs.is_current = 1
+              AND s.accession = ?
+            });
+        $get_clone->execute($accession);
+        
+        if (my ($clone) = $get_clone->fetchrow) {
+            return $clone;
+        } else {
+            return;
+        }
     }
 }
 

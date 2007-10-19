@@ -214,7 +214,7 @@ correct order and the usual finishing criteria may not apply.');
     sub add_MHC_Consortium_CC {
         my( $pdmp, $embl ) = @_;
 
-        return if $pdmp->chromosome != 6;
+        return if $pdmp->chromosome ne "6";
 
         my ($tlp) = $pdmp->sequence_name =~ /^(...)/;
         if ($mhc_prefix{$tlp}) {
