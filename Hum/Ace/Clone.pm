@@ -132,6 +132,12 @@ sub description {
     return $self->{'_description'};
 }
 
+sub drop_description {
+    my ($self) = @_;
+    
+    $self->{'_description'} = undef;
+}
+
 sub add_keyword {
     my ($self, $keyword) = @_;
 
