@@ -21,9 +21,9 @@ use vars qw( @ISA @EXPORT_OK );
     
     sub dbh {
         unless ($dbh) {
-            my $host = 'moonshine.ebi.ac.uk';
+            my $host = 'oracle.ebi.ac.uk';
             my $mach = Net::Netrc->lookup($host);
-            $dbh = DBI->connect("dbi:Oracle:host=$host;sid=PRDB1;port=1531",
+            $dbh = DBI->connect("dbi:Oracle:host=$host;sid=PRDB1;port=2001",
                 $mach->login,
                 $mach->password,
                 {RaiseError => 1});
