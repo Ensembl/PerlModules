@@ -57,7 +57,7 @@ sub zmap_xml_feature_tag {
     my ($self) = @_;
     
     return sprintf qq{<feature name="%s" start="%d" end="%d" strand="%s" style="%s" score="%.3f"></feature>\n},
-        $self->seq_name,
+        $self->method_name,
         $self->seq_start,
         $self->seq_end,
         $self->seq_strand == -1 ? '-' : '+',
