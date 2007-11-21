@@ -57,7 +57,6 @@ sub read_gap_contigs {
     
     my $db_name          = uc $pdmp->project_name;
     my $db_dir              = $pdmp->online_path || confess "No online path";
-    my $cluster             = $pdmp->online_cluster;
     my $contam_report_file  = $pdmp->contamination_report_file;
     
     local *GAP2CAF;
