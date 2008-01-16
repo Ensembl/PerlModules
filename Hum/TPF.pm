@@ -13,6 +13,8 @@ use Hum::Tracking qw{
     prepare_track_statement
     iso2time
     };
+use Hum::Species;
+
 
 sub new {
     my( $pkg ) = @_;
@@ -23,17 +25,89 @@ sub new {
 }
 
 sub species {
+  # SANGER oracle db not always uses binomial system
     my( $self, $species ) = @_;
-    
+
     if ($species) {
         $self->{'_species'} = ucfirst lc $species;
     }
     return $self->{'_species'};
 }
 
+sub organism {
+  # use for NCBI TPF submission: binomial system
+  my( $self ) = @_;
+  $self->{'ncbi_species'} = Hum::Species->fetch_Species_by_name($self->species)->binomial;
+  return $self->{'ncbi_species'};
+}
+sub assembly {
+  # use for NCBI TPF submission
+  my( $self, $assembly ) = @_;
+
+  if ($assembly) {
+    $self->{'_assembly'} = $assembly;
+  }
+  else {
+    $self->{'_assembly'} = $self->subregion ? $self->subregion : 'Reference';
+  }
+  return $self->{'_assembly'};
+}
+
+sub type {
+  # use for NCBI TPF submission
+  my( $self, $type ) = @_;
+
+  if ($type) {
+    $self->{'_type'} = $type;
+  }
+  else {
+    $self->{'_type'} = $self->subregion ? 'Contig' : 'Complete Chromosome';
+  }
+  return $self->{'_type'};
+}
+sub version {
+  # use for NCBI TPF submission
+  my( $self, $version ) = @_;
+
+  if ($version) {
+    $self->{'_version'} = $version;
+  }
+  return $self->{'_version'};
+}
+
+sub comment {
+  # use for NCBI TPF submission
+  my( $self, $comment ) = @_;
+
+  if ($comment) {
+    $self->{'_comment'} = $comment;
+  }
+  return $self->{'_comment'};
+}
+
+sub strain {
+  # use for NCBI TPF submission
+  my( $self, $strain ) = @_;
+
+  if ($strain) {
+    $self->{'_strain'} = $strain;
+  }
+  return $self->{'_strain'};
+}
+
+sub submitter {
+  # use for NCBI TPF submission
+  my( $self, $submitter ) = @_;
+
+  if ($submitter) {
+    $self->{'_submitter'} = $submitter;
+  }
+  return $self->{'_submitter'};
+}
+
 sub chromosome {
     my( $self, $chromosome ) = @_;
-    
+
     if ($chromosome) {
         $self->{'_chromosome'} = uc $chromosome;
     }
@@ -42,7 +116,7 @@ sub chromosome {
 
 sub subregion {
     my( $self, $subregion ) = @_;
-    
+
     if ($subregion) {
         $self->{'_subregion'} = $subregion;
     }
@@ -51,7 +125,7 @@ sub subregion {
 
 sub entry_date {
     my( $self, $entry_date ) = @_;
-    
+
     if (defined $entry_date) {
         $self->{'_entry_date'} = $entry_date;
     }
@@ -331,6 +405,98 @@ sub string {
     return $str;
 }
 
+
+sub ncbi_string {
+  my( $self ) = @_;
+
+  # Make the NCBI header
+  # currently REQUIRED: ORGANISM, ASSEMBLY, CHROMOSOME, TYPE
+  #           OPTIONAL: STRAIN/HAPLOTYPE/CULTIVAR, Version,
+  #                     Comment, SUBMITTER, "CREATE DATE", "UPDATE DATE"
+  my $str;
+  foreach my $method (qw{ organism chromosome assembly subregion type version comment submitter}) {
+    my $header = $method;
+    if ( $method eq "subregion" ){ $header = "Strain/Haplotype/Cultivar" }
+    elsif ( $method eq "assembly" ){ $header = "Assembly Name" }
+
+    if (my $data = $self->$method()) {
+      $str .= "##" . ucfirst($header) . ": $data\n";
+    }
+    else {
+      if ( $self->strain and $method eq "subregion" ){
+        $str .= "##" . ucfirst($header) . ": " . $self->strain() . "\n";
+      }
+      else {
+        $str .= "##" .ucfirst($header) . ":\n";
+      }
+    }
+  }
+  $str .= "##Create date:\n";
+  $str .= "##Update date:\n";
+  $str .= "\n##=== Beginning of TPF Data ===\n\n";
+
+  # Add the rows
+  foreach my $row ($self->fetch_all_Rows) {
+    # wait until database is updated
+    # type-4 should not be around (Darren G)
+    if ( $row->isa("Hum::TPF::Row::Gap") ){
+
+      # make sure to flag ncbi for changes in Hum::TPF::Row::Gap:string();
+      $row->ncbi(1);
+
+      if ( $row->type == 4 ){
+        if ( ! $row->remark ){
+          warn "NO REMARK for type-4\n"; # remark has the contral vocabulary for NCBI
+          $row->type(3);                 # else defaults to type-3
+        }
+      }
+    }
+    else{
+      # new foramt:
+      # Human: Hschr4_ctg3
+      # Mouse: Mmchr4_ctg*
+      my $prefix;
+
+      my $ctgname = $row->contig_name;
+      # eg  MmchrXctg1, Mmchr11_ctg3
+      # make sure contig name has right format
+      if ( $self->species  eq 'Mouse' ){
+        if ($ctgname =~ /^Mus_(\d+|\w*)(ctg.*)/i or
+            $ctgname =~ /Mmchr(\d+|\w*)_?(ctg.*)/i or
+            $ctgname =~ /chr(\d+|\w*)_?(.*)/i
+           ) {
+          $prefix = 'Mmchr';
+          $row->contig_name($prefix.$1."_".$2);
+          #warn %$row;
+        }
+        else {
+           warn "BAD contigname: ", $row->accession, "\n";
+           warn %$row;
+        }
+      }
+      else{
+        if ($ctgname =~ /^chr_(\d+|\w*)(.*)/i or $ctgname =~ /(X)_(.*)/i) {
+          $prefix = 'Hschr';
+          $row->contig_name($prefix.$1."_".$2);
+          #warn %$row;
+        }
+        else {
+           warn "BAD contigname: ", $row->accession, "\n";
+        }
+      }
+
+      # don't want remark column
+      $row->{'_remark'} = '' if defined $row->remark;
+    }
+
+    $str .= $row->string;
+  }
+
+  $str .= "\n##=== End of TPF Data ===\n";
+
+  return $str;
+}
+
 sub store {
     my( $self ) = @_;
     
@@ -396,7 +562,7 @@ sub get_store_chr_tpftarget_ids {
             });
         $sth->execute($species, $chr, $subregion);
         ($chr_id, $id_tpftarget) = $sth->fetchrow;
-        
+
         # Can't use the left join trick we do below
         # Have to do an extra select
         unless ($chr_id) {

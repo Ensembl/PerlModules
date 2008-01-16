@@ -13,7 +13,7 @@ sub is_gap { return 1; }
 
 sub type {
     my( $self, $type ) = @_;
-    
+
     if ($type) {
         confess "Bad type '$type'" unless $type =~ /^[1234]$/;
         $self->{'_type'} = $type;
@@ -23,7 +23,7 @@ sub type {
 
 sub type_string {
     my( $self ) = @_;
-    
+
     my $type = $self->type or confess "type not set";
     if ($type > 4) {
         return 'type-4';
@@ -32,9 +32,23 @@ sub type_string {
     }
 }
 
+sub ncbi {
+  # use as a flag that we want to modify
+  # GAP data in string() for all types to match NCBI format
+  # ie:
+  # GAP     type-2/3
+  # GAP     heterochromatin
+
+  my( $self, $ncbi ) = @_;
+  if ($ncbi) {
+    $self->{'_ncbi'} = $ncbi;
+  }
+  return $self->{'_ncbi'};
+}
+
 sub gap_length {
     my( $self, $gap_length ) = @_;
-    
+
     if ($gap_length) {
         $self->{'_gap_length'} = $gap_length;
     }
@@ -49,8 +63,22 @@ sub string {
         $self->type_string,
         $self->gap_length || '?',
         );
-    if (my $txt = $self->remark) {
-        push(@fields, $txt);
+
+    my $txt = $self->remark;
+
+    # for all gap-size given, method should be given (which is not always availabe)
+    # for all gap types so skip size to simplify
+    # for type-4, only the remark is needed (eg, centromere)
+    if ( $self->ncbi ) {
+      if ( $self->type_string eq 'type-4' ){
+        $fields[1] = $txt; # replace type_string with control vocabulary
+      }
+      else {
+        $fields[2] = ''; # skip size
+      }
+    }
+    else {
+      push(@fields, $txt) if $txt;
     }
     return join("\t", @fields) . "\n";
 }
