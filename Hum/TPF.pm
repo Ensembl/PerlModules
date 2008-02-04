@@ -482,9 +482,7 @@ sub ncbi_string {
           $new_ctgname =~ s/CTG/ctg/;
 
           $row->contig_name($new_ctgname);
-          warn "$ctgname vs $new_ctgname";
-
-          #warn %$row;
+          #warn "$ctgname vs $new_ctgname";
         }
         else {
            warn "BAD contigname, $ctgname: ", $row->accession, "\n";
@@ -492,8 +490,7 @@ sub ncbi_string {
       }
 
       # also want remark column
-	warn "REMARK: ", $row->{'_remark'} if $row->{'_remark'};
-      #$row->{'_remark'} = '' if defined $row->remark;
+      warn "REMARK: ", $row->{'_remark'} if $row->{'_remark'};
     }
 
     $str .= $row->string;
