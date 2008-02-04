@@ -405,7 +405,6 @@ sub string {
     return $str;
 }
 
-
 sub ncbi_string {
   my( $self ) = @_;
 
@@ -447,7 +446,8 @@ sub ncbi_string {
       if ( $row->type == 4 ){
         if ( ! $row->remark ){
           warn "NO REMARK for type-4\n"; # remark has the contral vocabulary for NCBI
-          $row->type(3);                 # else defaults to type-3
+          $row->type(3);                 # default to type-3 but check by hand 
+                                         # to determine if type2 via flanking contigs
         }
       }
     }
@@ -466,7 +466,7 @@ sub ncbi_string {
             $ctgname =~ /chr(\d+|\w*)_?(.*)/i
            ) {
           $prefix = 'Mmchr';
-          $row->contig_name($prefix.$1."_".$2);
+          $row->contig_name($prefix.$1."_".lc($2));
           #warn %$row;
         }
         else {
@@ -475,18 +475,25 @@ sub ncbi_string {
         }
       }
       else{
-        if ($ctgname =~ /^chr_(\d+|\w*)(.*)/i or $ctgname =~ /(X)_(.*)/i) {
+        #eg Chr_Xctg3 or X_JENA_3
+        if ($ctgname =~ /^chr_(\d+|\w*)(ctg.*)/i or $ctgname =~ /(X)_(.*)/i ) {
           $prefix = 'Hschr';
-          $row->contig_name($prefix.$1."_".$2);
+          my $new_ctgname = $prefix.$1."_".$2;
+          $new_ctgname =~ s/CTG/ctg/;
+
+          $row->contig_name($new_ctgname);
+          warn "$ctgname vs $new_ctgname";
+
           #warn %$row;
         }
         else {
-           warn "BAD contigname: ", $row->accession, "\n";
+           warn "BAD contigname, $ctgname: ", $row->accession, "\n";
         }
       }
 
-      # don't want remark column
-      $row->{'_remark'} = '' if defined $row->remark;
+      # also want remark column
+	warn "REMARK: ", $row->{'_remark'} if $row->{'_remark'};
+      #$row->{'_remark'} = '' if defined $row->remark;
     }
 
     $str .= $row->string;
