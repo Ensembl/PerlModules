@@ -278,6 +278,8 @@ sub create_full_gene_Methods {
         # Skip existing _trunc methods - we will make new ones
         next if $method->name =~ /_trunc$/;
         
+        $method->column_group('Transcript_col');
+        
         $self->add_Method($method);
         if (my $type = $method->mutable) {
             push(@mutable_methods, $method);
@@ -291,6 +293,7 @@ sub create_full_gene_Methods {
             my $new = $method->clone;
             $new->mutable(0);
             $new->name($prefix->name . $method->name);
+            $new->column_group($prefix->name . 'Transcript_col');
             $new->color($prefix->color);
             if ($method->cds_color) {
                 $new->cds_color($prefix->cds_color);
