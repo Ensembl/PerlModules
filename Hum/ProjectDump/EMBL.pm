@@ -196,10 +196,11 @@ sub add_Reference {
         my $date = EMBLdate();
 
         my $query_email  = 'vega';
-        my $clonerequest = 'clonerequest@sanger.ac.uk'; 
+        # clonerequest@sanger.ac.uk' is now obsolete
+        my $clonerequest = qq{Geneservice (http://www.geneservice.co.uk/) and BACPAC Resources (http://bacpac.chori.org/)};
         if ($pdmp->species eq 'Zebrafish') {
             $query_email  = 'zfish-help';
-            $clonerequest = "http://www.sanger.ac.uk/Projects/D_rerio/faqs.shtml#dataeight"; 
+            $clonerequest = "http://www.sanger.ac.uk/Projects/D_rerio/faqs.shtml#dataeight";
         }
 
         my $ref = $embl->newReference;
@@ -251,7 +252,7 @@ sub add_Reference {
     sub add_HGMP_Reference {
         my( $pdmp, $embl, $seqlength ) = @_;
 
-        return(0) unless $pdmp->sequenced_by == 58;
+        return (0) if ( !$pdmp->sequenced_by or $pdmp->sequenced_by != 58 );
 
         my $date = EMBLdate();
         my $ext_clone = $pdmp->external_clone_name;
