@@ -218,6 +218,9 @@ correct order and the usual finishing criteria may not apply.');
 
     my @mouse_specific = ('Sequence from the Mouse Genome Sequencing Consortium whole genome shotgun may have been used to confirm this sequence.  Sequence data from the whole genome shotgun alone has only been used where it has a phred quality of at least 30.');
 
+  my @h_parasitica_specific = ('Sequence from a whole genome shotgun assembly by the Genome Sequencing Center at Washington University School of Medicine in St. Louis may have been used to confirm this sequence. Sequence from the whole genome shotgun alone has only been used where it has a phred quality of at least 30.');
+
+
     sub add_standard_CC {
         my( $pdmp, $embl ) = @_;
 
@@ -243,8 +246,16 @@ correct order and the usual finishing criteria may not apply.');
                 $embl->newXX;
             }
         }
-	if ($pdmp->species eq 'Mouse') {
+        if ($pdmp->species eq 'Mouse') {
             foreach my $entry (@mouse_specific) {
+                my $cc = $embl->newCC;
+                $cc->list($entry);
+                $embl->newXX;
+            }
+        }
+
+        if ($pdmp->species eq 'H.parasitica') {
+            foreach my $entry (@h_parasitica_specific) {
                 my $cc = $embl->newCC;
                 $cc->list($entry);
                 $embl->newXX;
