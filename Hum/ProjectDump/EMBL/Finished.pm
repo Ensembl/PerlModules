@@ -152,11 +152,14 @@ sub add_extra_CC {
 
   sub fetch_clone_left_right_info {
     my ($pdmp) = shift;
+
     my $sliceAd =  $pdmp->DataSet->make_DBAdaptor->get_SliceAdaptor;
     my $clone = $sliceAd->fetch_by_region('clone', $pdmp->accession.".".$pdmp->sequence_version);
+
+    # project to contig as assembly_tags are on contigs
     my $ctg_projection = $clone->project('contig');
     my $ctg_slice = $ctg_projection->[0]->to_Slice;
-    warn "CTG: ", $ctg_slice->seq_region_name;
+
     my $mfa = $ctg_slice->adaptor->db->get_MiscFeatureAdaptor;
     my @misc_feats = @{$mfa->fetch_all_by_Slice($ctg_slice)};
 
@@ -172,8 +175,7 @@ sub add_extra_CC {
             $start = $mf->start;
             $end   = $mf->end;
           }
-          warn $atag->name;
-          warn "S-E: $start - $end";
+
           my $LR = $atag->name =~ /left/ ? 'left' : 'right';
           my $pos = $end eq 'left' ? $start : $end;
           $clone_LR_end_comment .= "The true $LR end of clone " . $atag->value . " is at $pos in this sequence.\n";
@@ -181,14 +183,13 @@ sub add_extra_CC {
       }
     }
 
-    my @lrcmts;
-    my $note1 = "IMPORTANT: This sequence is not the entire insert of clone " . $pdmp->external_clone_name .
-                ". It may be shorter because we sequence overlapping sections only once, except for a short overlap.";
-    my $note2 = "During sequence assembly data is compared from overlapping clones. Where differences are found these are annotated as
-variations together with a note of the overlapping clone name. Note that the variation annotation may not be found in the sequence
-submission corresponding to the overlapping clone, as we submit sequences with only a small overlap.";
-    push( @lrcmts, $note1, $note2, $clone_LR_end_comment);
-    return @lrcmts if $clone_LR_end_comment;
+    if ( $clone_LR_end_comment ){
+      my @lrcmts;
+      push(@lrcmts, "IMPORTANT: This sequence is not the entire insert of clone " . $pdmp->external_clone_name .
+                ". It may be shorter because we sequence overlapping sections only once, except for a short overlap.",
+           "During sequence assembly data is compared from overlapping clones. Where differences are found these are annotated as variations together with a note of the overlapping clone name. Note that the variation annotation may not be found in the sequence submission corresponding to the overlapping clone, as we submit sequences with only a small overlap.", $clone_LR_end_comment);
+      return @lrcmts;
+    }
   }
 
   # Standard comment blocks
