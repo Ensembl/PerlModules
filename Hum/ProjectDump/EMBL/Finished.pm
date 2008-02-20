@@ -148,9 +148,51 @@ sub add_extra_CC {
 
 
 {
-    
-    # Standard comment blocks
-    my @std = (
+  my $clone_LR_end_comment;
+
+  sub fetch_clone_left_right_info {
+    my ($pdmp) = shift;
+    my $sliceAd =  $pdmp->DataSet->make_DBAdaptor->get_SliceAdaptor;
+    my $clone = $sliceAd->fetch_by_region('clone', $pdmp->accession.".".$pdmp->sequence_version);
+    my $ctg_projection = $clone->project('contig');
+    my $ctg_slice = $ctg_projection->[0]->to_Slice;
+    warn "CTG: ", $ctg_slice->seq_region_name;
+    my $mfa = $ctg_slice->adaptor->db->get_MiscFeatureAdaptor;
+    my @misc_feats = @{$mfa->fetch_all_by_Slice($ctg_slice)};
+
+    foreach my $mf ( @misc_feats ){
+      foreach my $atag ( @{$mf->get_all_Attributes} ){
+        if ( $atag->name =~ /^Clone.+/ ){
+          my ($start, $end);
+          if ($mf->strand == -1) {
+            $start = $mf->end;
+            $end   = $mf->start;
+          }
+          else {
+            $start = $mf->start;
+            $end   = $mf->end;
+          }
+          warn $atag->name;
+          warn "S-E: $start - $end";
+          my $LR = $atag->name =~ /left/ ? 'left' : 'right';
+          my $pos = $end eq 'left' ? $start : $end;
+          $clone_LR_end_comment .= "The true $LR end of clone " . $atag->value . " is at $pos in this sequence.\n";
+        }
+      }
+    }
+
+    my @lrcmts;
+    my $note1 = "IMPORTANT: This sequence is not the entire insert of clone " . $pdmp->external_clone_name .
+                ". It may be shorter because we sequence overlapping sections only once, except for a short overlap.";
+    my $note2 = "During sequence assembly data is compared from overlapping clones. Where differences are found these are annotated as
+variations together with a note of the overlapping clone name. Note that the variation annotation may not be found in the sequence
+submission corresponding to the overlapping clone, as we submit sequences with only a small overlap.";
+    push( @lrcmts, $note1, $note2, $clone_LR_end_comment);
+    return @lrcmts if $clone_LR_end_comment;
+  }
+
+  # Standard comment blocks
+  my @std = (
 
 'This sequence was finished as follows unless otherwise noted: all regions were either double-stranded or sequenced with an alternate chemistry or covered by high quality data (i.e., phred quality >= 30); an attempt was made to resolve all sequencing problems, such as compressions and repeats; all regions were covered by at least one subclone; and the assembly was confirmed by restriction digest, except on the rare occasion of the clone being a YAC.',
 
@@ -177,6 +219,8 @@ correct order and the usual finishing criteria may not apply.');
 
     sub add_standard_CC {
         my( $pdmp, $embl ) = @_;
+
+        unshift(@std, fetch_clone_left_right_info($pdmp));
 
         # STD sequencing centre comment for Greg Schuler
         # (see: http://ray.nlm.nih.gov/genome/cloneserver/)
