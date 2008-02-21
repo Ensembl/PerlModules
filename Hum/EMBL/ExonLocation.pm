@@ -82,11 +82,8 @@ the genomic DNA sequence). Should be >= 1.
 
 sub start {
     my( $self, $value ) = @_;
-
-    if ($value) {
-        $self->{_hum_embl_exonlocation_start} = $value;
-    }
-    return $self->{_hum_embl_exonlocation_start};
+    
+    return + ($self->exons)[0]->start;
 }
 
 =head2 end
@@ -100,10 +97,7 @@ the genomic DNA sequence). Should be >= 1, and >start.
 sub end {
     my( $self, $value ) = @_;
 
-    if ($value) {
-        $self->{_hum_embl_exonlocation_end} = $value;
-    }
-    return $self->{_hum_embl_exonlocation_end};
+    return + ($self->exons)[-1]->end;
 }
 
 =head2 start_not_found

@@ -48,6 +48,7 @@ sub get_FT_Factory {
         $ft_factory->DataSet($ds);
         $ft_factory->accession($acc);
         $ft_factory->sequence_version($sv);
+        $ft_factory->fetch_clone_and_chromosome_Slices;
 
         $pdmp->{'_ft_factory'} = $ft_factory;
     }
