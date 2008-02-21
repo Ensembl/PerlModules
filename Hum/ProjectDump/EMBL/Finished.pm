@@ -88,7 +88,7 @@ sub add_Keywords {
     if (my $ft_factory = $pdmp->get_FT_Factory) {
         push(@key_words, $ft_factory->get_keywords_from_otter);
     }
-    
+
     my $kw = $embl->newKW;
     $kw->list(@key_words);
     $embl->newXX;
@@ -96,38 +96,89 @@ sub add_Keywords {
 
 sub add_Headers {
     my( $pdmp, $embl, $contig_map ) = @_;
-    
+
     $pdmp->add_standard_CC($embl);
     unless ($pdmp->add_MHC_Consortium_CC($embl)) {
         $pdmp->add_chromosomal_CC($embl);
     }
+    $pdmp->add_overlap_CC($embl);
     $pdmp->add_extra_CC($embl);
     $pdmp->add_library_CC($embl);
     $pdmp->add_external_draft_CC($embl);
-    #$pdmp->add_overlap_CC($embl);
     $pdmp->add_extra_headers($embl, 'comment');
 }
 
 sub add_FT_entries {
     my( $pdmp, $embl, $contig_map ) = @_;
-    
-    my $ft_factory = $pdmp->get_FT_Factory or return;    
+
+    my $ft_factory = $pdmp->get_FT_Factory or return;
     $ft_factory->make_embl_ft($embl);
 }
 
 sub DataSet {
     my( $self, $DataSet ) = @_;
-    
+
     if ($DataSet) {
         $self->{'_DataSet'} = $DataSet;
     }
     return $self->{'_DataSet'};
 }
 
+sub add_overlap_CC {
+
+  my ($pdmp, $embl) = @_;
+
+  # currently only support projects stored in loutre dbs
+  return unless $pdmp->DataSet;
+
+  my $clone_LR_end_comment;
+
+  my $sliceAd =  $pdmp->DataSet->make_DBAdaptor->get_SliceAdaptor;
+  my $clone = $sliceAd->fetch_by_region('clone', $pdmp->accession.".".$pdmp->sequence_version);
+
+  # project to contig as assembly_tags are on contigs
+  my $ctg_projection = $clone->project('contig');
+  my $ctg_slice = $ctg_projection->[0]->to_Slice;
+
+  my $mfa = $ctg_slice->adaptor->db->get_MiscFeatureAdaptor;
+  my @misc_feats = @{$mfa->fetch_all_by_Slice($ctg_slice)};
+
+  foreach my $mf ( @misc_feats ) {
+    foreach my $atag ( @{$mf->get_all_Attributes} ) {
+      if ( $atag->name =~ /^Clone.+/ ) {
+        my ($start, $end);
+        if ($mf->strand == -1) {
+          $start = $mf->end;
+          $end   = $mf->start;
+        } else {
+          $start = $mf->start;
+          $end   = $mf->end;
+        }
+
+        my $LR = $atag->name =~ /left/ ? 'left' : 'right';
+        my $pos = $end eq 'left' ? $start : $end;
+        $clone_LR_end_comment .= "The true $LR end of clone " . $atag->value . " is at $pos in this sequence.\n";
+      }
+    }
+  }
+
+  if ( $clone_LR_end_comment ) {
+    my @lrcmts;
+    push(@lrcmts, "IMPORTANT: This sequence is not the entire insert of clone " . $pdmp->external_clone_name .
+         ". It may be shorter because we sequence overlapping sections only once, except for a short overlap.",
+         "During sequence assembly data is compared from overlapping clones. Where differences are found these are annotated as variations together with a note of the overlapping clone name. Note that the variation annotation may not be found in the sequence submission corresponding to the overlapping clone, as we submit sequences with only a small overlap.", $clone_LR_end_comment);
+
+    foreach my $t (@lrcmts) {
+      my $cc = $embl->newCC;
+      $cc->list($t);
+      $embl->newXX;
+    }
+  }
+}
 
 sub add_extra_CC {
     my( $pdmp, $embl ) = @_;
-    
+
     return unless my $ds = $pdmp->DataSet;
 
     #warn "Adding Comment lines from otter database not yet implemented";
@@ -138,9 +189,9 @@ sub add_extra_CC {
     #foreach my $c (...) {
     #    push( @comment, $c );
     #}
-    
+
     return unless @comment;
-    
+
     my $cc = $embl->newCC;
     $cc->list( @comment );
     $embl->newXX;
@@ -148,50 +199,6 @@ sub add_extra_CC {
 
 
 {
-  my $clone_LR_end_comment;
-
-  sub fetch_clone_left_right_info {
-    my ($pdmp) = shift;
-
-    my $sliceAd =  $pdmp->DataSet->make_DBAdaptor->get_SliceAdaptor;
-    my $clone = $sliceAd->fetch_by_region('clone', $pdmp->accession.".".$pdmp->sequence_version);
-
-    # project to contig as assembly_tags are on contigs
-    my $ctg_projection = $clone->project('contig');
-    my $ctg_slice = $ctg_projection->[0]->to_Slice;
-
-    my $mfa = $ctg_slice->adaptor->db->get_MiscFeatureAdaptor;
-    my @misc_feats = @{$mfa->fetch_all_by_Slice($ctg_slice)};
-
-    foreach my $mf ( @misc_feats ){
-      foreach my $atag ( @{$mf->get_all_Attributes} ){
-        if ( $atag->name =~ /^Clone.+/ ){
-          my ($start, $end);
-          if ($mf->strand == -1) {
-            $start = $mf->end;
-            $end   = $mf->start;
-          }
-          else {
-            $start = $mf->start;
-            $end   = $mf->end;
-          }
-
-          my $LR = $atag->name =~ /left/ ? 'left' : 'right';
-          my $pos = $end eq 'left' ? $start : $end;
-          $clone_LR_end_comment .= "The true $LR end of clone " . $atag->value . " is at $pos in this sequence.\n";
-        }
-      }
-    }
-
-    if ( $clone_LR_end_comment ){
-      my @lrcmts;
-      push(@lrcmts, "IMPORTANT: This sequence is not the entire insert of clone " . $pdmp->external_clone_name .
-                ". It may be shorter because we sequence overlapping sections only once, except for a short overlap.",
-           "During sequence assembly data is compared from overlapping clones. Where differences are found these are annotated as variations together with a note of the overlapping clone name. Note that the variation annotation may not be found in the sequence submission corresponding to the overlapping clone, as we submit sequences with only a small overlap.", $clone_LR_end_comment);
-      return @lrcmts;
-    }
-  }
-
   # Standard comment blocks
   my @std = (
 
@@ -223,8 +230,6 @@ correct order and the usual finishing criteria may not apply.');
 
     sub add_standard_CC {
         my( $pdmp, $embl ) = @_;
-
-        unshift(@std, fetch_clone_left_right_info($pdmp));
 
         # STD sequencing centre comment for Greg Schuler
         # (see: http://ray.nlm.nih.gov/genome/cloneserver/)
