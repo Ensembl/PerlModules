@@ -460,7 +460,7 @@ sub replace_Clone {
 sub clone_name_overlapping {
     my( $self, $pos ) = @_;
     
-    #print STDERR "Getting: $self, $pos\n";
+    # print STDERR "Getting: $self, $pos\n";
     
     my $list = $self->{'_Clone_list'} or return;
     foreach my $clone (@$list) {

@@ -214,7 +214,7 @@ sub hash_key {
     return $key;
 }
 
-BEGIN {
+{
     my $joiner = "\nFT". ' ' x 19;
 
     sub compose {
