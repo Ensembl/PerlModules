@@ -4,13 +4,14 @@
 package Hum::Ace::Colors;
 
 use strict;
-use Exporter;
+use base 'Exporter';
 use Carp;
 
 use vars '@EXPORT_OK';
 @EXPORT_OK = qw{
     acename_to_rgb
     acename_to_webhex
+    webhex_to_acename
     list_all_color_names
     };
 
@@ -49,11 +50,12 @@ my %color_rgb = (
     'MIDBLUE'      => [  86, 178, 222 ],
     );
 
-my( %color_hex );
+my( %color_hex, %hex_color );
 while (my ($name, $rgb) = each %color_rgb) {
     my $hex = sprintf "#%02x%02x%02x", @$rgb;
     #warn "$name = $hex\n";
     $color_hex{$name} = $hex;
+    $hex_color{$hex} = $name;
 }
 
 sub acename_to_rgb {
@@ -64,6 +66,12 @@ sub acename_to_rgb {
     } else {
         confess "No such acedb color '$name'";
     }
+}
+
+sub webhex_to_acename {
+    my( $hex ) = @_;
+    
+    return $hex_color{$hex};
 }
 
 sub acename_to_webhex {

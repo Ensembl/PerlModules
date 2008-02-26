@@ -50,6 +50,7 @@ sub ace_string {
     my $str = '';
     foreach my $meth (@{$self->get_all_Methods}) {
         $str .= $meth->ace_string;
+        $str .= $meth->zmap_style_string;
     }
     return $str;
 }
@@ -278,10 +279,9 @@ sub create_full_gene_Methods {
         # Skip existing _trunc methods - we will make new ones
         next if $method->name =~ /_trunc$/;
         
-        $method->column_group('Transcript_col');
-        
         $self->add_Method($method);
         if (my $type = $method->mutable) {
+            $method->column_group('Transcript_col');
             push(@mutable_methods, $method);
             $self->add_Method($self->make_trunc_Method($method));
         }

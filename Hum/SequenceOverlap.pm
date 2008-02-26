@@ -97,6 +97,8 @@ sub _generic_fetch {
 sub fetch_by_db_id {
     my( $pkg, $id ) = @_;
     
+    confess "No use - does not fetch Overlap::Position objects";
+    
     my $sth = track_db->prepare_cached(q{
         SELECT length
           , id_source

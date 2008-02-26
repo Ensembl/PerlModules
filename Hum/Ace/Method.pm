@@ -5,7 +5,7 @@ package Hum::Ace::Method;
 
 use strict;
 use Carp;
-use Hum::Ace::Colors;
+use Hum::Ace::Colors qw{ acename_to_webhex };
 
 
 sub new {
@@ -188,6 +188,121 @@ sub new_from_AceText {
 
         return $new;
     }
+}
+
+
+sub zmap_style_string {
+    my ($self) = @_;
+    
+    my $name = $self->name;
+    my $txt = Hum::Ace::AceText->new(qq{\nZmap_Style : "$name"\n});
+
+    # We must have a Zmap mode
+    my $mode = $self->zmap_mode;
+    unless ($mode) {
+        if ($self->transcript_type) {
+            $mode = 'transcript';
+        } else {
+            $mode = 'basic';
+        }
+    }
+    $mode = 'plain_text' if $mode eq 'text';
+    $txt->add_tag(ucfirst $mode);
+    # Connect style to base style
+    $txt->add_tag('Parent', ucfirst $mode . '_Base');
+
+    my $fill_or_border = $mode eq 'transcript' ? 'Border' : 'Fill';
+    if (my $c = $self->color) {
+        $txt->add_tag(qw{Colours Normal }, $fill_or_border, acename_to_webhex(uc $c));
+    }
+    if (my $c = $self->cds_color) {
+        #$txt->add_tag(qw{Transcript CDS_colour Normal }, $fill_or_border, acename_to_webhex(uc $c));
+        $txt->add_tag(qw{Transcript CDS_colour Normal }, 'Fill', acename_to_webhex(uc $c));
+    }
+    
+    # Have not dealt with the following boolean methods:
+    #  Show_text
+    #  BlastN
+    #  Has_parent
+
+    #  Edit_score
+    #  Edit_display_label
+    #
+    #  Init_hidden
+
+    # Boolean methods:
+    foreach my $tag (qw{
+        Show_up_strand
+        Strand_sensitive
+        Frame_sensitive
+        Show_only_as_3_frame
+        })
+    {
+        my $tag_method = lc $tag;
+        $txt->add_tag($tag) if $self->$tag_method();
+    }
+    
+    $txt->add_tag('Score_percent') if $self->percent;
+
+    if ($self->no_display) {
+        $txt->add_tag(qw{Hide Always});
+    }
+    elsif ($self->init_hidden) {
+        $txt->add_tag(qw{Hide Initially});
+    }
+    
+    if (my $meth = $self->score_method) {
+        if ($meth eq 'width') {
+            $txt->add_tag('Score_by_width');
+        }
+        elsif ($meth eq 'histogram') {
+            $txt->add_tag(qw{Graph Mode Histogram});
+        }
+        else {
+            warn "score / display method '$meth' not supported by Zmap";
+        }
+    }
+    
+    if (my @bounds = $self->score_bounds) {
+        $txt->add_tag('Score_bounds', @bounds);
+    }
+    
+    # Overlap methods.
+    my $over = $self->overlap_mode || 'overlap';
+    if ($over ne 'overlap') {
+        $txt->add_tag(qw{ Bump_mode Overlap_mode Ends_range });
+    }
+    else {
+        $txt->add_tag(qw{ Bump_mode Overlap_mode Complete });
+    }
+    
+    if (my $width = $self->width) {
+        $txt->add_tag('Width', 5 * $width);
+    }
+    
+    ### Got here on Friday
+    #    Zone_number
+    #    Right_priority
+    #    Valid_length
+    #    Gapped
+    #    Join_aligns
+    #    Remark
+    foreach my $tag (qw{
+        Max_mag
+        Min_mag
+        })
+    {
+        my $tag_method = lc $tag;
+        if (defined (my $val = $self->$tag_method())) {
+            $txt->add_tag($tag, $val);
+        }
+    }
+    
+    if (my $group = $self->column_group) {
+        $txt->add_tag('Column_group', $group, $self->column_group_method);
+    }
+    
+    return $txt->ace_string;
 }
 
 sub ace_string {
