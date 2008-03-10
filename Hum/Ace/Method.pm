@@ -7,7 +7,6 @@ use strict;
 use Carp;
 use Hum::Ace::Colors qw{ acename_to_webhex };
 
-
 sub new {
     my( $pkg ) = @_;
     
@@ -87,7 +86,7 @@ sub new_from_AceText {
         text
         graph
         basic
-        alignemnt
+        alignment
         transcript
         allele
         graph
@@ -202,7 +201,12 @@ sub zmap_style_string {
     unless ($mode) {
         if ($self->transcript_type) {
             $mode = 'transcript';
-        } else {
+        }
+        elsif (defined $self->join_aligns) {
+            # Is this the best way to spot Alignment columns?
+            $mode = 'alignment';
+        }
+        else {
             $mode = 'basic';
         }
     }
@@ -268,12 +272,12 @@ sub zmap_style_string {
     }
     
     # Overlap methods.
-    my $over = $self->overlap_mode || 'overlap';
+    my $over = $self->overlap_mode;
     if ($over ne 'overlap') {
         $txt->add_tag(qw{ Bump_mode Overlap_mode Ends_range });
     }
     else {
-        $txt->add_tag(qw{ Bump_mode Overlap_mode Complete });
+        $txt->add_tag(qw{ Bump_mode Overlap_mode Overlap });
     }
     
     if (my $width = $self->width) {
@@ -284,18 +288,24 @@ sub zmap_style_string {
     #    Zone_number
     #    Right_priority
     #    Valid_length
-    #    Gapped
-    #    Join_aligns
-    #    Remark
     foreach my $tag (qw{
         Max_mag
         Min_mag
+        Remark
         })
     {
         my $tag_method = lc $tag;
         if (defined (my $val = $self->$tag_method())) {
             $txt->add_tag($tag, $val);
         }
+    }
+    
+    if (defined (my $n = $self->join_aligns)) {
+        $txt->add_tag(qw{ Alignment Gapped External }, $n);
+    }
+    
+    if (defined (my $n = $self->gapped)) {
+        $txt->add_tag(qw{ Alignment Gapped Internal }, $n);
     }
     
     if (my $group = $self->column_group) {
