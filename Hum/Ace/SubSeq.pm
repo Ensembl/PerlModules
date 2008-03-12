@@ -1415,7 +1415,11 @@ sub zmap_info_xml {
     # Add our own page called "Exons"
     $xml->open_tag('page', {name => 'Exons'});
     $xml->open_tag('subsection');
-    $xml->open_tag('paragraph', {type => 'compound_table', columns => q{'Start' 'End' 'Stable ID'}});
+    $xml->open_tag('paragraph', {
+        type => 'compound_table',
+        columns => q{'Start' 'End' 'Stable ID'},
+        column_types => qw{int int string},
+        });
     foreach my $exon ($self->get_all_Exons_in_transcript_order) {
         my @pos;
         if ($self->strand == 1) {
