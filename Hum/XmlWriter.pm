@@ -98,7 +98,8 @@ sub _begin_tag {
     my $tag_str = ' ' x $level{$self} . qq{<$name};
     if ($attr) {
         while (my ($attrib, $value) = each %$attr) {
-            $tag_str .= qq{ $attrib="} . xml_escape($value) . qq{"};
+            #$tag_str .= qq{ $attrib="} . xml_escape($value) . qq{"};
+            $tag_str .= qq{ $attrib="$value"};
         }
     }
     $tag_str .= '>';
