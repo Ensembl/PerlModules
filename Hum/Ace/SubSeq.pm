@@ -1341,13 +1341,12 @@ sub zmap_info_xml {
     my $locus = $self->Locus;
     
     my $xml = Hum::XmlWriter->new;
-    $xml->open_tag('notebook');
     $xml->open_tag('chapter');
     
     # We add info for Zmap into the "Feature" and "Annotation" subsections of the "Details" page.
     $xml->open_tag('page', {name => 'Details'});
 
-    # This Locus stuff should probably go into Hum::Ace::Locus
+    # This Locus stuff might be better in Hum::Ace::Locus
     $xml->open_tag('subsection', {name => 'Feature'});
 
         $xml->open_tag('paragraph', {name => 'Locus', type => 'tagvalue_table'});
@@ -1381,7 +1380,7 @@ sub zmap_info_xml {
         ### Need to add author to SubSequence object
         if (my $ott = $self->otter_id) {
             $xml->open_tag('paragraph', {type => 'tagvalue_table'});
-            $xml->full_tag('tagvalue', {name => 'Stable ID', type => 'simple'}, $ott)
+            $xml->full_tag('tagvalue', {name => 'Stable ID', type => 'simple'}, $ott);
             $xml->close_tag;
         }
 
@@ -1413,6 +1412,7 @@ sub zmap_info_xml {
     $xml->close_tag;
     $xml->close_tag;
     
+    # Add our own page called "Exons"
     $xml->open_tag('page', {name => 'Exons'});
     $xml->open_tag('subsection');
     $xml->open_tag('paragraph', {type => 'compound_table', columns => q{'Start' 'End' 'Stable ID'}});
@@ -1426,7 +1426,6 @@ sub zmap_info_xml {
         my $str = sprintf "%d %d %s", @pos, $exon->otter_id || '-';
         $xml->full_tag('tagvalue', {type => 'compound'}, $str);
     }
-    
     
     $xml->close_all_open_tags;
     return $xml->flush;

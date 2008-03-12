@@ -8,8 +8,8 @@ use Carp;
 
 
 sub xml_escape {
-
     my $str = shift;
+
     # Must do ampersand first!
     $str =~ s/&/&amp;/g;
     $str =~ s/</&lt;/g;
