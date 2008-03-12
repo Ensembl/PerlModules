@@ -4,9 +4,11 @@
 package Hum::Ace::SubSeq;
 
 use strict;
+use Carp;
+
 use Hum::Sequence::DNA;
 use Hum::Ace::Exon;
-use Carp;
+use Hum::XmlWriter;
 
 sub new {
     my( $pkg ) = @_;
@@ -477,6 +479,18 @@ sub clone_evidence_hash {
         $new_hash->{$type} = [@$ev_list];
     }
     return $new_hash
+}
+
+sub count_evidence {
+    my ($self) = @_;
+    
+    my $ev = $self->evidence_hash;
+    my $count = 0;
+    foreach my $type (keys %$ev) {
+        my $ev_list = $ev->{$type};
+        $count += @$ev_list;
+    }
+    return $count;
 }
 
 sub empty_evidence_hash {
@@ -1321,6 +1335,102 @@ sub zmap_xml_feature_tag {
     $self->end_not_found() ? "true" : "false";
 }
 
+sub zmap_info_xml {
+    my ($self) = @_;
+    
+    my $locus = $self->Locus;
+    
+    my $xml = Hum::XmlWriter->new;
+    $xml->open_tag('notebook');
+    $xml->open_tag('chapter');
+    
+    # We add info for Zmap into the "Feature" and "Annotation" subsections of the "Details" page.
+    $xml->open_tag('page', {name => 'Details'});
+
+    # This Locus stuff should probably go into Hum::Ace::Locus
+    $xml->open_tag('subsection', {name => 'Feature'});
+
+        $xml->open_tag('paragraph', {name => 'Locus', type => 'tagvalue_table'});
+
+        # Locus Symbol, Alias and Full name
+        $xml->full_tag('tagvalue', {name => 'Symbol', type => 'simple'}, $locus->name);
+        foreach my $alias ($locus->list_aliases) {
+            $xml->full_tag('tagvalue', {name => 'Alias', type => 'simple'}, $alias);
+        }
+        $xml->full_tag('tagvalue', {name => 'Full name', type => 'simple'}, $locus->description);
+
+        ### Author - need to add to Locus object
+        if (my $ott = $locus->otter_id) {
+            $xml->full_tag('tagvalue', {name => 'Stable ID', type => 'simple'}, $ott);
+        }
+
+        # Locus Remarks and Annotation remarks
+        foreach my $rem ($locus->list_remarks) {
+            $xml->full_tag('tagvalue', {name => 'Remark',            type => 'scrolled_text'}, $rem);
+        }
+        foreach my $rem ($locus->list_annotation_remarks) {
+            $xml->full_tag('tagvalue', {name => 'Annotation remark', type => 'scrolled_text'}, $rem);
+        }
+
+        $xml->close_tag;
+    
+    $xml->close_tag;
+
+    $xml->open_tag('subsection', {name => 'Annotation'});
+    
+        ### Need to add author to SubSequence object
+        if (my $ott = $self->otter_id) {
+            $xml->open_tag('paragraph', {type => 'tagvalue_table'});
+            $xml->full_tag('tagvalue', {name => 'Stable ID', type => 'simple'}, $ott)
+            $xml->close_tag;
+        }
+
+        # Subseq Remarks and Annotation remarks
+        if ($self->list_remarks or $self->list_annotation_remarks) {       
+            $xml->open_tag('paragraph', {type => 'tagvalue_table'});
+            foreach my $rem ($self->list_remarks) {
+                $xml->full_tag('tagvalue', {name => 'Remark',            type => 'scrolled_text'}, $rem);
+            }
+            foreach my $rem ($self->list_annotation_remarks) {
+                $xml->full_tag('tagvalue', {name => 'Annotation remark', type => 'scrolled_text'}, $rem);
+            }
+            $xml->close_tag;
+        }
+
+        # Supporting evidence
+        if ($self->count_evidence) {
+            $xml->open_tag('paragraph', {name => 'Evidence', type => 'tagvalue_table'});
+            my $evi = $self->evidence_hash;
+            foreach my $type (sort keys %$evi) {
+                my $id_list = $evi->{$type};
+                foreach my $name (@$id_list) {
+                    $xml->full_tag('tagvalue', {name => $type, type => 'simple'}, $name);
+                }
+            }
+            $xml->close_tag;
+        }
+    
+    $xml->close_tag;
+    $xml->close_tag;
+    
+    $xml->open_tag('page', {name => 'Exons'});
+    $xml->open_tag('subsection');
+    $xml->open_tag('paragraph', {type => 'compound_table', columns => q{'Start' 'End' 'Stable ID'}});
+    foreach my $exon ($self->get_all_Exons_in_transcript_order) {
+        my @pos;
+        if ($self->strand == 1) {
+            @pos = ($exon->start, $exon->end);
+        } else {
+            @pos = ($exon->end, $exon->start);
+        }
+        my $str = sprintf "%d %d %s", @pos, $exon->otter_id || '-';
+        $xml->full_tag('tagvalue', {type => 'compound'}, $str);
+    }
+    
+    
+    $xml->close_all_open_tags;
+    return $xml->flush;
+}
 
 #sub DESTROY {
 #    my( $self ) = @_;

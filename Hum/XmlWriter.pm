@@ -5,7 +5,20 @@ package Hum::XmlWriter;
 
 use strict;
 use Carp;
-use Hum::Utils::XmlEscape qw{ xml_escape };
+
+
+sub xml_escape {
+
+    my $str = shift;
+    # Must do ampersand first!
+    $str =~ s/&/&amp;/g;
+    $str =~ s/</&lt;/g;
+    $str =~ s/>/&gt;/g;
+    $str =~ s/"/&quot;/g;
+    $str =~ s/'/&apos;/g;
+    return $str;
+}
+
 
 my (%indent, %level, %open_tag, %string);
 
@@ -21,11 +34,11 @@ sub DESTROY {
 }
 
 sub new {
-    my ($pkg, $indent) = @_;
+    my ($pkg, $x) = @_;
     
     my $scalar;
     my $self = bless \$scalar, $pkg;
-    $indent{$self} = $indent || 2;
+    $indent{$self} = $x || 2;
     $level{$self} = 0;
     $open_tag{$self} = [];
     return $self;
@@ -49,20 +62,26 @@ sub flush {
 sub open_tag {
     my ($self, $name, $attr) = @_;
     
-    my $tag_str = $self->_begin_tag($name, $attr);
-
-    $tag_str .= qq{>\n};
+    my $tag_str = $self->_begin_tag($name, $attr). qq{\n};
     push @{$open_tag{$self}}, $name;
     $string{$self} .= $tag_str;
-    $level{$self} += $indent;
+    $level{$self} += $indent{$self};
 }
 
 sub close_tag {
     my ($self) = @_;
     
     my $name = pop @{$open_tag{$self}} or confess "No tag to close";
-    $level{$self} -= $indent;
-    $string{$self} .= $self->_end_tag($name);
+    $level{$self} -= $indent{$self};
+    $string{$self} .= ' ' x $level{$self} . qq{</$name>\n};
+}
+
+sub close_all_open_tags {
+    my ($self) = @_;
+    
+    while (@{$open_tag{$self}}) {
+        $self->close_tag;
+    }
 }
 
 sub full_tag {
@@ -70,7 +89,7 @@ sub full_tag {
 
     $string{$self} .= $self->_begin_tag($name, $attr)
         . xml_escape($data)
-        . $self->_end_tag($name);
+        . qq{</$name>\n};
 }
 
 sub _begin_tag {
@@ -79,16 +98,11 @@ sub _begin_tag {
     my $tag_str = ' ' x $level{$self} . qq{<$name};
     if ($attr) {
         while (my ($attrib, $value) = each %$attr) {
-            $tag_str .= qq{ $name="} . xml_escape($value) . qq{"};
+            $tag_str .= qq{ $attrib="} . xml_escape($value) . qq{"};
         }
     }
+    $tag_str .= '>';
     return $tag_str;
-}
-
-sub _end_tag {
-    my ($self, $name) = @_;
-    
-    return ' ' x $level{$self} . qq{</$name>\n};
 }
 
 1;
