@@ -202,8 +202,8 @@ close all the opening tags for you.
 
 Deletes the XML string from the XmlWriter object and returns it. The XmlWriter
 object will still contain open tags you have not yet closed, so you can format
-more data and call flush again. This behaviour is useful if, for example, you
-are generating very large XML documents and streaming them from a server.
+more data and call C<flush> again. This behaviour is useful if, for example,
+you are generating very large XML documents and streaming them from a server.
 
 =back
 
