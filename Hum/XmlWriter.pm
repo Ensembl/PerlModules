@@ -34,7 +34,7 @@ sub new {
 sub add_data {
     my ($self, $data) = @_;
     
-    $string{$self} .= xml_escape($data);
+    $string{$self} .= $self->xml_escape($data);
 }
 
 sub add_raw_data {
@@ -71,9 +71,15 @@ sub close_all_open_tags {
 sub full_tag {
     my ($self, $name, $attr, $data) = @_;
 
-    $string{$self} .= $self->_begin_tag($name, $attr)
-        . xml_escape($data)
-        . qq{</$name>\n};
+    if (defined $data) {
+        $string{$self} .= $self->_begin_tag($name, $attr)
+            . $self->xml_escape($data)
+            . qq{</$name>\n};
+    } else {
+        $string{$self} .= ' ' x $level{$self} . qq{<$name}
+          . $self->_format_attribs($attr)
+          . qq{ />\n};
+    }
 }
 
 sub _begin_tag {
@@ -81,11 +87,19 @@ sub _begin_tag {
     
     my $tag_str = ' ' x $level{$self} . qq{<$name};
     if ($attr) {
-        while (my ($attrib, $value) = each %$attr) {
-            $tag_str .= qq{ $attrib="} . xml_escape($value) . qq{"};
-        }
+        $tag_str .= $self->_format_attribs($attr);
     }
     $tag_str .= '>';
+    return $tag_str;
+}
+
+sub _format_attribs {
+    my ($self, $attr) = @_;
+    
+    my $tag_str = '';
+    while (my ($attrib, $value) = each %$attr) {
+        $tag_str .= qq{ $attrib="} . $self->xml_escape($value) . qq{"};
+    }
     return $tag_str;
 }
 
@@ -98,9 +112,8 @@ sub flush {
     return delete $string{$self};
 }
 
-# Non-instance utility method
 sub xml_escape {
-    my $str = shift;
+    my ($self, $str) = @_;
 
     # Must do ampersand first!
     $str =~ s/&/&amp;/g;

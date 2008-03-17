@@ -1273,12 +1273,12 @@ sub ace_string {
 sub zmap_delete_xml_string {
     my ($self) = @_;
     
-    return qq{<zmap action="delete_feature">\n}
-        . qq{\t<featureset>\n}
-        . qq{\t\t} . $self->zmap_xml_feature_tag
-        . qq{\t\t</feature>\n}
-        . qq{\t</featureset>\n}
-        . qq{</zmap>\n};
+    my $xml = Hum::XmlWriter->new;
+    $xml->open_tag('zmap', {action => 'delete_feature'});
+    $xml->open_tag('featureset');
+    $self->zmap_xml_feature_tag($xml);
+    $xml->close_all_open_tags;
+    return $xml->flush;
 }
 
 sub zmap_create_xml_string {
@@ -1287,9 +1287,10 @@ sub zmap_create_xml_string {
     ### featureset tag will require "align" and "block" attributes
     ### if there is more than one in the Zmap. Can probably be
     ### taken from the attached clone_Sequence.
-    my $xml = qq{<zmap action="create_feature">\n\t<featureset>\n};
-    
-    $xml .= qq{\t\t} . $self->zmap_xml_feature_tag;
+    my $xml = Hum::XmlWriter->new;
+    $xml->open_tag('zmap', {action => 'create_feature'});
+    $xml->open_tag('featureset');
+    $self->zmap_xml_feature_tag($xml);
     
     my @exons = $self->get_all_Exons
         or confess "No exons";
@@ -1298,41 +1299,50 @@ sub zmap_create_xml_string {
         if ($i > 0) {
             # Set intron span from end of previous exon to start of current
             my $pex = $exons[$i - 1];
-            $xml .= sprintf(qq{\t\t\t<subfeature ontology="intron" start="%d" end="%d" />\n},
-                            $pex->end + 1,
-                            $ex->start - 1);
+            $xml->full_tag('subfeature', {
+                ontology    => 'intron',
+                start       => $pex->end + 1,
+                end         => $ex->start - 1,
+            });
         }
-        $xml .= sprintf(qq{\t\t\t<subfeature ontology="exon" start="%d" end="%d" />\n},
-                        $ex->start,
-                        $ex->end);
+        $xml->full_tag('subfeature', {
+            ontology    => 'exon',
+            start       => $ex->start,
+            end         => $ex->end,
+        });
     }
 
     if ($self->translation_region_is_set) {
-        $xml .= sprintf qq{\t\t\t<subfeature ontology="cds" start="%d" end="%d" />\n},
-            $self->translation_region;
+        my @tr = $self->translation_region;
+        $xml->full_tag('subfeature', {
+            ontology    => 'cds',
+            start       => $tr[0],
+            end         => $tr[1],
+        });
     }
-    
-    $xml .= qq{\t\t</feature>\n\t</featureset>\n</zmap>\n};
-    
-    return $xml;
+
+    $xml->close_all_open_tags;
+    return $xml->flush;
 }
 
 sub zmap_xml_feature_tag {
-    my ($self) = @_;
+    my ($self, $xml) = @_;
     
     my $style = $self->GeneMethod->name;
     if (my $pre = $self->Locus->gene_type_prefix) {
         $style = "$pre:$style";
     }
 
-    return sprintf qq{<feature name="%s" start="%d" end="%d" strand="%s" style="%s" start_not_found="%s" end_not_found="%s">\n},
-    $self->name,
-    $self->start,
-    $self->end,
-    $self->strand == -1 ? '-' : '+',
-    $style,
-    $self->start_not_found(),
-    $self->end_not_found() ? "true" : "false";
+    $xml->open_tag('feature', {
+            name            => $self->name,
+            start           => $self->start,
+            end             => $self->end,
+            strand          => $self->strand == -1 ? '-' : '+',
+            style           => $style,
+            locus           => $self->Locus->name,
+            start_not_found => $self->start_not_found,
+            end_not_found   => $self->end_not_found ? 'true' : 'false',
+    });
 }
 
 sub zmap_info_xml {
