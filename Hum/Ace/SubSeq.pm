@@ -1407,12 +1407,18 @@ sub zmap_info_xml {
 
         # Supporting evidence
         if ($self->count_evidence) {
-            $xml->open_tag('paragraph', {name => 'Evidence', type => 'tagvalue_table'});
+            $xml->open_tag('paragraph', {
+                name => 'Evidence',
+                type => 'compound_table',
+                columns => q{'Type' 'Accession.SV'},
+                column_types => q{string string},
+                });
             my $evi = $self->evidence_hash;
             foreach my $type (sort keys %$evi) {
                 my $id_list = $evi->{$type};
                 foreach my $name (@$id_list) {
-                    $xml->full_tag('tagvalue', {name => $type, type => 'simple'}, $name);
+                    my $str = sprintf "%s %s", $type, $name;
+                    $xml->full_tag('tagvalue', {type => 'compound'}, $str);
                 }
             }
             $xml->close_tag;
@@ -1426,17 +1432,19 @@ sub zmap_info_xml {
     $xml->open_tag('subsection');
     $xml->open_tag('paragraph', {
         type => 'compound_table',
-        columns => q{'Start' 'End' 'Stable ID'},
-        column_types => q{int int string},
+        columns => q{'#' 'Start' 'End' 'Stable ID'},
+        column_types => q{int int int string},
         });
-    foreach my $exon ($self->get_all_Exons_in_transcript_order) {
+    my @ordered_exons = $self->get_all_Exons_in_transcript_order;
+    for (my $i = 0; $i < @ordered_exons; $i++) {
+        my $exon = $ordered_exons[$i];
         my @pos;
         if ($self->strand == 1) {
             @pos = ($exon->start, $exon->end);
         } else {
             @pos = ($exon->end, $exon->start);
         }
-        my $str = sprintf "%d %d %s", @pos, $exon->otter_id || '-';
+        my $str = sprintf "%d %d %d %s", $i + 1, @pos, $exon->otter_id || '-';
         $xml->full_tag('tagvalue', {type => 'compound'}, $str);
     }
     
