@@ -1407,22 +1407,34 @@ sub zmap_info_xml {
 
         # Supporting evidence
         if ($self->count_evidence) {
-            $xml->open_tag('paragraph', {
-                name => 'Evidence',
-                type => 'compound_table',
-                columns => q{'Type' 'Accession.SV'},
-                column_types => q{string string},
-                });
+            $xml->open_tag('paragraph', {name => 'Evidence', type => 'tagvalue_table'});
             my $evi = $self->evidence_hash;
             foreach my $type (sort keys %$evi) {
                 my $id_list = $evi->{$type};
                 foreach my $name (@$id_list) {
-                    my $str = sprintf "%s %s", $type, $name;
-                    $xml->full_tag('tagvalue', {type => 'compound'}, $str);
+                    $xml->full_tag('tagvalue', {name => $type, type => 'simple'}, $name);
                 }
             }
             $xml->close_tag;
         }
+        # # Supporting evidence as a compound table
+        # if ($self->count_evidence) {
+        #     $xml->open_tag('paragraph', {
+        #         name => 'Evidence',
+        #         type => 'compound_table',
+        #         columns => q{'Type' 'Accession.SV'},
+        #         column_types => q{string string},
+        #         });
+        #     my $evi = $self->evidence_hash;
+        #     foreach my $type (sort keys %$evi) {
+        #         my $id_list = $evi->{$type};
+        #         foreach my $name (@$id_list) {
+        #             my $str = sprintf "%s %s", $type, $name;
+        #             $xml->full_tag('tagvalue', {type => 'compound'}, $str);
+        #         }
+        #     }
+        #     $xml->close_tag;
+        # }
     
     $xml->close_tag;
     $xml->close_tag;
