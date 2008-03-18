@@ -1369,7 +1369,7 @@ sub zmap_info_xml {
 
             ### Author - need to add to Locus object
             if (my $ott = $locus->otter_id) {
-                $xml->full_tag('tagvalue', {name => 'Stable ID', type => 'simple'}, $ott);
+                $xml->full_tag('tagvalue', {name => 'Locus Stable ID', type => 'simple'}, $ott);
             }
 
             # Locus Remarks and Annotation remarks
@@ -1389,7 +1389,7 @@ sub zmap_info_xml {
         ### Need to add author to SubSequence object
         if (my $ott = $self->otter_id) {
             $xml->open_tag('paragraph', {type => 'tagvalue_table'});
-            $xml->full_tag('tagvalue', {name => 'Stable ID', type => 'simple'}, $ott);
+            $xml->full_tag('tagvalue', {name => 'Transcript Stable ID', type => 'simple'}, $ott);
             $xml->close_tag;
         }
 
