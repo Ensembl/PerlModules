@@ -1347,44 +1347,43 @@ sub zmap_xml_feature_tag {
 
 sub zmap_info_xml {
     my ($self) = @_;
-    
-    my $locus = $self->Locus;
-    
+
     my $xml = Hum::XmlWriter->new;
     $xml->open_tag('chapter');
     
     # We add info for Zmap into the "Feature" and "Annotation" subsections of the "Details" page.
     $xml->open_tag('page', {name => 'Details'});
 
-    # This Locus stuff might be better in Hum::Ace::Locus
-    $xml->open_tag('subsection', {name => 'Feature'});
+    if (my $locus = $self->Locus) {
+        # This Locus stuff might be better in Hum::Ace::Locus
+        $xml->open_tag('subsection', {name => 'Feature'});
 
-        $xml->open_tag('paragraph', {name => 'Locus', type => 'tagvalue_table'});
+            $xml->open_tag('paragraph', {name => 'Locus', type => 'tagvalue_table'});
 
-        # Locus Symbol, Alias and Full name
-        $xml->full_tag('tagvalue', {name => 'Symbol', type => 'simple'}, $locus->name);
-        foreach my $alias ($locus->list_aliases) {
-            $xml->full_tag('tagvalue', {name => 'Alias', type => 'simple'}, $alias);
-        }
-        $xml->full_tag('tagvalue', {name => 'Full name', type => 'simple'}, $locus->description);
+            # Locus Symbol, Alias and Full name
+            $xml->full_tag('tagvalue', {name => 'Symbol', type => 'simple'}, $locus->name);
+            foreach my $alias ($locus->list_aliases) {
+                $xml->full_tag('tagvalue', {name => 'Alias', type => 'simple'}, $alias);
+            }
+            $xml->full_tag('tagvalue', {name => 'Full name', type => 'simple'}, $locus->description);
 
-        ### Author - need to add to Locus object
-        if (my $ott = $locus->otter_id) {
-            $xml->full_tag('tagvalue', {name => 'Stable ID', type => 'simple'}, $ott);
-        }
+            ### Author - need to add to Locus object
+            if (my $ott = $locus->otter_id) {
+                $xml->full_tag('tagvalue', {name => 'Stable ID', type => 'simple'}, $ott);
+            }
 
-        # Locus Remarks and Annotation remarks
-        foreach my $rem ($locus->list_remarks) {
-            $xml->full_tag('tagvalue', {name => 'Remark',            type => 'scrolled_text'}, $rem);
-        }
-        foreach my $rem ($locus->list_annotation_remarks) {
-            $xml->full_tag('tagvalue', {name => 'Annotation remark', type => 'scrolled_text'}, $rem);
-        }
+            # Locus Remarks and Annotation remarks
+            foreach my $rem ($locus->list_remarks) {
+                $xml->full_tag('tagvalue', {name => 'Remark',            type => 'scrolled_text'}, $rem);
+            }
+            foreach my $rem ($locus->list_annotation_remarks) {
+                $xml->full_tag('tagvalue', {name => 'Annotation remark', type => 'scrolled_text'}, $rem);
+            }
+
+            $xml->close_tag;
 
         $xml->close_tag;
-    
-    $xml->close_tag;
-
+    }
     $xml->open_tag('subsection', {name => 'Annotation'});
     
         ### Need to add author to SubSequence object
