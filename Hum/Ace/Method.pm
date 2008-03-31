@@ -284,10 +284,9 @@ sub zmap_style_string {
         $txt->add_tag('Width', 5 * $width);
     }
     
-    ### Got here on Friday
-    #    Zone_number
-    #    Right_priority
-    #    Valid_length
+    ### Might need to add "Valid_length" to Zmap_styles in future.
+    ### It is used by GenomicFeatures window to validate length
+    ### of some feature types eg: PolyA signals and sites.
     foreach my $tag (qw{
         Max_mag
         Min_mag

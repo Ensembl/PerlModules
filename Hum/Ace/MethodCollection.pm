@@ -281,7 +281,10 @@ sub create_full_gene_Methods {
         
         $self->add_Method($method);
         if (my $type = $method->mutable) {
-            $method->column_group('Transcript');
+            # $method->column_group('Transcript');
+            # Do not add non-transcript mutable methods because
+            # we don't need prefixed or truncated versions of them.
+            next unless $method->transcript_type;
             push(@mutable_methods, $method);
             $self->add_Method($self->make_trunc_Method($method));
         }
@@ -293,7 +296,7 @@ sub create_full_gene_Methods {
             my $new = $method->clone;
             $new->mutable(0);
             $new->name($prefix->name . $method->name);
-            $new->column_group($prefix->name . 'Transcript');
+            # $new->column_group($prefix->name . 'Transcript');
             $new->color($prefix->color);
             if ($method->cds_color) {
                 $new->cds_color($prefix->cds_color);
