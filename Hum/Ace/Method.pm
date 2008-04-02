@@ -272,7 +272,7 @@ sub zmap_style_string {
     }
     
     # Overlap methods.
-    my $over = $self->overlap_mode;
+    my $over = $self->overlap_mode || 'overlap';
     if ($over ne 'overlap') {
         $txt->add_tag(qw{ Bump_mode Overlap_mode Ends_range });
     }
