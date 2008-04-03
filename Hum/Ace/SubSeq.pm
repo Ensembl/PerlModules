@@ -310,6 +310,7 @@ sub clone {
     # Copy scalar fields (But not is_archival!)
     foreach my $meth (qw{
         name
+        otter_id
         clone_Sequence
         GeneMethod
         Locus
@@ -1386,7 +1387,7 @@ sub zmap_info_xml {
     }
     $xml->open_tag('subsection', {name => 'Annotation'});
     
-        ### Need to add author to SubSequence object
+        ### Need to add author to Hum::Ace::SubSeq object
         if (my $ott = $self->otter_id) {
             $xml->open_tag('paragraph', {type => 'tagvalue_table'});
             $xml->full_tag('tagvalue', {name => 'Transcript Stable ID', type => 'simple'}, $ott);
