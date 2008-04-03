@@ -310,7 +310,6 @@ sub clone {
     # Copy scalar fields (But not is_archival!)
     foreach my $meth (qw{
         name
-        otter_id
         clone_Sequence
         GeneMethod
         Locus
