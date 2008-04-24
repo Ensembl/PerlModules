@@ -115,6 +115,16 @@ sub drop_otter_id {
     }
 }
 
+sub author_name {
+    my ($self, $name) = @_;
+    
+    if ($name) {
+        $self->{'_author_name'} = $name;
+    }
+    return $self->{'_author_name'};
+}
+
+
 sub gene_type_prefix {
     my( $self, $gene_type_prefix ) = @_;
     
@@ -155,13 +165,17 @@ sub save_locus_info {
         $self->otter_id($ott->name);
     }
 
-    if ($ace_locus->at('Type.Gene.Known')) {
-        $self->known(1);
+    if (my $aut = $ace_locus->at('Otter.Locus_author[1]')) {
+        $self->author_name($aut->name);
     }
 
     if ($ace_locus->at('Otter.Truncated')) {
         $self->is_truncated(1);
         #warn $self->name, " is truncated";
+    }
+
+    if ($ace_locus->at('Type.Gene.Known')) {
+        $self->known(1);
     }
 
     if (my $type = $ace_locus->at('Type_prefix[1]')) {
@@ -271,6 +285,7 @@ sub ace_string {
     $ace .= qq{\nLocus : "$name"\n}
         . qq{-D Type_prefix\n}
         . qq{-D Type\n}
+        . qq{-D Locus_author\n}
         . qq{-D Full_name\n}
         . qq{-D Remark\n}
         . qq{-D Annotation_remark\n}

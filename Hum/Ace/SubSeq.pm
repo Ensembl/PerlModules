@@ -167,6 +167,9 @@ sub process_ace_start_end_transcript_seq {
     if (my $otter_id = $t_seq->at('Otter.Transcript_id[1]')) {
         $self->otter_id($otter_id->name);
     }
+    if (my $aut = $t_seq->at('Otter.Transcript_author[1]')) {
+        $self->author_name($aut->name);
+    }
     
     # Make the exons
     foreach ($t_seq->at('Structure.From.Source_exons[1]')) {
@@ -404,6 +407,15 @@ sub otter_id {
         $self->{'_otter_id'} = $otter_id;
     }
     return $self->{'_otter_id'};
+}
+
+sub author_name {
+    my ($self, $name) = @_;
+    
+    if ($name) {
+        $self->{'_author_name'} = $name;
+    }
+    return $self->{'_author_name'};
 }
 
 sub set_remarks {
@@ -1154,6 +1166,7 @@ sub ace_string {
     
     $out .= qq{\nSequence "$name"\n}
         . qq{-D Source\n}
+        . qq{-D Transcript_author\n}
         . qq{-D Method\n}
         . qq{-D Locus\n}
         . qq{-D CDS\n}
@@ -1367,9 +1380,12 @@ sub zmap_info_xml {
             }
             $xml->full_tag('tagvalue', {name => 'Full name', type => 'simple'}, $locus->description);
 
-            ### Author - need to add to Locus object
+            # Otter stable ID and Author
             if (my $ott = $locus->otter_id) {
                 $xml->full_tag('tagvalue', {name => 'Locus Stable ID', type => 'simple'}, $ott);
+            }
+            if (my $aut = $locus->author_name) {
+                $xml->full_tag('tagvalue', {name => 'Locus author', type => 'simple'}, $aut);
             }
 
             # Locus Remarks and Annotation remarks
@@ -1386,10 +1402,15 @@ sub zmap_info_xml {
     }
     $xml->open_tag('subsection', {name => 'Annotation'});
     
-        ### Need to add author to Hum::Ace::SubSeq object
-        if (my $ott = $self->otter_id) {
+        # Otter stable ID and Author
+        if ($self->otter_id or $self->author_name) {
             $xml->open_tag('paragraph', {type => 'tagvalue_table'});
-            $xml->full_tag('tagvalue', {name => 'Transcript Stable ID', type => 'simple'}, $ott);
+            if (my $ott = $self->otter_id) {
+                $xml->full_tag('tagvalue', {name => 'Transcript Stable ID', type => 'simple'}, $ott);
+            }
+            if (my $aut = $self->author_name) {
+                $xml->full_tag('tagvalue', {name => 'Transcript author', type => 'simple'}, $aut);
+            }
             $xml->close_tag;
         }
 
