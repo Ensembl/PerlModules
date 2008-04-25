@@ -214,6 +214,11 @@ sub process_ace_start_end_transcript_seq {
         push(@remarks, $title->name);
     }
     $self->set_remarks(@remarks);
+
+    # Description (present in Halfwise PFAM domain match transcripts)
+    if (my $desc = $t_seq->at('DB_info.EMBL_dump_info.DE_line[1]')) {
+        $self->description($desc->name);
+    }
     
     my( @annotation_remarks );
     foreach my $rem ($t_seq->at('Annotation.Annotation_remark[1]')) {
@@ -321,6 +326,7 @@ sub clone {
           end_not_found
         upstream_subseq_name
         downstream_subseq_name
+        description
         })
     {
         $new->$meth($old->$meth());
@@ -351,6 +357,15 @@ sub name {
         $self->{'_name'} = $name;
     }
     return $self->{'_name'} || confess "name not set";
+}
+
+sub description {
+    my ($self, $desc) = @_;
+    
+    if ($desc) {
+        $self->{'_description'} = $desc;
+    }
+    return $self->{'_description'};
 }
 
 sub start_phase {
@@ -1358,20 +1373,96 @@ sub zmap_xml_feature_tag {
     });
 }
 
+sub zmap_transcript_info_xml {
+    my ($self) = @_;
+    
+    my $xml = Hum::XmlWriter->new(7);
+    # Otter stable ID and Author
+    if ($self->otter_id or $self->author_name) {
+        $xml->open_tag('paragraph', {type => 'tagvalue_table'});
+        if (my $ott = $self->otter_id) {
+            $xml->full_tag('tagvalue', {name => 'Transcript Stable ID', type => 'simple'}, $ott);
+        }
+        if (my $aut = $self->author_name) {
+            $xml->full_tag('tagvalue', {name => 'Transcript author', type => 'simple'}, $aut);
+        }
+        $xml->close_tag;
+    }
+
+    # Subseq Remarks and Annotation remarks
+    if ($self->list_remarks or $self->list_annotation_remarks) {       
+        $xml->open_tag('paragraph', {type => 'tagvalue_table'});
+        foreach my $rem ($self->list_remarks) {
+            $xml->full_tag('tagvalue', {name => 'Remark',            type => 'scrolled_text'}, $rem);
+        }
+        foreach my $rem ($self->list_annotation_remarks) {
+            $xml->full_tag('tagvalue', {name => 'Annotation remark', type => 'scrolled_text'}, $rem);
+        }
+        $xml->close_tag;
+    }
+
+    # # Supporting evidence in tag-value list
+    # if ($self->count_evidence) {
+    #     $xml->open_tag('paragraph', {name => 'Evidence', type => 'tagvalue_table'});
+    #     my $evi = $self->evidence_hash;
+    #     foreach my $type (sort keys %$evi) {
+    #         my $id_list = $evi->{$type};
+    #         foreach my $name (@$id_list) {
+    #             $xml->full_tag('tagvalue', {name => $type, type => 'simple'}, $name);
+    #         }
+    #     }
+    #     $xml->close_tag;
+    # }
+
+    # Supporting evidence as a compound table
+    if ($self->count_evidence) {
+        $xml->open_tag('paragraph', {
+            name => 'Evidence',
+            type => 'compound_table',
+            columns => q{'Type' 'Accession.SV'},
+            column_types => q{string string},
+            });
+        my $evi = $self->evidence_hash;
+        foreach my $type (sort keys %$evi) {
+            my $id_list = $evi->{$type};
+            foreach my $name (@$id_list) {
+                my $str = sprintf "%s %s", $type, $name;
+                $xml->full_tag('tagvalue', {type => 'compound'}, $str);
+            }
+        }
+        $xml->close_tag;
+    }
+    return $xml->flush;
+}
+
 sub zmap_info_xml {
     my ($self) = @_;
 
-    my $xml = Hum::XmlWriter->new;
-    $xml->open_tag('chapter');
+    my $xml = Hum::XmlWriter->new(5);
     
-    # We add info for Zmap into the "Feature" and "Annotation" subsections of the "Details" page.
+    # We can add our info for Zmap into the "Feature" and "Annotation" subsections of the "Details" page.
     $xml->open_tag('page', {name => 'Details'});
 
+    if (my $t_info_xml = $self->zmap_transcript_info_xml) {
+        $xml->open_tag('subsection', {name => 'Annotation'});
+        $xml->add_raw_data($t_info_xml);
+        $xml->close_tag;
+    }
+
+    # Description field was added to the object for displaying DE_line info for Halfwise (Pfam) objects
+    if (my $desc = $self->description) {
+        $xml->open_tag('subsection', {name => 'Feature'});
+        $xml->open_tag('paragraph', {type => 'tagvalue_table'});
+        $xml->full_tag('tagvalue', {name => 'Description', type => 'scrolled_text'}, $desc);
+        $xml->close_tag;
+        $xml->close_tag;
+    }
+    
     if (my $locus = $self->Locus) {
         # This Locus stuff might be better in Hum::Ace::Locus
-        $xml->open_tag('subsection', {name => 'Feature'});
+        $xml->open_tag('subsection', {name => 'Locus'});
 
-            $xml->open_tag('paragraph', {name => 'Locus', type => 'tagvalue_table'});
+            $xml->open_tag('paragraph', {type => 'tagvalue_table'});
 
             # Locus Symbol, Alias and Full name
             $xml->full_tag('tagvalue', {name => 'Symbol', type => 'simple'}, $locus->name);
@@ -1400,64 +1491,6 @@ sub zmap_info_xml {
 
         $xml->close_tag;
     }
-    $xml->open_tag('subsection', {name => 'Annotation'});
-    
-        # Otter stable ID and Author
-        if ($self->otter_id or $self->author_name) {
-            $xml->open_tag('paragraph', {type => 'tagvalue_table'});
-            if (my $ott = $self->otter_id) {
-                $xml->full_tag('tagvalue', {name => 'Transcript Stable ID', type => 'simple'}, $ott);
-            }
-            if (my $aut = $self->author_name) {
-                $xml->full_tag('tagvalue', {name => 'Transcript author', type => 'simple'}, $aut);
-            }
-            $xml->close_tag;
-        }
-
-        # Subseq Remarks and Annotation remarks
-        if ($self->list_remarks or $self->list_annotation_remarks) {       
-            $xml->open_tag('paragraph', {type => 'tagvalue_table'});
-            foreach my $rem ($self->list_remarks) {
-                $xml->full_tag('tagvalue', {name => 'Remark',            type => 'scrolled_text'}, $rem);
-            }
-            foreach my $rem ($self->list_annotation_remarks) {
-                $xml->full_tag('tagvalue', {name => 'Annotation remark', type => 'scrolled_text'}, $rem);
-            }
-            $xml->close_tag;
-        }
-
-        # Supporting evidence
-        if ($self->count_evidence) {
-            $xml->open_tag('paragraph', {name => 'Evidence', type => 'tagvalue_table'});
-            my $evi = $self->evidence_hash;
-            foreach my $type (sort keys %$evi) {
-                my $id_list = $evi->{$type};
-                foreach my $name (@$id_list) {
-                    $xml->full_tag('tagvalue', {name => $type, type => 'simple'}, $name);
-                }
-            }
-            $xml->close_tag;
-        }
-        # # Supporting evidence as a compound table
-        # if ($self->count_evidence) {
-        #     $xml->open_tag('paragraph', {
-        #         name => 'Evidence',
-        #         type => 'compound_table',
-        #         columns => q{'Type' 'Accession.SV'},
-        #         column_types => q{string string},
-        #         });
-        #     my $evi = $self->evidence_hash;
-        #     foreach my $type (sort keys %$evi) {
-        #         my $id_list = $evi->{$type};
-        #         foreach my $name (@$id_list) {
-        #             my $str = sprintf "%s %s", $type, $name;
-        #             $xml->full_tag('tagvalue', {type => 'compound'}, $str);
-        #         }
-        #     }
-        #     $xml->close_tag;
-        # }
-    
-    $xml->close_tag;
     $xml->close_tag;
     
     # Add our own page called "Exons"

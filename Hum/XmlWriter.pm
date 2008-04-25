@@ -25,10 +25,17 @@ sub new {
     
     my $scalar;
     my $self = bless \$scalar, $pkg;
-    $indent{$self} = $x || 2;
-    $level{$self} = 0;
+    $indent{$self} = 2;
+    $level{$self} = $x || 0;
     $open_tag{$self} = [];
     return $self;
+}
+
+sub add_XML {
+    my ($self, $xml) = @_;
+    
+    $xml->close_all_open_tags;
+    $string{$self} .= $xml->flush;
 }
 
 sub add_data {
