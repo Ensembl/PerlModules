@@ -782,19 +782,20 @@ sub _compose {
 
 sub string_for_checksum {
     my( $line ) = @_;
-    
+
     my @compose = $line->_compose;
+
     for (my $i = 0; $i < @compose;) {
         my $str = $compose[$i];
         # Don't return the Submitted date line
         # for inclusion in the checksum.
-        if ($str =~ /^RL    Submitted /) {
+        if ($str =~ /^RL   Submitted /) {
             splice(@compose, $i, 1);
         } else {
             $i++;
         }
     }
-    
+
     return join('', @compose);
 }
 
