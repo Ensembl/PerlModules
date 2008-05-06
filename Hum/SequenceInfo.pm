@@ -114,6 +114,15 @@ sub _embl_sequence_get {
                 return;
             }
 
+            my( $self );
+            unless ($self = $pkg->fetch_by_accession_sv($acc, $sv)) {
+                $self = $pkg->new;
+                $self->accession($acc);
+                $self->sequence_version($sv);
+                $self->projectname($proj);
+            }
+            $self->htgs_phase($htgs_phase);
+
             my( $seq );
             if ($htgs_phase == 3) {
                 # Finished sequences may not have an EMBL file
@@ -123,19 +132,11 @@ sub _embl_sequence_get {
                 # Unfinished sequences may be in multiple pieces
                 # so we need the sequence from the EMBL file where
                 # it is in one piece.
-                my $embl = Hum::EMBL->new;
-                my $entry = $embl->parse("$path/$name.embl");
+                $self->embl_file_path("$path/$name.embl");
+                my $entry = $self->get_EMBL_entry;
                 $seq = $entry->hum_sequence;
             }
 
-            my( $self );
-            unless ($self = $pkg->fetch_by_accession_sv($acc, $sv)) {
-                $self = $pkg->new;
-                $self->accession($acc);
-                $self->sequence_version($sv);
-                $self->projectname($proj);
-            }
-            $self->htgs_phase($htgs_phase);
             
             $seq->name("$acc.$sv");
             $self->Sequence($seq);
@@ -155,7 +156,20 @@ sub _embl_sequence_get {
     }
 }
 
-
+sub get_EMBL_entry {
+    my ($self) = @_;
+    
+    my $entry;
+    if (my $path = $self->embl_file_path) {
+        my $embl = Hum::EMBL->new;
+        $entry = $embl->parse($path);
+    } else {
+        my $acc = $self->accession        or confess        "accession not set";
+        my $sv  = $self->sequence_version or confess "sequence_version not set";
+        ($entry) = get_EMBL_entries("$acc.$sv");
+    }
+    return $entry;
+}
 
 sub _fetch_generic {
     my( $pkg, $where_clause, @data ) = @_;
@@ -250,6 +264,15 @@ sub projectname {
         $self->{'_projectname'} = $projectname;
     }
     return $self->{'_projectname'};
+}
+
+sub embl_file_path {
+    my( $self, $embl_file_path ) = @_;
+    
+    if ($embl_file_path) {
+        $self->{'_embl_file_path'} = $embl_file_path;
+    }
+    return $self->{'_embl_file_path'};
 }
 
 sub Sequence {
