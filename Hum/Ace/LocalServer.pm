@@ -160,7 +160,34 @@ sub default_timeout_string{
 }
 
 sub additional_server_parameters {
-    return('-readonly');
+    return;
+}
+
+sub save_ace {
+    my ($self, $ace_data) = @_;
+    
+    my $ace = $self->ace_handle;
+    my $messages = $ace->raw_query("parse = " . $ace_data);
+    my $errors = 0;
+    while ($messages =~ /(\d+) (errors|parse failed)/gi) {
+        $errors += $1;
+    }
+    if ($messages =~ /Sorry/i) {
+        $errors++;
+    }
+    
+    if ($errors) {
+        confess "Error parsing ace data\n$messages";
+    } else {
+        # Make sure that changes to acedb are saved to disk
+        my $save_msg = $ace->raw_query('save');
+        print STDERR $save_msg;
+        if ($save_msg =~ /sorry|error|keyword/i) {
+            confess "Error from sgifaceserver save: $save_msg";
+        } else {
+            return 1;
+        }
+    }
 }
 
 sub ace_handle {
@@ -208,14 +235,14 @@ sub connect_parameters {
     my $host = $self->host;
     my $port = $self->port;
     my @param = (
-                 -HOST       => $host,
-                 -PORT       => $port,
-                 -TIMEOUT    => 60,
+        -HOST       => $host,
+        -PORT       => $port,
+        -TIMEOUT    => 60,
         );
-    if(my $user = $self->user){
+    if (my $user = $self->user) {
         push(@param, (-USER => $user));
     }
-    if(my $pass = $self->pass){
+    if (my $pass = $self->pass) {
         push(@param, (-PASS => $pass));
     }
     return @param;
@@ -278,7 +305,7 @@ sub kill_server {
 {
     my $INFO  = {};
     my $DEBUG_THIS = 0;
-    sub full_child_info{
+    sub full_child_info {
         return $INFO;
     }
     sub start_server {
@@ -324,11 +351,10 @@ sub kill_server {
         return 0;
     }
 }
+
 sub make_server_wrm {
     my( $self ) = @_;
-    
-    local ( *WRM, *PWRM );
-    
+
     my $path = $self->path
         or confess "path not set";
     my $wspec = "$path/wspec";
@@ -336,27 +362,29 @@ sub make_server_wrm {
         unless -d $wspec;
     my $server_wrm  = "$wspec/serverconfig.wrm";
     my $serverp_wrm = "$wspec/serverpasswd.wrm";
-    unless(-e $server_wrm){
-        open WRM, "> $server_wrm"
+    unless (-e $server_wrm) {
+        open my $wrm, "> $server_wrm"
             or die "Can't create '$server_wrm' : $!";
-        print WRM map "\n$_\n", 
-        'WRITE NONE',
-        'READ WORLD';
-        close WRM;
+        print $wrm map "\n$_\n", 
+            'WRITE NONE',
+            'READ NONE';
+        close $wrm or confess "Error writing to '$server_wrm'; $!";
     }
     unlink($serverp_wrm);
-    unless(-e $serverp_wrm){
+    unless (-e $serverp_wrm) {
         my $user = $self->user;
         my $pass = $self->pass;
-        my $userpass_hash = ($user && $pass ? "$user ".md5_hex("$user$pass"): '');
-        open PWRM, "> $serverp_wrm"
+        my $userpass_hash = $user && $pass
+            ? "$user " . md5_hex("$user$pass")
+            : '';
+        open my $pwrm, "> $serverp_wrm"
             or die "Can't create '$serverp_wrm' : $!";
-        print PWRM map "\n$_\n", 
-        "admin: $user",
-        'write:',
-        'read:',
-        $userpass_hash;# password is 'password'
-        close PWRM;
+        print $pwrm map "\n$_\n", 
+            "admin: $user",
+            'write:',
+            'read:',
+            $userpass_hash;
+        close $pwrm or confess "Error writing to '$serverp_wrm'; $!";
     }
     return 1;
 }
@@ -364,14 +392,14 @@ sub make_server_wrm {
 sub DESTROY {
     my( $self ) = @_;
 
-    if(my $spid = $self->server_pid){
+    if (my $spid = $self->server_pid) {
         my $opid = $self->origin_pid;
-        if($opid && $opid == $$){
+        if ($opid && $opid == $$) {
             $self->kill_server;
-        }else{
+        } else {
             warn "Not killing server with pid $spid (not server leader '$opid' != '$$').\n";
         }
-    }else{
+    } else {
         # When the fork occurs everything gets copied.
         # This includes the reference to the $self
         # which is likely to be held in the calling module.
