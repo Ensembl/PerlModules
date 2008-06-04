@@ -32,6 +32,24 @@ sub name {
     return $self->{'_name'};
 }
 
+sub assembly_name { # or asm_type, or sequence_set_name
+    my( $self, $aname ) = @_;
+    
+    if ($aname) {
+        $self->{'_aname'} = $aname;
+    }
+    return $self->{'_aname'};
+}
+
+sub species { # in fact, it is the dataset_name (so 'human' and 'test_human' are different species!)
+    my( $self, $species ) = @_;
+    
+    if ($species) {
+        $self->{'_species'} = $species;
+    }
+    return $self->{'_species'};
+}
+
 sub Sequence {
     my( $self, $seq ) = @_;
     
@@ -290,6 +308,13 @@ sub express_data_fetch {
     # These raw_queries are much faster than
     # fetching the whole Genome_Sequence object!
     $ace->raw_query("find Sequence $name");
+
+    if (my ($species) = $ace->values_from_tag('Species')) {
+        $self->species($species->[0]);
+    }
+    if (my ($assembly_name) = $ace->values_from_tag('Assembly_name')) {
+        $self->assembly_name($assembly_name->[0]);
+    }
 
     # The SimpleFeatures we are intersted in (polyA etc...)
     # are only present on the top level assembly object.
