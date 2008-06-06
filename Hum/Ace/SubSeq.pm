@@ -1357,8 +1357,15 @@ sub zmap_xml_feature_tag {
     my ($self, $xml) = @_;
     
     my $style = $self->GeneMethod->name;
-    if (my $pre = $self->Locus->gene_type_prefix) {
-        $style = "$pre:$style";
+
+    # Not all transcripts have a locus.
+    # eg: Predicted genes (Genscan, Augustus) don't.
+    my @locus_prop;
+    if (my $locus = $self->Locus) {        
+        if (my $pre = $locus->gene_type_prefix) {
+            $style = "$pre:$style";
+        }
+        @locus_prop = (locus => $locus->name);
     }
 
     $xml->open_tag('feature', {
@@ -1367,9 +1374,9 @@ sub zmap_xml_feature_tag {
             end             => $self->end,
             strand          => $self->strand == -1 ? '-' : '+',
             style           => $style,
-            locus           => $self->Locus->name,
             start_not_found => $self->start_not_found,
             end_not_found   => $self->end_not_found ? 'true' : 'false',
+            @locus_prop,
     });
 }
 
