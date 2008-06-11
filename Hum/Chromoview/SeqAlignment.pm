@@ -123,6 +123,14 @@ sub parse_align_string {
   }
 }
 
+sub name_padding {
+  my ( $self, $padding ) =@_;
+  if ($padding) {
+    $self->{'_name_padding'} = $padding;
+  }
+  return $self->{'_name_padding'};
+}
+
 sub query_align_string {
   my ( $self, $align_str ) =@_;
   if ($align_str) {
@@ -294,6 +302,8 @@ sub _remove_old_features {
   my ( $self, $daf_Ad, $old_feats ) = @_;
 
   warn "MSG: Found ", scalar @$old_feats, " old dafs to remove...\n";
+  return unless $old_feats->[0];
+
   my $del = 0;
   my $seq_region_id;
   foreach my $feat ( @$old_feats ){
@@ -496,6 +506,7 @@ sub _pretty_alignment {
   }
 
   my $pretty_align = '';
+  my $padding = $self->name_padding ? '%s' : '%-20s';
 
   my $j = 0;
   for ( my $i=0; $i< scalar @qry_frags; $i++) {
@@ -533,17 +544,19 @@ sub _pretty_alignment {
       $hit_e_coord = $hit_s_coord + ($hsp_piece_len - $num_hit_indels) - 1;
     }
 
-    #$pretty_align .= sprintf("%s\t%d\t%s\t%d\n\t\t\t%s\n%s\t%d\t%s\t%d\n\n\n",
-#                             $qry_name, $qry_s_coord, $qry_hsp_frag, $qry_e_coord,
-#                             $matches->[$i],
-#                             $hit_name, $hit_s_coord, $hit_hsp_frag, $hit_e_coord);
-
-
-    $pretty_align .= sprintf("%-20s\t%d\t%s\t%d\n\t\t\t\t%s\n%-20s\t%d\t%s\t%d\n\n\n",
-                             $qry_name, $qry_s_coord, $qry_hsp_frag, $qry_e_coord,
-                             $matches->[$i],
-                             $hit_name, $hit_s_coord, $hit_hsp_frag, $hit_e_coord);
-
+    # should be more clever by taking padding param from constructor
+    if ( $self->name_padding ){
+      $pretty_align .= sprintf("%s\t%d\t%s\t%d\n\t\t\t%s\n%s\t%d\t%s\t%d\n\n\n",
+                               $qry_name, $qry_s_coord, $qry_hsp_frag, $qry_e_coord,
+                               $matches->[$i],
+                               $hit_name, $hit_s_coord, $hit_hsp_frag, $hit_e_coord);
+    }
+    else {
+      $pretty_align .= sprintf("%-20s\t%d\t%s\t%d\n\t\t\t\t%s\n%-20s\t%d\t%s\t%d\n\n\n",
+                               $qry_name, $qry_s_coord, $qry_hsp_frag, $qry_e_coord,
+                               $matches->[$i],
+                               $hit_name, $hit_s_coord, $hit_hsp_frag, $hit_e_coord);
+    }
 
     $j= $j+2;
 
