@@ -147,49 +147,6 @@ sub hit_align_string {
   return $self->{'_hit_align_string'};
 }
 
-sub crossmatch_hack {
-
-  my ($self) = @_;
-
-  my $daf = $self->feature;
-  my $qry_slice = $daf->slice;
-  my $hit_slice = $qry_slice->adaptor->fetch_by_region('clone', $daf->hseqname);
-
-  #warn "Q_len: ", length $qry_slice->seq;
-  #warn "H_len: ", length $hit_slice->seq;
-
-  my $qry_seq = $qry_slice->seq;
-  my $hit_seq = $hit_slice->seq;
-
-  if ( $daf->strand == 1 and $daf->hstrand == -1 ){
-    $hit_seq = $self->_complement($hit_seq);
-
-    #  warn $hit_seq;
-   # warn "QStart: ", $daf->start;
-   # warn "HStart: ", $daf->hstart;
-   # warn "Q: ", substr($qry_seq, $daf->start-1, 58);
-   # warn "H: ",  scalar reverse substr($hit_seq, $daf->hend-58, 58);
-    $self->query_align_string(substr($qry_seq, $daf->start-1, $daf->end - $daf->start + 1));
-   # warn "HS: ", $daf->hstart;
-   # warn "HE: ", $daf->hend;
-    $self->hit_align_string(scalar reverse substr($hit_seq, $daf->hstart-1, $daf->hend - $daf->hstart + 1));
-  }
-  elsif ($daf->strand == -1 and $daf->hstrand == 1 ){
-    $qry_seq = $self->_complement($qry_seq);
-    $self->hit_align_string(substr($hit_seq, $daf->hstart-1, $daf->hend - $daf->hstart + 1));
-    $self->query_align_string(scalar reverse substr($qry_seq, $daf->start-1, $daf->end - $daf->start + 1));
-  }
-  else {
-    $self->hit_align_string(substr($hit_seq, $daf->hstart-1, $daf->hend - $daf->hstart + 1));
-    $self->query_align_string(substr($qry_seq, $daf->start-1, $daf->end - $daf->start + 1));
-  }
-
-  $self->query_seq($qry_seq);
-  $self->hit_seq($hit_seq);
-
-  return $self;
-}
-
 sub make_cigar_string_from_align_strings {
 
   my ( $self ) = @_;
@@ -214,6 +171,8 @@ sub make_cigar_string_from_align_strings {
                );
 
   my $cigar_str = Bio::EnsEMBL::Utils::CigarString->generate_cigar_string_by_hsp($hsp);
+  warn $feature->seq_name, " --- ", $feature->hit_name;
+  warn "CIGAR: $cigar_str";
   $self->cigar_string($cigar_str);
 
   return $self;
@@ -320,18 +279,35 @@ sub _remove_old_features {
 
 sub _record_other_overlaps {
 
-  my ($self, $slice_Ad, $daf_Ad, $other_overlaps, $best_feat) = @_;
+  my ($self, $slice_Ad, $daf_Ad, $other_overlaps, $best_daf) = @_;
+
+  my $qry_slice = $best_daf->slice;
+  my $qry_seq   = $qry_slice->seq;
+
+  my $hit_slice = $qry_slice->adaptor->fetch_by_region('clone', $best_daf->hseqname);
+  my $hit_seq   = $hit_slice->seq;
 
   #do not want to store $best_feat again
-  my $best_str = $self->_stringified($best_feat, qw(start end strand hstart hend hstrand));
+  #my $best_str = $self->_stringified($best_feat, qw(start end strand hstart hend hstrand));
 
-  my $seq_region_id = $best_feat->slice->adaptor->get_seq_region_id($best_feat->slice);
+  my $seq_region_id = $slice_Ad->get_seq_region_id($qry_slice);
 
   my $count = 0;
   foreach my $ol ( @$other_overlaps ) {
 
-    my $ol_str = $self->_stringified($ol, qw(seq_start seq_end seq_strand hit_start hit_end hit_strand) );
-    next if $ol_str eq $best_str;
+    #my $ol_str = $self->_stringified($ol, qw(seq_start seq_end seq_strand hit_start hit_end hit_strand) );
+    #next if $ol_str eq $best_str;
+
+    my $alignment = Hum::Chromoview::SeqAlignment->
+      new(
+          algorithm => 'crossmatch',
+          feature   => $ol,
+          query_seq => $qry_seq,
+          hit_seq   => $hit_seq,
+         );
+
+    $alignment->parse_align_string();
+    $alignment->make_cigar_string_from_align_strings();
 
     my $other_daf = $self->_make_daf_object($ol, $slice_Ad);
     $daf_Ad->store($other_daf);
@@ -407,14 +383,15 @@ sub make_alignment_from_cigar_string {
   my $hit_strand = $daf->hstrand;
   my $qry_strand = $daf->strand;
 
-  #warn $daf->analysis->parameters, "\n";
-  warn "Q: ", $daf->slice->seq_region_name, "\n";
-  warn "QS-E: ", $daf->start, " ", $daf->end, "\n";
-  warn "QSTR: $qry_strand\n", "\n";
-
-  warn "H: ", $daf->hseqname, "\n";
-  warn "HS-E: ", $daf->hstart, " ", $daf->hend, "\n";
-  warn "HSTR: $hit_strand\n", "\n";
+#  #warn $daf->analysis->parameters, "\n";
+#  warn "Q: ", $daf->slice->seq_region_name, "\n";
+#  warn "QS-E: ", $daf->start, " ", $daf->end, "\n";
+#  warn "QSTR: $qry_strand\n", "\n";
+##  warn $query_align_str;
+#  warn "H: ", $daf->hseqname, "\n";
+#  warn "HS-E: ", $daf->hstart, " ", $daf->hend, "\n";
+#  warn "HSTR: $hit_strand\n", "\n";
+##  warn $hit_align_str;
 
   my $query_hsp = '';
   my $hit_hsp   = '';
@@ -423,6 +400,7 @@ sub make_alignment_from_cigar_string {
   unless (@parts) {
     die "Error parsing cigar_string\n";
   }
+
   foreach my $piece (@parts) {
     my ($length) = ( $piece =~ /^(\d*)/ );
     $length = 1 if $length eq '';
@@ -454,8 +432,8 @@ sub make_alignment_from_cigar_string {
   }
 
   $self->_pretty_alignment($query_hsp, $hit_hsp);
-  return $self;
 
+  return $self;
 }
 
 sub alignment {
@@ -465,6 +443,15 @@ sub alignment {
   }
   return $self->{'_alignment'};
 }
+
+sub compact_alignment {
+  my ( $self, $calignment ) = @_;
+  if ($calignment) {
+    $self->{'_compact_alignment'} = $calignment;
+  }
+  return $self->{'_compact_alignment'};
+}
+
 
 sub _pretty_alignment {
 
@@ -506,7 +493,9 @@ sub _pretty_alignment {
   }
 
   my $pretty_align = '';
-  my $padding = $self->name_padding ? '%s' : '%-20s';
+  my $compact_pretty_align = '';
+
+  #my $padding = $self->name_padding ? '%s' : '%-20s';
 
   my $j = 0;
   for ( my $i=0; $i< scalar @qry_frags; $i++) {
@@ -546,16 +535,20 @@ sub _pretty_alignment {
 
     # should be more clever by taking padding param from constructor
     if ( $self->name_padding ){
-      $pretty_align .= sprintf("%s\t%d\t%s\t%d\n\t\t\t%s\n%s\t%d\t%s\t%d\n\n\n",
+      my $align = sprintf("%s\t%d\t%s\t%d\n\t\t\t%s\n%s\t%d\t%s\t%d\n\n\n",
                                $qry_name, $qry_s_coord, $qry_hsp_frag, $qry_e_coord,
                                $matches->[$i],
                                $hit_name, $hit_s_coord, $hit_hsp_frag, $hit_e_coord);
+      $pretty_align .= $align;
+      $compact_pretty_align .= $align if $matches->[$i] =~ /\s/;
     }
     else {
-      $pretty_align .= sprintf("%-20s\t%d\t%s\t%d\n\t\t\t\t%s\n%-20s\t%d\t%s\t%d\n\n\n",
+      my $align = sprintf("%-20s\t%d\t%s\t%d\n\t\t\t\t%s\n%-20s\t%d\t%s\t%d\n\n\n",
                                $qry_name, $qry_s_coord, $qry_hsp_frag, $qry_e_coord,
                                $matches->[$i],
                                $hit_name, $hit_s_coord, $hit_hsp_frag, $hit_e_coord);
+      $pretty_align .= $align;
+      $compact_pretty_align .= $align if $matches->[$i] =~ /\s/;
     }
 
     $j= $j+2;
@@ -574,7 +567,10 @@ sub _pretty_alignment {
     }
   }
 
-  return $self->alignment($pretty_align);
+  $self->compact_alignment($compact_pretty_align);
+  $self->alignment($pretty_align);
+
+  return $self;
 }
 
 sub _split_to_blocks {

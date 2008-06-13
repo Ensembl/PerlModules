@@ -97,8 +97,6 @@ sub _generic_fetch {
 sub fetch_by_db_id {
     my( $pkg, $id ) = @_;
     
-    confess "No use - does not fetch Overlap::Position objects";
-    
     my $sth = track_db->prepare_cached(q{
         SELECT length
           , id_source
@@ -208,6 +206,26 @@ sub matches {
     return 1;
 }
 
+sub best_match_pair {
+  my( $self, $best_match_pair ) = @_;
+
+  if ( $best_match_pair ) {
+    $self->{'_best_matche_pair'} = $best_match_pair;
+  }
+  return $self->{'_best_matche_pair'};
+
+}
+
+sub other_match_pairs {
+  # a list of crossmatch matches other than the best one
+  my( $self, $other_match_pairs ) = @_;
+
+  if ( $other_match_pairs ) {
+    $self->{'_other_matche_pairs'} = $other_match_pairs;
+  }
+  return $self->{'_other_matche_pairs'};
+
+}
 sub source_name {
     my( $self, $source_name ) = @_;
     

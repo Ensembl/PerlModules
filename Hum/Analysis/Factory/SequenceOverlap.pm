@@ -72,7 +72,7 @@ sub find_SequenceOverlap {
     
     # Run cross_match and find overlap
     my $feat = $self->find_end_overlap($seq_a, $seq_b);
-    
+
     return unless $feat;
     
     if (my $over_fh = $self->overlap_alignment_file) {
@@ -85,6 +85,7 @@ sub find_SequenceOverlap {
     
     # Convert into a SequenceOverlap object that
     # can be written into the tracking database.
+
     return $self->make_SequenceOverlap($sinf_a, $sinf_b, $feat);
 }
 
@@ -161,7 +162,9 @@ sub make_SequenceOverlap {
     # Check that the positions calculated aren't
     # off the end of the sequences.
     $overlap->validate_Positions;
-    
+    $overlap->best_match_pair($feat);
+    $overlap->other_match_pairs($self->other_matches);
+
     return $overlap;
 }
 
@@ -222,37 +225,72 @@ sub is_three_prime_hit {
         }
 
         if ($seq_end == $hit_end) {
-            return $seq_end;
+          # so that we know which matches are not the best one
+          $self->filter_matches($seq_end);
+          return $seq_end;
         } else {
             #print STDERR "Creating merged feature\n";
             #return $self->merge_features($seq_end, $hit_end);
-            
+
             # New strategy: we no longer merge features
             my $best = $self->choose_best_feature($query, $subject, $seq_end, $hit_end);
             print STDERR "Chose best feature:\n", $best->pretty_string;
+
+            # so that we know which matches are not the best one
+            $self->filter_matches($best);
             return $best;
         }
     }
+}
+
+sub all_matches {
+  my( $self, $all_matches ) = @_;
+
+  if ($all_matches) {
+    $self->{'_all_matches'} = $all_matches;
+  }
+  return $self->{'_all_matches'};
+}
+
+sub other_matches {
+  my( $self, $other_matches ) = @_;
+
+  if ($other_matches) {
+    $self->{'_other_matches'} = $other_matches;
+  }
+  return $self->{'_other_matches'};
+}
+sub filter_matches {
+  my ($self, $match) = @_;
+
+  my @other_matches = @{$self->all_matches};
+  foreach my $m ( @other_matches ){
+    shift @other_matches if $m eq $match;
+  }
+
+  $self->other_matches(\@other_matches);
 }
 
 sub get_end_features {
     my( $self, $query, $subject ) = @_;
 
     my $parser = $self->crossmatch_factory->run($query, $subject);
-    
+
     my( @matches );
     while (my $m = $parser->next_Feature) {
-        push(@matches, $m);
+      push(@matches, $m);
     }
-    
+    # want to store all matches later in database
+    $self->all_matches(\@matches);
+
     confess "No matches found" unless @matches;
-    
+
     if (my $matches_fh = $self->matches_file) {
         print $matches_fh $self->sequence_length_header($query, $subject);
         print $matches_fh $matches[0]->pretty_header, "\n";
         print $matches_fh map($_->pretty_string, @matches), "\n";
     }
-    
+
     my $seq_end = $self->closest_end_best_pid(  $query->sequence_length, $end_distances{'seq'}, @matches);
     my $hit_end = $self->closest_end_best_pid($subject->sequence_length, $end_distances{'hit'}, @matches);
     
@@ -261,6 +299,7 @@ sub get_end_features {
     unless ($seq_end and $hit_end) {
         confess "No end overlap found\n";
     }
+    
     return($seq_end, $hit_end);
 }
 
@@ -281,7 +320,7 @@ sub crossmatch_factory {
 
 sub warn_match {
     my( $self, $query, $subject, $seq_end, $hit_end ) = @_;
-    
+
     printf STDERR "%s (%d) vs %s (%d)\n",
           $query->name,   $query->sequence_length,
         $subject->name, $subject->sequence_length;
