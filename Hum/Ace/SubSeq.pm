@@ -9,6 +9,7 @@ use Carp;
 use Hum::Sequence::DNA;
 use Hum::Ace::Exon;
 use Hum::XmlWriter;
+use Hum::ClipboardUtils 'integers_from_text';
 
 sub new {
     my( $pkg ) = @_;
@@ -28,6 +29,61 @@ sub new_from_ace_subseq_tag {
     $sub->process_ace_transcript($ace_trans);
     
     return $sub;
+}
+
+sub new_from_subseq_list {
+    my ($pkg, @subseq) = @_;
+    
+    my $self = $subseq[0]->clone;
+    bless $self, $pkg;
+    for (my $i = 1; $i < @subseq; $i++) {
+        my $sub = $subseq[$i];
+        foreach my $ex ($sub->get_all_Exons) {
+            $self->add_Exon($ex->clone);
+        }
+    }
+    $self->empty_evidence_hash;
+    $self->empty_remarks;
+    $self->empty_annotation_remarks;
+    $self->drop_all_exon_otter_id;
+
+    return $self;
+}
+
+sub new_from_clipboard_text {
+    my ($pkg, $text) = @_;
+    
+    my @ints = integers_from_text($text);
+    
+    my $self = $pkg->new;
+    
+    if (@ints) {
+        my $fwd = 0;
+        my $rev = 0;
+        for (my $i = 0; $i < @ints; $i += 2) {
+            my $l = $ints[$i];
+            my $r = $ints[$i + 1] || $l;
+            my $ex = $self->new_Exon;
+            if ($l < $r) {
+                $fwd++;
+            }
+            elsif ($l > $r) {
+                $rev++;
+                ($l, $r) = ($r, $l);
+            }
+            $ex->start($l);
+            $ex->end($r);
+        }
+        $self->strand($fwd >= $rev ? 1 : -1);
+    } else {
+        # Need to have at least 1 exon
+        my $ex = $self->new_Exon;
+        $ex->start(1);
+        $ex->end  (2);
+        $self->strand(1);
+    }
+    
+    return $self;
 }
 
 # This is used by realignGenes
@@ -167,6 +223,9 @@ sub process_ace_start_end_transcript_seq {
     if (my $otter_id = $t_seq->at('Otter.Transcript_id[1]')) {
         $self->otter_id($otter_id->name);
     }
+    if (my $otter_id = $t_seq->at('Otter.Translation_id[1]')) {
+        $self->translation_otter_id($otter_id->name);
+    }
     if (my $aut = $t_seq->at('Otter.Transcript_author[1]')) {
         $self->author_name($aut->name);
     }
@@ -274,6 +333,8 @@ sub process_ace_start_end_transcript_seq {
     $self->validate;
 }
 
+
+
 sub strip_Em {
     my( $self, $ace_obj ) = @_;
     
@@ -286,6 +347,7 @@ sub take_otter_ids {
     my( $self, $old ) = @_;
     
     $self->otter_id($old->otter_id);
+    $self->translation_otter_id($old->translation_otter_id);
 
     my @new_exons = $self->get_all_Exons;
     my @old_exons =  $old->get_all_Exons;
@@ -422,6 +484,15 @@ sub otter_id {
         $self->{'_otter_id'} = $otter_id;
     }
     return $self->{'_otter_id'};
+}
+
+sub translation_otter_id {
+    my( $self, $translation_otter_id ) = @_;
+    
+    if ($translation_otter_id) {
+        $self->{'_translation_otter_id'} = $translation_otter_id;
+    }
+    return $self->{'_translation_otter_id'};
 }
 
 sub author_name {
@@ -1145,6 +1216,7 @@ sub ace_string {
     my $clone_seq   = $self->clone_Sequence
         or confess "no clone_Sequence";
     my $ott         = $self->otter_id;
+    my $tsl_ott     = $self->translation_otter_id;
     my @exons       = $self->get_all_Exons;
     my $method      = $self->GeneMethod;
     my $locus       = $self->Locus;
@@ -1208,6 +1280,9 @@ sub ace_string {
     
     if ($ott) {
         $out .= qq{Transcript_id "$ott"\n};
+    }
+    if ($tsl_ott) {
+        $out .= qq{Translation_id "$tsl_ott"\n};
     }
     
     if ($method) {
@@ -1390,6 +1465,9 @@ sub zmap_transcript_info_xml {
         if (my $ott = $self->otter_id) {
             $xml->full_tag('tagvalue', {name => 'Transcript Stable ID', type => 'simple'}, $ott);
         }
+        if (my $ott = $self->translation_otter_id) {
+            $xml->full_tag('tagvalue', {name => 'Translation Stable ID', type => 'simple'}, $ott);
+        }
         if (my $aut = $self->author_name) {
             $xml->full_tag('tagvalue', {name => 'Transcript author', type => 'simple'}, $aut);
         }
@@ -1397,7 +1475,7 @@ sub zmap_transcript_info_xml {
     }
 
     # Subseq Remarks and Annotation remarks
-    if ($self->list_remarks or $self->list_annotation_remarks) {       
+    if ($self->list_remarks or $self->list_annotation_remarks) {
         $xml->open_tag('paragraph', {type => 'tagvalue_table'});
         foreach my $rem ($self->list_remarks) {
             $xml->full_tag('tagvalue', {name => 'Remark',            type => 'scrolled_text'}, $rem);
@@ -1505,19 +1583,18 @@ sub zmap_info_xml {
     $xml->open_tag('subsection');
     $xml->open_tag('paragraph', {
         type => 'compound_table',
-        columns => q{'#' 'Start' 'End' 'Stable ID'},
-        column_types => q{int int int string},
+        columns => q{'Start' 'End' 'Stable ID'},
+        column_types => q{int int string},
         });
     my @ordered_exons = $self->get_all_Exons_in_transcript_order;
-    for (my $i = 0; $i < @ordered_exons; $i++) {
-        my $exon = $ordered_exons[$i];
+    foreach my $exon (@ordered_exons) {
         my @pos;
         if ($self->strand == 1) {
             @pos = ($exon->start, $exon->end);
         } else {
             @pos = ($exon->end, $exon->start);
         }
-        my $str = sprintf "%d %d %d %s", $i + 1, @pos, $exon->otter_id || '-';
+        my $str = sprintf "%d %d %s", @pos, $exon->otter_id || '-';
         $xml->full_tag('tagvalue', {type => 'compound'}, $str);
     }
     
