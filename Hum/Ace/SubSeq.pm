@@ -75,7 +75,8 @@ sub new_from_clipboard_text {
             $ex->end($r);
         }
         $self->strand($fwd >= $rev ? 1 : -1);
-    } else {
+    }
+    else {
         # Need to have at least 1 exon
         my $ex = $self->new_Exon;
         $ex->start(1);

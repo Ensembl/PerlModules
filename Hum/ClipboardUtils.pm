@@ -41,7 +41,7 @@ sub integers_from_text {
         
         unless (@ints = $text =~ /^\S+\s+-?(\d+)\s+-?(\d+)\s+\(\d+\)/mg) {
             # or just get all the integers
-            @ints = grep !/\./, $text =~ /([\.\d]+)/g;
+            @ints = grep !/\./, $text =~ /\b([\.\d]+)\b/g;
         }
     }
     return @ints;
