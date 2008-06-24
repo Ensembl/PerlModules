@@ -105,6 +105,13 @@ sub fetch_all_Rows {
     return @{$self->{'_rows'}};
 }
 
+sub last_Row {
+    my ($self) = @_;
+    
+    my $r = $self->{'_rows'};
+    return $r->[$#$r];
+}
+
 sub add_Row {
     my( $self, $row ) = @_;
     
@@ -175,7 +182,7 @@ sub _process_contig {
             # Set strand for current clone
             $cl->strand($strand || 1);
             
-            $self->insert_missing_overlap_pad;
+            $self->insert_missing_overlap_pad->remark('No overlap in database');
             $strand = undef;
             $cl = $self->new_Clone_from_tpf_Clone($contig->[$i]);
             next;
@@ -187,14 +194,14 @@ sub _process_contig {
         my $miss_join = 0;
         if ($pa->is_3prime) {
             if ($strand and $was_3prime) {
-                $self->insert_missing_overlap_pad;
+                $self->insert_missing_overlap_pad->remark('Bad overlap - double 3 prime join');
                 $strand = undef;
                 $miss_join = 3;
             }
             $cl->seq_end($pa->position);
         } else {
             if ($strand and ! $was_3prime) {
-                $self->insert_missing_overlap_pad;
+                $self->insert_missing_overlap_pad->remark('Bad overlap - double 5 prime join');
                 $strand = undef;
                 $miss_join = 5;
             }
@@ -205,7 +212,20 @@ sub _process_contig {
         if ($miss_join) {
             printf STDERR "Double %d-prime join to '%s'\n",
                 $miss_join, $cl->accession_sv;
+        } else {
+            if (my $dovetail = $pa->dovetail_length || $pb->dovetail_length) {
+                printf STDERR "Dovetail of length '$dovetail' in overlap\n";
+                $self->insert_missing_overlap_pad->remark('Bad overlap - dovetail');
+                $strand = undef;
+                if ($pa->is_3prime) {
+                    $cl->seq_end($inf_a->sequence_length);
+                } else {
+                    $cl->seq_start(1);
+                }
+            }
         }
+        
+        
         
         unless ($strand) {
             # Not set for first pair, or following miss-join
@@ -235,7 +255,7 @@ sub insert_missing_overlap_pad {
     
     my $gap = $self->new_Gap;
     $gap->chr_length($self->missing_overlap_pad);
-    $gap->remark("clone\tno");
+    return $gap;
 }
 
 sub _chr_end {
