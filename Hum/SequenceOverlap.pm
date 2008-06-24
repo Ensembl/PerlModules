@@ -35,8 +35,10 @@ sub _generic_fetch {
     my $sth = track_db->prepare_cached(qq{
         SELECT oa.position
           , oa.is_3prime
+          , oa.dovetail_length
           , ob.position
           , ob.is_3prime
+          , ob.dovetail_length
           , o.id_overlap
           , o.length
           , o.id_source
@@ -61,8 +63,8 @@ sub _generic_fetch {
         });
     $sth->execute($seq_a->db_id, $seq_b->db_id);
     
-    my( $a_pos, $a_is3prime,
-        $b_pos, $b_is3prime,
+    my( $a_pos, $a_is3prime, $a_dovetail,
+        $b_pos, $b_is3prime, $b_dovetail,
         $overlap_id, $length, $source_id,
         $sub, $ins, $del,
         $status, $remark, $program, $operator) = $sth->fetchrow;
@@ -85,9 +87,11 @@ sub _generic_fetch {
     my ($pa, $pb) = $self->make_new_Position_objects;
     $pa->position($a_pos);
     $pa->is_3prime($a_is3prime);
+    $pa->dovetail_length($a_dovetail);
     $pa->SequenceInfo($seq_a);
     $pb->position($b_pos);
     $pb->is_3prime($b_is3prime);
+    $pb->dovetail_length($b_dovetail);
     $pb->SequenceInfo($seq_b);
     
     return $self;
