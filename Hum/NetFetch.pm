@@ -8,9 +8,10 @@ use LWP::UserAgent;
 
 use Hum::Conf qw( HUMPUB_ROOT );
 use Hum::Lock;
+use Hum::EMBL;
 
 @ISA = qw( Exporter );
-@EXPORT_OK = qw( wwwfetch );
+@EXPORT_OK = qw( wwwfetch wwwfetch_EMBL_object );
 
 my $embl_simple_url = 'http://www.ebi.ac.uk/cgi-bin/dbfetch?db=emblsva&format=default&style=raw&id=';
 
@@ -35,6 +36,24 @@ sub wwwfetch {
     }
 }
 
+sub wwwfetch_EMBL_object {
+    my ($acc) = @_;
+    
+    my $txt;
+    eval {
+        $txt = wwwfetch($acc);
+    };
+    if ($@) {
+        warn $@;
+        return;
+    }
+    else {
+        my $parser = Hum::EMBL->new;
+        my $embl = $parser->parse(\$entry)  
+            or confess "nothing returned from parsing '$entry'";
+        return $embl;        
+    }
+}
 
 1;
 

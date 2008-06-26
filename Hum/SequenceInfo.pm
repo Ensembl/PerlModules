@@ -11,6 +11,7 @@ use Hum::Tracking qw{
     prepare_cached_track_statement
     };
 use Hum::Pfetch 'get_EMBL_entries';
+use Hum::NetFetch 'wwwfetch_EMBL_object';
 use Hum::FastaFileIO;
 
 
@@ -159,14 +160,18 @@ sub _embl_sequence_get {
 sub get_EMBL_entry {
     my ($self) = @_;
     
-    my $entry;
-    if (my $path = $self->embl_file_path) {
+    my( $entry );
+    if (my $path = $self->embl_file_path || $self->fetch_embl_file_path) {
         my $embl = Hum::EMBL->new;
         $entry = $embl->parse($path);
-    } else {
+    }
+    unless ($entry) {
         my $acc = $self->accession        or confess        "accession not set";
         my $sv  = $self->sequence_version or confess "sequence_version not set";
         ($entry) = get_EMBL_entries("$acc.$sv");
+        unless ($entry) {
+            $entry = wwwfetch_EMBL_object("$acc.$sv");
+        }
     }
     return $entry;
 }
@@ -274,6 +279,38 @@ sub embl_file_path {
     }
     return $self->{'_embl_file_path'};
 }
+
+sub fetch_embl_file_path {
+    my ($self) = @_;
+    
+    return if $self->{'_no_embl_file_path_stored'};
+    
+    my $acc = $self->accession          or confess "accession not set";
+    my $sv  = $self->sequence_version   or confess "sequence_version not set";
+    
+    my $sth ||= prepare_statement(q{
+        SELECT s.sequence_name
+          , s.file_path
+        FROM project_acc a
+          , project_dump d
+          , sequence s
+        WHERE a.sanger_id = d.sanger_id
+          AND d.seq_id = s.seq_id
+          AND d.is_current = 'Y'
+          AND a.accession = ?
+          AND s.sequence_version = ?
+        });
+    $sth->execute($acc, $sv);
+    
+    my ($name, $path) = $sth->fetchrow;
+    
+    if ($name and $path) {
+        $self->embl_file_path("$path/$name.embl");
+    } else {
+        $self->{'_no_embl_file_path_stored'} = 1;
+    }
+}
+
 
 sub Sequence {
     my( $self, $seq ) = @_;
