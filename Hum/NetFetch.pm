@@ -2,6 +2,7 @@
 package Hum::NetFetch;
 
 use strict;
+use Carp;
 use Exporter;
 use vars qw( @EXPORT_OK @ISA );
 use LWP::UserAgent;
@@ -49,8 +50,8 @@ sub wwwfetch_EMBL_object {
     }
     else {
         my $parser = Hum::EMBL->new;
-        my $embl = $parser->parse(\$entry)  
-            or confess "nothing returned from parsing '$entry'";
+        my $embl = $parser->parse(\$txt)  
+            or confess "nothing returned from parsing '$txt'";
         return $embl;        
     }
 }

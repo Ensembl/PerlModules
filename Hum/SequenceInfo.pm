@@ -305,9 +305,10 @@ sub fetch_embl_file_path {
     my ($name, $path) = $sth->fetchrow;
     
     if ($name and $path) {
-        $self->embl_file_path("$path/$name.embl");
+        return $self->embl_file_path("$path/$name.embl");
     } else {
         $self->{'_no_embl_file_path_stored'} = 1;
+        return;
     }
 }
 
