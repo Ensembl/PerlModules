@@ -6,7 +6,35 @@ package Hum::ClipboardUtils;
 use strict;
 use base 'Exporter';
 
-our @EXPORT_OK = qw{ integers_from_text evidence_type_and_name_from_text };
+our @EXPORT_OK = qw{
+    text_is_zmap_clip
+    integers_from_text
+    evidence_type_and_name_from_text
+    };
+
+my $magic_evi_name_matcher = qr{
+    ([A-Za-z]{2}:)?       # Optional prefix
+    (
+                          # Something that looks like an accession:
+        [A-Z]+\d{5,}      # one or more letters followed by 5 or more digits
+        |                 # or, for TrEMBL,
+        [A-Z]\d[A-Z\d]{4} # a capital letter, a digit, then 4 letters or digits.
+    )
+    (\-\d+)?              # Optional VARSPLICE suffix
+    (\.\d+)?              # Optional .SV            
+}x;
+
+my $posn_int = qr{-?(\d+)};
+
+sub text_is_zmap_clip {
+    my ($text) = @_;
+    
+    if ($text =~ /^"$magic_evi_name_matcher"\s+$posn_int\s+$posn_int\s+\(\d+\)/m) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
 
 sub integers_from_text {
     my ($text) = @_;
@@ -25,7 +53,7 @@ sub integers_from_text {
     # ttactttacctcacattcaggcatgcctataaaatgacagccttggtagg
     # cagcaaccgcttgtgttaacgcagacgggtctgccagacctgccacacac
     # ag
-    if (@ints = $text =~ />-?(\d+)--?(\d+) DNA/) {
+    if (@ints = $text =~ />$posn_int-$posn_int DNA/) {
         if ($ints[0] == $ints[1]) {
             # user clicked on single base pair
             @ints = ($ints[0]);
@@ -39,7 +67,7 @@ sub integers_from_text {
         # "Em:CR600548.1"    -145886 -145723 (164)
         # "Em:CR600548.1"    -144505 -144330 (176)
         
-        unless (@ints = $text =~ /^\S+\s+-?(\d+)\s+-?(\d+)\s+\(\d+\)/mg) {
+        unless (@ints = $text =~ /^\S+\s+$posn_int\s+$posn_int\s+\(\d+\)/mg) {
             # or just get all the integers
             @ints = grep !/\./, $text =~ /\b([\.\d]+)\b/g;
         }
@@ -59,17 +87,6 @@ sub integers_from_text {
     sub evidence_type_and_name_from_text {
         my ($ace, $text) = @_;
 
-        my $magic_evi_name_matcher = qr{
-            ([A-Za-z]{2}:)?       # Optional prefix
-            (
-                                  # Something that looks like an accession:
-                [A-Z]+\d{5,}      # one or more letters followed by 5 or more digits
-                |                 # or, for TrEMBL,
-                [A-Z]\d[A-Z\d]{4} # a capital letter, a digit, then 4 letters or digits.
-            )
-            (\-\d+)?              # Optional VARSPLICE suffix
-            (\.\d+)?              # Optional .SV            
-        }x;
 
         #warn "Trying to parse: [$text]\n";
 
@@ -97,7 +114,7 @@ sub integers_from_text {
                 my $acc    = $2;
                 $acc      .= $3 if $3;
                 my $sv     = $4 || '*';
-                warn "Got name '$prefix$acc$sv'";
+                # warn "Got name '$prefix$acc$sv'";
                 $clip_names{"$prefix$acc$sv"} = 1;
             }
 
