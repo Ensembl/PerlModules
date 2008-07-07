@@ -180,7 +180,7 @@ sub save_ace {
         confess "Error parsing ace data\n$messages";
     } else {
         # Make sure that changes to acedb are saved to disk
-        my $save_msg = $ace->raw_query('save');
+        my $save_msg = $ace->raw_query('save -regain');
         print STDERR $save_msg;
         if ($save_msg =~ /sorry|error|keyword/i) {
             confess "Error from sgifaceserver save: $save_msg";
@@ -212,6 +212,7 @@ sub ace_handle {
             $ace = Ace->connect(@param);
             if ($ace) {
                 $ace->auto_save(0);
+                $ace->raw_query('writeaccess -gain');
                 last;
             } else {
                 sleep $try_interval;
