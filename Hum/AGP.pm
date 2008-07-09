@@ -214,18 +214,20 @@ sub _process_contig {
                 $miss_join, $cl->accession_sv;
         } else {
             if (my $dovetail = $pa->dovetail_length || $pb->dovetail_length) {
+                ### Should if overlap has been manually OK'd
                 printf STDERR "Dovetail of length '$dovetail' in overlap\n";
                 $self->insert_missing_overlap_pad->remark('Bad overlap - dovetail');
+                $cl->strand($strand || 1);
                 $strand = undef;
                 if ($pa->is_3prime) {
                     $cl->seq_end($inf_a->sequence_length);
                 } else {
                     $cl->seq_start(1);
                 }
+                $cl = $self->new_Clone_from_tpf_Clone($contig->[$i]);
+                next;
             }
         }
-        
-        
         
         unless ($strand) {
             # Not set for first pair, or following miss-join
