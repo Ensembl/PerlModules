@@ -138,14 +138,14 @@ sub make_SequenceOverlap {
             $pos_a->position($feat->seq_end);
         } else {
             $pos_a->position($feat->seq_start);
-        }        
+        }
         if ($pos_b->is_3prime) {
             $pos_b->position($feat->hit_start - 1);
         } else {
             $pos_b->position($feat->hit_end + 1);
         }
     }
-    
+
     # Record the length of any unmatched sequence at
     # the end of either sequence beyond the match.
     if ($pos_a->is_3prime) {
@@ -158,7 +158,7 @@ sub make_SequenceOverlap {
     } else {
         $pos_b->dovetail_length($feat->hit_start - 1);
     }
-    
+
     # Check that the positions calculated aren't
     # off the end of the sequences.
     $overlap->validate_Positions;
@@ -170,7 +170,7 @@ sub make_SequenceOverlap {
 
 sub is_three_prime_hit {
     my( $self, $feat, $length, $type ) = @_;
-    
+
     my( $start_dist, $end_dist ) = $end_distances{$type}->($feat, $length);
     return $start_dist < $end_dist ? 0 : 1;
 }
@@ -264,8 +264,8 @@ sub filter_matches {
   my ($self, $match) = @_;
 
   my @other_matches = @{$self->all_matches};
-  foreach my $m ( @other_matches ){
-    shift @other_matches if $m eq $match;
+  for(my $i=0; $i<scalar @other_matches; $i++ ){
+    delete $other_matches[$i] if $other_matches[$i] eq $match;
   }
 
   $self->other_matches(\@other_matches);
