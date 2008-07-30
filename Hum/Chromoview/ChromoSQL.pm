@@ -7,6 +7,7 @@ use vars qw{ @ISA @EXPORT_OK };
 use strict;
 use warnings;
 use Hum::Tracking qw{prepare_track_statement};
+#use CGI::Carp qw(warningsToBrowser fatalsToBrowser);
 
 @ISA = ('Exporter');
 @EXPORT_OK = qw(
@@ -15,12 +16,85 @@ use Hum::Tracking qw{prepare_track_statement};
                 get_species_subregions
                 get_tpf_from_clonename
                 get_tpf_from_accession
+                fetch_all_speceis_chr_subregions_names
                );
 
 sub new {
     my ($class) = @_;
     my $self = {};
     return bless ($self, $class);
+}
+
+sub fetch_all_speceis_chr_subregions_names {
+  my ($self) = @_;
+  my $species_chr_subr =
+    prepare_track_statement(qq{
+                               SELECT c.speciesname, c.chromosome, tg.subregion
+                               FROM chromosomedict c, tpf_target tg, tpf t
+                               WHERE t.id_tpftarget=tg.id_tpftarget
+                               AND tg.chromosome=c.id_dict and t.ISCURRENT=1
+                               ORDER BY c.speciesname, c.chromosome
+                             });
+  $species_chr_subr->execute;
+  my $all_species_chr_subregion;
+
+  while( my ($species, $chr, $subregion) = $species_chr_subr->fetchrow ) {
+    push(@{$all_species_chr_subregion->{$species}->{$chr}}, $subregion);
+  }
+
+  return $all_species_chr_subregion;
+}
+
+
+sub fetch_all_species_chr_Tpf {
+  my ($self) = @_;
+  my $species_chr = 
+    prepare_track_statement(qq{
+                               SELECT c.speciesname, c.chromosome, tg.id_tpftarget
+                               FROM chromosomedict c, tpf_target tg, tpf t
+                               WHERE tg.subregion is null
+                               AND t.id_tpftarget=tg.id_tpftarget
+                               AND tg.chromosome=c.id_dict and t.ISCURRENT=1
+                               ORDER BY c.speciesname, c.chromosome
+                             });
+  $species_chr->execute;
+  my $all_species_chr;
+
+  while( my $h = $species_chr->fetchrow_hashref ) {
+    my $species = Hum::Chromoview::ChromoSQL->new();
+    $species->species($h->{SPECIESNAME});
+    $species->chromosome($h->{CHROMOSOME});
+    $species->id_tpftarget($h->{ID_TPFTARGET});
+    push(@$all_species_chr, $species);
+  }
+
+  return $all_species_chr;
+}
+
+sub fetch_all_species_subregions_Tpf {
+  my $species_subregions =
+    prepare_track_statement(qq{
+                               SELECT distinct tpft.subregion, cd.speciesname, tpf.id_tpf, tpft.id_tpftarget
+                               FROM   tpf, tpf_target tpft, chromosomedict cd
+                               WHERE  tpft.chromosome   = cd.id_dict
+                               AND    tpft.id_tpftarget = tpf.id_tpftarget
+                               AND    tpf.iscurrent =1
+                               AND    tpft.subregion is not null
+                             });
+
+  $species_subregions->execute();
+  my $all_species_subregions;
+
+  while( my $h = $species_subregions->fetchrow_hashref ) {
+    my $species = Hum::Chromoview::ChromoSQL->new();
+    $species->species($h->{SPECIESNAME});
+    $species->chromosome($h->{CHROMOSOME});
+    $species->subregion($h->{SUBREGION});
+    $species->id_tpftarget($h->{ID_TPFTARGET});
+    push(@$all_species_subregions, $species);
+  }
+
+  return $all_species_subregions;
 }
 
 sub fetch_species_chrsTpf {
@@ -71,23 +145,23 @@ sub fetch_subregionsTpf {
   return $species_subregions_chrTpf;
 }
 
-sub get_species_subregions {
-  my $species_subregion = prepare_track_statement(q{
-                                                     SELECT distinct tpft.subregion, cd.speciesname, tpf.id_tpf, tpft.id_tpftarget
-                                                     FROM   tpf, tpf_target tpft, chromosomedict cd
-                                                     WHERE  tpft.chromosome   = cd.id_dict
-                                                     AND    tpft.id_tpftarget = tpf.id_tpftarget
-                                                     AND    tpf.iscurrent =1
-                                                     AND    tpft.subregion is not null
-                                                   });
-  $species_subregion->execute();
+#sub get_species_subregions {
+#  my $species_subregion = prepare_track_statement(q{
+#                                                     SELECT distinct tpft.subregion, cd.speciesname, tpf.id_tpf, tpft.id_tpftarget
+#                                                     FROM   tpf, tpf_target tpft, chromosomedict cd
+#                                                     WHERE  tpft.chromosome   = cd.id_dict
+#                                                     AND    tpft.id_tpftarget = tpf.id_tpftarget
+#                                                     AND    tpf.iscurrent =1
+#                                                     AND    tpft.subregion is not null
+#                                                   });
+#  $species_subregion->execute();
 
-  my $spec_subrg_idTpf_ttrgt = {};
+#  my $spec_subrg_idTpf_ttrgt = {};
 
-  while ( my ($subregion, $species, $idtpf, $tpftarget) = $species_subregion->fetchrow ){
-    $spec_subrg_idTpf_ttrgt->{$species}->{$subregion};
-  }
-}
+#  while ( my ($subregion, $species, $idtpf, $tpftarget) = $species_subregion->fetchrow ){
+#    $spec_subrg_idTpf_ttrgt->{$species}->{$subregion};
+#  }
+#}
 
 sub get_tpf_from_clonename {
   my ($self, $clonename) = @_;
@@ -100,8 +174,8 @@ sub get_tpf_from_clonename {
                       tpf_target tt,
                       chromosomedict cd
                WHERE  tr.clonename = ?
-               AND    tr.id_tpf = t.id_tpf
                AND    t.iscurrent  = 1
+               AND    tr.id_tpf = t.id_tpf
                AND    t.id_tpftarget = tt.id_tpftarget
                AND    tt.chromosome=cd.id_dict
             };
@@ -112,6 +186,9 @@ sub get_tpf_from_clonename {
   my $rows = [];
 
   while ( my ($rank, $id_tpftarget, $chr, $species, $subregion) = $qry->fetchrow ){
+
+    next if $subregion =~ /ZFISH_HS/; # this is deprecated
+
     my $obj = Hum::Chromoview::ChromoSQL->new;
     $subregion = '' unless $subregion;
     warn "$rank, $id_tpftarget, $chr, $species, $subregion";
@@ -124,6 +201,20 @@ sub get_tpf_from_clonename {
     push( @$rows, $obj);
   }
   return $rows;
+}
+
+sub check_accession_is_current {
+  my ($self, $accession) = @_;
+  my $sql = qq{SELECT from clone_sequence cs, sequence s
+               WHERE cs.id_sequence=s.id_sequence
+	       AND s.accession = ?};
+
+  my $qry = prepare_track_statement($sql);
+  $qry->execute($accession);
+
+  #return $qry-
+
+
 }
 
 sub get_tpf_from_accession {
@@ -157,9 +248,12 @@ sub get_tpf_from_accession {
   my $rows = [];
 
   while ( my ($rank, $id_tpftarget, $chr, $species, $subregion) = $qry->fetchrow ){
+
+    next if defined $subregion and $subregion =~ /ZFISH_HS/; # this is deprecated
+
     my $obj = Hum::Chromoview::ChromoSQL->new;
     $subregion = '' unless $subregion;
-    warn "$rank, $id_tpftarget, $chr, $species, $subregion";
+    #warn "$rank, $id_tpftarget, $chr, $species, $subregion";
     $obj->seqname($accession);
     $obj->rank($rank);
     $obj->id_tpftarget($id_tpftarget);

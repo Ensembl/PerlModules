@@ -8,7 +8,7 @@ use warnings;
 use Bio::Search::HSP::GenericHSP;
 use Bio::EnsEMBL::Utils::CigarString;
 use Hum::Pfetch 'get_Sequences';
-
+use Bio::EnsEMBL::Analysis;
 use DBI;
 
 sub new {
@@ -39,6 +39,17 @@ sub feature {
 
   return $self->{'_feature'};
 }
+sub other_features {
+  #$align_feat: a list ref of other overlap features which are not the best
+
+  my ( $self, $other_align_feats ) = @_;
+  if ($other_align_feats ){
+    $self->{'_other_features'} = $other_align_feats;
+  }
+
+  return $self->{'_other_features'};
+}
+
 
 sub query_seq {
   my ( $self, $seq ) = @_;
@@ -175,6 +186,7 @@ sub make_cigar_string_from_align_strings {
   warn "CIGAR: $cigar_str";
   $self->cigar_string($cigar_str);
 
+warn "SELF: $self in make_cigar_string_from_align_strings()";
   return $self;
 }
 
@@ -188,7 +200,10 @@ sub cigar_string {
 
 sub _make_daf_object {
 
-  my ($self, $crossMatch_feat, $slice_Ad) = @_;
+  my ($self, $crossMatch_feat, $slice_Ad, $aln_obj) = @_;
+
+  #distinquish the objects
+  my $cigar_str = $aln_obj ? $aln_obj->cigar_string : $self->cigar_string;
 
   my $analysis = Bio::EnsEMBL::Analysis->new
     (
@@ -213,15 +228,15 @@ sub _make_daf_object {
           -score        => $crossMatch_feat->score,
           -percent_id   => $crossMatch_feat->percent_identity,
           -analysis     => $analysis,
-          -cigar_string => $self->cigar_string,
+          -cigar_string => $cigar_str,
          );
 
   return $daf;
 }
 
 sub store_crossmatch_feature_if_new {
-  # daf: dna_align_feature
-  my ($self, $slice_Ad, $daf_Ad, $matched_end_feats) = @_;
+
+  my ($self, $slice_Ad, $daf_Ad) = @_;
 
   my $daf = $self->_make_daf_object($self->feature, $slice_Ad);
 
@@ -250,7 +265,10 @@ sub store_crossmatch_feature_if_new {
   warn "MSG: Inserted $row best_overlap into best_alignment table ...\n";
 
   # also store other less optimal alignments
-  if ( scalar @$matched_end_feats > 2 ) {
+  my $matched_end_feats = $self->other_features;
+  warn "FEATS: $matched_end_feats";
+
+  if ( $matched_end_feats->[0] ) {
     $self->_record_other_overlaps($slice_Ad, $daf_Ad, $matched_end_feats, $daf);
   }
 }
@@ -307,9 +325,14 @@ sub _record_other_overlaps {
          );
 
     $alignment->parse_align_string();
+
+warn "SELF: $self in _record_other_overlaps()";
     $alignment->make_cigar_string_from_align_strings();
 
-    my $other_daf = $self->_make_daf_object($ol, $slice_Ad);
+    #warn "QAS: ", substr($alignment->query_align_string, 0, 50);
+    #warn "HAS: ", substr($alignment->hit_align_string, 0, 50);
+
+    my $other_daf = $self->_make_daf_object($ol, $slice_Ad, $alignment);
     $daf_Ad->store($other_daf);
 
     $count++;
@@ -377,6 +400,9 @@ sub make_alignment_from_cigar_string {
      $query_align_str = substr($qry_seq, $daf->start-1, $daf->end - $daf->start + 1);
   }
 
+  $self->query_align_string($query_align_str);
+  $self->hit_align_string($hit_align_str);
+
   $query_align_str = uc $query_align_str;
   $hit_align_str   = uc $hit_align_str;
 
@@ -387,11 +413,13 @@ sub make_alignment_from_cigar_string {
 #  warn "Q: ", $daf->slice->seq_region_name, "\n";
 #  warn "QS-E: ", $daf->start, " ", $daf->end, "\n";
 #  warn "QSTR: $qry_strand\n", "\n";
-##  warn $query_align_str;
+#  #warn $query_align_str;
+#  warn length $query_align_str;
 #  warn "H: ", $daf->hseqname, "\n";
 #  warn "HS-E: ", $daf->hstart, " ", $daf->hend, "\n";
 #  warn "HSTR: $hit_strand\n", "\n";
-##  warn $hit_align_str;
+#  #warn $hit_align_str;
+#  warn length $hit_align_str;
 
   my $query_hsp = '';
   my $hit_hsp   = '';
@@ -452,6 +480,14 @@ sub compact_alignment {
   return $self->{'_compact_alignment'};
 }
 
+sub compact_alignment_length {
+  my ( $self, $len ) = @_;
+  if ($len) {
+    $self->{'_compact_alignment_length'} = $len;
+  }
+
+  return $self->{'_compact_alignment_length'};
+}
 
 sub _pretty_alignment {
 
@@ -494,6 +530,7 @@ sub _pretty_alignment {
 
   my $pretty_align = '';
   my $compact_pretty_align = '';
+  my $compact_alignment_length = 0;
 
   #my $padding = $self->name_padding ? '%s' : '%-20s';
 
@@ -509,6 +546,7 @@ sub _pretty_alignment {
     my $hsp_piece_len  = length $matches->[$i];
     my $qry_name = $daf->slice->seq_region_name;
     my $hit_name = $daf->hseqname;
+    my $align;
 
     if ( $hit_strand == -1 and $qry_strand == 1 ) {
       $qry_name = "  $qry_name";
@@ -535,20 +573,23 @@ sub _pretty_alignment {
 
     # should be more clever by taking padding param from constructor
     if ( $self->name_padding ){
-      my $align = sprintf("%s\t%d\t%s\t%d\n\t\t\t%s\n%s\t%d\t%s\t%d\n\n\n",
+      $align = sprintf("%s\t%d\t%s\t%d\n\t\t\t%s\n%s\t%d\t%s\t%d\n\n\n",
                                $qry_name, $qry_s_coord, $qry_hsp_frag, $qry_e_coord,
                                $matches->[$i],
                                $hit_name, $hit_s_coord, $hit_hsp_frag, $hit_e_coord);
       $pretty_align .= $align;
-      $compact_pretty_align .= $align if $matches->[$i] =~ /\s/;
     }
     else {
-      my $align = sprintf("%-20s\t%d\t%s\t%d\n\t\t\t\t%s\n%-20s\t%d\t%s\t%d\n\n\n",
+      $align = sprintf("%-20s\t%d\t%s\t%d\n\t\t\t\t%s\n%-20s\t%d\t%s\t%d\n\n\n",
                                $qry_name, $qry_s_coord, $qry_hsp_frag, $qry_e_coord,
                                $matches->[$i],
                                $hit_name, $hit_s_coord, $hit_hsp_frag, $hit_e_coord);
       $pretty_align .= $align;
-      $compact_pretty_align .= $align if $matches->[$i] =~ /\s/;
+    }
+
+    if ( $matches->[$i] =~ /\s/ ){
+      $compact_pretty_align .= $align;
+      $compact_alignment_length += length $matches->[$i];
     }
 
     $j= $j+2;
@@ -569,6 +610,7 @@ sub _pretty_alignment {
 
   $self->compact_alignment($compact_pretty_align);
   $self->alignment($pretty_align);
+  $self->compact_alignment_length($compact_alignment_length);
 
   return $self;
 }
