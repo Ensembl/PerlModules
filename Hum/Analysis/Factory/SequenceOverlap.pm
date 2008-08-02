@@ -260,12 +260,12 @@ sub other_matches {
   }
   return $self->{'_other_matches'};
 }
+
 sub filter_matches {
   my ($self, $match) = @_;
 
   my @other_matches = @{$self->all_matches};
   for(my $i=0; $i<scalar @other_matches; $i++ ){
-    warn "$match --- $other_matches[$i]" if $other_matches[$i] eq $match;
     splice(@other_matches, $i, 1) if $other_matches[$i] eq $match;
   }
 
