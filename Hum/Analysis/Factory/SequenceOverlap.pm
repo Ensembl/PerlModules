@@ -265,7 +265,8 @@ sub filter_matches {
 
   my @other_matches = @{$self->all_matches};
   for(my $i=0; $i<scalar @other_matches; $i++ ){
-    delete $other_matches[$i] if $other_matches[$i] eq $match;
+    warn "$match --- $other_matches[$i]" if $other_matches[$i] eq $match;
+    splice(@other_matches, $i, 1) if $other_matches[$i] eq $match;
   }
 
   $self->other_matches(\@other_matches);
