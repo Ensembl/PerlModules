@@ -11,6 +11,7 @@ use Net::Netrc;
 use Hum::Chromoview::ChromoSQL;
 use Hum::Sort ('ace_sort');
 use Hum::Submission 'prepare_statement';
+use Hum::Tracking ('prepare_track_statement');
 
 #use Hum::Tracking qw{prepare_track_statement};
 
@@ -32,6 +33,8 @@ use URI::Escape;
                 unixtime2YYYYMMDD
                 get_TPF_modtime
                 get_DNA_from_ftpghost
+                get_lastest_TPF_update_of_clone
+                get_all_current_TPFs
                );
 
 sub unixtime2YYYYMMDD {
@@ -74,7 +77,7 @@ sub get_TPF_modtime {
   my $dba = get_chromoDB_handle();
   my $sql =(qq{SELECT LEFT(check_date, 10)
                FROM tpf_check
-               WHERE id_tpf = $id_tpftarget
+               WHERE id_tpftarget = $id_tpftarget
              });
 
 #  $sql .= $subregion ? qq{AND subregion = '$subregion'} : qq{AND subregion is NULL};
@@ -125,20 +128,28 @@ sub get_mysql_datetime {
 
 sub get_chromoDB_handle {
 
+  # $user will be coming from single sing on
+  # and has right to edit TPF
+  my $editor = @_;
+
   my $host     = 'otterpipe2';
   my $dbname   = 'chromoDB';
+  my $port     = 3303;
   my $mach     = Net::Netrc->lookup($host);
-  my ($user, $password, $port);
+  my ($user, $password);
 
   if ( $mach ){
     $password = $mach->password;
     $user     = $mach->login;
-    $port     = $mach->account;
   }
   else {
     $user     = 'ottro';
     $password = undef;
-    $port = 3303;
+  }
+
+  if ($editor ){
+    $password = 'lutralutra';
+    $user = 'ottadmin';
   }
 
   my $dbh = DBI->connect("DBI:mysql:host=$host;port=$port;database=$dbname",
@@ -322,6 +333,89 @@ sub concat_js_params {
   return join(', ', map { "'".$_."'" } @params);
 }
 
+sub get_lastest_TPF_update_of_clone {
+
+  my ($species, $chr, $subregion, $daySpan) = @_;
+  # get latest entrydate of current clone in a TPF
+
+  my $sql = qq{
+               SELECT * from (
+               SELECT TO_CHAR(cs.entrydate, 'yyyy-mm-dd'), tg.id_tpftarget, cd.chromosome, tg.subregion, cd.speciesname, ROWNUM
+               FROM clone_sequence cs, clone c, tpf_row tr, tpf t, tpf_target tg, chromosomedict cd
+               WHERE cs.is_current=1
+               AND cs.clonename = c.clonename
+               AND c.clonename=tr.clonename
+               AND tr.id_tpf = t.id_tpf
+               AND t.ID_TPFTARGET=tg.ID_TPFTARGET
+               AND tg.chromosome=cd.id_dict
+               AND t.iscurrent=1
+               AND cd.speciesname = '$species'
+               AND cd.chromosome = '$chr'
+             };
+  my $csWindow = $daySpan ? qq{ AND cs.ENTRYDATE > sysdate-$daySpan} : qq{ AND cs.ENTRYDATE < sysdate};
+  my $region = $subregion ? qq{ AND tg.subregion = '$subregion'} : qq{ AND tg.subregion IS NULL};
+
+  $sql .= $csWindow . $region;
+  $sql .= qq{ ORDER BY cs.entrydate DESC) WHERE ROWNUM <=1};
+  $sql .= qq{ UNION};
+  $sql .= qq{ SELECT DISTINCT TO_CHAR(t.entry_date, 'yyyy-mm-dd'), tg.id_tpftarget, cd.chromosome, tg.subregion, cd.speciesname, ROWNUM
+              FROM tpf t, tpf_target tg, chromosomedict cd
+              WHERE t.ID_TPFTARGET=tg.ID_TPFTARGET
+              AND tg.chromosome=cd.id_dict
+              AND t.iscurrent=1};
+  $sql .= qq{ AND cd.speciesname = '$species'
+              AND cd.chromosome = '$chr'};
+  my $tpfWindow = $daySpan ? qq{ AND t.entry_date > sysdate-$daySpan} : qq{ AND t.entry_date < sysdate};
+  $sql .= $tpfWindow . $region;
+
+  #print $sql;
+
+  my $qry = prepare_track_statement($sql);
+  $qry->execute();
+
+  my $date_data = {};
+  my $date = '';
+  my $counter;
+  while ( my (@fields) = $qry->fetchrow() ){
+    $counter++;
+    pop @fields;
+    $date_data->{$fields[0]} = \@fields;
+  }
+  return unless $counter;
+
+  #warn "NUM: ", scalar keys %$date_data;
+  if (scalar keys %$date_data == 0 ){
+    return;
+  }
+  elsif (scalar keys %$date_data == 1 ){
+    return map { @{$date_data->{$_}} } keys %$date_data;
+  }
+  else {
+    my @Dt = sort { ace_sort($b, $a) } keys %$date_data;
+    return @{$date_data->{$Dt[0]}};
+  }
+}
+
+sub get_all_current_TPFs {
+
+  my $qry = prepare_track_statement(
+    qq{
+       SELECT cd.speciesname, cd.chromosome, tg.subregion
+       FROM tpf t, tpf_target tg, chromosomedict cd
+       WHERE t.id_tpftarget=tg.id_tpftarget
+       AND tg.chromosome=cd.id_dict
+       AND t.iscurrent=1
+       ORDER BY cd.speciesname, cd.chromosome, tg.subregion
+     });
+  $qry->execute;
+
+  my $os_chr_sub = [];
+  while (my($species, $chr, $subregion) = $qry->fetchrow() ){
+    push(@{$os_chr_sub}, [$species, $chr, $subregion]);
+  }
+
+  return $os_chr_sub;
+}
 
 1;
 
