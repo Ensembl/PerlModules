@@ -5,6 +5,7 @@ package Hum::AGP::Row;
 
 use strict;
 use Carp;
+use warnings;
 
 sub new {
     my( $pkg ) = @_;
@@ -55,6 +56,23 @@ sub chr_end {
     return $self->{'_chr_end'};
 }
 
+sub join_error {
+  my ( $self, $join_err) = @_;
+
+  if ($join_err) {
+    $self->{'_join_error'} = $join_err;
+  }
+  return $self->{'_join_error'};
+
+}
+sub error_message {
+  my ( $self, $error_msg) = @_;
+
+  if ($error_msg) {
+    $self->{'_error_message'} = $error_msg;
+  }
+  return $self->{'_error_message'};
+}
 
 1;
 
