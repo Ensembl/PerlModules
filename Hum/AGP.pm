@@ -287,7 +287,7 @@ sub catch_errors {
 }
 
 sub string {
-    my( $self, $catch_err ) = @_;
+    my( $self ) = @_;
 
     my $str = '';
     my $chr_end = 0;
