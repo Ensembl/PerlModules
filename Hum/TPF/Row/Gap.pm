@@ -15,7 +15,7 @@ sub type {
     my( $self, $type ) = @_;
 
     if ($type) {
-        confess "Bad type '$type'" unless $type =~ /^[1234]$/;
+        confess "Bad type '$type'" unless ($type =~ /^[12345678]$/);
         $self->{'_type'} = $type;
     }
     return $self->{'_type'};
@@ -24,12 +24,23 @@ sub type {
 sub type_string {
     my( $self ) = @_;
 
+    my %bio_gap_type = (5 => 'CENTROMERE',
+                        6 => 'HETEROCHROMATIN',
+                        7 => 'SHORT-ARM',
+                        8 => 'TELOMERE'
+                       );
+
     my $type = $self->type or confess "type not set";
-    if ($type > 4) {
-        return 'type-4';
+    if ($type < 5) {
+      return "type-$type";
     } else {
-        return "type-$type";
+      return $bio_gap_type{$type};
     }
+  #  if ($type > 4) {
+#      return 'type-4';
+#    } else {
+#      return "type-$type";
+#    }
 }
 
 sub ncbi {
@@ -59,10 +70,10 @@ sub string {
     my( $self ) = @_;
 
     my @fields = (
-        'GAP',
-        $self->type_string,
-        $self->gap_length || '?',
-        );
+                  'GAP',
+                  $self->type_string,
+                  $self->gap_length || '', # replace '?' as NCBI does not use unknown length
+                 );
 
     my $txt = $self->remark;
 
@@ -103,7 +114,7 @@ sub store {
         $rank,
         $self->remark,
         );
-    
+
     my $gap_insert = prepare_cached_track_statement(q{
         INSERT INTO tpf_gap(id_tpfrow
               , length

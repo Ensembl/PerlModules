@@ -34,6 +34,12 @@ sub parse {
     
     my( %uniq_clone, %uniq_accession );
 
+    my %bio_gap_type = (CENTROMERE      => 5,
+                        HETEROCHROMATIN => 6,
+                        'SHORT-ARM'     => 7,
+                        TELOMERE        => 8
+                       );
+
     local $/ = "\n";
     my $fh = $self->file or confess "file not set";
     my $tpf = Hum::TPF->new;
@@ -44,6 +50,10 @@ sub parse {
             $self->parse_comment_line($tpf, $_);
             next;
         }
+        if ($_ =~ /^\s/){
+          next;
+        }
+
         my @line = split /\s+/, $_, 4;
         confess "Bad line in TPF: $_" unless @line >= 3;
         my( $row );
@@ -51,8 +61,11 @@ sub parse {
             my $identifier = uc $1;
             my( $type_str, $length_str ) = @line[1,2];
             $row = Hum::TPF::Row::Gap->new;
-            if ($type_str =~ /type-([1234])/i) {
+            if ($type_str =~ /type-([1234])/i ){
                 $row->type($1);
+            }
+            elsif ( $bio_gap_type{uc($type_str)} ){
+              $row->type($bio_gap_type{uc($type_str)});
             }
             else {
                 confess "Can't parse gap type from '$type_str'";
