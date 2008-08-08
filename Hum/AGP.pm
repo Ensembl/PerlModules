@@ -1,10 +1,11 @@
-
 ### Hum::AGP
 
 package Hum::AGP;
 
 use strict;
+use warnings;
 use Carp;
+
 use Hum::AGP::Row::Clone;
 use Hum::AGP::Row::Gap;
 use Hum::SequenceOverlap;
@@ -105,13 +106,6 @@ sub fetch_all_Rows {
     return @{$self->{'_rows'}};
 }
 
-sub last_Row {
-    my ($self) = @_;
-    
-    my $r = $self->{'_rows'};
-    return $r->[$#$r];
-}
-
 sub add_Row {
     my( $self, $row ) = @_;
     
@@ -134,7 +128,7 @@ sub process_TPF {
     for (my $i = 0; $i < @rows; $i++) {
         my $row = $rows[$i];
         if ($row->is_gap) {
-            $self->_process_contig($contig) if @$contig;
+            $self->_process_contig($contig, $row) if @$contig;
             $contig = [];
             my $gap = $self->new_Gap;
             $gap->chr_length($row->gap_length || $self->unknown_gap_length);
@@ -163,13 +157,16 @@ sub process_TPF {
             }
         }
     }
+
     $self->_process_contig($contig) if @$contig;
 }
 
 sub _process_contig {
-    my( $self, $contig ) = @_;
+    my( $self, $contig, $row ) = @_;
+
+    # $cl is a Hum::AGP::Row::Clone
     my $cl = $self->new_Clone_from_tpf_Clone($contig->[0]);
-    
+
     my( $was_3prime, $strand );
     for (my $i = 1; $i < @$contig; $i++) {
         my $inf_a = $contig->[$i - 1]->SequenceInfo;
@@ -182,7 +179,7 @@ sub _process_contig {
             # Set strand for current clone
             $cl->strand($strand || 1);
             
-            $self->insert_missing_overlap_pad->remark('No overlap in database');
+            $self->insert_missing_overlap_pad;
             $strand = undef;
             $cl = $self->new_Clone_from_tpf_Clone($contig->[$i]);
             next;
@@ -194,14 +191,14 @@ sub _process_contig {
         my $miss_join = 0;
         if ($pa->is_3prime) {
             if ($strand and $was_3prime) {
-                $self->insert_missing_overlap_pad->remark('Bad overlap - double 3 prime join');
+                $self->insert_missing_overlap_pad;
                 $strand = undef;
                 $miss_join = 3;
             }
             $cl->seq_end($pa->position);
         } else {
             if ($strand and ! $was_3prime) {
-                $self->insert_missing_overlap_pad->remark('Bad overlap - double 5 prime join');
+                $self->insert_missing_overlap_pad;
                 $strand = undef;
                 $miss_join = 5;
             }
@@ -210,23 +207,10 @@ sub _process_contig {
         
         # Report miss-join errors
         if ($miss_join) {
-            printf STDERR "Double %d-prime join to '%s'\n",
+          my $join_err = sprintf "Double %d-prime join to '%s'\n",
                 $miss_join, $cl->accession_sv;
-        } else {
-            if (my $dovetail = $pa->dovetail_length || $pb->dovetail_length) {
-                ### Should if overlap has been manually OK'd
-                printf STDERR "Dovetail of length '$dovetail' in overlap\n";
-                $self->insert_missing_overlap_pad->remark('Bad overlap - dovetail');
-                $cl->strand($strand || 1);
-                $strand = undef;
-                if ($pa->is_3prime) {
-                    $cl->seq_end($inf_a->sequence_length);
-                } else {
-                    $cl->seq_start(1);
-                }
-                $cl = $self->new_Clone_from_tpf_Clone($contig->[$i]);
-                next;
-            }
+          printf STDERR $join_err;
+          $cl->join_error($join_err);
         }
         
         unless ($strand) {
@@ -234,11 +218,11 @@ sub _process_contig {
             $strand = $pa->is_3prime ? 1 : -1;
         }
         $cl->strand($strand);
-        
+
         # Flip the strand if this is a
         # head to head or tail to tail join.
         $strand *= $pa->is_3prime == $pb->is_3prime ? -1 : 1;
-        
+
         # Move $cl pointer to next clone
         $cl = $self->new_Clone_from_tpf_Clone($contig->[$i]);
         if ($pb->is_3prime) {
@@ -254,38 +238,84 @@ sub _process_contig {
 
 sub insert_missing_overlap_pad {
     my( $self ) = @_;
-    
+
     my $gap = $self->new_Gap;
     $gap->chr_length($self->missing_overlap_pad);
-    return $gap;
+    $gap->remark("clone\tno");
 }
 
 sub _chr_end {
     my( $self, $_chr_end ) = @_;
-    
+
     if (defined $_chr_end) {
         $self->{'__chr_end'} = $_chr_end;
     }
     return $self->{'__chr_end'};
 }
 
+sub catch_errors {
+
+  my( $self, $catch_err ) = @_;
+
+  if ( $catch_err ) {
+    $self->{'_catch_errors'} = $catch_err;
+  }
+  return $self->{'_catch_errors'};
+}
+
 sub string {
-    my( $self ) = @_;
-    
+    my( $self, $catch_err ) = @_;
+
     my $str = '';
     my $chr_end = 0;
     my $row_num = 0;
     my $name = $self->chr_name;
+    my $catch_err = $self->catch_errors;
+
     foreach my $row ($self->fetch_all_Rows) {
-        my $new_end = $chr_end + $row->chr_length;
-        $str .= join("\t",
-            $name,
-            $chr_end + 1,
-            $new_end,
-            ++$row_num,
-            $row->elements) . "\n";
-        $chr_end = $new_end;
+      my $new_end;
+      my $gap_str = 0;
+
+      if ( $catch_err ){
+        my ($chr_length);
+        eval{$chr_length = $row->chr_length};
+
+        if ( $@ ){
+          #die $row->accession_sv;
+          $gap_str = 1;
+          $row->error_message($@);
+        }
+        $chr_length = 0 unless $chr_length;
+        $new_end = $chr_end + $chr_length;
+      }
+      else {
+        $new_end = $chr_end + $row->chr_length;
+      }
+
+      $str .= join("\t",
+                   $name,
+                   $chr_end + 1,
+                   $new_end,
+                   ++$row_num,
+                   $row->elements) . "\n";
+
+      if ( $catch_err ){
+        # add a gap (5000 bps) after a problematic clone
+        if ($gap_str){
+          $chr_end = $new_end;
+          $new_end = $chr_end + 5000;
+          $str .= join("\t",
+                       $name,
+                       $chr_end + 1,
+                       $new_end,
+                       ++$row_num,
+                       'N', 5000, 'contig', 'no') . "\n";
+        }
+      }
+
+      $chr_end = $new_end;
     }
+
     return $str;
 }
 
