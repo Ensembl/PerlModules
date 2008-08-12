@@ -95,6 +95,9 @@ sub validate {
 
 sub matches {
     my( $self, $othr ) = @_;
+
+    # 4 factors are used to compare for difference in overlap
+    # position, orientation (5'/3') and accession, version
     
     foreach my $num (qw{ position is_3prime }) {
         return 0 unless $self->$num() == $othr->$num()
