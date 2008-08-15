@@ -35,6 +35,7 @@ use URI::Escape;
                 get_DNA_from_ftpghost
                 get_lastest_TPF_update_of_clone
                 get_all_current_TPFs
+                get_species_chr_subregion_from_id_tpftarget
                );
 
 sub unixtime2YYYYMMDD {
@@ -130,26 +131,23 @@ sub get_chromoDB_handle {
 
   # $user will be coming from single sing on
   # and has right to edit TPF
-  my $editor = @_;
+  my ($user, $password) = @_;
 
   my $host     = 'otterpipe2';
   my $dbname   = 'chromoDB';
   my $port     = 3303;
   my $mach     = Net::Netrc->lookup($host);
-  my ($user, $password);
 
   if ( $mach ){
     $password = $mach->password;
     $user     = $mach->login;
   }
+  elsif ( $user and $password ){
+    $password = $password;
+  }
   else {
     $user     = 'ottro';
     $password = undef;
-  }
-
-  if ($editor ){
-    $password = 'lutralutra';
-    $user = 'ottadmin';
   }
 
   my $dbh = DBI->connect("DBI:mysql:host=$host;port=$port;database=$dbname",
@@ -415,6 +413,23 @@ sub get_all_current_TPFs {
   }
 
   return $os_chr_sub;
+}
+
+sub get_species_chr_subregion_from_id_tpftarget {
+
+  my ($id_tpftarget) = @_;
+  my $qry = prepare_track_statement(qq{
+                                       SELECT cd.speciesname, cd.chromosome, tt.subregion
+                                       FROM tpf t, tpf_target tt, chromosomedict cd
+                                       WHERE t.id_tpftarget=tt.id_tpftarget
+                                       AND tt.chromosome=cd.id_dict
+                                       AND t.id_tpftarget=?
+                                       AND t.iscurrent=1
+                                     });
+
+  $qry->execute($id_tpftarget);
+  my ($species, $chr, $subregion) = $qry->fetchrow();
+  return ($species, $chr, $subregion);
 }
 
 1;
