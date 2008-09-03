@@ -119,7 +119,7 @@ sub _quoted_ace_line {
 
 	        # Escape newlines and tabs
 	        s/\n/\\n/g;
-	        s/\n/\\t/g;
+	        s/\t/\\t/g;
 
 	        # Quote tag unless it is entirely word characters
             unless (/^\w+$/) {

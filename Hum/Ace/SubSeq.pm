@@ -8,6 +8,7 @@ use Carp;
 
 use Hum::Sequence::DNA;
 use Hum::Ace::Exon;
+use Hum::Ace::AceText;
 use Hum::XmlWriter;
 use Hum::ClipboardUtils 'integers_from_text';
 
