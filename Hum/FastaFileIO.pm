@@ -13,15 +13,23 @@ use Hum::Sequence::Peptide;
 
 sub new {
     my( $pkg, $file ) = @_;
-    
+
     my $ffio = bless {}, $pkg;
     $ffio->file_handle($file) if $file;
     return $ffio;
 }
 
+sub new_String_IO {
+    my( $pkg, $string ) = @_;
+
+    my $ffio = bless {}, $pkg;
+    $ffio->string_to_file_handle($string) if $string;
+    return $ffio;
+}
+
 sub new_DNA_IO {
     my( $pkg, $file ) = @_;
-    
+
     my $ffio = $pkg->new($file);
     $ffio->sequence_class('Hum::Sequence::DNA');
     return $ffio;
@@ -29,7 +37,7 @@ sub new_DNA_IO {
 
 sub new_DNA_Quality_IO {
     my( $pkg, $file, $quality_file ) = @_;
-    
+
     unless ($quality_file) {
         if (ref($file)) {
             confess "Can't auto generate quality file name from '$file'";
@@ -37,18 +45,18 @@ sub new_DNA_Quality_IO {
             $quality_file = "$file.qual";
         }
     }
-    
+
     my $ffio = $pkg->new_DNA_IO($file);
     $ffio->sequence_class('Hum::Sequence::DNA');
-    
+
     $ffio->quality_file_handle($quality_file);
-    
+
     return $ffio;
 }
 
 sub new_Peptide_IO {
     my( $pkg, $file ) = @_;
-    
+
     my $ffio = $pkg->new($file);
     $ffio->sequence_class('Hum::Sequence::Peptide');
     return $ffio;
@@ -65,7 +73,7 @@ sub sequence_class {
 
 sub _next_line {
     my( $ffio ) = @_;
-    
+
     if (my $line = $ffio->{'_last_line'}) {
         $ffio->{'_last_line'} = undef;
         return $line;
@@ -100,7 +108,7 @@ sub _last_quality_line {
 
 sub file_handle {
     my( $ffio, $file ) = @_;
-    
+
     if ($file) {
         if (ref($file) eq 'GLOB') {
             $ffio->{'_file_handle'} = $file;
@@ -113,9 +121,20 @@ sub file_handle {
     return $ffio->{'_file_handle'};
 }
 
+sub string_to_file_handle {
+    my( $ffio, $string ) = @_;
+
+    if ($string) {
+    	my $fh = Symbol::gensym();
+    	open $fh,qq{ echo "$string" | };
+    	$ffio->{'_file_handle'} = $fh;
+    }
+    return $ffio->{'_file_handle'};
+}
+
 sub quality_file_handle {
     my( $ffio, $file ) = @_;
-    
+
     if ($file) {
         if (ref($file) eq 'GLOB') {
             $ffio->{'_quality_file_handle'} = $file;
@@ -130,7 +149,7 @@ sub quality_file_handle {
 
 sub read_all_sequences {
     my( $ffio ) = @_;
-    
+
     my( @all_seq );
     while (my $seq = $ffio->read_one_sequence) {
         push(@all_seq, $seq);
@@ -140,11 +159,11 @@ sub read_all_sequences {
 
 sub read_one_sequence {
     my( $ffio ) = @_;
-    
+
     local $/ = "\n";
-    
+
     my $class = $ffio->sequence_class;
-    
+
     my $seq_string = '';
     my( $seq_obj );
     while ($_ = $ffio->_next_line) {
@@ -165,22 +184,22 @@ sub read_one_sequence {
     }
     return unless $seq_obj;
     $seq_obj->sequence_string($seq_string);
-    
+
     # Read quality values if we've got a handle to a quality file
     if ($ffio->quality_file_handle) {
         $ffio->_add_quality_string($seq_obj);
     }
-    
+
     return $seq_obj;
 }
 
 sub _add_quality_string {
     my( $ffio, $seq_obj ) = @_;
-    
+
     my $name = $seq_obj->name;
     my $qfh = $ffio->quality_file_handle
         or confess "No quality file handle";
-    
+
     my $first_line = $ffio->_last_quality_line || <$qfh>;
     my ($q_name) = $first_line =~ /^>(\S+)/
         or die "Invalid first line '$first_line'";
@@ -201,13 +220,13 @@ sub _add_quality_string {
 
 sub write_sequences {
     my( $ffio, @all_seq ) = @_;
-    
+
     my $fh  = $ffio->file_handle;
     my $qfh = $ffio->quality_file_handle;
     foreach my $seq_obj (@all_seq) {
         print $fh $seq_obj->fasta_string
             or confess "Error printing fasta : $!";
-            
+
         if ($qfh) {
             print $qfh $seq_obj->fasta_quality_string
                 or confess "Error printing fasta : $!";
