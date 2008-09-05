@@ -12,9 +12,6 @@ use Hum::Chromoview::ChromoSQL;
 use Hum::Sort ('ace_sort');
 use Hum::Submission 'prepare_statement';
 use Hum::Tracking ('prepare_track_statement');
-
-#use Hum::Tracking qw{prepare_track_statement};
-
 use URI::Escape;
 
 @ISA = ('Exporter');
@@ -36,6 +33,7 @@ use URI::Escape;
                 get_lastest_TPF_update_of_clone
                 get_all_current_TPFs
                 get_species_chr_subregion_from_id_tpftarget
+                get_latest_clone_entries_with_overlap_of_assembly
                );
 
 sub unixtime2YYYYMMDD {
@@ -95,7 +93,7 @@ sub make_table_row {
   my $flds = '';
   foreach my $f ( @$dataArray ){
  #   warn $f, "---", $fields_hash->{$f};
-    my $class = $fields_hash->{$f};
+    my $class = $fields_hash->{$f} || '';
     $f = '-' unless $f;
     $flds .= qq{<td class="$class">$f</td>};
   }
@@ -431,6 +429,7 @@ sub get_species_chr_subregion_from_id_tpftarget {
   my ($species, $chr, $subregion) = $qry->fetchrow();
   return ($species, $chr, $subregion);
 }
+
 
 1;
 
