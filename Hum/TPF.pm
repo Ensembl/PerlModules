@@ -447,7 +447,8 @@ sub ncbi_string {
   # Add the rows
   foreach my $row ($self->fetch_all_Rows) {
     # wait until database is updated
-    # type-4 should not be around (Darren G)
+    # type-4 is still used for undetermined GAP types (Darren G)
+
     if ( $row->isa("Hum::TPF::Row::Gap") ){
 
       # make sure to flag ncbi for changes in Hum::TPF::Row::Gap:string();
@@ -455,8 +456,8 @@ sub ncbi_string {
 
       if ( $row->type == 4 ){
         if ( ! $row->remark ){
-          warn "NO REMARK for type-4\n"; # remark has the contral vocabulary for NCBI
-          $row->type(3);                 # default to type-3 but check by hand 
+          warn "NO REMARK for type-4\n"; # remark has the control vocabulary for NCBI
+          $row->type(3);                 # default to type-3 but check by hand
                                          # to determine if type2 via flanking contigs
         }
       }
@@ -494,8 +495,8 @@ sub ncbi_string {
           $row->contig_name($new_ctgname);
           #warn "$ctgname vs $new_ctgname";
         }
-        else {
-           warn "BAD contigname, $ctgname: ", $row->accession, "\n";
+        elsif ( $ctgname !~ /^Hschr\d+_ctg\d+/ ) {
+          warn "BAD contigname, $ctgname: ", $row->accession, "\n";
         }
       }
 

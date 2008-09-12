@@ -84,9 +84,6 @@ sub string {
       if ( $self->type_string eq 'type-4' ){
         $fields[1] = $txt; # replace type_string with control vocabulary
       }
-      else {
-        $fields[2] = ''; # skip size
-      }
     }
     else {
       push(@fields, $txt) if $txt;
