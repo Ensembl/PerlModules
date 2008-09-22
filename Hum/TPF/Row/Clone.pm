@@ -232,13 +232,13 @@ sub string {
 }
 
 sub store {
-    my( $self, $tpf, $rank, $store_sequence_flag ) = @_;
+    my( $self, $tpf, $rank ) = @_;
     
     confess("row is already stored with id_tpfrow=", $self->db_id)
         if $self->db_id;
     
     $self->store_clone_if_missing($tpf->species);
-    $self->store_SequenceInfo_and_link if $store_sequence_flag;
+    $self->store_SequenceInfo_and_link;
     
     my $db_id = $self->get_next_id_tpfrow;
     my $insert = prepare_cached_track_statement(q{

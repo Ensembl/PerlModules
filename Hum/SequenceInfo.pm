@@ -44,12 +44,12 @@ sub fetch_latest_with_Sequence {
     
     confess "Missing accession argument" unless $acc;
     
-    return $pkg->_sanger_sequence_get($acc)
-        || $pkg->_embl_sequence_get($acc);
+    return $pkg->sanger_sequence_get($acc)
+        || $pkg->embl_sequence_get($acc);
 }
 
 
-sub _embl_sequence_get {
+sub embl_sequence_get {
     my( $pkg, $acc ) = @_;
     
     my ($embl) = get_EMBL_entries($acc);
@@ -88,7 +88,7 @@ sub _embl_sequence_get {
 {
     my( $sth );
 
-    sub _sanger_sequence_get {
+    sub sanger_sequence_get {
         my( $pkg, $acc ) = @_;
 
         my $sth ||= prepare_statement(q{

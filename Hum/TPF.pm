@@ -150,16 +150,6 @@ sub operator {
     return $self->{'_operator'} || (getpwuid($<))[0];
 }
 
-sub store_sequence_flag {
-    my ($self, $flag) = @_;
-    
-    if (defined $flag) {
-        $self->{'_store_sequence_flag'} = $flag ? 1 : 0;
-    }
-    $flag = $self->{'_store_sequence_flag'};
-    return defined($flag) ? $flag : 1;
-}
-
 sub new_from_db_id {
     my( $pkg, $db_id ) = @_;
     
@@ -547,9 +537,8 @@ sub store {
     
     # Store all rows
     my $rank = 0;
-    my $store_sequence_flag = $self->store_sequence_flag;
     foreach my $row ($self->fetch_all_Rows) {
-        $row->store($self, ++$rank, $store_sequence_flag);
+        $row->store($self, ++$rank);
     }
 }
 

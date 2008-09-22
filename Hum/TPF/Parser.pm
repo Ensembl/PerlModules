@@ -30,31 +30,53 @@ sub file {
 }
 
 sub parse {
-    my( $self ) = @_;
-    
-    my( %uniq_clone, %uniq_accession );
+    my( $self, $str ) = @_;
 
+    local $/ = "\n";
+    my $fh = $self->file or confess "file not set";
+    my $tpf = Hum::TPF->new;
+    
+    if ($str) {
+        if ($self->{'_file'}) {
+            confess "string argument given, but filehandle defined too!";
+        }
+        while ($str =~ /^(.+)$/mg) {
+            # Pattern match automatically skips blank lines
+            $self->parse_line($tpf, $1);
+        }
+    } else {
+        while (<$fh>) {
+            chomp;
+            next if /^$/;
+            $tpf->parse_line($tpf, $_);
+        }
+    }
+    
+    # Empty parser for re-use
+    $self->{'_file'}            = undef;
+    $self->{'_uniq_clone'}      = undef;
+    $self->{'_uniq_accession'}  = undef;
+    
+    return $tpf;
+}
+
+{
     my %bio_gap_type = (CENTROMERE      => 5,
                         HETEROCHROMATIN => 6,
                         'SHORT-ARM'     => 7,
                         TELOMERE        => 8
                        );
-
-    local $/ = "\n";
-    my $fh = $self->file or confess "file not set";
-    my $tpf = Hum::TPF->new;
-    while (<$fh>) {
-        chomp;
-        next if /^$/;
-        if (/^#/) {
-            $self->parse_comment_line($tpf, $_);
-            next;
+    sub parse_line {
+        my ($self, $tpf, $line_str) = @_;
+        if ($line_str =~ /^#/) {
+            $self->parse_comment_line($tpf, $line_str);
+            return;
         }
-        if ($_ =~ /^\s/){
-          next;
+        if ($line_str =~ /^\s/){
+          return;
         }
 
-        my @line = split /\s+/, $_, 4;
+        my @line = split /\s+/, $line_str, 4;
         confess "Bad line in TPF: $_" unless @line >= 3;
         my( $row );
         if ($line[0] =~ /GAP/i) {
@@ -76,13 +98,15 @@ sub parse {
         } else {
             my( $acc, $intl, $contig_name ) = @line;
             if ($acc eq '?' and $acc eq $intl) {
-                die "Bad TPF line (accession and clone are both blank): $_\n";
+                die "Bad TPF line (accession and clone are both blank): $line_str\n";
             }
             elsif ($intl =~ /type/i) {
                 die "Bad TPF gap line: $_\nGap lines must begin with 'GAP'\n";
             }
-            if ($acc ne '?' and $uniq_accession{$acc}) {
-                die "Accession '$acc' appears twice in TPF\n";
+            if ($acc ne '?') {
+                die "Accession '$acc' appears twice in TPF\n"
+                    if $self->{'_uniq_accession'}{$acc};
+                $self->{'_uniq_accession'}{$acc}++;
             }
             $row = Hum::TPF::Row::Clone->new;
             $row->accession($acc);
@@ -90,21 +114,20 @@ sub parse {
                 $row->is_multi_clone(1);
                 $row->sanger_clone_name($acc);
             } else {
-                $row->intl_clone_name($intl);
-                if ($intl ne '?' and $uniq_clone{$intl}) {
-                    die "Clone name '$intl' appears twice in TPF\n";
+                if ($intl ne '?') {
+                    die "Clone name '$intl' appears twice in TPF\n"
+                        if $self->{'_uniq_clone'}{$intl};
+                    $self->{'_uniq_clone'}{$intl}++;
                 }
+                $row->intl_clone_name($intl);
             }
             $row->contig_name($contig_name);
-            $uniq_clone{$intl}++;
-            $uniq_accession{$acc}++;
         }
         $row->remark($line[3]);
         $tpf->add_Row($row);
     }
-    $self->{'_file'} = undef;
-    return $tpf;
 }
+
 
 {
     my %accepted_field = map {$_, 1} qw{
