@@ -4,6 +4,7 @@
 package Hum::TPF::Parser;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::TPF;
 use Symbol 'gensym';
@@ -33,9 +34,8 @@ sub parse {
     my( $self, $str ) = @_;
 
     local $/ = "\n";
-    my $fh = $self->file or confess "file not set";
     my $tpf = Hum::TPF->new;
-    
+
     if ($str) {
         if ($self->{'_file'}) {
             confess "string argument given, but filehandle defined too!";
@@ -45,18 +45,19 @@ sub parse {
             $self->parse_line($tpf, $1);
         }
     } else {
+        my $fh = $self->file or confess "file not set";
         while (<$fh>) {
             chomp;
             next if /^$/;
             $tpf->parse_line($tpf, $_);
         }
     }
-    
+
     # Empty parser for re-use
     $self->{'_file'}            = undef;
     $self->{'_uniq_clone'}      = undef;
     $self->{'_uniq_accession'}  = undef;
-    
+
     return $tpf;
 }
 
@@ -68,6 +69,7 @@ sub parse {
                        );
     sub parse_line {
         my ($self, $tpf, $line_str) = @_;
+
         if ($line_str =~ /^#/) {
             $self->parse_comment_line($tpf, $line_str);
             return;
@@ -77,7 +79,9 @@ sub parse {
         }
 
         my @line = split /\s+/, $line_str, 4;
-        confess "Bad line in TPF: $_" unless @line >= 3;
+
+        #confess "Bad line in TPF: $_" unless @line >= 3;
+        confess "Bad line in TPF: $line_str" unless @line >= 3;
         my( $row );
         if ($line[0] =~ /GAP/i) {
             my $identifier = uc $1;
@@ -97,6 +101,7 @@ sub parse {
             }
         } else {
             my( $acc, $intl, $contig_name ) = @line;
+
             if ($acc eq '?' and $acc eq $intl) {
                 die "Bad TPF line (accession and clone are both blank): $line_str\n";
             }
@@ -136,7 +141,7 @@ sub parse {
 
     sub parse_comment_line {
         my( $self, $tpf, $line ) = @_;
-        
+
         while ($line =~ /(\S+)=(\S+)/g) {
             my $field = $1;
             my $value = $2;
