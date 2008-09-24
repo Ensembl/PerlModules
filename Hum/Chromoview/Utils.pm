@@ -16,7 +16,6 @@ use URI::Escape;
 
 @ISA = ('Exporter');
 @EXPORT_OK = qw(
-                add_banner
                 make_table_row
                 extra_footer_browsers
                 get_yyyymmdd
@@ -100,11 +99,7 @@ sub make_table_row {
 
   return qq{<tr class="$trClass">$flds</tr>};
 }
-sub add_banner {
-  my ($id) = @_;
-  my $msg = "<span id='chromoview'>ChromoView</span> - Clone / Assembly info of genomes at the Sanger Institute";
-  return qq{<div id='$id'>$msg</div>};
-}
+
 sub extra_footer_browsers {
   my ($id) = @_;
   my $msg = "Browser compatibility: Mozilla based browsers, eg, Firefox, Opera. For Internet Explorer, only IE-7 is supported";
