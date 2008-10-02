@@ -13,9 +13,12 @@ use Hum::Sort ('ace_sort');
 use Hum::Submission 'prepare_statement';
 use Hum::Tracking ('prepare_track_statement');
 use URI::Escape;
+use SangerPaths qw(core badger humpub);
+use SangerWeb;
 
 @ISA = ('Exporter');
 @EXPORT_OK = qw(
+                authorize
                 make_table_row
                 extra_footer_browsers
                 get_yyyymmdd
@@ -34,6 +37,36 @@ use URI::Escape;
                 get_species_chr_subregion_from_id_tpftarget
                 get_latest_clone_entries_with_overlap_of_assembly
                );
+
+sub authorize {
+
+  my $editor = shift;
+  my ($user, $pass, $editors);
+  my $sw = SangerWeb->new();
+  my $dbaccess = $sw->server_root."/data/humpub/dbaccess";
+  open(my $fh, "$dbaccess") or die $!;
+  my $conf = '';
+  my $flag = 0;
+  while(<$fh>){
+    chomp;
+    if ( /^USER\s+(.*)/ ){
+      $user = $1;
+    }
+    elsif ( /^PASS\s+(.*)/ ){
+      $pass = $1;
+    }
+    elsif ( /\[editors\]/ ){
+      $flag = 1;
+    }
+    elsif ( $flag == 1 ){
+      $editors->{$_}++;
+    }
+  }
+
+  if ( $editors->{$editor} ){
+    return ($user, $pass);
+  }
+}
 
 sub unixtime2YYYYMMDD {
   my $time = shift;
