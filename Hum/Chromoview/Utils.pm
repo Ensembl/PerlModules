@@ -15,6 +15,7 @@ use Hum::Tracking ('prepare_track_statement');
 use URI::Escape;
 use SangerPaths qw(core badger humpub);
 use SangerWeb;
+use CGI::Carp qw(warningsToBrowser fatalsToBrowser);
 
 @ISA = ('Exporter');
 @EXPORT_OK = qw(
@@ -31,6 +32,7 @@ use SangerWeb;
                 concat_js_params
                 unixtime2YYYYMMDD
                 get_TPF_modtime
+                get_latest_clone_entrydate_of_TPF
                 get_DNA_from_ftpghost
                 get_lastest_TPF_update_of_clone
                 get_all_current_TPFs
@@ -98,6 +100,30 @@ sub get_DNA_from_ftpghost {
   }
 
   return uc($seqs);
+}
+
+sub get_latest_clone_entrydate_of_TPF {
+
+  # this will pick up clones modified after its belonging TPF has been created
+  #my ( $species, $chr, $subregion) = @_;
+  my ( $id_tpftarget, $longVersion ) = @_;
+  my $qry = prepare_track_statement(qq{
+                             SELECT TO_CHAR(MAX(cs.entrydate), 'yyyy-mm-dd hh24:mm:ss')
+                             FROM tpf_target tt, tpf t, tpf_row tr, clone_sequence cs
+                             WHERE tt.id_tpftarget=t.id_tpftarget
+                             AND t.id_tpf=tr.id_tpf
+                             AND tr.clonename = cs.clonename
+                             AND cs.is_current = 1
+                             AND t.iscurrent =1
+                             AND tt.id_tpftarget = ?
+                           });
+
+  $qry->execute($id_tpftarget);
+  my $modtime = $qry->fetchrow;
+
+  ($modtime) = $modtime =~ /(.*)\s.*/ unless $longVersion;
+
+  return $modtime;
 }
 
 sub get_TPF_modtime {
