@@ -24,6 +24,7 @@ use CGI::Carp qw(warningsToBrowser fatalsToBrowser);
                 extra_footer_browsers
                 get_yyyymmdd
                 get_mysql_datetime
+                datetime2unixTime
                 get_chromoDB_handle
                 make_hmenus
                 make_search_box
@@ -105,7 +106,9 @@ sub get_DNA_from_ftpghost {
 sub get_latest_clone_entrydate_of_TPF {
 
   # this will pick up clones modified after its belonging TPF has been created
-  #my ( $species, $chr, $subregion) = @_;
+  # from oracle database
+
+  # if $longVersion: returns yyyy-mm-dd hh24:mm:ss; else: returns yyyy-mm-dd
   my ( $id_tpftarget, $longVersion ) = @_;
   my $qry = prepare_track_statement(qq{
                              SELECT TO_CHAR(MAX(cs.entrydate), 'yyyy-mm-dd hh24:mm:ss')
@@ -129,7 +132,8 @@ sub get_latest_clone_entrydate_of_TPF {
 sub get_TPF_modtime {
 
   # this will pick up clones modified after its belonging TPF has been created
-  #my ( $species, $chr, $subregion) = @_;
+  # from chromoDB.tpf_check (ie, depends on chron job being run already)
+
   my ( $id_tpftarget) = @_;
   my $dba = get_chromoDB_handle();
   my $sql =(qq{SELECT LEFT(check_date, 10)
@@ -177,6 +181,32 @@ sub get_mysql_datetime {
   # 0000-00-00 00:00:00
   my @t = split(/ /, scalar(localtime));
   return get_yyyymmdd()  . " " . $t[3];
+}
+
+sub datetime2unixTime {
+
+  #expects time in yyyy-mm-dd hh:mm:ss format
+  my( $time ) = shift;
+  my( $year, $month, $day, $hour, $minute, $sec ) = split( /\W/, $time );
+  my $oneday = 24 * 3600;       #for convenience
+  my $utime = $sec + ($minute * 60) + ($hour * 3600); ## time in seconds on the day in question
+  $year -= 1970;
+
+  my @months = (31,28,31,30,31,30,31,31,30,31,30,31);
+
+  for (my $i=0; $i < ($month-1); $i++ ) {
+    $utime += ($months[$i] * $oneday);
+  }
+
+  $utime += ((($year - ($year%4))/4) * $oneday); ## take leap years into account
+  if ( ($year%4)==0 && $month < 3 ) {
+    $utime -= $oneday;
+  }
+
+  $utime += (($day-1) * $oneday);
+  $utime += ($year * 365 * $oneday);
+
+  return $utime;
 }
 
 sub get_chromoDB_handle {
