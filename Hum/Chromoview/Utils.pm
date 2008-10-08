@@ -227,8 +227,11 @@ sub get_chromoDB_handle {
   elsif ( $user and $password ){
     $password = $password;
   }
+  elsif ( $user eq 'public' ){
+    $password = undef;
+  }		
   else {
-    $user     = 'ottro';
+    $user = 'ottro';
     $password = undef;
   }
 

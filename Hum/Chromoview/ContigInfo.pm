@@ -74,4 +74,65 @@ sub fetch_contig_info_by_Idtpftarget {
   return $ctgSrErlen;
 }
 
+sub fetch_total_fin_unfin_length_by_Idtpftarget {
+  my ($self, $id_tpftarget) = @_;
+  my $qry = prepare_track_statement(q{
+                                       SELECT sum(se.length)
+                                       FROM   tpf_row tpr, tpf, clone_sequence cs, sequence se
+                                       where  tpf.id_tpftarget = ?
+                                       and    tpf.iscurrent    = 1
+                                       and    tpf.id_tpf       = tpr.id_tpf
+                                       and    tpr.contigname is not null
+                                       and    tpr.clonename   = cs.clonename
+                                       and    cs.is_current = 1
+                                       and    cs.id_sequence   = se.id_sequence
+                                       group  by tpr.contigname
+                                       order  by min(tpr.rank)}
+                                   );
+  $qry->execute($id_tpftarget);
+
+  my $total_len = 0;
+  while (my $len = $qry->fetchrow){
+    $total_len += $len;
+  }
+
+  return $total_len;
+}
+
+sub fetch_total_fin_length_by_Idtpftarget {
+  my ($self, $id_tpftarget) = @_;
+  my $qry = prepare_track_statement(q{
+                                       SELECT sum(se.length)
+                                       FROM   tpf_row tpr, tpf, clone_sequence cs, sequence se,
+                                              htgsphasedict h
+                                       where  tpf.id_tpftarget = ?
+                                       and    tpf.iscurrent    = 1
+                                       and    tpf.id_tpf       = tpr.id_tpf
+                                       and    tpr.contigname is not null
+                                       and    tpr.clonename   = cs.clonename
+                                       and    cs.is_current = 1
+                                       and    cs.id_sequence   = se.id_sequence
+                                       and    se.ID_HTGSPHASE = h.ID_HTGSPHASE
+                                       and    h.name = 'Finished'
+                                       group  by tpr.contigname
+                                       order  by min(tpr.rank)}
+                                   );
+  $qry->execute($id_tpftarget);
+
+  my $total_len = 0;
+  while (my $len = $qry->fetchrow){
+    $total_len += $len;
+  }
+
+  return $total_len;
+}
+
+sub fetch_id_tpftarget_by_id_tpf {
+  my ($self, $tpf) = @_;
+  my $id_tpf = $tpf->db_id;
+  my $qry = prepare_track_statement("SELECT ID_TPFTARGET FROM tpf WHERE id_tpf = $id_tpf");
+  $qry->execute();
+  return $qry->fetchrow;
+}
+
 1;
