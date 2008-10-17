@@ -109,6 +109,12 @@ sub parse {
                 die "Bad TPF gap line: $_\nGap lines must begin with 'GAP'\n";
             }
             if ($acc ne '?') {
+
+              # prevent loading with acc.sv
+              if ($acc =~ /(.*)\.\d+/ ){
+                $acc = $1;
+              }
+
                 die "Accession '$acc' appears twice in TPF\n"
                     if $self->{'_uniq_accession'}{$acc};
                 $self->{'_uniq_accession'}{$acc}++;
