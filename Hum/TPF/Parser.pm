@@ -49,7 +49,7 @@ sub parse {
         while (<$fh>) {
             chomp;
             next if /^$/;
-            $tpf->parse_line($tpf, $_);
+            $self->parse_line($tpf, $_);
         }
     }
 
