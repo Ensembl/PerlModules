@@ -1,8 +1,22 @@
 
-package Hum::EMBL::Handle;
+### Hum::StringHandle
+
+package Hum::StringHandle;
 
 use strict;
+use warnings;
 use Carp;
+use Symbol 'gensym';
+
+sub new {
+    my ($pkg, $string_ref) = @_;
+
+    # A bit of magic which makes a string
+    # behave like a filehandle
+    my $fh = gensym();
+    tie( *{$fh}, $pkg, $string_ref );
+    return $fh;
+}
 
 sub TIEHANDLE {
     my( $pkg, $string ) = @_;
@@ -30,10 +44,15 @@ sub READLINE {
     }
 }
 
-# 012345
-# xxxxxn
+
 
 1;
 
 __END__
+
+=head1 NAME - Hum::StringHandle
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
 

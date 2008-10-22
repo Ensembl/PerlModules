@@ -7,7 +7,7 @@ use Digest::MD5;
 use Symbol 'gensym';
 
 use Hum::EMBL::Line;    # Contains most of the line handling packages
-use Hum::EMBL::Handle;
+use Hum::StringHandle;
 use Hum::Sequence::DNA;
 use Hum::Sequence::Peptide;
 
@@ -162,8 +162,7 @@ sub parse {
     } elsif ($type eq 'SCALAR') {
         # A bit of magic which makes a string
         # behave like a filehandle
-        $fh = gensym();
-        tie( *{$fh}, 'Hum::EMBL::Handle', $arg );
+        $fh = Hum::StringHandle->new($arg);
     } else {
         $fh = gensym();
         open $fh, $arg or confess("Can't open file '$arg' : $!")

@@ -6,6 +6,7 @@ package Hum::Pfetch;
 use strict;
 use Carp;
 use Hum::EMBL;
+use Hum::StringHandle;
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use IO::Socket;
 use Exporter;
@@ -18,6 +19,18 @@ use vars qw{@ISA @EXPORT_OK};
     get_lengths
     get_EMBL_entries
     };
+
+sub do_query {
+    my ($query) = @_;
+    
+    if (my $www = $ENV{'PFETCH_WWW'}) {
+        
+    } else {
+        my $server = get_server();
+        print $server $query;
+        return $server;
+    }
+}
 
 sub get_server {
     return _connect_to_server(
