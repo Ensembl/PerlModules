@@ -49,6 +49,7 @@ sub _generic_fetch {
           , s.remark
           , s.program
           , s.operator
+          , to_char(s.statusdate, 'yyyy-mm-dd')
         FROM sequence_overlap oa
           , overlap o
           , sequence_overlap ob
@@ -67,7 +68,7 @@ sub _generic_fetch {
         $b_pos, $b_is3prime, $b_dovetail,
         $overlap_id, $length, $source_id,
         $sub, $ins, $del,
-        $status, $remark, $program, $operator) = $sth->fetchrow;
+        $status, $remark, $program, $operator, $statusdate) = $sth->fetchrow;
     $sth->finish;
     
     return unless $overlap_id;
@@ -83,7 +84,8 @@ sub _generic_fetch {
     $self->remark($remark);
     $self->program($program || '');
     $self->operator($operator || '');
-    
+    $self->statusdate($statusdate || '');
+
     my ($pa, $pb) = $self->make_new_Position_objects;
     $pa->position($a_pos);
     $pa->is_3prime($a_is3prime);
@@ -282,6 +284,15 @@ sub operator {
         $self->{'_operator'} = $operator;
     }
     return $self->{'_operator'};
+}
+
+sub statusdate {
+    my( $self, $statusdate ) = @_;
+    
+    if ($statusdate) {
+        $self->{'_statusdate'} = $statusdate;
+    }
+    return $self->{'_statusdate'};
 }
 
 {
