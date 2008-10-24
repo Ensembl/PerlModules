@@ -9,6 +9,9 @@ use Hum::EMBL;
 use Hum::StringHandle;
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use IO::Socket;
+use LWP;
+use HTTP::Cookies::Netscape;
+use URI::Escape qw{ uri_escape };
 use Exporter;
 
 use vars qw{@ISA @EXPORT_OK};
@@ -23,12 +26,42 @@ use vars qw{@ISA @EXPORT_OK};
 sub do_query {
     my ($query) = @_;
     
-    if (my $www = $ENV{'PFETCH_WWW'}) {
-        
+    if (my $url = $ENV{'PFETCH_WWW'}) {
+        return pfetch_response_handle($url, $query);
     } else {
         my $server = get_server();
         print $server $query;
         return $server;
+    }
+}
+
+sub pfetch_response_handle {
+    my ($url, $query) = @_;
+    
+    ### Could re-arrange this so that it works with Bio::Otter::Lace::Client
+    ### to prompt the user for their password once the cookie has expired.
+    my $jar_file = $ENV{'OTTERLACE_COOKIE_JAR'}
+        or die "OTTERLACE_COOKIE_JAR not set\n";
+
+    my $req_str = "request=" . uri_escape($query);
+
+    my $pfetch = LWP::UserAgent->new;
+    $pfetch->env_proxy;     # Pick up any proxy settings from environment
+    $pfetch->protocols_allowed([qw{ http https }]);
+    $pfetch->agent('hum_pfetch/0.1 ');
+    push @{ $pfetch->requests_redirectable }, 'POST';
+    $pfetch->cookie_jar(HTTP::Cookies::Netscape->new( file => $jar_file ));
+
+    my $request = HTTP::Request->new;
+    $request->method('POST');
+    $request->uri($url);
+    $request->content($req_str);
+
+    my $response = $pfetch->request($request);
+    if ($response->is_success) {
+        return Hum::StringHandle->new($response->content_ref);
+    } else {
+        confess $response->message, "\nError running web based pfetch: URL='$url' POST='$req_str'";
     }
 }
 
@@ -65,11 +98,10 @@ sub get_Sequences {
     
     confess "No names provided" unless @id_list;
     
-    my $server = get_server();
-    print $server "-q @id_list\n";
+    my $fh = do_query("-q @id_list\n");
     my( @seq_list, @missing_i );
     for (my $i = 0; $i < @id_list; $i++) {
-        chomp( my $seq_string = <$server> );
+        chomp( my $seq_string = <$fh> );
         if ($seq_string eq 'no match') {
             # Add to list of indexes of missing sequences
             push(@missing_i, $i);
@@ -89,11 +121,10 @@ sub get_descriptions {
     
     confess "No names provided" unless @id_list;
     
-    my $server = get_server();
-    print $server "-D @id_list\n";
+    my $fh = do_query("-D @id_list\n");
     my( @desc_list );
     for (my $i = 0; $i < @id_list; $i++) {
-        chomp( my $desc = <$server> );
+        chomp( my $desc = <$fh> );
         if ($desc eq 'no match') {
             $desc_list[$i] = undef;
         } else {
@@ -109,13 +140,13 @@ sub get_lengths { # : list_reference -> hash_reference
     confess "No names provided" unless @$name_lp;
     
     my $server = get_server();
-    print $server "-l @$name_lp\n";
+    my $fh = do_query("-l @$name_lp\n");
 
 	my $length_hp = {};
 
     for (my $i = 0; $i < @$name_lp; $i++) {
 		my $name = $name_lp->[$i];
-        my $length = <$server>;
+        my $length = <$fh>;
 		if(! $length) {
 			warn "The length of $name is missing";
 		}
@@ -134,14 +165,17 @@ sub get_EMBL_entries {
     
     my $parser = Hum::EMBL->new;
     
-    my $server = get_server();
-    print $server "-F @id_list\n";
+    my $fh = do_query("-F @id_list\n");
     my( @entries );
     for (my $i = 0; $i < @id_list; $i++) {
-        my $entry = join '', <$server>;
+        my $entry = <$fh>;
         if ($entry eq "no match\n") {
             $entries[$i] = undef;
         } else {
+            while (<$fh>) {
+                $entry .= $_;
+                last if m{^//};
+            }
             my $embl = $parser->parse(\$entry)  
                 or confess "nothing returned from parsing '$entry'";
             $entries[$i] = $embl;
