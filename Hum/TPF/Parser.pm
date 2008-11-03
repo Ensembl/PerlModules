@@ -85,7 +85,7 @@ sub parse {
         my( $row );
         if ($line[0] =~ /GAP/i) {
             my $identifier = uc $1;
-            my( $type_str, $length_str ) = @line[1,2];
+            my( $type_str, $length_str, $method, $remark ) = @line[1..4];
             $row = Hum::TPF::Row::Gap->new;
             if ($type_str =~ /type-([1234])/i ){
                 $row->type($1);
@@ -98,7 +98,10 @@ sub parse {
             }
             if ($length_str =~ /(\d+)/) {
                 $row->gap_length($1);
+                #confess "GAP length given but no method is specified" unless $method;
+                #$row->method($method);
             }
+            $row->remark($remark);
         } else {
             my( $acc, $intl, $contig_name ) = @line;
 
@@ -133,8 +136,9 @@ sub parse {
                 $row->intl_clone_name($intl);
             }
             $row->contig_name($contig_name);
+            $row->remark($line[3]);
         }
-        $row->remark($line[3]);
+
         $tpf->add_Row($row);
     }
 }
