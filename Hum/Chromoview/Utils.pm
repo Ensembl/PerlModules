@@ -13,9 +13,16 @@ use Hum::Sort ('ace_sort');
 use Hum::Submission 'prepare_statement';
 use Hum::Tracking ('prepare_track_statement');
 use URI::Escape;
-use SangerPaths qw(core badger humpub);
-use SangerWeb;
-use CGI::Carp qw(warningsToBrowser fatalsToBrowser);
+
+eval {
+#use SangerPaths qw(core badger humpub);
+#use SangerWeb;
+#use CGI::Carp qw(warningsToBrowser fatalsToBrowser);
+};
+
+# these are only necessary for web server codes
+warn "Not loading SangerPath, SangerWeb, CGI\n" if $@;
+
 
 @ISA = ('Exporter');
 @EXPORT_OK = qw(
@@ -34,6 +41,7 @@ use CGI::Carp qw(warningsToBrowser fatalsToBrowser);
                 unixtime2YYYYMMDD
                 get_TPF_modtime
                 get_latest_clone_entrydate_of_TPF
+                get_latest_overlap_statusdate_of_TPF
                 get_DNA_from_ftpghost
                 get_lastest_TPF_update_of_clone
                 get_all_current_TPFs
@@ -101,6 +109,36 @@ sub get_DNA_from_ftpghost {
   }
 
   return uc($seqs);
+}
+
+sub get_latest_overlap_statusdate_of_TPF {
+
+  # this will pick up clones found with overlaps after its belonging TPF has been created
+  # from oracle database
+
+  # if $longVersion: returns yyyy-mm-dd hh24:mm:ss; else: returns yyyy-mm-dd
+  my ( $id_tpftarget, $longVersion ) = @_;
+
+  my $qry = prepare_track_statement(qq{
+                             SELECT TO_CHAR(MAX(os.statusdate), 'yyyy-mm-dd hh24:mm:ss')
+                             FROM tpf_target tt, tpf t, tpf_row tr, clone_sequence cs,
+                                  sequence_overlap so, overlap_status os
+                             WHERE tt.id_tpftarget=t.id_tpftarget
+                             AND t.id_tpf=tr.id_tpf
+                             AND tr.clonename = cs.clonename
+                             AND cs.is_current = 1
+                             AND t.iscurrent =1
+                             AND cs.id_sequence=so.id_sequence
+                             AND so.id_overlap=os.id_overlap
+                             AND os.iscurrent = 1
+                             AND tt.id_tpftarget = ?
+                           });
+  $qry->execute($id_tpftarget);
+  my $modtime = $qry->fetchrow;
+
+  ($modtime) = $modtime =~ /(.*)\s.*/ unless $longVersion;
+
+  return $modtime;
 }
 
 sub get_latest_clone_entrydate_of_TPF {
@@ -220,16 +258,17 @@ sub get_chromoDB_handle {
   my $port     = 3303;
   my $mach     = Net::Netrc->lookup($host);
 
-  if ( $mach ){
-    $password = $mach->password;
-    $user     = $mach->login;
+  if ( $user eq 'public' ){
+    # chromoview external users	
+    $password = undef;
   }
   elsif ( $user and $password ){
     $password = $password;
+  }	
+  elsif ( $mach ){
+    $password = $mach->password;
+    $user     = $mach->login;
   }
-  elsif ( $user eq 'public' ){
-    $password = undef;
-  }		
   else {
     $user = 'ottro';
     $password = undef;
@@ -242,6 +281,7 @@ sub get_chromoDB_handle {
 
   return $dbh;
 }
+
 sub get_script_root {
   return "/cgi-bin/humpub";
 }
