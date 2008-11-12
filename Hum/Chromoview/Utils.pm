@@ -258,7 +258,7 @@ sub get_chromoDB_handle {
   my $port     = 3303;
   my $mach     = Net::Netrc->lookup($host);
 
-  if ( $user eq 'public' ){
+  if ( defined $user and $user eq 'public' ){
     # chromoview external users	
     $password = undef;
   }
