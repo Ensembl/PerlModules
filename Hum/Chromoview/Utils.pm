@@ -43,7 +43,7 @@ warn "Not loading SangerPath, SangerWeb, CGI\n" if $@;
                 get_latest_clone_entrydate_of_TPF
                 get_latest_overlap_statusdate_of_TPF
                 get_DNA_from_ftpghost
-                get_lastest_TPF_update_of_clone
+                get_latest_TPF_update_of_clone
                 get_all_current_TPFs
                 get_species_chr_subregion_from_id_tpftarget
                 get_latest_clone_entries_with_overlap_of_assembly
@@ -456,7 +456,7 @@ sub concat_js_params {
   return join(', ', map { "'".$_."'" } @params);
 }
 
-sub get_lastest_TPF_update_of_clone {
+sub get_latest_TPF_update_of_clone {
 
   my ($species, $chr, $subregion, $daySpan) = @_;
   # get latest entrydate of current clone in a TPF

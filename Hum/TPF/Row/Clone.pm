@@ -4,6 +4,7 @@
 package Hum::TPF::Row::Clone;
 
 use strict;
+use warnings;
 use Carp;
 use base 'Hum::TPF::Row';
 use Hum::Tracking qw{
@@ -219,11 +220,11 @@ sub SequenceInfo {
 
 sub string {
     my( $self ) = @_;
-    
+
     my @fields = (
-        $self->accession       || '?',
-        $self->intl_clone_name || '?',
-        $self->contig_name     || '?',
+                  $self->accession       || '?',
+                  $self->intl_clone_name || '?',
+                  $self->contig_name     || '?',
         );
     if (my $txt = $self->remark) {
         push(@fields, $txt);
