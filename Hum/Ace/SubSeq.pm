@@ -9,6 +9,7 @@ use Carp;
 use Hum::Sequence::DNA;
 use Hum::Ace::Exon;
 use Hum::Ace::AceText;
+use Hum::Translator;
 use Hum::XmlWriter;
 use Hum::ClipboardUtils 'integers_from_text';
 
@@ -56,14 +57,13 @@ sub new_from_clipboard_text {
     
     my @ints = integers_from_text($text);
     
-    my $self = $pkg->new;
-    
     if (@ints) {
+        my $self = $pkg->new;
         my $fwd = 0;
         my $rev = 0;
         for (my $i = 0; $i < @ints; $i += 2) {
             my $l = $ints[$i];
-            my $r = $ints[$i + 1] || $l;
+            my $r = $ints[$i + 1] || $l + 2;
             my $ex = $self->new_Exon;
             if ($l < $r) {
                 $fwd++;
@@ -76,113 +76,12 @@ sub new_from_clipboard_text {
             $ex->end($r);
         }
         $self->strand($fwd >= $rev ? 1 : -1);
+        return $self;
     }
     else {
-        # Need to have at least 1 exon
-        my $ex = $self->new_Exon;
-        $ex->start(1);
-        $ex->end  (2);
-        $self->strand(1);
+        # Need to have at least 1 number on clipboard
+        return;
     }
-    
-    return $self;
-}
-
-# This is used by realignGenes
-sub new_from_start_end_fox_subseq {
-    my( $pkg, $start, $end, $sub ) = @_;
-    
-    my $self = $pkg->new;
-    my $name = $sub->name;
-    $self->name($name);
-    my $txt = $sub->mutable_data;
-
-    # Sort out the strand
-    my( $strand );
-    if ($start < $end) {
-        $strand = 1;
-    } else {
-        ($start, $end) = ($end, $start);
-        $strand = -1;
-    }
-    $self->strand($strand);
-
-    # Make the exons
-    foreach my $ints ($txt->get_values('Source_exons')) {
-        
-        # Make an Exon object
-        my $exon = Hum::Ace::Exon->new;
-        
-        my ($x, $y) = @$ints;
-        die "Missing coordinate in '$name' : start='$x' end='$y'\n"
-            unless $x and $y;
-        if ($strand == 1) {
-            foreach ($x, $y) {
-                $_ = $start + $_ - 1;
-            }
-        } else {
-            foreach ($x, $y) {
-                $_ = $end - $_ + 1;
-            }
-            ($x, $y) = ($y, $x);
-        }
-        $exon->start($x);
-        $exon->end($y);
-        $self->add_Exon($exon);
-    }
-    
-    # Parse Contines_from and Continues_as
-    if (my ($from) = $txt->get_values('Continued_from')) {
-        $self->upstream_subseq_name($from->[0]);
-    }
-    if (my ($as) = $txt->get_values('Continues_as')) {
-        $self->downstream_subseq_name($as->[0]);
-    }
-
-    ## Parse Supporting evidence tags
-    #foreach my $type (qw{ Protein_match EST_match cDNA_match }) {
-    #    foreach my $evidence ($txt->get_values($type)) {
-    #    $self->add_SupportingEvidence_accession($type, @$evidence);
-    #    }
-    #}
-    
-    my @exons = $self->get_all_Exons
-        or confess "No exons in '", $self->name, "'";
-
-    # Add CDS coordinates
-    if (my ($cds) = $txt->get_values('CDS')) {
-        if (@$cds == 2) {
-            $self->set_translation_region_from_cds_coords(@$cds);
-        }
-        elsif (@$cds != 0) {
-            warn "ERROR: Got ", scalar(@$cds), " coordinates from CDS tag";
-        }
-    }
-
-    # Is this a partial CDS?
-    my $s_n_f = $txt->count_tag('Start_not_found');
-    my ($snf_val) = $txt->get_values('Start_not_found');
-    my $codon_start = $snf_val->[0] if $snf_val;
-    if ($s_n_f) {
-        # Store phase in AceDB convention (not EnsEMBL)
-        $codon_start ||= 1;
-        if ($codon_start and $txt->count_tag('CDS')) {
-            if ($codon_start =~ /^[123]$/) {
-                $self->start_not_found($codon_start);
-            } else {
-                confess("Bad codon start ('$codon_start') in '$name'");
-            }
-        }
-    }
-
-    # Are we missing the 3' end?
-    if ($txt->count_tag('End_not_found')) {
-        $self->end_not_found(1);
-    }
-
-    $self->validate;
-    
-    return $self;
 }
 
 sub new_from_name_start_end_transcript_seq {
@@ -317,13 +216,16 @@ sub process_ace_start_end_transcript_seq {
     eval{ ($s_n_f, $codon_start) = map "$_", $t_seq->at('Properties.Start_not_found')->row() };
     if ($s_n_f) {
         # Store phase in AceDB convention (not EnsEMBL)
-        $codon_start ||= 1;
-        if ($t_seq->at('Properties.Coding.CDS')) {
-            if ($codon_start =~ /^[123]$/) {
-                $self->start_not_found($codon_start);
-            } else {
-                confess("Bad codon start ('$codon_start') in '$t_seq'");
+        if ($codon_start) {
+            if ($t_seq->at('Properties.Coding.CDS')) {
+                if ($codon_start =~ /^[123]$/) {
+                    $self->start_not_found($codon_start);
+                } else {
+                    confess("Bad codon start ('$codon_start') in '$t_seq'");
+                }
             }
+        } else {
+            $self->utr_start_not_found(1);
         }
     }
 
@@ -386,10 +288,9 @@ sub clone {
         GeneMethod
         Locus
         strand
-        start_not_found
-          end_not_found
-        upstream_subseq_name
-        downstream_subseq_name
+            start_not_found
+              end_not_found
+        utr_start_not_found
         description
         })
     {
@@ -452,6 +353,15 @@ sub start_not_found {
     return $self->{'_start_phase'} || 0;
 }
 
+sub utr_start_not_found {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_utr_start_not_found'} = $flag ? 1 : 0;
+    }
+    return $self->{'_utr_start_not_found'} || 0;
+}
+
 sub end_not_found {
     my( $self, $flag ) = @_;
     
@@ -459,24 +369,6 @@ sub end_not_found {
         $self->{'_end_not_found'} = $flag ? 1 : 0;
     }
     return $self->{'_end_not_found'} || 0;
-}
-
-sub upstream_subseq_name {
-    my( $self, $name ) = @_;
-    
-    if (defined $name) {
-        $self->{'_upstream_subseq_name'} = $name;
-    }
-    return $self->{'_upstream_subseq_name'};
-}
-
-sub downstream_subseq_name {
-    my( $self, $name ) = @_;
-    
-    if (defined $name) {
-        $self->{'_downstream_subseq_name'} = $name;
-    }
-    return $self->{'_downstream_subseq_name'};
 }
 
 sub otter_id {
@@ -586,8 +478,7 @@ sub count_evidence {
     
     my $ev = $self->evidence_hash;
     my $count = 0;
-    foreach my $type (keys %$ev) {
-        my $ev_list = $ev->{$type};
+    foreach my $ev_list (values %$ev) {
         $count += @$ev_list;
     }
     return $count;
@@ -684,12 +575,19 @@ sub mRNA_Sequence {
     return $seq;
 }
 
+sub translate {
+    my ($self) = @_;
+    
+    my $mRNA = $self->translatable_Sequence;
+    return $self->translator->translate($mRNA);
+}
+
 sub translatable_Sequence {
     my( $self ) = @_;
     
     my ($t_start, $t_end)   = $self->translation_region;
     my $strand              = $self->strand;
-    my $phase               = $self->start_phase  ;
+    my $phase               = $self->start_phase;
     my $clone_seq           = $self->clone_Sequence or confess "No clone_Sequence";
     
     #warn "strand = $strand, phase = $phase\n";
@@ -701,19 +599,26 @@ sub translatable_Sequence {
     foreach my $exon ($self->get_all_CDS_Exons) {
         my $start = $exon->start;
         my $end   = $exon->end;
-
-        # Is this the first coding exon?        
-        if ($strand == 1 and $start == $t_start) {
-            $start += $phase - 1;
-        }
-        elsif ($strand == -1 and $end == $t_end) {
-            $end   += 1 - $phase;
-        }
         
         $seq_str .= $clone_seq
             ->sub_sequence($start, $end)
             ->sequence_string;
     }
+
+    # If the start phase is not 1, then we add one or two bases to
+    # the translation start end so that the translation includes
+    # an "X" amino acid at the beginning.
+    if ($phase > 1) {
+        my $pad = 'n' x (($phase + 2) % 3);
+        if ($strand == 1) {
+            # Add 1 or 2 bases to the start of the string
+            substr($seq_str, 0, 0) = $pad;
+        } else {
+            # Add 1 or 2 bases to the end of the string
+            substr($seq_str, length($seq_str), 0) = $pad;
+        }
+    }
+    
     $seq->sequence_string($seq_str);
     
     if ($strand == -1) {
@@ -980,6 +885,68 @@ sub end {
     return $exons[$#exons]->end;
 }
 
+sub translator {
+    my( $self, $translator ) = @_;
+    
+    if ($translator) {
+        $self->{'_translator'} = $translator;
+    }
+    return $self->{'_translator'} || 
+        $self->is_seleno_transcript
+            ? Hum::Translator->new_seleno
+            : Hum::Translator->new;
+}
+
+{
+    # Selenocysteine remarks are of the format:
+    #   "selenocysteine 4 56"
+    # where the digits are the positions of U amino
+    # acids within the peptide.
+    my $seleno_pat = qr{^seleno\S*[\s\d]*$}i;
+
+    sub is_seleno_transcript {
+        my ($self) = @_;
+    
+        foreach my $remark ($self->list_annotation_remarks) {
+            return 1 if $remark =~ /$seleno_pat/;
+        }
+        return 0;
+    }
+
+    sub set_seleno_remark_from_translation {
+        my ($self) = @_;
+
+        # Seleno remark will be removed if transcript is non-coding
+        # or if there are no selenocysteines in the translation.
+    
+        my @rem = $self->list_annotation_remarks;
+        my $is_seleno = 0;
+        for (my $i = 0; $i < @rem;) {
+            my $txt = $rem[$i];
+            if ($txt =~ /$seleno_pat/) {
+                $is_seleno = 1;
+                splice(@rem, $i, 1);
+            } else {
+                $i++;
+            }
+        }
+
+        if ($is_seleno) {
+            if ($self->translation_region_is_set) {
+                my $pep_str = $self->translate->sequence_string;
+                my @sel_indices;
+                for (my $i = 0; ($i = index($pep_str, 'U', $i)) != -1; $i++) {
+                    push(@sel_indices, $i + 1);
+                }
+                if (@sel_indices) {
+                    push(@rem, "selenocysteine @sel_indices");
+                }
+            }
+            $self->set_annotation_remarks(@rem);
+        }
+    }
+}
+
 sub set_translation_region_from_cds_coords {
     my( $self, @coords ) = @_;
     
@@ -1112,11 +1079,18 @@ sub translation_region_is_set {
 sub cds_coords {
     my( $self ) = @_;
     
+    my $err = '';
+
     my @t_region   = $self->translation_region;
     @t_region = reverse(@t_region) if $self->strand == -1;
     my @cds_coords = $self->remap_coords_genomic_to_mRNA(@t_region);
+
+    # Do not allow a CDS shorter than 1 aminio acid.
+    my $cds_length = 1 + $cds_coords[1] - $cds_coords[0];
+    unless ($cds_length >= 3) {
+        $err .= "CDS must be at least 3 bp long, but is $cds_length bp\n";
+    }
     
-    my $err = "";
     for (my $i = 0; $i < @t_region; $i++) {
         unless ($cds_coords[$i]) {
             $err .= qq{Translation coord '$t_region[$i]' does not lie within any Exon\n};
@@ -1140,6 +1114,113 @@ sub validate {
     
     $self->valid_exon_coordinates;
     $self->cds_coords;
+}
+
+sub pre_otter_save_error {
+    my ($self) = @_;
+    
+    my $err = '';
+    $err .= $self->error_start_not_found;
+    $err .= $self->error_in_translation;
+    $err .= $self->error_no_evidence;
+    $err .= $self->error_in_name_format;
+    return $err;
+}
+
+sub error_in_translation {
+    my ($self) = @_;
+    
+    my $err = '';
+
+    return $err unless $self->translation_region_is_set;
+
+
+    my $pep_str = $self->translate->sequence_string;
+
+    # Check that there are no internal stops in the translation
+    my $end_i = length($pep_str) - 1;
+    my $i = index($pep_str, '*');
+    if ($i != $end_i) {
+        $err .= "Stops found in translation\n";
+    }
+    
+    # Check that if translation does not begin with an methionine then
+    # Start_not_found is set, and if it does not end with a stop then
+    # End_not_found is set.    
+    if (substr($pep_str, 0, 1) ne 'M') {
+        unless ($self->start_not_found) {
+            $err .= "Translation does not begin with Methionine, and 'Start not found (1 or 2 or 3)' is not set\n";
+        }
+    }
+    if (substr($pep_str, -1, 1) ne '*') {
+        unless ($self->end_not_found) {
+            $err .= "Translation does not end with stop, and 'End not found' is not set\n";
+        }
+    }
+    
+    return $err;
+}
+
+sub error_start_not_found {
+    my ($self) = @_;
+    
+    my $err = '';
+    
+    # Translation region should start on the first base of the
+    # transcript if Start_not_found is set to 2 or 3.
+
+    if (my $snf = $self->start_not_found) {
+        if ($self->translation_region_is_set) {
+            my @t_region = $self->translation_region;
+            my ($t_start, $start);
+            if ($self->strand == 1) {
+                $start = $self->start;
+                $t_start = $t_region[0];
+            } else {
+                $start = $self->end;
+                $t_start = $t_region[1];
+            }
+            unless ($t_start == $start) {
+                $err .= "Start_not_found set to '$snf' but UTR detected:\n"
+                    . "translation region start '$t_start' does not match transcript start '$start'\n";
+            }
+        } else {
+            $err .= "Start_not_found set to '$snf' but no translation region\n";
+        }
+    }
+    return $err;
+}
+
+sub error_no_evidence {
+    my ($self) = @_;
+    
+    my $err = '';
+    unless ($self->count_evidence) {
+        $err .= "No evidence attached\n";
+    }
+    return $err;
+}
+
+{
+    my $pre_pat = qr{^([^:]+:)};
+
+    sub error_in_name_format {
+        my ($self) = @_;
+    
+        my $err = '';
+        if ($self->name !~ /\.\d+-\d{3}$/) {
+            $err .= "Transcript name does not end in '.#-###' format\n";
+        }
+
+        my ($trsct_pre) = $self->name        =~ /$pre_pat/;
+        my ($locus_pre) = $self->Locus->name =~ /$pre_pat/;
+        $trsct_pre ||= '';
+        $locus_pre ||= '';
+        if ($trsct_pre ne $locus_pre) {
+            $err .= "Transcript name has prefix '$trsct_pre' but locus name has prefix '$locus_pre'\n";
+        }
+        return $err;
+    }
 }
 
 sub valid_exon_coordinates {
@@ -1311,15 +1392,12 @@ sub ace_string {
     if (my $phase = $self->start_not_found) {
         $out .= qq{Start_not_found $phase\n};
     }
+    elsif ($self->utr_start_not_found) {
+        $out .= qq{Start_not_found\n};
+    }
+
     if ($self->end_not_found) {
         $out .= qq{End_not_found\n};
-    }
-    
-    if (my $from = $self->upstream_subseq_name) {
-        $out .= qq{Continued_from "$from"\n};
-    }
-    if (my $as = $self->downstream_subseq_name) {
-        $out .= qq{Continues_as "$as"\n};
     }
     
     # The exons
@@ -1444,7 +1522,7 @@ sub zmap_xml_feature_tag {
         }
         @locus_prop = (locus => $locus->name);
     }
-
+    
     $xml->open_tag('feature', {
             name            => $self->name,
             start           => $self->start,

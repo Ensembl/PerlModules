@@ -29,9 +29,6 @@ use vars qw{ @ISA };
 @ISA = qw{ Hum::ProjectDump::EMBL };
 
 
-### These first subroutines override
-### subroutines in Hum::ProjectDump::EMBL
-
 sub get_FT_Factory {
     my( $pdmp ) = @_;
 
@@ -54,6 +51,9 @@ sub get_FT_Factory {
     }
     return $ft_factory;
 }
+
+### These first subroutines override
+### subroutines in Hum::ProjectDump::EMBL
 
 sub add_Description {
     my( $pdmp, $embl ) = @_;

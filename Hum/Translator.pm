@@ -13,34 +13,12 @@ sub new {
     return bless {}, $pkg;
 }
 
-sub translate {
-    my( $self, $seq ) = @_;
+sub new_seleno {
+    my ($pkg) = @_;
     
-    my $is_seq = 0;
-    eval{
-        $is_seq = $seq->isa('Hum::Sequence');
-    };
-    unless ($is_seq) {
-        confess "Expecting a 'Hum::Sequence' object, but got '$seq'";
-    }
-    
-    my $seq_str = lc $seq->sequence_string;
-    my $codon_table = $self->codon_table
-        or confess "Go no codon table";
-    my $unknown_amino_acid = $self->unknown_amino_acid;
-    my $pep_str = '';
-    while ($seq_str =~ /(...)/g) {
-        $pep_str .= $codon_table->{$1} || $unknown_amino_acid;
-    }
-    if (length($seq_str) % 3) {
-        $pep_str .= $unknown_amino_acid;
-    }
-    
-    my $pep = Hum::Sequence::Peptide->new;
-    $pep->name($seq->name);
-    $pep->sequence_string($pep_str);
-    
-    return $pep;
+    my $self = $pkg->new;
+    $self->codon_table('seleno_standard');
+    return $self;
 }
 
 sub unknown_amino_acid {
@@ -53,94 +31,139 @@ sub unknown_amino_acid {
 }
 
 {
-    my $std = {
 
-        'tca' => 'S',    # Serine
-        'tcc' => 'S',    # Serine
-        'tcg' => 'S',    # Serine
-        'tct' => 'S',    # Serine
+    my %tables = (
+        standard => {
 
-        'ttc' => 'F',    # Phenylalanine
-        'ttt' => 'F',    # Phenylalanine
-        'tta' => 'L',    # Leucine
-        'ttg' => 'L',    # Leucine
+            'tca' => 'S',    # Serine
+            'tcc' => 'S',    # Serine
+            'tcg' => 'S',    # Serine
+            'tct' => 'S',    # Serine
 
-        'tac' => 'Y',    # Tyrosine
-        'tat' => 'Y',    # Tyrosine
-        'taa' => '*',    # Stop
-        'tag' => '*',    # Stop
+            'ttc' => 'F',    # Phenylalanine
+            'ttt' => 'F',    # Phenylalanine
+            'tta' => 'L',    # Leucine
+            'ttg' => 'L',    # Leucine
 
-        'tgc' => 'C',    # Cysteine
-        'tgt' => 'C',    # Cysteine
-        'tga' => '*',    # Stop
-        'tgg' => 'W',    # Tryptophan
+            'tac' => 'Y',    # Tyrosine
+            'tat' => 'Y',    # Tyrosine
+            'taa' => '*',    # Stop
+            'tag' => '*',    # Stop
 
-        'cta' => 'L',    # Leucine
-        'ctc' => 'L',    # Leucine
-        'ctg' => 'L',    # Leucine
-        'ctt' => 'L',    # Leucine
+            'tgc' => 'C',    # Cysteine
+            'tgt' => 'C',    # Cysteine
+            'tga' => '*',    # Stop or Selenocysteine (U)
+            'tgg' => 'W',    # Tryptophan
 
-        'cca' => 'P',    # Proline
-        'ccc' => 'P',    # Proline
-        'ccg' => 'P',    # Proline
-        'cct' => 'P',    # Proline
+            'cta' => 'L',    # Leucine
+            'ctc' => 'L',    # Leucine
+            'ctg' => 'L',    # Leucine
+            'ctt' => 'L',    # Leucine
 
-        'cac' => 'H',    # Histidine
-        'cat' => 'H',    # Histidine
-        'caa' => 'Q',    # Glutamine
-        'cag' => 'Q',    # Glutamine
+            'cca' => 'P',    # Proline
+            'ccc' => 'P',    # Proline
+            'ccg' => 'P',    # Proline
+            'cct' => 'P',    # Proline
 
-        'cga' => 'R',    # Arginine
-        'cgc' => 'R',    # Arginine
-        'cgg' => 'R',    # Arginine
-        'cgt' => 'R',    # Arginine
+            'cac' => 'H',    # Histidine
+            'cat' => 'H',    # Histidine
+            'caa' => 'Q',    # Glutamine
+            'cag' => 'Q',    # Glutamine
 
-        'ata' => 'I',    # Isoleucine
-        'atc' => 'I',    # Isoleucine
-        'att' => 'I',    # Isoleucine
-        'atg' => 'M',    # Methionine
+            'cga' => 'R',    # Arginine
+            'cgc' => 'R',    # Arginine
+            'cgg' => 'R',    # Arginine
+            'cgt' => 'R',    # Arginine
 
-        'aca' => 'T',    # Threonine
-        'acc' => 'T',    # Threonine
-        'acg' => 'T',    # Threonine
-        'act' => 'T',    # Threonine
+            'ata' => 'I',    # Isoleucine
+            'atc' => 'I',    # Isoleucine
+            'att' => 'I',    # Isoleucine
+            'atg' => 'M',    # Methionine
 
-        'aac' => 'N',    # Asparagine
-        'aat' => 'N',    # Asparagine
-        'aaa' => 'K',    # Lysine
-        'aag' => 'K',    # Lysine
+            'aca' => 'T',    # Threonine
+            'acc' => 'T',    # Threonine
+            'acg' => 'T',    # Threonine
+            'act' => 'T',    # Threonine
 
-        'agc' => 'S',    # Serine
-        'agt' => 'S',    # Serine
-        'aga' => 'R',    # Arginine
-        'agg' => 'R',    # Arginine
+            'aac' => 'N',    # Asparagine
+            'aat' => 'N',    # Asparagine
+            'aaa' => 'K',    # Lysine
+            'aag' => 'K',    # Lysine
 
-        'gta' => 'V',    # Valine
-        'gtc' => 'V',    # Valine
-        'gtg' => 'V',    # Valine
-        'gtt' => 'V',    # Valine
+            'agc' => 'S',    # Serine
+            'agt' => 'S',    # Serine
+            'aga' => 'R',    # Arginine
+            'agg' => 'R',    # Arginine
 
-        'gca' => 'A',    # Alanine
-        'gcc' => 'A',    # Alanine
-        'gcg' => 'A',    # Alanine
-        'gct' => 'A',    # Alanine
+            'gta' => 'V',    # Valine
+            'gtc' => 'V',    # Valine
+            'gtg' => 'V',    # Valine
+            'gtt' => 'V',    # Valine
 
-        'gac' => 'D',    # Aspartic Acid
-        'gat' => 'D',    # Aspartic Acid
-        'gaa' => 'E',    # Glutamic Acid
-        'gag' => 'E',    # Glutamic Acid
+            'gca' => 'A',    # Alanine
+            'gcc' => 'A',    # Alanine
+            'gcg' => 'A',    # Alanine
+            'gct' => 'A',    # Alanine
 
-        'gga' => 'G',    # Glycine
-        'ggc' => 'G',    # Glycine
-        'ggg' => 'G',    # Glycine
-        'ggt' => 'G',    # Glycine
+            'gac' => 'D',    # Aspartic Acid
+            'gat' => 'D',    # Aspartic Acid
+            'gaa' => 'E',    # Glutamic Acid
+            'gag' => 'E',    # Glutamic Acid
 
-        };
-    
-    # This is in a method so that we can add
-    # other translation tables in the future
+            'gga' => 'G',    # Glycine
+            'ggc' => 'G',    # Glycine
+            'ggg' => 'G',    # Glycine
+            'ggt' => 'G',    # Glycine
+
+        },
+    );
+
+    # Make a copy of the standard codon table, with
+    # Selenocysteine replacing the stop for "tga".
+    $tables{'seleno_standard'} = { %{$tables{'standard'}} };
+    $tables{'seleno_standard'}{'tga'} = 'U';
+
     sub codon_table {
-        return $std;
+        my( $self, $table_name ) = @_;
+    
+        if ($table_name) {
+            unless ($tables{$table_name}) {
+                confess "No such table '$table_name'";
+            }
+            $self->{'_codon_table'} = $table_name;
+        }
+        return $self->{'_codon_table'} || 'standard';
+    }
+
+    sub translate {
+        my( $self, $seq ) = @_;
+    
+        my $is_seq = 0;
+        eval{
+            $is_seq = $seq->isa('Hum::Sequence');
+        };
+        unless ($is_seq) {
+            confess "Expecting a 'Hum::Sequence' object, but got '$seq'";
+        }
+    
+        my $seq_str = lc $seq->sequence_string;
+        my $table_name = $self->codon_table;
+        my $codon_table = $tables{$table_name}
+            or confess "No codon table called '$table_name'";
+        my $unknown_amino_acid = $self->unknown_amino_acid;
+        my $pep_str = '';
+        while ($seq_str =~ /(...)/g) {
+            $pep_str .= $codon_table->{$1} || $unknown_amino_acid;
+        }
+        if (length($seq_str) % 3) {
+            $pep_str .= $unknown_amino_acid;
+        }
+    
+        my $pep = Hum::Sequence::Peptide->new;
+        $pep->name($seq->name);
+        $pep->sequence_string($pep_str);
+    
+        return $pep;
     }
 }
 
