@@ -1140,7 +1140,7 @@ sub error_in_translation {
     # Check that there are no internal stops in the translation
     my $end_i = length($pep_str) - 1;
     my $i = index($pep_str, '*');
-    if ($i != $end_i) {
+    if ($i != -1 and $i != $end_i) {
         $err .= "Stops found in translation\n";
     }
     
@@ -1153,6 +1153,8 @@ sub error_in_translation {
         }
     }
     if (substr($pep_str, -1, 1) ne '*') {
+        ### Add check when end_not_found is set, and translation does not end
+        ### in a stop, then the translation end should be the transcript end.
         unless ($self->end_not_found) {
             $err .= "Translation does not end with stop, and 'End not found' is not set\n";
         }
