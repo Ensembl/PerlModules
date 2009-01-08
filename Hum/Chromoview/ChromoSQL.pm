@@ -203,27 +203,13 @@ sub get_tpf_from_clonename {
   return $rows;
 }
 
-sub check_accession_is_current {
-  my ($self, $accession) = @_;
-  my $sql = qq{SELECT from clone_sequence cs, sequence s
-               WHERE cs.id_sequence=s.id_sequence
-	       AND s.accession = ?};
-
-  my $qry = prepare_track_statement($sql);
-  $qry->execute($accession);
-
-  #return $qry-
-
-
-}
-
 sub get_tpf_from_accession {
   my ($self, $accession) = @_;
   my $sql = qq{SELECT tr.rank,
                       t.id_tpftarget,
                       cd.chromosome,
                       cd.speciesname,
-                      tt.subregion
+                      tt.subregion,
                FROM   tpf_row tr,
                       tpf t,
                       clone_sequence cs,
