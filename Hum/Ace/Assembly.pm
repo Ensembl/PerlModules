@@ -113,6 +113,58 @@ sub get_all_SubSeqs {
     return @{$self->{'_SubSeq_list'}};
 }
 
+sub set_SubSeq_locus_level_errors {
+    my ($self) = @_;
+    
+    my %locus_sub;
+
+    # Group editable transcripts by locus
+    foreach my $sub ($self->get_all_SubSeqs) {
+        next unless $sub->is_mutable;
+        my $tsct_list = $locus_sub{$sub->Locus->name} ||= [];
+        push(@$tsct_list, $sub);
+    }
+    
+    foreach my $loc_name (keys %locus_sub) {
+        my $tsct_list = $locus_sub{$loc_name};
+        my $locus = $tsct_list->[0]->Locus;
+        
+        # Is there anything wrong with the annotation of this locus?
+        my $locus_err = $locus->pre_otter_save_error;
+        
+        # Find out which strand the locus is on
+        my $fwd = 0;
+        my $rev = 0;
+        foreach my $sub (@$tsct_list) {
+            if ($sub->strand == 1) {
+                $fwd++;
+            } else {
+                $rev++;
+            }
+        }
+
+        # Save strandedness and locus errors in each transcript
+        foreach my $sub (@$tsct_list) {
+            my $err = $locus_err;
+            if ($sub->strand == 1) {
+                if ($rev and $rev >= $fwd) {
+                    $err .= sprintf qq{Transcript is forward strand but %s in Locus '%s' %s reverse\n},
+                        $rev > 1 ? $rev : 'the other transcript',
+                        $locus->name,
+                        $rev > 1 ? 'are' : 'is';
+                }
+            } else {
+                if ($fwd and $fwd >= $rev) {
+                    $err .= sprintf qq{Transcript is reverse strand but %s in Locus '%s' %s forward\n},
+                        $fwd > 1 ? $fwd : 'the other transcript',
+                        $locus->name,
+                        $fwd > 1 ? 'are' : 'is';
+                }
+            }
+            $sub->locus_level_errors($err);
+        }
+    }
+}
 
 sub clear_SimpleFeatures {
     my ($self) = @_;

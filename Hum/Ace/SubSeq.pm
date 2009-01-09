@@ -752,7 +752,7 @@ sub Locus {
     my( $self, $Locus ) = @_;
     
     if ($Locus) {
-        unless (ref($Locus) and $Locus->isa('Hum::Ace::Locus')) {
+        unless (UNIVERSAL::isa($Locus, 'Hum::Ace::Locus')) {
             confess "Wrong kind of thing '$Locus'";
         }
         $self->{'_Locus'} = $Locus;
@@ -1124,7 +1124,17 @@ sub pre_otter_save_error {
     $err .= $self->error_in_translation;
     $err .= $self->error_no_evidence;
     $err .= $self->error_in_name_format;
+    $err .= $self->locus_level_errors;
     return $err;
+}
+
+sub locus_level_errors {
+    my( $self, $locus_level_errors ) = @_;
+    
+    if (defined $locus_level_errors) {
+        $self->{'_locus_level_errors'} = $locus_level_errors;
+    }
+    return $self->{'_locus_level_errors'};
 }
 
 sub error_in_translation {

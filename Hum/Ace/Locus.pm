@@ -9,8 +9,6 @@ use Carp qw{ confess cluck };
 use Bio::EnsEMBL::Exon;
 use Bio::EnsEMBL::Translation;
 
-use Data::Dumper;
-
 sub new {
     my( $pkg ) = shift;
     
@@ -154,6 +152,18 @@ sub is_truncated {
     }
     return $self->{'_is_truncated'} || 0;
 }
+
+sub pre_otter_save_error {
+    my ($self) = @_;
+
+    my $desc = $self->description;
+    if ($desc =~ /\w{3,}/) {    # Potential to be more sophisticated
+        return '';
+    } else {
+        return qq{No full name (description) in Locus\n};
+    }
+}
+
 
 sub save_locus_info {
     my( $self, $ace_locus ) = @_;
