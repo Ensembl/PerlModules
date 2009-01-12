@@ -14,8 +14,9 @@ use Hum::Tracking qw{prepare_track_statement};
                 fetch_species_chrsTpf
                 fetch_subregionsTpf
                 get_species_subregions
-                get_tpf_from_clonename
-                get_tpf_from_accession
+                get_tpf_row_from_clonename
+                get_tpf_row_from_accession
+                get_tpf_row_from_international_name
                 fetch_all_speceis_chr_subregions_names
                );
 
@@ -145,25 +146,25 @@ sub fetch_subregionsTpf {
   return $species_subregions_chrTpf;
 }
 
-#sub get_species_subregions {
-#  my $species_subregion = prepare_track_statement(q{
-#                                                     SELECT distinct tpft.subregion, cd.speciesname, tpf.id_tpf, tpft.id_tpftarget
-#                                                     FROM   tpf, tpf_target tpft, chromosomedict cd
-#                                                     WHERE  tpft.chromosome   = cd.id_dict
-#                                                     AND    tpft.id_tpftarget = tpf.id_tpftarget
-#                                                     AND    tpf.iscurrent =1
-#                                                     AND    tpft.subregion is not null
-#                                                   });
-#  $species_subregion->execute();
+sub get_tpf_row_from_international_name {
+  my ($self, $name) = @_;
+  my ($prefix, $suffix) = split(/-/, $name);
 
-#  my $spec_subrg_idTpf_ttrgt = {};
+  my $sql = qq{SELECT c.clonename
+               FROM library l, clone c
+               WHERE c.libraryname=l.libraryname
+               AND l.external_prefix= ?
+               AND c.clonename like ?
+             };
 
-#  while ( my ($subregion, $species, $idtpf, $tpftarget) = $species_subregion->fetchrow ){
-#    $spec_subrg_idTpf_ttrgt->{$species}->{$subregion};
-#  }
-#}
+  my $qry = prepare_track_statement($sql);
+  $qry->execute($prefix, "%$suffix");
+  my $clonename = $qry->fetchrow;
+  #confess $clonename;
+  return $self->get_tpf_row_from_clonename($clonename);
+}
 
-sub get_tpf_from_clonename {
+sub get_tpf_row_from_clonename {
   my ($self, $clonename) = @_;
   my $sql = qq{SELECT tr.rank,
                       t.id_tpftarget,
@@ -203,13 +204,13 @@ sub get_tpf_from_clonename {
   return $rows;
 }
 
-sub get_tpf_from_accession {
+sub get_tpf_row_from_accession {
   my ($self, $accession) = @_;
   my $sql = qq{SELECT tr.rank,
                       t.id_tpftarget,
                       cd.chromosome,
                       cd.speciesname,
-                      tt.subregion,
+                      tt.subregion
                FROM   tpf_row tr,
                       tpf t,
                       clone_sequence cs,
