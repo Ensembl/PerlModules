@@ -609,7 +609,7 @@ sub translatable_Sequence {
     # the translation start end so that the translation includes
     # an "X" amino acid at the beginning.
     if ($phase > 1) {
-        my $pad = 'n' x (($phase + 2) % 3);
+        my $pad = 'n' x (3 - ($phase - 1));
         if ($strand == 1) {
             # Add 1 or 2 bases to the start of the string
             substr($seq_str, 0, 0) = $pad;
@@ -633,14 +633,17 @@ sub translatable_Sequence {
 sub codon_start_map {
     my( $self ) = @_;
     
-    my $map = [];
     my @exons = $self->get_all_CDS_Exons;
     
-    # Phase is in 0,1,2 convention instead of acedb 1,2,3
+    # Get phase in 0,1,2 convention instead of acedb 1,2,3
     # to make calculation of next exons's phase easiser
     my $phase = $self->start_phase - 1;
-    #warn "start phase = '$phase'\n";
+    # my $first_exon_start = $self->strand == 1
+    #     ? $exons[0]->start + $phase
+    #     : $exons[0]->end   - $phase;
+    # warn "start phase = '$phase'  first exon = '$first_exon_start'\n";
     
+    my $map = [];
     if ($self->strand == 1) {
         foreach my $ex (@exons) {
             my $start = $ex->start + $phase;
