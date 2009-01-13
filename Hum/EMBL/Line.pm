@@ -156,17 +156,13 @@ sub data {
 {
     my $max   = 75;         # Maximum length for a line
     my $limit = $max - 1;
-    
+
     sub wrap {
         my( $line, $prefix, $text ) = @_;
 
-        # Test for a string longer than $max
-        confess "String '$1' too long to wrap"
-            if $text =~ /(\S\S{$max,})/o;
-
         my( @lines );
-        while ($text =~ /(.{0,$limit}\S)(\s+|$)/og) {
-            push( @lines, "$prefix$1\n" );
+        while ($text =~ /\s?\b(.{0,$limit}\S)\b\W?\n?/g) {
+          push( @lines, "$prefix$1\n" );
         }
 
         return @lines;
