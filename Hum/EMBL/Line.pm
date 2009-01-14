@@ -161,8 +161,10 @@ sub data {
         my( $line, $prefix, $text ) = @_;
 
         my( @lines );
-        while ($text =~ /\s?\b(.{0,$limit}\S)\b\W?\n?/g) {
-          push( @lines, "$prefix$1\n" );
+        while ($text =~ /\s?\b(.{0,$limit}\S?)\b(\W?)/g) {
+          next if $1 eq '';
+          next if $2 eq "\n";
+          push( @lines, "$prefix$1$2\n" );
         }
 
         return @lines;
