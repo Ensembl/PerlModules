@@ -129,6 +129,11 @@ sub set_SubSeq_locus_level_errors {
         my $tsct_list = $locus_sub{$loc_name};
         my $locus = $tsct_list->[0]->Locus;
         
+        # Check that we don't have different locus name roots within
+        # transcript names from the same locus, and don't have the
+        # same locus name root in transcript names shared amongst
+        # different loci.
+        
         # Is there anything wrong with the annotation of this locus?
         my $locus_err = $locus->pre_otter_save_error;
         

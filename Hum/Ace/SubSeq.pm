@@ -1248,8 +1248,15 @@ sub valid_exon_coordinates {
         confess "Illegal start-end ($start-$end)"
             unless $start <= $end;
         if ($last_end) {
-            confess "Exon [$start-$end] overlap with previous (ends at $last_end)"
-                if $start <= $last_end;
+            my $error;
+            if ($start <= $last_end) {
+                $error = 'overlaps';
+            }
+            elsif ($start == 1 + $last_end) {
+                $error = 'abuts';
+            }
+            confess "Exon [$start-$end] $error with neighbour at $last_end\n"
+                if $error;
         }
         $last_end = $end;
     }
