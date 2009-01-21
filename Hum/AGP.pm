@@ -223,7 +223,7 @@ sub _process_contig {
           if (my $dovetail = $pa->dovetail_length || $pb->dovetail_length) {
             ### Should if overlap has been manually OK'd
             printf STDERR "Dovetail of length '$dovetail' in overlap\n";
-            $self->insert_missing_overlap_pad->remark('Bad overlap - dovetail');
+            $self->insert_missing_overlap_pad->remark("Bad overlap - dovetail of length $dovetail");
             $cl->strand($strand || 1);
             $strand = undef;
             if ($pa->is_3prime) {
