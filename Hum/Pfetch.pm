@@ -17,6 +17,7 @@ use Exporter;
 use vars qw{@ISA @EXPORT_OK};
 @ISA = ('Exporter');
 @EXPORT_OK = qw{
+    do_query
     get_Sequences
     get_descriptions
     get_lengths
@@ -77,7 +78,7 @@ sub _connect_to_server {
     
     foreach my $host_port (@$server_list) {
         my($host, $port) = @$host_port;
-        #warn "Trying '$host:$port'\n";
+        # warn "Trying '$host:$port'\n";
         my $server = IO::Socket::INET->new(
             PeerAddr => $host,
             PeerPort => $port,

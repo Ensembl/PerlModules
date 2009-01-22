@@ -157,7 +157,7 @@ sub pre_otter_save_error {
     my ($self) = @_;
 
     my $desc = $self->description;
-    if ($desc =~ /\w{3,}/) {    # Potential to be more sophisticated
+    if ($desc and $desc =~ /\w{3,}/) {    # Potential to be more sophisticated
         return '';
     } else {
         return qq{No full name (description) in Locus\n};
