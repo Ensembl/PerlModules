@@ -140,7 +140,6 @@ sub get_lengths { # : list_reference -> hash_reference
     
     confess "No names provided" unless @$name_lp;
     
-    my $server = get_server();
     my $fh = do_query("-l @$name_lp\n");
 
 	my $length_hp = {};
