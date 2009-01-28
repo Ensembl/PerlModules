@@ -490,6 +490,13 @@ sub empty_evidence_hash {
     $self->{'_evidence_hash'} = {};
 }
 
+sub locus_name_root {
+    my ($self) = @_;
+    
+    my ($root) = $self->name =~ /^(.+)-\d\d\d/;
+    return $root;
+}
+
 sub clone_Sequence {
     my( $self, $seq ) = @_;
     
@@ -1137,7 +1144,7 @@ sub locus_level_errors {
     if (defined $locus_level_errors) {
         $self->{'_locus_level_errors'} = $locus_level_errors;
     }
-    return $self->{'_locus_level_errors'};
+    return $self->{'_locus_level_errors'} || '';
 }
 
 sub error_in_translation {
@@ -1222,18 +1229,26 @@ sub error_no_evidence {
     sub error_in_name_format {
         my ($self) = @_;
     
+        my $name = $self->name;
+        my $locus_name = $self->Locus->name;
+        
         my $err = '';
-        if ($self->name !~ /\.\d+-\d{3}$/) {
+        if ($self->name =~ /\.\d+-\d\d\d$/) {
+            if ($locus_name =~ /\.\d+$/ and $self->locus_name_root ne $locus_name) {
+                $err .= "Transcript name does not begin with locus name '$locus_name'\n";
+            }
+        } else {
             $err .= "Transcript name does not end in '.#-###' format\n";
         }
 
-        my ($trsct_pre) = $self->name        =~ /$pre_pat/;
-        my ($locus_pre) = $self->Locus->name =~ /$pre_pat/;
+        my ($trsct_pre) = $name         =~ /$pre_pat/;
+        my ($locus_pre) = $locus_name   =~ /$pre_pat/;
         $trsct_pre ||= '';
         $locus_pre ||= '';
         if ($trsct_pre ne $locus_pre) {
             $err .= "Transcript name has prefix '$trsct_pre' but locus name has prefix '$locus_pre'\n";
         }
+        
         return $err;
     }
 }

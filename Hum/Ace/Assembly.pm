@@ -13,6 +13,7 @@ use Hum::Ace::SubSeq;
 use Hum::Ace::Clone;
 use Hum::Ace::SeqFeature::Simple;
 use Hum::Ace::MethodCollection;
+use Hum::Sort qw{ ace_sort };
 use Hum::Sequence::DNA;
 
 sub new {
@@ -119,7 +120,7 @@ sub set_SubSeq_locus_level_errors {
     my %locus_sub;
 
     # Group editable transcripts by locus
-    foreach my $sub ($self->get_all_SubSeqs) {
+    foreach my $sub (sort { ace_sort($a->name, $b->name) } $self->get_all_SubSeqs) {
         next unless $sub->is_mutable;
         my $tsct_list = $locus_sub{$sub->Locus->name} ||= [];
         push(@$tsct_list, $sub);
@@ -127,46 +128,179 @@ sub set_SubSeq_locus_level_errors {
     
     foreach my $loc_name (keys %locus_sub) {
         my $tsct_list = $locus_sub{$loc_name};
+
+        ### Could check that we actually have the same locus
+        ### object in memory attached to all its sequences.
+        ### Would be v. bad if it wasn't!
         my $locus = $tsct_list->[0]->Locus;
-        
-        # Check that we don't have different locus name roots within
-        # transcript names from the same locus, and don't have the
-        # same locus name root in transcript names shared amongst
-        # different loci.
         
         # Is there anything wrong with the annotation of this locus?
         my $locus_err = $locus->pre_otter_save_error;
-        
-        # Find out which strand the locus is on
-        my $fwd = 0;
-        my $rev = 0;
         foreach my $sub (@$tsct_list) {
-            if ($sub->strand == 1) {
-                $fwd++;
-            } else {
-                $rev++;
-            }
+            # Need to set on all transcripts since error
+            # may have been fixed.
+            $sub->locus_level_errors($locus_err);
         }
 
-        # Save strandedness and locus errors in each transcript
-        foreach my $sub (@$tsct_list) {
-            my $err = $locus_err;
-            if ($sub->strand == 1) {
-                if ($rev and $rev >= $fwd) {
-                    $err .= sprintf qq{Transcript is forward strand but %s in Locus '%s' %s reverse\n},
-                        $rev > 1 ? $rev : 'the other transcript',
-                        $locus->name,
-                        $rev > 1 ? 'are' : 'is';
-                }
-            } else {
-                if ($fwd and $fwd >= $rev) {
-                    $err .= sprintf qq{Transcript is reverse strand but %s in Locus '%s' %s forward\n},
-                        $fwd > 1 ? $fwd : 'the other transcript',
-                        $locus->name,
-                        $fwd > 1 ? 'are' : 'is';
-                }
+        $self->error_more_than_one_locus_name_root_in_transcript_names($tsct_list);
+        $self->error_strand_in_transcript_set($tsct_list);
+        $self->error_evidence_used_more_than_once_in_transcript_set($tsct_list);
+    }
+    
+    $self->error_same_locus_name_root_in_transcripts_on_different_loci;
+}
+
+sub error_same_locus_name_root_in_transcripts_on_different_loci {
+    my ($self) = @_;
+    
+    # Check we don't have same locus name root in transcript names
+    # shared amongst different loci.
+    
+    my %root_locus_tsct;
+    foreach my $sub (sort { ace_sort($a->name, $b->name) } $self->get_all_SubSeqs) {
+        next unless $sub->is_mutable;
+        my $root = $sub->locus_name_root;
+        my $sub_list = $root_locus_tsct{$root}{$sub->Locus->name} ||= [];
+        push @$sub_list, $sub;
+    }
+    
+    foreach my $root (keys %root_locus_tsct) {
+        my $locus_tsct = $root_locus_tsct{$root};
+        my @loc_name = sort { ace_sort($a, $b) } keys %$locus_tsct;
+        next if @loc_name == 1;
+        my $other_loci_error;
+        for (my $i = 0; $i < @loc_name; $i++) {
+            my @others = @loc_name;
+            my $this = splice(@others, $i, 1);
+            $other_loci_error = sprintf "Locus name root '%s' is used in other %s %s\n",
+                $root,
+                @others > 1 ? 'loci' : 'locus',
+                join(' and ', map "'$_'", @others);
+            foreach my $sub (@{$locus_tsct->{$this}}) {
+                my $err = $sub->locus_level_errors;
+                $sub->locus_level_errors($err . $other_loci_error);
             }
-            $sub->locus_level_errors($err);
+        }
+    }
+}
+
+sub error_more_than_one_locus_name_root_in_transcript_names {
+    my ($self, $tsct_list) = @_;
+    
+    # Check that we don't have different locus name roots within
+    # transcript names from the same locus.
+
+    my %lnr;
+    foreach my $sub (@$tsct_list) {
+        my $by_root = $lnr{$sub->locus_name_root} ||= [];
+        push @$by_root, $sub;
+    }
+    
+    # Return if we've only got one root
+    return unless keys %lnr > 1;
+    
+    my ($most, @rest) = sort { @{$lnr{$b}} <=> @{$lnr{$a}} } keys %lnr;
+    if (@{$lnr{$most}} > @{$lnr{$rest[0]}}) {
+        # One root is used more frequently than others in locus
+        foreach my $root (@rest) {
+            foreach my $sub (@{$lnr{$root}}) {
+                my $err = $sub->locus_level_errors;
+                $err .= "In locus this transcript has name root '$root', but more in locus use '$most'\n";
+                $sub->locus_level_errors($err);
+            }
+        }
+    } else {
+        # There isn't a name root which is used more frequently than any of the others
+        my @all_root = sort { ace_sort($a, $b) } keys %lnr;
+        for (my $i = 0; $i < @all_root; $i++) {
+            my @others = @all_root;
+            my $this = splice(@others, $i, 1);
+            my $other_count = 0;
+            foreach my $root (@others) {
+                $other_count += @{$lnr{$root}};
+            }
+            my $this_err_msg = sprintf "In locus this transcript has name root '%s' but other transcript%s root%s %s\n",
+                $this,
+                $other_count > 1 ? 's have' : ' has',
+                @others > 1 ? 's' : '',
+                join(' or ', map "'$_'", @others);
+            foreach my $sub (@{$lnr{$this}}) {
+                my $err = $sub->locus_level_errors;
+                $sub->locus_level_errors($err . $this_err_msg);
+            }
+        }
+    }
+}
+
+sub error_strand_in_transcript_set {
+    my ($self, $tsct_list) = @_;
+
+    my $locus_name = $tsct_list->[0]->Locus->name;
+
+    # Find out which strand the locus is on
+    my $fwd = 0;
+    my $rev = 0;
+    foreach my $sub (@$tsct_list) {
+        if ($sub->strand == 1) {
+            $fwd++;
+        } else {
+            $rev++;
+        }
+    }
+
+    # Save strandedness errors in each transcript
+    foreach my $sub (@$tsct_list) {
+        my $err = $sub->locus_level_errors;
+        if ($sub->strand == 1) {
+            if ($rev and $rev >= $fwd) {
+                $err .= sprintf qq{Transcript is forward strand but %s in Locus '%s' %s reverse\n},
+                    $rev > 1 ? $rev : 'the other transcript',
+                    $locus_name,
+                    $rev > 1 ? 'are' : 'is';
+            }
+        } else {
+            if ($fwd and $fwd >= $rev) {
+                $err .= sprintf qq{Transcript is reverse strand but %s in Locus '%s' %s forward\n},
+                    $fwd > 1 ? $fwd : 'the other transcript',
+                    $locus_name,
+                    $fwd > 1 ? 'are' : 'is';
+            }
+        }
+        $sub->locus_level_errors($err);
+    }
+}
+
+sub error_evidence_used_more_than_once_in_transcript_set {
+    my ($self, $tsct_list) = @_;
+    
+    # Check that the same piece of evidence is not used in more than one transcript.
+    my %evi_tsct;
+
+    foreach my $sub (@$tsct_list) {
+        my $evi_hash = $sub->evidence_hash;
+        foreach my $type (sort keys %$evi_hash) {
+            next if $type eq 'Protein';
+            my $evi_list = $evi_hash->{$type};
+            foreach my $evi_name (@$evi_list) {
+                my $sub_list = $evi_tsct{"$type $evi_name"} ||= [];
+                push(@$sub_list, $sub);
+            }
+        }
+    }
+    
+    foreach my $type_evi (sort { ace_sort($a, $b) } keys %evi_tsct) {
+        my $sub_list = $evi_tsct{$type_evi};
+        if (@$sub_list > 1) {
+            for (my $i = 0; $i < @$sub_list; $i++) {
+                my $sub = $sub_list->[$i];
+                my $error = $sub->locus_level_errors;
+                for (my $j = 0; $j < @$sub_list; $j++) {
+                    next if $i == $j;
+                    $error .= sprintf "Evidence %s is also used in transcript %s\n",
+                        $type_evi, $sub_list->[$j]->name;
+                }
+                $sub->locus_level_errors($error);
+            }
         }
     }
 }
