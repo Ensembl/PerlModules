@@ -181,7 +181,9 @@ sub make_cigar_string_from_align_strings {
                 -hit_seq      => $self->hit_align_string,
                 # so that we will not get
                 # MSG: Did not defined the number of conserved matches in the HSP assuming conserved == identical (0)
-                -identical    => 0
+                # assign 0 to both identical and conserved for DNA comparison
+                -identical    => 0,
+                -conserved    => 0
                );
 
   my $cigar_str = Bio::EnsEMBL::Utils::CigarString->generate_cigar_string_by_hsp($hsp);
@@ -210,6 +212,12 @@ sub log_message {
 
 }
 
+sub get_accession {
+  my($acc_sv) = @_;
+  $acc_sv =~ s/\.\d+$//;
+  return $acc_sv;
+}
+
 sub _make_daf_object {
 
   my ($self, $slice_Ad, $otherFeat) = @_;
@@ -224,7 +232,7 @@ sub _make_daf_object {
      -program    => $self->algorithm,
     );
 
-  my $qry_slice = $slice_Ad->fetch_by_region('clone', $self->best_feature->seq_name);
+  my $qry_slice = $slice_Ad->fetch_by_region('clone', get_accession($self->best_feature->seq_name) );
   #warn %$qry_slice;
 
   my $daf = Bio::EnsEMBL::DnaDnaAlignFeature
@@ -249,43 +257,79 @@ sub _make_daf_object {
 sub store_crossmatch_features {
 
   my ($self, $slice_Ad, $daf_Ad) = @_;
+  my $best_daf;
 
-  my $qry_slice         = $slice_Ad->fetch_by_region('clone', $self->best_feature->seq_name);
-  my $qry_seq_region_id = $qry_slice->get_seq_region_id;
+  #my @k = keys %$self; # test
+  #warn "@k";
 
-  my $daf = $self->_make_daf_object($slice_Ad);
+  if ( $self->best_feature ){
+    my $qry_slice         = $slice_Ad->fetch_by_region('clone', get_accession($self->best_feature->seq_name) );
+    my $qry_seq_region_id = $qry_slice->get_seq_region_id;
+    my $best_daf = $self->_make_daf_object($slice_Ad);
 
-  # if new end_match alignment is available, it means new seq. version is available,
-  # we need to remove any previous dna_align_feature and best_alignment
-  # ie, remove daf which hitname is not of seq_region_id = $qry_seq_region_id
-  my $feats = $daf_Ad->fetch_all_by_hit_name($daf->hseqname, $daf->analysis->logic_name);
-  if ( $feats->[0] ){
-    $self->_remove_old_features($daf_Ad, $slice_Ad, $qry_seq_region_id, $feats, $daf->hseqname);
+    # if new end_match alignment is available, it means new seq. version is available,
+    # we need to remove any previous dna_align_feature and best_alignment
+    # ie, remove daf which hitname is not of seq_region_id = $qry_seq_region_id
+    my $feats = $daf_Ad->fetch_all_by_hit_name($best_daf->hseqname, $best_daf->analysis->logic_name);
+    if ( $feats->[0] ){
+      $self->_remove_old_features($daf_Ad, $slice_Ad, $qry_seq_region_id, $feats, $best_daf->hseqname);
+    }
+
+    # check if feature exists before store to avoid duplicates
+    if ( ! daf_is_duplicate($slice_Ad, $best_daf, $qry_seq_region_id) ){
+      $daf_Ad->store($best_daf);
+      my $msg = "MSG: Stored 1 best_overlap in dna_align_feature table ...";
+      warn $msg;
+      $self->log_message($msg);
+      my $dafs = $daf_Ad->fetch_all_by_hit_name($best_daf->hseqname, $best_daf->analysis->logic_name);
+      my $daf_id = $dafs->[0]->dbID;
+
+      # record best feature in best_alignment table
+      #+---------------+---------------------+------+-----+---------+-------+
+      #| Field         | Type                | Null | Key | Default | Extra |
+      #+---------------+---------------------+------+-----+---------+-------+
+      #| seq_region_id | int(10) unsigned    |      |     | 0       |       |
+      #| daf_id        | int(10)             |      |     |         |       |
+      #| hit_name      | varchar(40)         |      | PRI |         |       |
+      #+---------------+---------------------+------+-----+---------+-------+
+
+      my $insert = $slice_Ad->dbc->prepare(qq{INSERT IGNORE INTO best_alignment VALUES (?,?,?)});
+      $insert->execute($qry_seq_region_id, $daf_id, $best_daf->hseqname);
+      my $msg2 = "MSG: Inserted " . $insert->rows . " best_overlap into best_alignment table ...\n";
+      warn $msg2;
+      $self->log_message($msg2);
+    }
+    else {
+      my $msg = "MSG: This best_alignment is already stored in dna_align_feature table ...\n";
+      warn $msg;
+      $self->log_message($msg);
+    }
   }
-
-  $daf_Ad->store($daf);
-  warn "MSG: Stored 1 best_overlap in dna_align_feature table ...\n";
-
-  my $dafs = $daf_Ad->fetch_all_by_hit_name($daf->hseqname, $daf->analysis->logic_name);
-  my $daf_id = $dafs->[0]->dbID;
-
-  # record best feature in best_alignment table
-  #+---------------+---------------------+------+-----+---------+-------+
-  #| Field         | Type                | Null | Key | Default | Extra |
-  #+---------------+---------------------+------+-----+---------+-------+
-  #| seq_region_id | int(10) unsigned    |      |     | 0       |       |
-  #| daf_id        | int(10)             |      |     |         |       |
-  #| hit_name      | varchar(40)         |      | PRI |         |       |
-  #+---------------+---------------------+------+-----+---------+-------+
-
-  my $insert = $daf_Ad->dbc->prepare(qq{INSERT IGNORE INTO best_alignment VALUES (?,?,?)});
-  my $row = $insert->execute($qry_seq_region_id, $daf_id, $daf->hseqname);
-  warn "MSG: Inserted $row best_overlap into best_alignment table ...\n";
 
   # also store other less optimal alignments
   if ( $self->other_features ){
-    $self->_store_other_overlaps($slice_Ad, $daf_Ad, $self->other_features, $daf);
+    #$self->_store_other_overlaps($slice_Ad, $daf_Ad, $self->other_features, $daf);
+    my $msg = "MSG: About to store other_overlaps ...\n";
+    warn $msg;
+    $self->log_message($msg);
+    $self->_store_other_overlaps($slice_Ad, $daf_Ad, $best_daf);
   }
+}
+
+sub daf_is_duplicate {
+  my ($slice_Ad, $daf, $qry_seq_region_id) = @_;
+  my $check = $slice_Ad->dbc->prepare(qq{SELECT count(*)
+                                         FROM dna_align_feature
+                                         WHERE seq_region_id = ?
+                                         AND score = ?
+                                         AND hit_start = ?
+                                         AND hit_end = ?
+                                         AND hit_name = ?
+                                         AND seq_region_start = ?
+                                         AND seq_region_end = ?
+                                     });
+  $check->execute($qry_seq_region_id, $daf->score, $daf->hstart, $daf->hend, $daf->hseqname, $daf->start, $daf->end);
+  $check->fetchrow == 0 ? return 0 : 1;
 }
 
 sub _remove_old_features {
@@ -305,48 +349,57 @@ sub _remove_old_features {
       $del++;
     }
   }
-  my @s_srids = sort keys %$srids;
-  if ( @s_srids ){
-    warn "MSG: Removed $del old dafs (hit_name = $hit_name, seq_region_id (", join(',', @s_srids), ") from dna_align_feature table ...\n";
+
+  if ( $del ){
+    my @s_srids = sort keys %$srids;
+
+    my $msg = "MSG: Removed $del old dafs (hit_name = $hit_name, seq_region_id (" . join(',', @s_srids) . ") from dna_align_feature table ...\n";
+    warn $msg;
+    $self->log_message($msg);
+
+    my $qry = $slice_Ad->dbc->prepare(qq{DELETE FROM best_alignment WHERE seq_region_id = ? and hit_name = ?});
+    foreach my $srid ( @s_srids ){
+      $qry->execute($srid, $hit_name);
+      my $msg = "MSG: Removed old best_alignment (hit_name = $hit_name, seq_region_id = $srid) from best_alignment table ...\n";
+      warn $msg;
+      $self->log_message($msg);
+    }
   }
   else {
-    warn "MSG: No old dafs to remove..\n";
+    my $msg = "MSG: No old dafs to remove..\n";
+    warn $msg;
+    $self->log_message($msg);
   }
 
   # also check daf where seq_region_id = $qry_seq_region_id, but hit_name is not $hit_name
   # should not happen
-  my $chk = $daf_Ad->dbc->prepare(qq{DELETE FROM dna_align_feature WHERE seq_region_id = ? and hit_name != ?});
+  my $chk = $slice_Ad->dbc->prepare(qq{DELETE FROM dna_align_feature WHERE seq_region_id = ? and hit_name != ?});
   $chk->execute($qry_seq_region_id, $hit_name);
   if ( my $rows = $chk->rows >1 ){
-    warn "MSG: Removed $rows old dafs (hit_name != $hit_name, seq_region_id = $qry_seq_region_id) from dna_align_feature table ...\n"; 
-  }
-
-  my $qry = $daf_Ad->dbc->prepare(qq{DELETE FROM best_alignment WHERE seq_region_id = ? and hit_name = ?});
-  foreach my $srid ( @s_srids ){
-    $qry->execute($srid, $hit_name);
-    warn "MSG: Removed old best_alignment (hit_name = $hit_name, seq_region_id = $srid) from best_alignment table ...\n";
+    my $msg = "MSG: Removed $rows old dafs (hit_name != $hit_name, seq_region_id = $qry_seq_region_id) from dna_align_feature table ...\n"; 
+    warn $msg;
+    $self->log_message($msg);
   }
 }
 
 sub _store_other_overlaps {
 
-  my ($self, $slice_Ad, $daf_Ad, $other_overlaps, $best_daf) = @_;
+  my ($self, $slice_Ad, $daf_Ad, $best_daf) = @_;
 
-  my $qry_slice = $best_daf->slice;
+  my $other_overlaps = $self->other_features;
+  my $hit_name;
+
+  my $qry_slice = $slice_Ad->fetch_by_region('clone', get_accession($other_overlaps->[0]->seq_name));
   my $qry_seq   = $qry_slice->seq;
 
-  my $hit_slice = $slice_Ad->fetch_by_region('clone', $best_daf->hseqname);
+  my $hit_slice = $slice_Ad->fetch_by_region('clone', get_accession($other_overlaps->[0]->hit_name));
   my $hit_seq   = $hit_slice->seq;
-
-  #do not want to store $best_feat again
-  #my $best_str = $self->_stringified($best_feat, qw(start end strand hstart hend hstrand));
 
   my $qry_seq_region_id = $qry_slice->get_seq_region_id;
 
   my $count = 0;
-  foreach my $ol ( @$other_overlaps ) {
 
-    $count++;
+  foreach my $ol ( @$other_overlaps ) {
 
     my $seqAlignFeat = Hum::Chromoview::SeqAlignment->
       new(
@@ -362,11 +415,18 @@ sub _store_other_overlaps {
     #test
     #warn "QAS: ", substr($seqAlignFeat->query_align_string, 0, 50);
     #warn "HAS: ", substr($seqAlignFeat->hit_align_string, 0, 50);
-
+    $hit_name = $ol->hit_name unless $hit_name;
     my $other_daf = $self->_make_daf_object($slice_Ad, $seqAlignFeat);
-    $daf_Ad->store($other_daf);
+
+    if ( !$best_daf and !daf_is_duplicate($slice_Ad, $other_daf, $qry_seq_region_id) ){
+      $count++;
+      $daf_Ad->store($other_daf);
+    }
   }
-  warn "MSG: Stored $count other_overlap(s) in dna_align_feature table (seq_region_id: $qry_seq_region_id, hit_name: " . $best_daf->hseqname . ")\n";
+
+  my $msg = "MSG: Stored $count other_overlap(s) in dna_align_feature table (seq_region_id: $qry_seq_region_id, hit_name: " . $hit_name . ")\n";
+  warn $msg;
+  $self->log_message($msg);
 }
 
 sub _get_daf_id_by_hit_name_analysis_name {
@@ -387,7 +447,7 @@ sub make_alignment_from_cigar_string {
 
   my $hit_seq;
   eval {
-    my $hit_slice = $qry_slice->adaptor->fetch_by_region('clone', $daf->hseqname);
+    my $hit_slice = $qry_slice->adaptor->fetch_by_region('clone', get_accession($daf->hseqname) );
     $hit_seq = $hit_slice->seq;
   };
 
