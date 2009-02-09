@@ -115,12 +115,26 @@ sub last_Row {
 
 sub add_Row {
     my( $self, $row ) = @_;
-    
+
     push(@{$self->{'_rows'}}, $row);
+}
+
+sub not_verbose {
+
+  my( $self, $val ) = @_;
+
+  # do not print STDERR messages
+  if ( $val ) {
+    $self->{'_not_verbose'} = $val;
+  }
+
+  return $self->{'_not_verbose'};
 }
 
 sub process_TPF {
     my( $self, $tpf ) = @_;
+
+    my $not_verbose = $self->not_verbose;
 
     my @rows = $tpf->fetch_all_Rows;
     my $contig = [];
@@ -147,7 +161,7 @@ sub process_TPF {
                 push(@$contig, $row);
             } else {
                 printf STDERR "Skipping HTGS_PHASE$phase sequence '%s'\n",
-                    $row->sanger_clone_name;
+                  $row->sanger_clone_name if ! defined $not_verbose;
                 $self->_process_contig($contig) if @$contig;
                 $contig = [];
                 my $gap = $self->new_Gap;
@@ -169,7 +183,9 @@ sub process_TPF {
 }
 
 sub _process_contig {
-    my( $self, $contig, $row ) = @_;
+    my( $self, $contig, $row) = @_;
+
+    my $not_verbose = $self->not_verbose;
 
     # $cl is a Hum::AGP::Row::Clone
     my $cl = $self->new_Clone_from_tpf_Clone($contig->[0]);
@@ -211,18 +227,18 @@ sub _process_contig {
             }
             $cl->seq_start($pa->position);
         }
-        
+
         # Report miss-join errors
         if ($miss_join) {
           my $join_err = sprintf "Double %d-prime join to '%s'\n",
-                $miss_join, $cl->accession_sv;
-          printf STDERR $join_err;
+            $miss_join, $cl->accession_sv;
+          printf STDERR $join_err if ! defined $not_verbose;
           $cl->join_error($join_err);
         }
         else {
           if (my $dovetail = $pa->dovetail_length || $pb->dovetail_length) {
             ### Should if overlap has been manually OK'd
-            printf STDERR "Dovetail of length '$dovetail' in overlap\n";
+            printf STDERR "Dovetail of length '$dovetail' in overlap\n" if ! defined $not_verbose;
             $self->insert_missing_overlap_pad->remark("Bad overlap - dovetail of length $dovetail");
             $cl->strand($strand || 1);
             $strand = undef;
