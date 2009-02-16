@@ -69,7 +69,7 @@ sub new {
     # Give lockdir ".LOCK" extension if none supplied
     unless ($lockDir =~ /.+\.[^\.]+$/) {
     	$lockDir =~ s/\.+$//; # Remove trailing dots
-	$lockDir = $lockDir . ".LOCK";
+    	$lockDir = $lockDir . ".LOCK";
     }
     
     # Create lock directory
@@ -85,29 +85,29 @@ sub new {
             next;
         }
 
-	# Is the process still running?
-	my $status = processExists( $hostName, $processID );
+    	# Is the process still running?
+    	my $status = processExists( $hostName, $processID );
 
-	if ($status eq 'RUN') {
-            my $msg = "Process '$processID' still running on host '$hostName'\n";
-            if ($timeout) {
-                sleep 5;
-                if (time > $start + $timeout) {
-                    croak("${msg}Failed to set lock after $timeout seconds");
+    	if ($status eq 'RUN') {
+                my $msg = "Process '$processID' still running on host '$hostName'\n";
+                if ($timeout) {
+                    sleep 5;
+                    if (time > $start + $timeout) {
+                        croak("${msg}Failed to set lock after $timeout seconds");
+                    }
+                } else {
+    	        croak $msg;
                 }
-            } else {
-	        croak $msg;
-            }
-	}
-	elsif ($status eq 'DEAD') {
+    	}
+    	elsif ($status eq 'DEAD') {
             # Remove the lock
-	    trashLock( $lockDir );
-	}
-	else {
+    	    trashLock( $lockDir );
+    	}
+    	else {
             # Can't tell if process still running, so not
             # safe to continue trying to set lock.
-	    croak("Error from processExists: $status");
-	}
+    	    croak("Error from processExists: $status");
+    	}
     }
     
     # Create the lockfile object
@@ -169,9 +169,13 @@ BEGIN {
         if (mkdir($dir, 0777)) {
             # Record process info in owner file
             open NEWLOCK, "> $owner"
-    	        or croak("Can't open '$owner' for write: $!");
+    	        or croak("Can't write to '$owner'; $!");
             print NEWLOCK "$hostname $$ $END_MARKER";
-            close NEWLOCK;
+            unless (close NEWLOCK) {
+                my $exit = $!;
+                trashLock($dir);
+                croak("Error writing to '$owner'; $exit");
+            }
             return 1;
         } else {
             return;
@@ -196,7 +200,7 @@ BEGIN {
         if ($host and ($pid =~ /^\d+$/)) {
             return( $host, $pid );
         } else {
-	    croak("Can't parse owner file '$owner'");
+    	    croak("Can't parse owner file '$owner'");
         }
     }
 

@@ -494,7 +494,7 @@ sub locus_name_root {
     my ($self) = @_;
     
     my ($root) = $self->name =~ /^(.+)-\d\d\d/;
-    return $root;
+    return $root || $self->name . ' (invalid format)';
 }
 
 sub clone_Sequence {
@@ -1560,13 +1560,14 @@ sub zmap_xml_feature_tag {
         @locus_prop = (locus => $locus->name);
     }
     
+    my $snf = $self->start_not_found;
     $xml->open_tag('feature', {
             name            => $self->name,
             start           => $self->start,
             end             => $self->end,
             strand          => $self->strand == -1 ? '-' : '+',
             style           => $style,
-            start_not_found => $self->start_not_found,
+            start_not_found => $snf ? $snf : 'false',
             end_not_found   => $self->end_not_found ? 'true' : 'false',
             @locus_prop,
     });
