@@ -120,15 +120,14 @@ sub add_Row {
 }
 
 sub verbose {
-
   my( $self, $val ) = @_;
 
   # print STDERR messages
-  if ( $val ) {
+  if (defined $val) {
     $self->{'_verbose'} = $val;
   }
-
-  return $self->{'_verbose'};
+  $val = $self->{'_verbose'};
+  return defined($val) ? $val : 1;
 }
 
 sub process_TPF {
