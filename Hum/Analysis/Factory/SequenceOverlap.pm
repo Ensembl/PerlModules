@@ -287,7 +287,8 @@ sub get_end_features {
     }
     # checks jobs exceeding the ulimit time (20min) set in commandpipe
     if ( defined $parser->results_filehandle_status() ){
-      print STDERR "crossmatch run beyond 20 min ... given up\n";
+      print STDERR "crossmatch run beyond 20 min ... given up - exit status: ",
+        $parser->results_filehandle_status(), "\n";
       return (undef, undef);
     }
 
