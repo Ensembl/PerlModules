@@ -217,7 +217,10 @@ sub is_three_prime_hit {
                 $factory->$setting($param->{$setting});
             }
             ($seq_end, $hit_end) = $self->get_end_features($query, $subject);
-            if ($seq_end == $hit_end) {
+            if ( ! defined $seq_end and ! defined $hit_end ){
+              return;
+            }
+            elsif ($seq_end == $hit_end) {
                 # We have found the overlap in one piece
                 print STDERR "Found single feature\n";
                 last;
@@ -278,11 +281,16 @@ sub get_end_features {
     my( $self, $query, $subject ) = @_;
 
     my $parser = $self->crossmatch_factory->run($query, $subject);
-
     my( @matches );
     while (my $m = $parser->next_Feature) {
       push(@matches, $m);
     }
+    # checks jobs exceeding the ulimit time (20min) set in commandpipe
+    if ( defined $parser->results_filehandle_status() ){
+      print STDERR "crossmatch run beyond 20 min ... given up\n";
+      return (undef, undef);
+    }
+
     # want to store all matches later in database
     $self->all_matches(\@matches);
 

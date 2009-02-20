@@ -63,16 +63,15 @@ sub show_alignments {
 
 sub run {
     my( $self, $query, $subject ) = @_;
-    
+
     my $tmp = $self->make_tmp_dir;
     my   $query_file = $self->_get_file_path('query',   $tmp, $query);
     my $subject_file = $self->_get_file_path('subject', $tmp, $subject);
-    
-    
+
     my $cmd_pipe = $self->make_command_pipe($tmp, $query_file, $subject_file);
     my $fh = gensym();
     open $fh, $cmd_pipe or confess "Can't open pipe '$cmd_pipe' : $!";
-    
+
     my $parser = Hum::Analysis::Parser::CrossMatch->new;
     $parser->results_filehandle($fh);
     $parser->temporary_directory($tmp);
@@ -86,7 +85,7 @@ sub make_command_pipe {
     my $min_match = $self->min_match_length;
     my $bandwidth = $self->bandwidth;
     my $gap_ext   = $self->gap_extension_penalty;
-    my $cmd_pipe = "cd $dir; cross_match -gap_ext $gap_ext -minmatch $min_match -bandwidth $bandwidth";
+    my $cmd_pipe = "cd $dir;  ulimit -t 1200; cross_match -gap_ext $gap_ext -minmatch $min_match -bandwidth $bandwidth";
     if ($self->show_alignments) {
         $cmd_pipe .= ' -alignments';
     }
