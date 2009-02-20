@@ -26,7 +26,7 @@ sub get_all_Features {
 
 sub next_Feature {
     my( $self ) = @_;
-        
+
     my $feature = $self->_current_feature;
     my $aln_str = '';
     my $fh = $self->results_filehandle or return($feature);
@@ -49,7 +49,9 @@ sub next_Feature {
             $aln_str .= $_;
         }
     }
+
     $self->close_results_filehandle;
+
     return $feature;
 }
 
@@ -77,7 +79,7 @@ sub new_Feature_from_coordinate_line {
     
     # Split into fields on white space
     my @data = split /\s+/, $line;
-    
+
     $feature->score(                $data[0]  );
     $feature->percent_substitution( $data[1]  );
     $feature->percent_insertion(    $data[2]  );
@@ -115,7 +117,7 @@ sub new_Feature_from_coordinate_line {
 
 sub results_filehandle {
     my( $self, $results_filehandle ) = @_;
-    
+
     if ($results_filehandle) {
         $self->{'_results_filehandle'} = $results_filehandle;
     }
@@ -124,16 +126,30 @@ sub results_filehandle {
 
 sub close_results_filehandle {
     my( $self ) = @_;
-    
+
     if (my $fh = $self->{'_results_filehandle'}) {
-        close($fh) or confess "Error from cross_match filehandle exit($?)";
+      #close($fh) or confess "Error from cross_match filehandle exit($?)";
+      close($fh);
+      $self->{'_results_filehandle_status'} = $?;
     }
+
     $self->{'_results_filehandle'} = undef;
 }
 
+sub results_filehandle_status {
+
+  my( $self, $status ) = @_;
+  if ( $status ){
+    $self->{'_results_filehandle_status'} = $status
+  }
+
+  return $self->{'_results_filehandle_status'};
+}
+
+
 sub temporary_directory {
     my( $self, $temporary_directory ) = @_;
-    
+
     if ($temporary_directory) {
         $self->{'_temporary_directory'} = $temporary_directory;
     }
