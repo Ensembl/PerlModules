@@ -1,4 +1,3 @@
-
 package Hum::Chromoview::SeqAlignment;
 
 #author: ck1@sanger.ac.uk
@@ -259,9 +258,6 @@ sub store_crossmatch_features {
   my ($self, $slice_Ad, $daf_Ad) = @_;
   my $best_daf;
 
-  #my @k = keys %$self; # test
-  #warn "@k";
-
   if ( $self->best_feature ){
     my $qry_slice         = $slice_Ad->fetch_by_region('clone', get_accession($self->best_feature->seq_name) );
     my $qry_seq_region_id = $qry_slice->get_seq_region_id;
@@ -305,6 +301,11 @@ sub store_crossmatch_features {
       $self->log_message($msg);
     }
   }
+  else {
+    my $msg = "MSG: No best feature found ...\n";
+    warn $msg;
+    $self->log_message($msg);
+  }
 
   # also store other less optimal alignments
   if ( $self->other_features ){
@@ -314,6 +315,55 @@ sub store_crossmatch_features {
     $self->log_message($msg);
     $self->_store_other_overlaps($slice_Ad, $daf_Ad, $best_daf);
   }
+}
+
+sub _store_other_overlaps {
+
+  my ($self, $slice_Ad, $daf_Ad, $best_daf) = @_;
+
+  my $other_overlaps = $self->other_features;
+
+  my $hit_name;
+
+  my $qry_slice = $slice_Ad->fetch_by_region('clone', get_accession($other_overlaps->[0]->seq_name));
+  my $qry_seq   = $qry_slice->seq;
+
+  my $hit_slice = $slice_Ad->fetch_by_region('clone', get_accession($other_overlaps->[0]->hit_name));
+  my $hit_seq   = $hit_slice->seq;
+
+  my $qry_seq_region_id = $qry_slice->get_seq_region_id;
+
+  my $count = 0;
+
+  foreach my $ol ( @$other_overlaps ) {
+
+    my $seqAlignFeat = Hum::Chromoview::SeqAlignment->
+      new(
+          algorithm      => 'crossmatch',
+          best_feature   => $ol,
+          query_seq      => $qry_seq,
+          hit_seq        => $hit_seq,
+         );
+
+    $seqAlignFeat->parse_align_string();
+    $seqAlignFeat->make_cigar_string_from_align_strings();
+
+    #test
+    #warn "QAS: ", substr($seqAlignFeat->query_align_string, 0, 50);
+    #warn "HAS: ", substr($seqAlignFeat->hit_align_string, 0, 50);
+
+    $hit_name = $ol->hit_name unless $hit_name;
+    my $other_daf = $self->_make_daf_object($slice_Ad, $seqAlignFeat);
+
+    if ( !daf_is_duplicate($slice_Ad, $other_daf, $qry_seq_region_id) ){
+      $count++;
+      $daf_Ad->store($other_daf);
+    }
+  }
+
+  my $msg = "MSG: Stored $count other_overlap(s) in dna_align_feature table (seq_region_id: $qry_seq_region_id, hit_name: " . $hit_name . ")\n";
+  warn $msg;
+  $self->log_message($msg);
 }
 
 sub daf_is_duplicate {
@@ -380,53 +430,6 @@ sub _remove_old_features {
     warn $msg;
     $self->log_message($msg);
   }
-}
-
-sub _store_other_overlaps {
-
-  my ($self, $slice_Ad, $daf_Ad, $best_daf) = @_;
-
-  my $other_overlaps = $self->other_features;
-  my $hit_name;
-
-  my $qry_slice = $slice_Ad->fetch_by_region('clone', get_accession($other_overlaps->[0]->seq_name));
-  my $qry_seq   = $qry_slice->seq;
-
-  my $hit_slice = $slice_Ad->fetch_by_region('clone', get_accession($other_overlaps->[0]->hit_name));
-  my $hit_seq   = $hit_slice->seq;
-
-  my $qry_seq_region_id = $qry_slice->get_seq_region_id;
-
-  my $count = 0;
-
-  foreach my $ol ( @$other_overlaps ) {
-
-    my $seqAlignFeat = Hum::Chromoview::SeqAlignment->
-      new(
-          algorithm      => 'crossmatch',
-          best_feature   => $ol,
-          query_seq      => $qry_seq,
-          hit_seq        => $hit_seq,
-         );
-
-    $seqAlignFeat->parse_align_string();
-    $seqAlignFeat->make_cigar_string_from_align_strings();
-
-    #test
-    #warn "QAS: ", substr($seqAlignFeat->query_align_string, 0, 50);
-    #warn "HAS: ", substr($seqAlignFeat->hit_align_string, 0, 50);
-    $hit_name = $ol->hit_name unless $hit_name;
-    my $other_daf = $self->_make_daf_object($slice_Ad, $seqAlignFeat);
-
-    if ( !$best_daf and !daf_is_duplicate($slice_Ad, $other_daf, $qry_seq_region_id) ){
-      $count++;
-      $daf_Ad->store($other_daf);
-    }
-  }
-
-  my $msg = "MSG: Stored $count other_overlap(s) in dna_align_feature table (seq_region_id: $qry_seq_region_id, hit_name: " . $hit_name . ")\n";
-  warn $msg;
-  $self->log_message($msg);
 }
 
 sub _get_daf_id_by_hit_name_analysis_name {
