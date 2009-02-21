@@ -85,7 +85,8 @@ sub make_command_pipe {
     my $min_match = $self->min_match_length;
     my $bandwidth = $self->bandwidth;
     my $gap_ext   = $self->gap_extension_penalty;
-    my $cmd_pipe = "cd $dir;  ulimit -t 1200; cross_match -gap_ext $gap_ext -minmatch $min_match -bandwidth $bandwidth";
+    my $cmd_pipe = "cd $dir;  ulimit -t 300; cross_match -gap_ext $gap_ext -minmatch $min_match -bandwidth $bandwidth";
+    #my $cmd_pipe = "cd $dir;  ulimit -m 1800000; cross_match -gap_ext $gap_ext -minmatch $min_match -bandwidth $bandwidth";
     if ($self->show_alignments) {
         $cmd_pipe .= ' -alignments';
     }
