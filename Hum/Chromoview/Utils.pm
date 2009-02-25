@@ -61,6 +61,8 @@ sub get_id_tpftargets_by_seq_region_id {
   if ( defined $accSv and $accSv =~ /\./ ){
     return get_id_tpftargets_by_acc_sv( split(/\./, $accSv) );
   }
+
+  return 0;
 }
 
 sub get_id_tpftargets_by_acc_sv {
