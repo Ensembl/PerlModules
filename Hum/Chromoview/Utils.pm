@@ -14,16 +14,6 @@ use Hum::Submission 'prepare_statement';
 use Hum::Tracking ('prepare_track_statement');
 use URI::Escape;
 
-eval {
-#use SangerPaths qw(core badger humpub);
-#use SangerWeb;
-#use CGI::Carp qw(warningsToBrowser fatalsToBrowser);
-};
-
-# these are only necessary for web server codes
-warn "Not loading SangerPath, SangerWeb, CGI\n" if $@;
-
-
 @ISA = ('Exporter');
 @EXPORT_OK = qw(
                 authorize
@@ -39,6 +29,7 @@ warn "Not loading SangerPath, SangerWeb, CGI\n" if $@;
                 phase_2_status
                 concat_js_params
                 unixtime2YYYYMMDD
+                unixtime2datetime
                 get_TPF_modtime
                 get_latest_clone_entrydate_of_TPF
                 get_latest_overlap_statusdate_of_TPF
@@ -47,7 +38,69 @@ warn "Not loading SangerPath, SangerWeb, CGI\n" if $@;
                 get_all_current_TPFs
                 get_species_chr_subregion_from_id_tpftarget
                 get_latest_clone_entries_with_overlap_of_assembly
+                fetch_query_seq_region_id_by_accession
+                get_seq_len_by_acc_sv
+                get_id_tpftargets_by_acc_sv
+                get_id_tpftargets_by_seq_region_id
                );
+
+sub get_seq_len_by_acc_sv {
+  my($acc_sv) = @_;
+  my $dba = get_chromoDB_handle();
+  my $qry = $dba->prepare(qq{SELECT length FROM seq_region WHERE name = ?});
+  $qry->execute($acc_sv);
+  return $qry->fetchrow;
+}
+
+sub get_id_tpftargets_by_seq_region_id {
+  my ($srId) = @_;
+  my $dba = get_chromoDB_handle();
+  my $qry = $dba->prepare(q{SELECT name FROM seq_region WHERE seq_region_id = ?});
+  $qry->execute($srId);
+  my $accSv = $qry->fetchrow;
+  if ( defined $accSv and $accSv =~ /\./ ){
+    return get_id_tpftargets_by_acc_sv( split(/\./, $accSv) );
+  }
+}
+
+sub get_id_tpftargets_by_acc_sv {
+
+  my ($acc, $sv) = @_;
+  my $qry = prepare_track_statement(qq{
+                                       SELECT tt.id_tpftarget
+                                       FROM sequence s, clone_sequence cs, tpf_row tr, tpf t, tpf_target tt
+                                       WHERE t.iscurrent=1
+                                       AND s.accession=?
+                                       AND s.sv=?
+                                       AND s.id_sequence=cs.id_sequence
+                                       AND cs.clonename=tr.clonename
+                                       AND tr.id_tpf=t.id_tpf
+                                       AND t.id_tpftarget=tt.id_tpftarget
+                                     });
+  $qry->execute($acc, $sv);
+
+  my $id_tpftargets = [];
+  while ( my $id = $qry->fetchrow ){
+    push(@$id_tpftargets, $id);
+  }
+
+  return $id_tpftargets;
+
+}
+
+sub fetch_query_seq_region_id_by_accession {
+  my ($acc) = @_;
+
+  my $dba = get_chromoDB_handle();
+  my $qry = $dba->prepare(qq{SELECT seq_region_id
+                             FROM seq_region
+                             WHERE name LIKE ?
+                             ORDER BY seq_region_id
+                             DESC LIMIT 1});
+  $qry->execute("$acc%");
+
+  return $qry->fetchrow;
+}
 
 sub authorize {
 
@@ -77,6 +130,49 @@ sub authorize {
   if ( $editors->{$editor} ){
     return ($user, $pass);
   }
+  else {
+    return (undef, undef);
+  }
+
+}
+
+sub get_chromoDB_handle {
+
+  # $user will be coming from single sing on
+  # and has right to edit TPF
+  my ($user, $password) = @_;
+
+  my $host     = 'otterpipe2';
+  my $dbname   = 'chromoDB';
+  my $port     = 3303;
+  my $mach     = Net::Netrc->lookup($host);
+
+  if ( (defined $user and $user eq 'public') ){
+    # chromoview external users	
+    $password = undef;
+  }
+  elsif ( $user and $password ){
+    $password = $password;
+  }	
+  elsif ( $mach ){
+    $password = $mach->password;
+    $user     = $mach->login;
+  }
+  else {
+    $user = 'ottro';
+    $password = undef;
+  }
+
+  my $dbh = DBI->connect("DBI:mysql:host=$host;port=$port;database=$dbname",
+                         $user, $password, { RaiseError => 1, PrintError => 0 })
+    or die "Can't connect to chromoDB as '$user' ",
+      DBI::errstr();
+
+  return $dbh;
+}
+
+sub get_script_root {
+  return "/cgi-bin/humpub";
 }
 
 sub unixtime2YYYYMMDD {
@@ -86,6 +182,18 @@ sub unixtime2YYYYMMDD {
 
   return join('-', ( $y+1900, sprintf("%02d", $m+1), sprintf("%02d",$d) ));
 }
+sub unixtime2datetime {
+  my $time = shift;
+  my @t = localtime($time);
+  #  0    1    2     3     4    5     6     7     8
+  # ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)
+
+  my ($s, $min, $h, $d, $m, $y) = @t[0..5];
+
+  return join('-', ( $y+1900, sprintf("%02d", $m+1), sprintf("%02d",$d) )) . ' ' .
+              join(':', ( sprintf("%02d",$h), sprintf("%02d",$min), sprintf("%02d",$s)) );
+}
+
 
 sub get_DNA_from_ftpghost {
   my ($acc ) = @_;
@@ -245,45 +353,6 @@ sub datetime2unixTime {
   $utime += ($year * 365 * $oneday);
 
   return $utime;
-}
-
-sub get_chromoDB_handle {
-
-  # $user will be coming from single sing on
-  # and has right to edit TPF
-  my ($user, $password) = @_;
-
-  my $host     = 'otterpipe2';
-  my $dbname   = 'chromoDB';
-  my $port     = 3303;
-  my $mach     = Net::Netrc->lookup($host);
-
-  if ( defined $user and $user eq 'public' ){
-    # chromoview external users	
-    $password = undef;
-  }
-  elsif ( $user and $password ){
-    $password = $password;
-  }	
-  elsif ( $mach ){
-    $password = $mach->password;
-    $user     = $mach->login;
-  }
-  else {
-    $user = 'ottro';
-    $password = undef;
-  }
-
-  my $dbh = DBI->connect("DBI:mysql:host=$host;port=$port;database=$dbname",
-                         $user, $password, { RaiseError => 1, PrintError => 0 })
-    or die "Can't connect to submissions database as '$user' ",
-      DBI::errstr();
-
-  return $dbh;
-}
-
-sub get_script_root {
-  return "/cgi-bin/humpub";
 }
 
 sub make_hmenus {
