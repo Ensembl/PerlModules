@@ -284,7 +284,7 @@ sub get_TPF_modtime {
 
   my ( $id_tpftarget) = @_;
   my $dba = get_chromoDB_handle();
-  my $sql =(qq{SELECT LEFT(check_date, 10)
+  my $sql =(qq{SELECT check_date
                FROM tpf_update
                WHERE id_tpftarget = $id_tpftarget
              });
