@@ -280,12 +280,12 @@ sub get_latest_clone_entrydate_of_TPF {
 sub get_TPF_modtime {
 
   # this will pick up clones modified after its belonging TPF has been created
-  # from chromoDB.tpf_check (ie, depends on chron job being run already)
+  # from chromoDB.tpf_update (ie, depends on chron job being run already)
 
   my ( $id_tpftarget) = @_;
   my $dba = get_chromoDB_handle();
   my $sql =(qq{SELECT LEFT(check_date, 10)
-               FROM tpf_check
+               FROM tpf_update
                WHERE id_tpftarget = $id_tpftarget
              });
 
