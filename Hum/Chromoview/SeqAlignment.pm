@@ -693,7 +693,6 @@ sub _pretty_alignment {
 
   my $pretty_align = '';
   my $compact_pretty_aligns = [];
-  #my $compact_pretty_align = '';
   my $compact_alignment_length = 0;
 
   #my $padding = $self->name_padding ? '%s' : '%-20s';
@@ -752,7 +751,6 @@ sub _pretty_alignment {
     }
 
     if ( $matches->[$i] =~ /\s/ ){
-      #$compact_pretty_align .= $align;
       push(@$compact_pretty_aligns, $align);
       $compact_alignment_length += length $matches->[$i];
     }
