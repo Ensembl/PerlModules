@@ -635,6 +635,14 @@ sub compact_alignment {
   return $self->{'_compact_alignment'};
 }
 
+sub compact_alignment_verbose {
+  my ( $self, $calignment ) = @_;
+  if ($calignment) {
+    $self->{'_compact_alignment_verbose'} = $calignment;
+  }
+  return $self->{'_compact_alignment_verbose'};
+}
+
 sub compact_alignment_length {
   my ( $self, $len ) = @_;
   if ($len) {
@@ -684,7 +692,8 @@ sub _pretty_alignment {
   }
 
   my $pretty_align = '';
-  my $compact_pretty_align = '';
+  my $compact_pretty_aligns = [];
+  #my $compact_pretty_align = '';
   my $compact_alignment_length = 0;
 
   #my $padding = $self->name_padding ? '%s' : '%-20s';
@@ -743,7 +752,8 @@ sub _pretty_alignment {
     }
 
     if ( $matches->[$i] =~ /\s/ ){
-      $compact_pretty_align .= $align;
+      #$compact_pretty_align .= $align;
+      push(@$compact_pretty_aligns, $align);
       $compact_alignment_length += length $matches->[$i];
     }
 
@@ -763,7 +773,8 @@ sub _pretty_alignment {
     }
   }
 
-  $self->compact_alignment($compact_pretty_align);
+  $self->compact_alignment(join("",@$compact_pretty_aligns));
+  $self->compact_alignment_verbose(join("<<skip 100% identity>>\n\n", @$compact_pretty_aligns));
   $self->alignment($pretty_align);
   $self->compact_alignment_length($compact_alignment_length);
 
