@@ -748,7 +748,8 @@ sub _pretty_alignment {
       $cpcount++;
 
       if ( $cpcount > 1 and abs($last_qry_e_coord - $qry_s_coord) != 1 ){
-        $compact_pretty_align .= "skip 100% identify\n\n" . $align;
+        my $skip_bps = abs($last_qry_e_coord - $qry_s_coord) -1;
+        $compact_pretty_align .= "skip $skip_bps bps 100% identify\n\n" . $align;
       }
       else {
         $compact_pretty_align .= $align;
