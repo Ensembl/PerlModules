@@ -297,7 +297,7 @@ sub store_crossmatch_features {
         $self->log_message($msg);
       }
       else {
-        my $msg = "MSG: Already has best_overlap, checking best_alignment in dna_align_feature table ...\n";
+        my $msg = "MSG: Already has best_overlap, checking entry in tpf_best_alignment table ...\n";
         warn $msg;
         $self->log_message($msg);
       }
@@ -307,12 +307,17 @@ sub store_crossmatch_features {
   }
 
   # also store other less optimal alignments
-  if ( $self->other_features ){
-    #$self->_store_other_overlaps($slice_Ad, $daf_Ad, $self->other_features, $daf);
-    my $msg = "MSG: About to store other_overlaps ...\n";
+  my $other_features = $self->other_features;
+  if ( $other_features->[0] ){
+    my $msg = "MSG: About to store other_overlap(s) ...\n";
     warn $msg;
     $self->log_message($msg);
     $self->_store_other_overlaps($slice_Ad, $daf_Ad, $best_daf);
+  }
+  else {
+    my $msg = "MSG: No other_overlap(s) to store ...\n";
+    warn $msg;
+    $self->log_message($msg);
   }
 }
 
@@ -344,7 +349,7 @@ sub _store_best_alignment {
   my $dafs = $daf_Ad->fetch_all_by_hit_name($hit_name, $best_daf->analysis->logic_name);
   my $daf_id = $dafs->[0]->dbID;
 
-  # record best feature in best_alignment table
+  # record best feature in tpf_best_alignment table
   #+---------------+---------------------+------+-----+---------+-------+
   #| Field         | Type                | Null | Key | Default | Extra |
   #+---------------+---------------------+------+-----+---------+-------+
@@ -353,17 +358,19 @@ sub _store_best_alignment {
   #| hit_name      | varchar(40)         |      | PRI |         |       |
   #+---------------+---------------------+------+-----+---------+-------+
 
-  my $insert = $slice_Ad->dbc->prepare(qq{INSERT IGNORE INTO best_alignment VALUES (?,?,?)});
+  my $insert = $slice_Ad->dbc->prepare(qq{INSERT IGNORE INTO tpf_best_alignment VALUES (?,?,?)});
   $insert->execute($qry_seq_region_id, $daf_id, $hit_name);
-  my $msg2 = "MSG: Inserted " . $insert->rows . " best_overlap into best_alignment table ...\n";
+  my $msg2 = "MSG: Inserted " . $insert->rows . " best_overlap into tpf_best_alignment table ...\n";
   warn $msg2;
   $self->log_message($msg2);
 }
 
 sub _remove_old_features {
 
-  # when sequence version is changed
-  # remove old feature in dna_align_feature table
+  # When sequence version is changed
+  # remove old feature(s) in dna_align_feature table
+  # which belong to the same TPF as the hit_name
+  # because a hit_name may belong to multiple TPFs (ref. chr. and subregion)
 
   my ( $self, $daf_Ad, $slice_Ad, $qry_seq_region_id, $old_feats, $hit_name ) = @_;
 
@@ -433,11 +440,11 @@ sub _remove_old_best_alignment {
 
   my ($self, $slice_Ad, $srId, $hit_name) = @_;
 
-  my $qry = $slice_Ad->dbc->prepare(qq{DELETE FROM best_alignment WHERE seq_region_id = ? and hit_name = ?});
+  my $qry = $slice_Ad->dbc->prepare(qq{DELETE FROM tpf_best_alignment WHERE seq_region_id = ? and hit_name = ?});
   $qry->execute($srId, $hit_name);
   my $killed = $qry->rows;
   if ( $killed != 0 ){
-    my $msg = "MSG: Removed $killed best_alignment (hit_name = $hit_name, seq_region_id = $srId) from best_alignment table ...\n";
+    my $msg = "MSG: Removed $killed best_alignment (hit_name = $hit_name, seq_region_id = $srId) from tpf_best_alignment table ...\n";
     warn $msg;
     $self->log_message($msg);
   }
