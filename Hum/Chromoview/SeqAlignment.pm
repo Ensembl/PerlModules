@@ -686,8 +686,9 @@ sub _pretty_alignment {
   my $pretty_align = '';
   my $compact_pretty_align = '';
   my $compact_alignment_length = 0;
-  my $cpcount = 0; #compact align str counter
   my $last_qry_e_coord;
+  my $first_qry_s_coord;
+  my $cpcount; # compact align counter
 
   #my $padding = $self->name_padding ? '%s' : '%-20s';
 
@@ -744,12 +745,21 @@ sub _pretty_alignment {
       $pretty_align .= $align;
     }
 
+    $first_qry_s_coord = $qry_s_coord if $i == 0;
+
     if ( $matches->[$i] =~ /\s/ ){
       $cpcount++;
 
-      if ( $cpcount > 1 and abs($last_qry_e_coord - $qry_s_coord) != 1 ){
+      if ( $i == 0 ) {
+        $compact_pretty_align .= $align;
+      }
+      elsif ( $cpcount == 1 and abs($last_qry_e_coord - $qry_s_coord) != 1 ){
+        my $skip_bps = abs($first_qry_s_coord - $qry_e_coord) + 1;
+        $compact_pretty_align .= "skip $skip_bps bps 100% identity alignment\n\n" . $align;
+      }
+      elsif ( abs($last_qry_e_coord - $qry_s_coord) != 1 ){
         my $skip_bps = abs($last_qry_e_coord - $qry_s_coord) -1;
-        $compact_pretty_align .= "skip $skip_bps bps 100% identify\n\n" . $align;
+        $compact_pretty_align .= "skip $skip_bps bps 100% identity alignment\n\n" . $align;
       }
       else {
         $compact_pretty_align .= $align;
@@ -759,7 +769,6 @@ sub _pretty_alignment {
 
       $last_qry_e_coord = $qry_e_coord;
     }
-
 
     $j= $j+2;
 
