@@ -130,6 +130,15 @@ sub ace_string {
     return $ace_string;
 }
 
+sub type {
+	my ( $seq_obj, $type ) = @_;
+    
+    if ($type) {
+        $seq_obj->{'_type'} = $type;
+    }
+    return $seq_obj->{'_type'};
+}
+
 1;
 
 __END__

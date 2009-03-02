@@ -10,9 +10,10 @@ our @EXPORT_OK = qw{
     text_is_zmap_clip
     integers_from_text
     evidence_type_and_name_from_text
+    $magic_evi_name_matcher
     };
 
-my $magic_evi_name_matcher = qr{
+our $magic_evi_name_matcher = qr{
     ([A-Za-z]{2}:)?       # Optional prefix
     (
                           # Something that looks like an accession:
@@ -82,11 +83,13 @@ sub integers_from_text {
         BLASTX          => 'Protein',
         SwissProt       => 'Protein',
         TrEMBL          => 'Protein',
+        OTF_EST			=> 'EST',
+        OTF_mRNA		=> 'cDNA',
+        OTF_Protein		=> 'Protein',
     );
 
     sub evidence_type_and_name_from_text {
         my ($ace, $text) = @_;
-
 
         #warn "Trying to parse: [$text]\n";
 
@@ -96,7 +99,7 @@ sub integers_from_text {
         # Protein:"Sw:Q16635-4.1"    14669 14761 (93)  BLASTX 100.0 (124 - 154) Sw:Q16635-4.1
 
         if ($text =~
-    /^(?:Sequence|Protein):"?(\w\w:[\-\.\w]+)"?[\d\(\)\s]+(EST|vertebrate_mRNA|BLASTX)/
+    /^(?:Sequence|Protein):"?(\w\w:[\-\.\w]+)"?[\d\(\)\s]+(EST|vertebrate_mRNA|BLASTX|OTF)/
           )
         {
             my $name   = $1;
@@ -114,7 +117,7 @@ sub integers_from_text {
                 my $acc    = $2;
                 $acc      .= $3 if $3;
                 my $sv     = $4 || '*';
-                # warn "Got name '$prefix$acc$sv'";
+                warn "Got name '$prefix$acc$sv'";
                 $clip_names{"$prefix$acc$sv"} = 1;
             }
 
