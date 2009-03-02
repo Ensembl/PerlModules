@@ -749,11 +749,12 @@ sub _pretty_alignment {
 
     if ( $matches->[$i] =~ /\s/ ){
       $cpcount++;
+      chop $align;
 
       if ( $i == 0 ) {
         $compact_pretty_align .= $align;
       }
-      elsif ( $cpcount == 1 ){
+      if ( $cpcount == 1 ){
         my $skip_bps = abs($first_qry_s_coord - $qry_s_coord);
         $compact_pretty_align .= "skip $skip_bps bps 100% identity alignment\n\n" . $align;
       }
