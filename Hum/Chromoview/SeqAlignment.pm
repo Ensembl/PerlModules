@@ -731,14 +731,14 @@ sub _pretty_alignment {
 
     # should be more clever by taking padding param from constructor
     if ( $self->name_padding ){
-      $align = sprintf("%s\t%d\t%s\t%d\n\t\t\t%s\n%s\t%d\t%s\t%d\n\n\n",
+      $align = sprintf("%s\t%d\t%s\t%d\n\t\t\t%s\n%s\t%d\t%s\t%d\n\n",
                                $qry_name, $qry_s_coord, $qry_hsp_frag, $qry_e_coord,
                                $matches->[$i],
                                $hit_name, $hit_s_coord, $hit_hsp_frag, $hit_e_coord);
       $pretty_align .= $align;
     }
     else {
-      $align = sprintf("%-20s\t%d\t%s\t%d\n\t\t\t\t%s\n%-20s\t%d\t%s\t%d\n\n\n",
+      $align = sprintf("%-20s\t%d\t%s\t%d\n\t\t\t\t%s\n%-20s\t%d\t%s\t%d\n\n",
                                $qry_name, $qry_s_coord, $qry_hsp_frag, $qry_e_coord,
                                $matches->[$i],
                                $hit_name, $hit_s_coord, $hit_hsp_frag, $hit_e_coord);
@@ -749,7 +749,6 @@ sub _pretty_alignment {
 
     if ( $matches->[$i] =~ /\s/ ){
       $cpcount++;
-      chop $align;
 
       if ( $i == 0 ) {
         $compact_pretty_align .= $align;
