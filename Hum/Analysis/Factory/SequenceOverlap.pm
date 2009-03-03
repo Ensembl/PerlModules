@@ -115,8 +115,9 @@ sub make_SequenceOverlap {
     $pos_b->SequenceInfo($sb);
     $pos_a->is_3prime($self->is_three_prime_hit($feat, $sa->sequence_length, 'seq'));
     $pos_b->is_3prime($self->is_three_prime_hit($feat, $sb->sequence_length, 'hit'));
-    
+
     if ($feat->hit_length > $feat->seq_length) {
+
         # More unusual "upstairs" overlap which is only chosen
         # where the length of overlap on the hit is longer
         $overlap->overlap_length($feat->hit_length);
@@ -131,6 +132,7 @@ sub make_SequenceOverlap {
             $pos_b->position($feat->hit_start);
         }
     } else {
+
         # The usual "downstairs" overlap (ie: most clones
         # in the golden path begin at 2001 or 101).
         $overlap->overlap_length($feat->seq_length);
@@ -161,7 +163,11 @@ sub make_SequenceOverlap {
 
     # Check that the positions calculated aren't
     # off the end of the sequences.
-    $overlap->validate_Positions;
+    eval{
+	$overlap->validate_Positions;
+    };
+    return $@ if $@;
+
     $overlap->best_match_pair($feat);
     $overlap->other_match_pairs($self->other_matches);
 
@@ -228,10 +234,12 @@ sub is_three_prime_hit {
         }
 
         if ($seq_end == $hit_end) {
+
           # so that we know which matches are not the best one
           $self->filter_matches($seq_end);
           return $seq_end;
         } else {
+
             #print STDERR "Creating merged feature\n";
             #return $self->merge_features($seq_end, $hit_end);
 
@@ -243,6 +251,7 @@ sub is_three_prime_hit {
             $self->filter_matches($best);
             return $best;
         }
+
     }
 }
 
@@ -274,6 +283,7 @@ sub filter_matches {
             last;
         }
     }
+
     $self->other_matches(\@other_matches);
 }
 
@@ -285,6 +295,7 @@ sub get_end_features {
     while (my $m = $parser->next_Feature) {
       push(@matches, $m);
     }
+
     # checks jobs exceeding the ulimit time (20min) set in commandpipe
     if ( $parser->results_filehandle_status() != 0 ){
       print STDERR "crossmatch run beyond 20 min ... given up - exit status: ",
