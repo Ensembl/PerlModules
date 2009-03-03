@@ -1189,7 +1189,7 @@ sub error_start_not_found {
     my $err = '';
     
     # Translation region should start on the first base of the
-    # transcript if Start_not_found is set to 2 or 3.
+    # transcript if Start_not_found is set to 1, 2 or 3.
 
     if (my $snf = $self->start_not_found) {
         if ($self->translation_region_is_set) {
