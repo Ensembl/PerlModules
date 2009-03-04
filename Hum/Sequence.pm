@@ -130,6 +130,7 @@ sub ace_string {
     return $ace_string;
 }
 
+# mRNA, EST, Protein etc...
 sub type {
 	my ( $seq_obj, $type ) = @_;
     

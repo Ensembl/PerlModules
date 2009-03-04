@@ -8,6 +8,7 @@ use base 'Exporter';
 
 our @EXPORT_OK = qw{
     text_is_zmap_clip
+    accessions_from_text
     integers_from_text
     evidence_type_and_name_from_text
     $magic_evi_name_matcher
@@ -35,6 +36,19 @@ sub text_is_zmap_clip {
     } else {
         return 0;
     }
+}
+
+sub accessions_from_text {
+    my ($text) = @_;
+    
+    my (%seen, @acc);
+    while ($text =~ /($magic_evi_name_matcher)/g) {
+        unless ($seen{$1}) {
+            $seen{$1} = 1;
+            push @acc, $1;
+        }
+    }
+    return @acc;
 }
 
 sub integers_from_text {
