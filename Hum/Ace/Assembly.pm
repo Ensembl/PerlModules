@@ -687,6 +687,16 @@ sub clone_name_overlapping {
 
 sub generate_description_for_clone {
 	my ( $self, $clone ) = @_;
+	return $self->_generate_desc_and_kws_for_clone($clone)->{description};
+}
+
+sub generate_keywords_for_clone {
+	my ( $self, $clone ) = @_;
+	return $self->_generate_desc_and_kws_for_clone($clone)->{keywords};
+}
+
+sub _generate_desc_and_kws_for_clone {
+	my ( $self, $clone ) = @_;
 	
 	my $DEBUG = 0;
 	
@@ -704,8 +714,6 @@ sub generate_description_for_clone {
 		
 		foreach my $sub (sort { ace_sort($a->name, $b->name) } $self->get_all_SubSeqs) {
 			
-			next unless $sub->Locus;
-			
 			# ignore loci that are not havana annotated genes
 			next unless ($sub->Locus->is_truncated || $sub->GeneMethod->mutable);
 			
@@ -721,6 +729,7 @@ sub generate_description_for_clone {
 		print "clone: $cstart-$cend\n" if $DEBUG;
 		
 		my $final_line = 'Contains ';
+		my @keywords;
 		my $novel_gene_count = 0;
 		my $part_novel_gene_count = 0;
 		my @DEline;
@@ -819,6 +828,7 @@ sub generate_description_for_clone {
 	        elsif ($lname !~ /-/) {
 	            $line .= "the $lname gene for $desc" ; 
 	            push @DEline,\$line ; 
+	            push @keywords, $locus;1
 	        }
 	        else {
 	            $line .= "a gene for a $desc";
@@ -867,7 +877,12 @@ sub generate_description_for_clone {
 		
 		print $final_line."\n" if $DEBUG;
 		
-		$self->{_clone_desc_cache}->{$clone->accession} = $final_line;
+		my $kws = '';
+		
+		$kws = join "\n", @keywords if @keywords;
+		
+		$self->{_clone_desc_cache}->{$clone->accession}->{keywords} = $kws;
+		$self->{_clone_desc_cache}->{$clone->accession}->{description} = $final_line;
 	}
 	else {
 		print "clone_desc_cache hit\n" if $DEBUG;

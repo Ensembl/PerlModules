@@ -138,6 +138,35 @@ sub drop_description {
     $self->{'_description'} = undef;
 }
 
+sub add_keyword {
+    my ($self, $keyword) = @_;
+
+    $self->{'_keywords_are_sorted'} = 0;
+    push(@{ $self->{'_keywords'} }, $keyword);
+}
+
+sub get_all_keywords {
+    my ($self) = @_;
+
+    if ($self->{'_keywords'}) {
+        my $key = $self->{'_keywords'};
+        unless ($self->{'_keywords_are_sorted'}) {
+            @$key = sort { ace_sort($a, $b) } @$key;
+            $self->{'_keywords_are_sorted'} = 1;
+        }
+        return @$key;
+    }
+    else {
+        return;
+    }
+}
+
+sub drop_all_keywords {
+    my ($self) = @_;
+    
+    $self->{'_keywords'} = undef;
+}
+
 sub add_remark {
     my ($self, $remark) = @_;
 
@@ -188,6 +217,9 @@ sub clone {
         $new->$method($self->$method());
     }
     
+    foreach my $keyword ($self->get_all_keywords) {
+        $new->add_keyword($keyword);
+    }
     foreach my $remark ($self->get_all_remarks) {
         $new->add_remark($remark);
     }
@@ -203,6 +235,7 @@ sub ace_string {
     
     my $str = $obj_start;
     foreach my $tag (qw{
+        keyword
         Annotation_remark
         EMBL_dump_info
         })
@@ -211,7 +244,9 @@ sub ace_string {
     }
     
     $str .= $obj_start;
-    
+    foreach my $kw ($self->get_all_keywords) {
+    	$str .= qq{keyword "$kw"\n};
+    }
     if (my $de = $self->description) {
         $str .= qq{EMBL_dump_info DE_line "$de"\n};
     }
@@ -251,6 +286,12 @@ sub express_data_fetch {
 
     # Get start and end on golden path
     $self->set_golden_start_end_from_NonGolden_Features($ace);
+
+    foreach my $keyword ($ace->values_from_tag('Keyword')) {
+        if (defined($keyword->[0])) {
+            $self->add_keyword($keyword->[0]);
+        }
+    }
 
     foreach my $remark ($ace->values_from_tag('Annotation_remark')) {
         if (defined($remark->[0])) {
