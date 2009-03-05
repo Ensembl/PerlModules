@@ -42,7 +42,29 @@ use URI::Escape;
                 get_seq_len_by_acc_sv
                 get_id_tpftargets_by_acc_sv
                 get_id_tpftargets_by_seq_region_id
+                store_failed_overlap_pairs
                );
+
+sub store_failed_overlap_pairs {
+  my ($qry_accSv, $hit_accSv, $errmsg) = @_;
+
+  my $dba = get_chromoDB_handle();
+
+  my (@srids);
+
+  foreach ($qry_accSv, $hit_accSv) {
+     push(@srids, fetch_query_seq_region_id_by_accession($_));
+  }
+  my $srids = join(', ', @srids);
+
+  my $insert_a = $dba->prepare(qq{INSERT INTO tpf_failed_overlap_pairs VALUES(?, $srids)});
+  $insert_a->execute();
+
+  my $lastID = $dba->last_insert_id(undef, undef, undef, undef, undef);
+
+  my $insert_b = $dba->prepare(qq{INSERT INTO tpf_overlap_errors VALUES($lastID, "$errmsg")});
+  $insert_b->execute();
+}
 
 sub get_seq_len_by_acc_sv {
   my($acc_sv) = @_;
