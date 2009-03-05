@@ -701,7 +701,9 @@ sub generate_description_for_clone {
 	my $locus_sub;
 	
 	foreach my $sub (sort { ace_sort($a->name, $b->name) } $self->get_all_SubSeqs) {
+		# ignore loci that are not havana annotated genes
 		next unless ($sub->Locus->is_truncated || $sub->GeneMethod->mutable);
+		
         my $tsct_list = $locus_sub->{$sub->Locus->name} ||= [];
         push(@$tsct_list, $sub);
     }
@@ -748,6 +750,7 @@ sub generate_description_for_clone {
         	$lend = $end if $end > $lend;
         	die "mixed strands" if $tsct->strand != $lstrand;
         }
+        
         print "locus: $lstart-$lend\n" if $DEBUG;
         
         # establish if any part of this locus lies on this clone
@@ -837,7 +840,7 @@ sub generate_description_for_clone {
            	push @DEline, \$line;
        	}
        	else {
-           	my $line = "parts of ".$novel_gene_count." novel genes";
+           	my $line = "parts of ".$part_novel_gene_count." novel genes";
            	push @DEline, \$line;
        	}
     }
