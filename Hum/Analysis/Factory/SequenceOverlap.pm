@@ -8,6 +8,9 @@ use Carp;
 use Hum::Analysis::Factory::CrossMatch;
 use Hum::SequenceOverlap;
 use Symbol 'gensym';
+use Hum::Chromoview::Utils qw(store_failed_overlap_pairs);
+
+
 
 my( %end_distances );
 
@@ -82,7 +85,7 @@ sub find_SequenceOverlap {
             $feat->pretty_string, "\n",
             $feat->pretty_alignment_string;
     }
-    
+
     # Convert into a SequenceOverlap object that
     # can be written into the tracking database.
 
@@ -91,7 +94,7 @@ sub find_SequenceOverlap {
 
 sub sequence_length_header {
     my( $self, @seqs ) = @_;
-    
+
     my $str = "\n";
     foreach my $seq (@seqs) {
         $str .= sprintf "%22s  %10d bp\n", $seq->name, $seq->sequence_length;
@@ -109,7 +112,7 @@ sub make_SequenceOverlap {
         $overlap->$meth($feat->$meth());
     }
     $overlap->source_name('CrossMatch');
-    
+
     my ($pos_a, $pos_b) = $overlap->make_new_Position_objects;
     $pos_a->SequenceInfo($sa);
     $pos_b->SequenceInfo($sb);
@@ -164,9 +167,16 @@ sub make_SequenceOverlap {
     # Check that the positions calculated aren't
     # off the end of the sequences.
     eval{
-	$overlap->validate_Positions;
+      $overlap->validate_Positions;
     };
-    return $@ if $@;
+    if ( $@ ) {
+      my $query_name = $sa->accession . '.' . $sa->sequence_version;
+      my $subjt_name = $sb->accession . '.' . $sb->sequence_version;
+      print STDERR "ERR: $@";
+      Hum::Chromoview::Utils::store_failed_overlap_pairs($query_name, $subjt_name, $@);
+
+      return $@;
+    }
 
     $overlap->best_match_pair($feat);
     $overlap->other_match_pairs($self->other_matches);
@@ -296,10 +306,13 @@ sub get_end_features {
       push(@matches, $m);
     }
 
-    # checks jobs exceeding the ulimit time (20min) set in commandpipe
+    # checks jobs exceeding the ulimit virtual mem of 1.8G set in commandpipe
     if ( $parser->results_filehandle_status() != 0 ){
-      print STDERR "crossmatch run beyond 20 min ... given up - exit status: ",
-        $parser->results_filehandle_status(), "\n";
+
+      my $errmsg = "crossmatch has used up 1.8G of ulimit virtural memory ... given up";
+      print STDERR $errmsg, "\n";
+      Hum::Chromoview::Utils::store_failed_overlap_pairs($query->name, $subject->name, $errmsg);
+
       return (undef, undef);
     }
 
