@@ -50,20 +50,39 @@ sub store_failed_overlap_pairs {
 
   my $dba = get_chromoDB_handle();
 
-  my (@srids);
+  my (@srids, $id_tpftargets);
+  my $wanted_itt; # only want id_tpftarget of main assembly, ignore subregion
 
   foreach ($qry_accSv, $hit_accSv) {
-     push(@srids, fetch_query_seq_region_id_by_accession($_));
+
+    push(@srids, fetch_query_seq_region_id_by_accession($_));
+
+    unless ( $id_tpftargets ){
+      $id_tpftargets = get_id_tpftargets_by_seq_region_id(fetch_query_seq_region_id_by_accession($_));
+
+      if ( @$id_tpftargets > 1 ) {
+        foreach my $itt ( @$id_tpftargets ){
+          my ($species, $chr, $subregion) = get_species_chr_subregion_from_id_tpftarget($itt);
+          $wanted_itt = $itt unless $subregion;
+        }
+      }
+      else {
+        $wanted_itt = $id_tpftargets->[0];
+      }
+    }
   }
+
   my $srids = join(', ', @srids);
 
-  my $insert_a = $dba->prepare(qq{INSERT INTO tpf_failed_overlap_pairs VALUES(?, $srids)});
+  # ignore same pairs in subregion
+  my $insert_a = $dba->prepare(qq{INSERT IGNORE INTO tpf_failed_overlap_pairs VALUES(?, $wanted_itt, $srids)});
   $insert_a->execute();
 
-  my $lastID = $dba->last_insert_id(undef, undef, undef, undef, undef);
-
-  my $insert_b = $dba->prepare(qq{INSERT INTO tpf_overlap_errors VALUES($lastID, "$errmsg")});
-  $insert_b->execute();
+  if ( $insert_a->rows == 1 ){
+    my $lastID = $dba->last_insert_id(undef, undef, undef, undef, undef);
+    my $insert_b = $dba->prepare(qq{INSERT INTO tpf_overlap_errors VALUES($lastID, "$errmsg")});
+    $insert_b->execute();
+  }
 }
 
 sub get_seq_len_by_acc_sv {
