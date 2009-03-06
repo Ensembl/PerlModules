@@ -13,6 +13,8 @@ use Hum::Sort ('ace_sort');
 use Hum::Submission 'prepare_statement';
 use Hum::Tracking ('prepare_track_statement');
 use URI::Escape;
+use CGI;
+use CGI::Carp qw(warningsToBrowser fatalsToBrowser);
 
 @ISA = ('Exporter');
 @EXPORT_OK = qw(
@@ -42,46 +44,27 @@ use URI::Escape;
                 get_seq_len_by_acc_sv
                 get_id_tpftargets_by_acc_sv
                 get_id_tpftargets_by_seq_region_id
-                store_failed_overlap_pairs
+                check_for_crossmatch_errors_by_accSv
                );
 
-sub store_failed_overlap_pairs {
-  my ($qry_accSv, $hit_accSv, $errmsg) = @_;
 
-  my $dba = get_chromoDB_handle();
+sub check_for_crossmatch_errors_by_accSv {
+  my ( $accSv ) = @_;
 
-  my (@srids, $id_tpftargets);
-  my $wanted_itt; # only want id_tpftarget of main assembly, ignore subregion
+  my $chromo_dbh = get_chromoDB_handle();
+  my $qry = $chromo_dbh->prepare(qq{SELECT LEFT(e.message, 1)
+                                    FROM tpf_info i, tpf_failed_overlap_pairs p, tpf_overlap_errors e, seq_region sra, seq_region srb
+                                    WHERE i.id_tpftarget=p.id_tpftarget
+                                    AND p.err_id=e.err_id
+                                    AND p.srid_a=sra.seq_region_id
+                                    AND p.srid_b=srb.seq_region_id
+                                    AND sra.name = ?
+                                  });
+  $qry->execute("$accSv");
 
-  foreach ($qry_accSv, $hit_accSv) {
-
-    push(@srids, fetch_query_seq_region_id_by_accession($_));
-
-    unless ( $id_tpftargets ){
-      $id_tpftargets = get_id_tpftargets_by_seq_region_id(fetch_query_seq_region_id_by_accession($_));
-
-      if ( @$id_tpftargets > 1 ) {
-        foreach my $itt ( @$id_tpftargets ){
-          my ($species, $chr, $subregion) = get_species_chr_subregion_from_id_tpftarget($itt);
-          $wanted_itt = $itt unless $subregion;
-        }
-      }
-      else {
-        $wanted_itt = $id_tpftargets->[0];
-      }
-    }
-  }
-
-  my $srids = join(', ', @srids);
-
-  # ignore same pairs in subregion
-  my $insert_a = $dba->prepare(qq{INSERT IGNORE INTO tpf_failed_overlap_pairs VALUES(?, $wanted_itt, $srids)});
-  $insert_a->execute();
-
-  if ( $insert_a->rows == 1 ){
-    my $lastID = $dba->last_insert_id(undef, undef, undef, undef, undef);
-    my $insert_b = $dba->prepare(qq{INSERT INTO tpf_overlap_errors VALUES($lastID, "$errmsg")});
-    $insert_b->execute();
+  if ( my $err = $qry->fetchrow ){
+    $err = $err eq 'c' ? 'crossmatch error finding end-overlap' : 'end-overlap position lies outside sequence length';
+    return $err;
   }
 }
 
