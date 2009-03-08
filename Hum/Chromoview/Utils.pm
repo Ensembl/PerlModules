@@ -63,7 +63,8 @@ sub check_for_crossmatch_errors_by_accSv {
   $qry->execute("$accSv");
 
   if ( my $err = $qry->fetchrow ){
-    $err = $err eq 'c' ? 'crossmatch error finding end-overlap' : 'end-overlap position lies outside sequence length';
+    $err = $err eq 'c' ? 'Job terminated: crossmatch used up virtual memory set for finding end-overlap' : 
+                         'Error: end-overlap position lies outside sequence length';
     return $err;
   }
 }
