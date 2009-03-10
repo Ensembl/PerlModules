@@ -13,8 +13,8 @@ use Hum::Sort ('ace_sort');
 use Hum::Submission 'prepare_statement';
 use Hum::Tracking ('prepare_track_statement');
 use URI::Escape;
-use CGI;
-use CGI::Carp qw(warningsToBrowser fatalsToBrowser);
+#use CGI;
+#use CGI::Carp qw(warningsToBrowser fatalsToBrowser);
 
 @ISA = ('Exporter');
 @EXPORT_OK = qw(
@@ -40,13 +40,64 @@ use CGI::Carp qw(warningsToBrowser fatalsToBrowser);
                 get_all_current_TPFs
                 get_species_chr_subregion_from_id_tpftarget
                 get_latest_clone_entries_with_overlap_of_assembly
-                fetch_query_seq_region_id_by_accession
+                fetch_seq_region_id_by_accession
                 get_seq_len_by_acc_sv
                 get_id_tpftargets_by_acc_sv
                 get_id_tpftargets_by_seq_region_id
                 check_for_crossmatch_errors_by_accSv
+                store_failed_overlap_pairs
                );
 
+sub store_failed_overlap_pairs {
+  my ($qry_accSv, $hit_accSv, $errmsg) = @_;
+
+  my $dba = get_chromoDB_handle();
+
+  my (@srids, $wanted_itt);
+
+  foreach ($qry_accSv, $hit_accSv) {
+    my $srid = fetch_seq_region_id_by_accession($_);
+    push(@srids, $srid);
+    my $itt = get_id_tpftargets_by_seq_region_id($srid);
+
+    my ($species, $chr, $subregion ) = get_species_chr_subregion_from_id_tpftarget($itt);
+    if ( !$wanted_itt and $species and !$subregion ) {
+      $wanted_itt = $itt;
+    }
+  }
+
+  #  <<ottroot@otterpipe2 chromoDB>> desc tpf_failed_overlap_pairs;
+  #+--------------+------------------+------+-----+---------+----------------+
+  #| Field        | Type             | Null | Key | Default | Extra          |
+  #+--------------+------------------+------+-----+---------+----------------+
+  #| err_id       | int(10) unsigned |      | PRI | NULL    | auto_increment |
+  #| id_tpftarget | int(10) unsigned |      |     | 0       |                |
+  #| srid_a       | int(10)          |      | MUL | 0       |                |
+  #| srid_b       | int(10)          |      |     | 0       |                |
+  #+--------------+------------------+------+-----+---------+----------------+
+
+  #<<ottroot@otterpipe2 chromoDB>> desc tpf_overlap_errors
+  #    -> ;
+  #+---------+---------+------+-----+---------+-------+
+  #| Field   | Type    | Null | Key | Default | Extra |
+  #+---------+---------+------+-----+---------+-------+
+  #| err_id  | int(10) |      | PRI | 0       |       |
+  #| message | text    | YES  |     | NULL    |       |
+  #+---------+---------+------+-----+---------+-------+
+
+  # $wanted_itt is set only for main chromosome TPF
+  if ( $wanted_itt ){
+    my $srids = join(', ', @srids);
+
+    my $insert_a = $dba->prepare(qq{INSERT INTO tpf_failed_overlap_pairs VALUES(?, $wanted_itt, $srids)});
+    $insert_a->execute();
+
+    my $lastID = $dba->last_insert_id(undef, undef, undef, undef, undef);
+
+    my $insert_b = $dba->prepare(qq{INSERT INTO tpf_overlap_errors VALUES($lastID, "$errmsg")});
+    $insert_b->execute();
+  }
+}
 
 sub check_for_crossmatch_errors_by_accSv {
   my ( $accSv ) = @_;
@@ -115,7 +166,7 @@ sub get_id_tpftargets_by_acc_sv {
 
 }
 
-sub fetch_query_seq_region_id_by_accession {
+sub fetch_seq_region_id_by_accession {
   my ($acc) = @_;
 
   my $dba = get_chromoDB_handle();
