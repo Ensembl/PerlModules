@@ -750,13 +750,13 @@ sub _pretty_alignment {
     # specify the skipped part of the alignment if identical
     if ( $matches->[$i] =~ /\s/ ){
       $cpcount++;
-      
+
       if ( $i == 0 ) {
         $compact_pretty_align .= $align;
       }
       elsif ( $cpcount == 1 ){
         my $skip_bps = abs($first_qry_s_coord - $qry_s_coord);
-        $compact_pretty_align .= "skip $skip_bps bps 100% identity alignment\n\n" . $align;
+        $compact_pretty_align .= "#skip $skip_bps bps 100% identity alignment\n\n" . $align;
       }
       elsif ( abs($last_qry_e_coord - $qry_s_coord) != 1 ){
         my $skip_bps = abs($last_qry_e_coord - $qry_s_coord) -1;
@@ -770,9 +770,11 @@ sub _pretty_alignment {
       $last_qry_e_coord = $qry_e_coord;
     }
 
-    if ( $i == $#qry_frags and $last_qry_e_coord != $qry_e_coord ){
-      my $skip_bps = abs($qry_e_coord - $last_qry_e_coord);
-      $compact_pretty_align .= "skip $skip_bps bps 100% identity alignment\n";
+    if ( $compact_pretty_align ne '' ){
+      if ( $i == $#qry_frags and $last_qry_e_coord != $qry_e_coord ){
+        my $skip_bps = abs($qry_e_coord - $last_qry_e_coord);
+        $compact_pretty_align .= "skip $skip_bps bps 100% identity alignment\n";
+      }
     }
 
     $j= $j+2;
@@ -793,7 +795,13 @@ sub _pretty_alignment {
 
   $self->compact_alignment($compact_pretty_align);
   $self->alignment($pretty_align);
-  $self->compact_alignment_length($compact_alignment_length);
+
+  if ( $compact_pretty_align eq '' ){
+    $self->compact_alignment_length(length $query_hsp);
+  }
+  else {
+    $self->compact_alignment_length($compact_alignment_length);
+  }
 
   return $self;
 }
