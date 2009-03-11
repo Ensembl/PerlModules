@@ -756,7 +756,7 @@ sub _pretty_alignment {
       }
       elsif ( $cpcount == 1 ){
         my $skip_bps = abs($first_qry_s_coord - $qry_s_coord);
-        $compact_pretty_align .= "#skip $skip_bps bps 100% identity alignment\n\n" . $align;
+        $compact_pretty_align .= "skip $skip_bps bps 100% identity alignment\n\n" . $align;
       }
       elsif ( abs($last_qry_e_coord - $qry_s_coord) != 1 ){
         my $skip_bps = abs($last_qry_e_coord - $qry_s_coord) -1;
