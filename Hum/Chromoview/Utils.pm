@@ -58,11 +58,13 @@ sub store_failed_overlap_pairs {
   foreach ($qry_accSv, $hit_accSv) {
     my $srid = fetch_seq_region_id_by_accession($_);
     push(@srids, $srid);
-    my $itt = get_id_tpftargets_by_seq_region_id($srid);
+    my $itts = get_id_tpftargets_by_seq_region_id($srid);
 
-    my ($species, $chr, $subregion ) = get_species_chr_subregion_from_id_tpftarget($itt);
-    if ( !$wanted_itt and $species and !$subregion ) {
-      $wanted_itt = $itt;
+    foreach my $itt ( @$itts ){
+      my ($species, $chr, $subregion ) = get_species_chr_subregion_from_id_tpftarget($itt);
+      if ( !$wanted_itt and $species and !$subregion ) {
+        $wanted_itt = $itt;
+      }
     }
   }
 
