@@ -266,11 +266,10 @@ sub store_crossmatch_features {
     my $qry_seq_region_id = $qry_slice->get_seq_region_id;
     my $best_daf = $self->_make_daf_object($slice_Ad);
 
-
     # if new end_match alignment is available, it means new seq. version is available,
-    # we need to remove any previous dna_align_feature and best_alignment
+    # we need to remove previous best_alignment
     # ie, remove daf which hitname is not of seq_region_id = $qry_seq_region_id
-
+    
     my $feats;
 
     eval {
@@ -285,29 +284,22 @@ sub store_crossmatch_features {
 
       $daf_Ad->store($best_daf);
 
-      $msg = "MSG: Stored 1 best_overlap (score: ${score}) in dna_align_feature table ...\n";
+      $msg = "MSG: Stored 1 best_overlap (score: $score) in dna_align_feature table ...\n";
       $self->_print_and_log_msg($msg);
     }
     else {
-  #    # check if feature exists before store to avoid duplicates
-#      if ( ! daf_is_duplicate($slice_Ad, $best_daf, $qry_seq_region_id) ){
-
-#        $daf_Ad->store($best_daf);
-#        my $msg = "MSG: Stored 1 best_overlap (score: ${score}), in dna_align_feature table ...\n";
-#        warn $msg;
-#        $self->log_message($msg);
-#      }
-#      else {
-#        my $msg = "MSG: Already has best_overlap (score: ${score}), checking entry in tpf_best_alignment table ...\n";
-#        warn $msg;
-#        $self->log_message($msg);
-#      }
       my $hit_name = $best_daf->hseqname;
-      $self->_remove_old_features($daf_Ad, $slice_Ad, $qry_seq_region_id, $hit_name );
-      $daf_Ad->store($best_daf);
+      if ( ! daf_is_duplicate($slice_Ad, $best_daf, $qry_seq_region_id) ){
+      #$self->_remove_old_features($daf_Ad, $slice_Ad, $qry_seq_region_id, $hit_name );
+        $daf_Ad->store($best_daf);
 
-      my $msg = "MSG: Stored 1 best_overlap (score: ${score}) in dna_align_feature table ...\n";
-      $self->_print_and_log_msg($msg);
+        my $msg = "MSG: Stored 1 best_overlap (score $score) in dna_align_feature table ...\n";
+        $self->_print_and_log_msg($msg);
+      }
+      else {
+        my $msg = "MSG: identical best overlap already exists ... skip\n";
+        $self->_print_and_log_msg($msg);
+      }
     }
 
     $self->_store_best_alignment($slice_Ad, $daf_Ad, $feats, $best_daf, $qry_seq_region_id);
@@ -346,7 +338,8 @@ sub daf_is_duplicate {
                                          AND seq_region_end = ?
                                      });
   $check->execute($qry_seq_region_id, $daf->score, $daf->hstart, $daf->hend, $daf->hseqname, $daf->start, $daf->end);
-  $check->fetchrow == 0 ? return 0 : 1;
+
+  return $check->fetchrow == 0 ? 0 : 1;
 }
 
 sub _store_best_alignment {
@@ -367,13 +360,11 @@ sub _store_best_alignment {
   #| hit_name      | varchar(40)         |      | PRI |         |       |
   #+---------------+---------------------+------+-----+---------+-------+
 
-  # first remove best_alignment with same seq_region_id
-#  my $del = $slice_Ad->dbc->prepare(qq{DELETE FROM tpf_best_alignment WHERE seq_region_id = ? AND hit_name = ?});
-#  $del->execute($qry_seq_region_id, $hit_name);
-#  my $msg1 = "MSG: Deleted " . $del->rows . " old best_overlap from tpf_best_alignment table ...\n";
-#  $self->_print_and_log_msg($msg1);
+  # remove best_alignment with same seq_region_id but diff. daf_id
+  # as the same sequence can be in another TPF, which will have another seq_region_id
+  $self->_remove_old_best_alignment($slice_Ad, $qry_seq_region_id, $hit_name);
 
-  my $insert = $slice_Ad->dbc->prepare(qq{INSERT INTO tpf_best_alignment VALUES (?,?,?)});
+  my $insert = $slice_Ad->dbc->prepare(qq{INSERT IGNORE INTO tpf_best_alignment VALUES (?,?,?)});
   $insert->execute($qry_seq_region_id, $daf_id, $hit_name);
   my $msg2 = "MSG: Inserted " . $insert->rows . " best_overlap (daf_id: ${daf_id}, srid: ${qry_seq_region_id}) into tpf_best_alignment table ...\n";
   $self->_print_and_log_msg($msg2);
@@ -383,84 +374,73 @@ sub _remove_old_features {
 
   # When sequence version is changed
   # remove old feature(s) in dna_align_feature table
-
   # because a hit_name may belong to multiple TPFs (ref. chr. and subregion)
+
   my ( $self, $daf_Ad, $slice_Ad, $qry_seq_region_id, $hit_name ) = @_;
 
-  # my $id_tpftargets = get_id_tpftargets_by_acc_sv(split(/\./, $hit_name));
-  # my %tpfs = map {($_, 1)} @{$id_tpftargets};
+ # my $id_tpftargets = get_id_tpftargets_by_acc_sv(split(/\./, $hit_name));
+  my $id_tpftargets = get_id_tpftargets_by_seq_region_id($qry_seq_region_id);
+  my %tpfs = map {($_, 1)} @{$id_tpftargets};
 
-  # my $old_dafs = $slice_Ad->dbc->prepare(qq{
-  #                                           SELECT distinct seq_region_id FROM dna_align_feature
-  #                                           WHERE hit_name = ?
-  #                                         });
-  my $del_daf = $slice_Ad->dbc->prepare(qq{
-                                           DELETE FROM dna_align_feature
-                                           WHERE hit_name = ?}
-                                       );
-
-  $del_daf->execute($hit_name);
-  my $msg = "MSG: Removed " . $del_daf->rows . " old feature(s) from dna_align_feature table ...\n";
+  my $msg = "MSG: Query sequence is from id_tpftarget: " . @$id_tpftargets ."\n";
   $self->_print_and_log_msg($msg);
 
-#  $old_dafs->execute($hit_name);
 
- # my @srId_to_del;
+  my $old_dafs = $slice_Ad->dbc->prepare(qq{
+                                            SELECT distinct seq_region_id
+                                            FROM dna_align_feature
+                                            WHERE hit_name = ?
+                                           });
+  my $del_daf = $slice_Ad->dbc->prepare(qq{
+                                           DELETE FROM dna_align_feature
+                                           WHERE hit_name = ?
+                                           AND seq_region_id = ?
+                                          }
+                                       );
 
-#  while( my $srId = $old_dafs->fetchrow ){
+  $old_dafs->execute($hit_name);
 
-#    my $idtpftargets = get_id_tpftargets_by_seq_region_id($srId);
+  my @srId_to_del;
 
-#    foreach my $itt ( @$idtpftargets ){
-#      # remove feature from same TPF
-#      if ( $tpfs{$itt} ){
-#        my $msg = "Found old overlap feature(s) with seq_region_id $srId\n";
-#        $self->_print_and_log_msg($msg);
-#        push(@srId_to_del, $srId);
-#      }
-#    }
-#  }
+  while( my $srId = $old_dafs->fetchrow ){
 
- # foreach my $srId ( @srId_to_del ){
-#    $del_daf->execute($hit_name, $srId);
-#    if (  $del_daf->rows != 0 ){
-#      my $msg = "MSG: Removed seq_region_id $srId from dna_align_feature table ...\n";
-#      $self->_print_and_log_msg($msg);
+    my $idtpftargets = get_id_tpftargets_by_seq_region_id($srId);
 
-#      # also remove best_alignment with same seq_region_id
-#      $self->_remove_old_best_alignment($slice_Ad, $srId, $hit_name);
-#    }
-#  }
+    foreach my $itt ( @$idtpftargets ){
+      # remove feature from same TPF
+      if ( $tpfs{$itt} ){
+        my $msg = "Found old overlap feature(s) with seq_region_id $srId (id_tpftarget: $itt)\n";
+        $self->_print_and_log_msg($msg);
+        #push(@srId_to_del, $srId);
 
-  # also remove best_alignment with same seq_region_id
-  $self->_remove_old_best_alignment($slice_Ad, $hit_name);
+        $del_daf->execute($hit_name, $srId);
+        if (  $del_daf->rows != 0 ){
+          my $msg = "MSG: Removed $hit_name (seq_region_id = ${srId}) from dna_align_feature table ...\n";
+          $self->_print_and_log_msg($msg);
 
-
-  # also check daf where seq_region_id = $qry_seq_region_id, but hit_name is not $hit_name
-  # should not happen
-  my $chk = $slice_Ad->dbc->prepare(qq{DELETE FROM dna_align_feature WHERE seq_region_id = ? and hit_name != ?});
-  $chk->execute($qry_seq_region_id, $hit_name);
-  if ( my $rows = $chk->rows >1 ){
-    my $msg = "MSG: Removed $rows old dafs (hit_name != $hit_name, seq_region_id = $qry_seq_region_id) from dna_align_feature table ...\n"; 
-    $self->_print_and_log_msg($msg);
+          # also remove best_alignment with same seq_region_id
+        #  $msg = "MSG: About to remove old best_alignment ($hit_name, seq_region_id = ${srId}) from tpf_best_alignment table ...\n";
+        #  $self->_print_and_log_msg($msg);
+       #   $self->_remove_old_best_alignment($slice_Ad, $srId, $hit_name);
+        }
+      }
+    }
   }
 }
 
 sub _remove_old_best_alignment {
 
-  my ($self, $slice_Ad, $hit_name) = @_;
+  my ($self, $slice_Ad, $srId, $hit_name) = @_;
 
-  my $qry = $slice_Ad->dbc->prepare(qq{DELETE FROM tpf_best_alignment WHERE hit_name = ?});
-  $qry->execute($hit_name);
+  my $qry = $slice_Ad->dbc->prepare(qq{DELETE FROM tpf_best_alignment
+                                       WHERE hit_name = ?
+                                       AND seq_region_id = ?
+                                     });
+  $qry->execute($hit_name, $srId);
   my $killed = $qry->rows;
-  if ( $killed != 0 ){
-    my $msg = "MSG: Removed $killed best_alignment (hit_name = ${hit_name}) from tpf_best_alignment table ...\n";
-    $self->_print_and_log_msg($msg);
-  }
-  else {
-    my $msg = "MSG: No best_alignment to remove...\n";
-    $self->_print_and_log_msg($msg);
-  }
+
+  my $msg = "MSG: Removed $killed best_alignment (hit_name = $hit_name, srid = ${srId}) from tpf_best_alignment table ...\n";
+  $self->_print_and_log_msg($msg);
 }
 
 sub _store_other_overlaps {
@@ -504,6 +484,10 @@ sub _store_other_overlaps {
     if ( !daf_is_duplicate($slice_Ad, $other_daf, $qry_seq_region_id) ){
       $count++;
       $daf_Ad->store($other_daf);
+    }
+    else {
+      my $msg = "MSG: an identical other_overlap already exists ... skip\n";
+      $self->_print_and_log_msg($msg);
     }
   }
 
