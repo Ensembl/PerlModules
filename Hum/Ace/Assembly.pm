@@ -714,6 +714,8 @@ sub _generate_desc_and_kws_for_clone {
 		
 		foreach my $sub (sort { ace_sort($a->name, $b->name) } $self->get_all_SubSeqs) {
 			
+			next unless $sub->Locus;
+			
 			# ignore loci that are not havana annotated genes
 			next unless ($sub->Locus->is_truncated || $sub->GeneMethod->mutable);
 			
