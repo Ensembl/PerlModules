@@ -147,7 +147,7 @@ sub get_id_tpftargets_by_acc_sv {
 
   my ($acc, $sv) = @_;
   my $qry = prepare_track_statement(qq{
-                                       SELECT tt.id_tpftarget
+                                       SELECT DISTINCT tt.id_tpftarget
                                        FROM sequence s, clone_sequence cs, tpf_row tr, tpf t, tpf_target tt
                                        WHERE t.iscurrent=1
                                        AND s.accession=?
