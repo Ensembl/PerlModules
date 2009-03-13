@@ -261,15 +261,14 @@ sub store_crossmatch_features {
   my $best_daf;
 
   if ( $self->best_feature ){
-    my $qry_slice         = $slice_Ad->fetch_by_region('clone', get_accession($self->best_feature->seq_name) );
-
+    my $qry_slice = $slice_Ad->fetch_by_region('clone', get_accession($self->best_feature->seq_name) );
     my $qry_seq_region_id = $qry_slice->get_seq_region_id;
     my $best_daf = $self->_make_daf_object($slice_Ad);
 
     # if new end_match alignment is available, it means new seq. version is available,
     # we need to remove previous best_alignment
     # ie, remove daf which hitname is not of seq_region_id = $qry_seq_region_id
-    
+
     my $feats;
 
     eval {
@@ -302,7 +301,7 @@ sub store_crossmatch_features {
       }
     }
 
-    $self->_store_best_alignment($slice_Ad, $daf_Ad, $feats, $best_daf, $qry_seq_region_id);
+    $self->_store_best_alignment($slice_Ad, $daf_Ad, $best_daf, $qry_seq_region_id);
   }
 
   # also store other less optimal alignments
@@ -344,12 +343,21 @@ sub daf_is_duplicate {
 
 sub _store_best_alignment {
 
-  my ( $self, $slice_Ad, $daf_Ad, $feats, $best_daf, $qry_seq_region_id ) = @_;
+  my ( $self, $slice_Ad, $daf_Ad, $best_daf, $qry_seq_region_id ) = @_;
 
   my $hit_name = $best_daf->hseqname;
 
   my $dafs = $daf_Ad->fetch_all_by_hit_name($hit_name, $best_daf->analysis->logic_name);
-  my $daf_id = $dafs->[0]->dbID;
+
+  my $daf_id;
+  foreach my $daf ( @$dafs ){
+    my $qry_slice = $daf->slice;
+    my $qry_srid  = $slice_Ad->get_seq_region_id($qry_slice);
+    if ( $qry_srid == $qry_seq_region_id ){
+      $daf_id = $daf->dbID;
+      last;
+    }
+  }
 
   # record best feature in tpf_best_alignment table
   #+---------------+---------------------+------+-----+---------+-------+
