@@ -5,10 +5,11 @@ package Hum::Ace::MethodCollection;
 
 use strict;
 use Carp;
-use Symbol 'gensym';
 
 use Hum::Ace::Method;
+use Hum::Ace::Zmap_Style;
 use Hum::Ace::AceText;
+use Hum::Sort qw{ ace_sort };
 
 sub new {
     my( $pkg ) = @_;
@@ -27,10 +28,25 @@ sub new_from_string {
         # any lines that begin with a word character.
         if ($para =~ /^\w/m) {
             my $txt  = Hum::Ace::AceText->new($para);
-            my $meth = Hum::Ace::Method->new_from_AceText($txt);
-            $self->add_Method($meth);
+            my ($class, $name) = $txt->class_and_name;
+            if ($class eq 'Method') {
+                my $meth = Hum::Ace::Method->new_from_name_AceText($name, $txt);
+                $self->add_Method($meth);                
+            }
+            elsif ($class eq 'Zmap_style') {
+                my $style = Hum::Ace::Zmap_Style->new_from_name_AceText($name, $txt);
+                $self->add_Zmap_Style($style);
+            }
+            else {
+                warn qq{Ignoring unknown class: $class : "$name"};
+            }
         }
     }
+    
+    my $err = $self->link_Zmap_Styles;
+    $err .= $self->link_Methods_to_Zmap_Styles;
+    confess $err if $err;
+    
     return $self;
 }
 
@@ -47,11 +63,28 @@ sub new_from_ace_handle {
 sub ace_string {
     my( $self ) = @_;
     
+    my $z_styles = $self->get_Zmap_Styles_hash;
+    my %got_z_style;
+    
     my $str = '';
     foreach my $meth (@{$self->get_all_Methods}) {
         $str .= $meth->ace_string;
-        $str .= $meth->zmap_style_string;
+        if (my $style_name = $meth->style_name) {
+            if (my $style = delete $z_styles->{$style_name}) {
+                $str .= $style->ace_string;
+                $got_z_style{$style_name} = 1;
+            }
+            elsif (! $got_z_style{$style_name}) {
+                confess "Method refers to non-existant Zmap_Style '$style_name':\n",
+                    $meth->ace_string;
+            }
+        }
     }
+    
+    foreach my $style (sort { ace_sort($a->name, $b->name) } values %$z_styles) {
+        $str .= $style->ace_string;
+    }
+    
     return $str;
 }
 
@@ -60,8 +93,7 @@ sub new_from_file {
     
     local $/ = undef;
     
-    my $fh = gensym();
-    open $fh, $file or die "Can't read '$file' : $!";
+    open my $fh, $file or die "Can't read '$file' : $!";
     my $str = <$fh>;
     close $fh or die "Error reading '$file' : $!";
     return $pkg->new_from_string($str);
@@ -70,8 +102,7 @@ sub new_from_file {
 sub write_to_file {
     my( $self, $file ) = @_;
     
-    my $fh = gensym();
-    open $fh, "> $file" or confess "Can't write to '$file' : $!";
+    open my $fh, "> $file" or confess "Can't write to '$file' : $!";
     print $fh $self->ace_string;
     close $fh or confess "Error writing to '$file' : $!";
 }
@@ -81,9 +112,9 @@ sub add_Method {
     
     if ($method) {
         my $name = $method->name
-            or confess "Can't add un-named method";
+            or confess "Can't add un-named Method";
         if (my $existing = $self->{'_method_by_name'}{$name}) {
-            confess "Already have method called '$name':\n",
+            confess "Already have Method called '$name':\n",
                 $existing->ace_string;
         }
         my $lst = $self->get_all_Methods;
@@ -102,34 +133,98 @@ sub get_all_Methods {
     return $lst;
 }
 
+sub add_Zmap_Style {
+    my ($self, $style) = @_;
+    
+    if ($style) {
+        my $name = $style->name
+            or confess ("Can't add un-name Zmap_Style");
+        if (my $exisiting = $self->{'_zmap_style'}{$name}) {
+            confess "Already have Zmap_Style called '$name':\n",
+                $exisiting->ace_string;
+        } else {
+            $self->{'_zmap_style'}{$name} = $style;
+        }
+    } else {
+        confess "missing Hum::Ace::Zmap_Style argument";
+    }
+}
+
+sub get_Zmap_Style {
+    my ($self, $name) = @_;
+    
+    return $self->{'_zmap_style'}{$name};
+}
+
+sub get_Zmap_Styles_hash {
+    my ($self) = @_;
+    
+    my $zsh = $self->{'_zmap_style'} ||= {};
+
+    # Return a ref to a copy of the hash
+    return {%$zsh};
+}
+
+sub link_Zmap_Styles {
+    my ($self) = @_;
+    
+    my $zsh = $self->get_Zmap_Styles_hash;
+    my $err = '';
+    foreach my $style (values %$zsh) {
+        my $name = $style->parent_name or next;
+        if (my $parent = $zsh->{$name}) {
+            # printf STDERR "Adding style parent '%s' to Zmap_Style '%s'\n",
+            #     $parent->name, $style->name;
+            $style->parent_Style($parent);
+        } else {
+            $err .= sprintf qq{Style_parent '%s' of Zmap_Style '%s' does not exist\n},
+                $name, $style->name;
+        }
+    }
+    return $err;
+}
+
+sub link_Methods_to_Zmap_Styles {
+    my ($self) = @_;
+    
+    my $err = '';
+    foreach my $method (@{$self->get_all_Methods}) {
+        if (my $name = $method->style_name) {
+            if (my $style = $self->get_Zmap_Style($name)) {
+                # printf STDERR "Adding Zmap_Style object '%s' to Method '%s'\n",
+                #     $style->name, $method->name;
+                $method->Zmap_Style($style);
+            } else {
+                $err .= sprintf qq{Zmap_Style '%s' in Method '%s' does not exist\n},
+                    $name, $method->name;
+            }
+        }
+    }
+    return $err;
+}
+
 sub get_all_transcript_Methods {
     my ($self) = @_;
     
-    if (my $lst = $self->{'_method_list'}) {
-        return grep $_->transcript_type, @$lst;
-    } else {
-        return;
-    }
+    return grep $_->is_transcript, @{$self->get_all_Methods};
 }
 
 sub get_all_mutable_Methods {
     my ($self) = @_;
     
-    if (my $lst = $self->{'_method_list'}) {
-        return grep $_->mutable, @$lst;
-    } else {
-        return;
-    }
+    return grep $_->mutable, @{$self->get_all_Methods};
 }
 
 sub get_all_mutable_non_transcript_Methods {
     my ($self) = @_;
     
-    if (my $lst = $self->{'_method_list'}) {
-        return grep {$_->mutable and ! $_->transcript_type} @$lst;
-    } else {
-        return;
-    }
+    return grep {$_->mutable and ! $_->is_transcript} @{$self->get_all_Methods};
+}
+
+sub get_all_top_level_Methods {
+    my ($self) = @_;
+    
+    return grep ! $_->column_parent, @{$self->get_all_Methods};
 }
 
 sub get_Method_by_name {
@@ -151,109 +246,6 @@ sub process_for_otterlace {
     my( $self ) = @_;
     
     $self->create_full_gene_Methods;
-    $self->cluster_Methods_with_same_column_group;
-    $self->order_by_zone;
-    $self->assign_right_priorities;
-}
-
-sub order_by_zone {
-    my( $self ) = @_;
-    
-    my $lst = $self->get_all_Methods;
-    
-    # Multiple methods with the same zone_number will
-    # be left in their original order by sort.
-    @$lst = sort { ($a->zone_number || 0) <=> ($b->zone_number || 0) } @$lst;
-}
-
-sub order_by_right_priority {
-    my( $self ) = @_;
-    
-    my $lst = $self->get_all_Methods;
-    @$lst = sort { ($a->right_priority || 0) <=> ($b->right_priority || 0) } @$lst;
-}
-
-
-sub cluster_Methods_with_same_column_group {
-    my( $self ) = @_;
-    
-    my @all_meth = @{$self->get_all_Methods};
-    $self->flush_Methods;
-    my %column_cluster = ();
-    foreach my $meth (@all_meth) {
-        if (my $col = $meth->column_group) {
-            my $cluster = $column_cluster{$col} ||= [];
-            push(@$cluster, $meth);
-        }
-    }
-    while (my $meth = shift @all_meth) {
-        if (my $col = $meth->column_group) {
-            # Add the whole cluster where we find its first
-            # member in the list.
-            if (my $cluster = delete $column_cluster{$col}) {
-                my $zone = $meth->zone_number;
-                foreach my $meth (@$cluster) {
-                    # Make sure they are all in the same zone
-                    $meth->zone_number($zone);
-                    $self->add_Method($meth);
-                }
-            }
-        } else {
-            $self->add_Method($meth);
-        }
-    }
-}
-
-sub assign_right_priorities {
-    my( $self ) = @_;
-    
-    my $incr = 0.001;
-    
-    # This is a bit bigger than the hard-coded
-    # value for right_priority of DNA in fMap: 
-    my $dna_pos = 6.3;
-    
-    # The "oligo zone" is a region of the fMap where weird things
-    # happen due to the special oligo drawing code.
-    my @oligo_zone = (3.2, 3.9);
-    
-    my $meth_list = $self->get_all_Methods;
-    # Must start at 0.1 or objects get drawn left of the ruler in fMap
-    my $pos = 0.1;
-    for (my $i = 0; $i < @$meth_list; $i++) {
-        my $method = $meth_list->[$i];
-        next if $method->right_priority_fixed;
-
-        my $prev = $i > 0 ? $meth_list->[$i - 1] : undef;
-
-        # Don't increase right_priority if we are
-        # in the same column as the previous method
-        if  ($prev and $prev->column_group and $prev->column_group eq $method->column_group) {
-            $method->right_priority($prev->right_priority);
-        }
-        elsif ($pos >= $oligo_zone[0] and $pos <= $oligo_zone[1]) {
-            #warn "Skipping oligo twilight zone\n";
-            $pos = $oligo_zone[1] + $incr;
-        }
-        elsif (my $pri = $method->right_priority) {
-            # Keep values greater than 5 greater than 5
-            if ($pri >= $dna_pos and $pos < $dna_pos) {
-                $pos = $dna_pos;
-            }
-            # Keep values greater than 4 greater than what was set
-            elsif ($pri >= 4 and $pos < 4) {
-                $pos = $pri;
-            }
-            else {
-                $pos += $incr;
-            }
-        }
-        else {
-            $pos += $incr;
-        }
-
-        $method->right_priority($pos);
-    }
 }
 
 sub create_full_gene_Methods {
@@ -280,11 +272,10 @@ sub create_full_gene_Methods {
         next if $method->name =~ /_trunc$/;
         
         $self->add_Method($method);
-        if (my $type = $method->mutable) {
-            # $method->column_group('Transcript');
+        if ($method->mutable) {
             # Do not add non-transcript mutable methods because
             # we don't need prefixed or truncated versions of them.
-            next unless $method->transcript_type;
+            next unless $method->is_transcript;
             push(@mutable_methods, $method);
             $self->add_Method($self->make_trunc_Method($method));
         }
@@ -294,13 +285,15 @@ sub create_full_gene_Methods {
     foreach my $prefix (@prefix_methods) {
         foreach my $method (@mutable_methods) {
             my $new = $method->clone;
-            $new->mutable(0);
+            $new->column_parent($prefix->column_parent);
+            # $new->mutable(0);
             $new->name($prefix->name . $method->name);
-            # $new->column_group($prefix->name . 'Transcript');
-            $new->color($prefix->color);
-            if ($method->cds_color) {
-                $new->cds_color($prefix->cds_color);
-            }
+            $new->Zmap_Style($prefix->Zmap_Style);
+            # # $new->column_group($prefix->name . 'Transcript');
+            # $new->color($prefix->color);
+            # if ($method->cds_color) {
+            #     $new->cds_color($prefix->cds_color);
+            # }
             $self->add_Method($new);
             $self->add_Method($self->make_trunc_Method($new));
         }
@@ -312,9 +305,9 @@ sub make_trunc_Method {
     
     my $new = $method->clone;
     $new->name($method->name . '_trunc');
-    $new->mutable(0);
-    $new->color('GRAY');
-    $new->cds_color('BLACK') if $method->cds_color;
+    my $style = $self->get_Zmap_Style('truncated_tsct');
+    $new->Zmap_Style($style);
+    ### Dullen colours
     return $new;
 }
 

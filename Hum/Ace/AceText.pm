@@ -43,6 +43,22 @@ sub get_values {
     return @matches;
 }
 
+
+sub class_and_name {
+    my ($self) = @_;
+    
+    # Assume we have a whole object - the first line is Class "obj-name"
+    if ($$self =~ /^(\w.+)/m) {
+        my @ele = quotewords('\s+', 0, $1);
+        my $class = $ele[0];
+        my $name = $ele[1] eq ':' ? $ele[2] : $ele[1];
+        return($class, $name);
+    } else {
+        return;
+    }
+}
+
+
 ### Not used - not as quick as get_values due to the checks it
 ### does, but is nicer to use.
 #sub get_unique_value {
@@ -106,9 +122,6 @@ sub _quoted_ace_line {
     
     for (my $i = 1; $i < @$tv; $i++) {
         $_ = $tv->[$i];
-        
-        ## Don't quote elements which are numbers or just ':'
-        #unless (/^[\.\d]+$/ or /^:$/) {
 
         # Don't quote elements which are numbers or just ':'
         unless (/^[\+\-]?[\.\d]+$/ or $_ eq ':') {
