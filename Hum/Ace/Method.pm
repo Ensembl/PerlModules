@@ -19,6 +19,7 @@ my @boolean_tags = qw{
     Edit_score
     Edit_display_label
     Coding
+    Allow_misalign
     
     };
 
@@ -139,6 +140,23 @@ sub column_parent {
     return $self->{'_column_parent'} || '';
 }
 
+sub get_all_child_Methods {
+    my ($self) = @_;
+    
+    if (my $chld = $self->{'_column_children'}) {
+        return @$chld;
+    } else {
+        return;
+    }
+}
+
+sub add_child_Method {
+    my ($self, $method) = @_;
+    
+    my $chld = $self->{'_column_children'} ||= [];
+    push(@$chld, $method);
+}
+
 sub style_name {
     my $self = shift;
     
@@ -172,7 +190,7 @@ sub is_transcript {
         #     $style->name, $style->inherited_mode;
         return $style->inherited_mode eq 'Transcript';
     } else {
-        printf STDERR "No Zmap_Style attached to method '%s'\n", $self->name;
+        # printf STDERR "No Zmap_Style attached to method '%s'\n", $self->name;
         return 0;
     }
 }
@@ -243,6 +261,15 @@ sub edit_display_label {
         $self->{'_edit_display_label'} = $flag ? 1 : 0;
     }
     return $self->{'_edit_display_label'};
+}
+
+sub allow_misalign {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_allow_misalign'} = $flag ? 1 : 0;
+    }
+    return $self->{'_allow_misalign'};
 }
 
 1;

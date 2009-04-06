@@ -10,9 +10,9 @@ use warnings;
 
 my %colour_tags;
 foreach my $clr_str (qw{
-    Colours.Normal.Outline
+    Colours.Normal.Border
     Colours.Normal.Fill
-    Colours.Selected.Outline
+    Colours.Selected.Border
     Colours.Selected.Fill
     })
 {
@@ -194,7 +194,7 @@ sub ace_string {
     # print STDERR Dumper($self);
     
     my $name = $self->name or confess "Zmap_Style has no name\n";
-    my $txt = Hum::Ace::AceText->new(qq{\nZmap_style : "$name"\n});
+    my $txt = Hum::Ace::AceText->new(qq{\nZmap_Style : "$name"\n});
     
     if (my $pn = $self->parent_name) {
         $txt->add_tag('Style_parent', $pn);
@@ -371,15 +371,15 @@ sub score_bounds {
 
 # Colour methods
 
-# Four methods for normal and selected colour of fill and outline of features
+# Four methods for normal and selected colour of fill and border of features
 
-sub colours_normal_outline {
-    my( $self, $colours_normal_outline ) = @_;
+sub colours_normal_border {
+    my( $self, $colours_normal_border ) = @_;
     
-    if ($colours_normal_outline) {
-        $self->{'_colours_normal_outline'} = $colours_normal_outline;
+    if ($colours_normal_border) {
+        $self->{'_colours_normal_border'} = $colours_normal_border;
     }
-    return $self->{'_colours_normal_outline'};
+    return $self->{'_colours_normal_border'};
 }
 
 sub colours_normal_fill {
@@ -391,13 +391,13 @@ sub colours_normal_fill {
     return $self->{'_colours_normal_fill'};
 }
 
-sub colours_selected_outline {
-    my( $self, $colours_selected_outline ) = @_;
+sub colours_selected_border {
+    my( $self, $colours_selected_border ) = @_;
     
-    if ($colours_selected_outline) {
-        $self->{'_colours_selected_outline'} = $colours_selected_outline;
+    if ($colours_selected_border) {
+        $self->{'_colours_selected_border'} = $colours_selected_border;
     }
-    return $self->{'_colours_selected_outline'};
+    return $self->{'_colours_selected_border'};
 }
 
 sub colours_selected_fill {
@@ -410,30 +410,30 @@ sub colours_selected_fill {
 }
 
 
-# Four methods for normal and selected colour of fill and outline of transcript CDS regions
+# Four methods for normal and selected colour of fill and border of transcript CDS regions
 
-sub cds_colour_normal_outline {
+sub cds_colour_normal_border {
     my( $self, $colour ) = @_;
     
-    return $self->get_set_mode_data($colour, qw{ CDS_Colour Normal Outline });
+    return $self->get_set_mode_data($colour, qw{ CDS_Colour Normal Border });
 }
 
 sub cds_colour_normal_fill {
     my( $self, $colour ) = @_;
     
-    return $self->get_set_mode_data($colour, qw{ CDS_Colour Normal Outline });
+    return $self->get_set_mode_data($colour, qw{ CDS_Colour Normal Border });
 }
 
-sub cds_colour_selected_outline {
+sub cds_colour_selected_border {
     my( $self, $colour ) = @_;
     
-    return $self->get_set_mode_data($colour, qw{ CDS_Colour Selected Outline });
+    return $self->get_set_mode_data($colour, qw{ CDS_Colour Selected Border });
 }
 
 sub cds_colour_selected_fill {
     my( $self, $colour ) = @_;
     
-    return $self->get_set_mode_data($colour, qw{ CDS_Colour Selected Outline });
+    return $self->get_set_mode_data($colour, qw{ CDS_Colour Selected Border });
 }
 
 

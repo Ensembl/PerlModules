@@ -581,7 +581,6 @@ sub store_MethodCollection_from_ace_handle {
     my ($self, $ace) = @_;
     
     my $coll = Hum::Ace::MethodCollection->new_from_ace_handle($ace);
-    $coll->order_by_right_priority;
     $self->MethodCollection($coll);
 }
 

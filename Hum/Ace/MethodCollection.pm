@@ -20,6 +20,8 @@ sub new {
 sub new_from_string {
     my( $pkg, $str ) = @_;
     
+    # warn "Collection:\n$str\n";
+    
     my $self = $pkg->new;
 
     # Split text into paragraphs (which are separated by one or more blank lines).
@@ -33,18 +35,20 @@ sub new_from_string {
                 my $meth = Hum::Ace::Method->new_from_name_AceText($name, $txt);
                 $self->add_Method($meth);                
             }
-            elsif ($class eq 'Zmap_style') {
+            elsif ($class eq 'Zmap_Style') {
                 my $style = Hum::Ace::Zmap_Style->new_from_name_AceText($name, $txt);
                 $self->add_Zmap_Style($style);
             }
             else {
-                warn qq{Ignoring unknown class: $class : "$name"};
+                warn qq{Ignoring unknown class: $class : "$name" in:\n$para};
             }
         }
     }
     
     my $err = $self->link_Zmap_Styles;
     $err .= $self->link_Methods_to_Zmap_Styles;
+    $err .= $self->link_column_children;
+    $err .= $self->check_all_leaf_Methods_have_Zmap_Styles;
     confess $err if $err;
     
     return $self;
@@ -54,8 +58,12 @@ sub new_from_ace_handle {
     my ($pkg, $ace) = @_;
     
     $ace->raw_query('find Method *');
+    my $str = $ace->raw_query('show -a');
+    $ace->raw_query('find Zmap_Style *');
+    $str .= $ace->raw_query('show -a');
+    
     # Using the AceText object strips out any server comments and nulls
-    my $meths = Hum::Ace::AceText->new($ace->raw_query('show -a'));
+    my $meths = Hum::Ace::AceText->new($str);
     return $pkg->new_from_string($meths->ace_string);
 }
 
@@ -124,13 +132,6 @@ sub add_Method {
     } else {
         confess "missing Hum::Ace::Method argument";
     }
-}
-
-sub get_all_Methods {
-    my( $self ) = @_;
-    
-    my $lst = $self->{'_method_list'} ||= [];
-    return $lst;
 }
 
 sub add_Zmap_Style {
@@ -203,6 +204,42 @@ sub link_Methods_to_Zmap_Styles {
     return $err;
 }
 
+sub link_column_children {
+    my ($self) = @_;
+    
+    my $err = '';
+    my %parent_columns = map {$_->name, $_} $self->get_all_top_level_Methods;
+    foreach my $method (grep $_->column_parent, @{$self->get_all_Methods}) {
+        my $parent_name = $method->column_parent;
+        if (my $parent = $parent_columns{$parent_name}) {
+            $parent->add_child_Method($method);
+        } else {
+            $err .= qq{No top level Method called '$parent_name'\n};
+        }
+    }
+    return $err;
+}
+
+sub check_all_leaf_Methods_have_Zmap_Styles {
+    my ($self) = @_;
+    
+    my $err = '';
+    foreach my $method (@{$self->get_all_Methods}) {
+        next if $method->get_all_child_Methods;
+        unless ($method->Zmap_Style) {
+            $err .= sprintf qq{Method '%s' has no children and no Zmap_Style\n}, $method->name;
+        }
+    }
+    return $err;
+}
+
+sub get_all_Methods {
+    my( $self ) = @_;
+    
+    my $lst = $self->{'_method_list'} ||= [];
+    return $lst;
+}
+
 sub get_all_transcript_Methods {
     my ($self) = @_;
     
@@ -268,16 +305,19 @@ sub create_full_gene_Methods {
     
     my @mutable_methods;
     foreach my $method (@$meth_list) {
-        # Skip existing _trunc methods - we will make new ones
+        # Skip any existing _trunc methods - we will make new ones
         next if $method->name =~ /_trunc$/;
         
         $self->add_Method($method);
+
         if ($method->mutable) {
             # Do not add non-transcript mutable methods because
             # we don't need prefixed or truncated versions of them.
-            next unless $method->is_transcript;
-            push(@mutable_methods, $method);
-            $self->add_Method($self->make_trunc_Method($method));
+            if ($method->is_transcript) {
+                push(@mutable_methods, $method);
+                $self->add_Method($self->make_trunc_Method($method));
+                next;
+            }
         }
     }
 
@@ -286,14 +326,8 @@ sub create_full_gene_Methods {
         foreach my $method (@mutable_methods) {
             my $new = $method->clone;
             $new->column_parent($prefix->column_parent);
-            # $new->mutable(0);
             $new->name($prefix->name . $method->name);
             $new->Zmap_Style($prefix->Zmap_Style);
-            # # $new->column_group($prefix->name . 'Transcript');
-            # $new->color($prefix->color);
-            # if ($method->cds_color) {
-            #     $new->cds_color($prefix->cds_color);
-            # }
             $self->add_Method($new);
             $self->add_Method($self->make_trunc_Method($new));
         }
