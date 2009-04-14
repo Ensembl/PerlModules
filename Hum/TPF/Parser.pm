@@ -81,7 +81,9 @@ sub parse {
         my @line = split /\s+/, $line_str, 4;
 
         #confess "Bad line in TPF: $_" unless @line >= 3;
-        confess "Bad line in TPF: $line_str" unless @line >= 3;
+        # now this is allowed
+        confess "Bad line in TPF: $line_str" unless @line >= 2;
+
         my( $row );
         if ($line[0] =~ /GAP/i) {
             my $identifier = uc $1;
