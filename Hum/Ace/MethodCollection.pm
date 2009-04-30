@@ -246,6 +246,23 @@ sub get_all_transcript_Methods {
     return grep $_->is_transcript, @{$self->get_all_Methods};
 }
 
+sub add_mutable_GeneMethod {
+    my ($self, $method) = @_;
+    
+    my $core = $self->{'_core_transcript_meths'} ||= [];
+    push @$core, $method;
+}
+
+sub get_all_mutable_GeneMethods {
+    my ($self) = @_;
+    
+    if (my $core = $self->{'_core_transcript_meths'}) {
+        return @$core;
+    } else {
+        return;
+    }
+}
+
 sub get_all_mutable_Methods {
     my ($self) = @_;
     
@@ -303,7 +320,6 @@ sub create_full_gene_Methods {
         }
     }
     
-    my @mutable_methods;
     foreach my $method (@$meth_list) {
         # Skip any existing _trunc methods - we will make new ones
         next if $method->name =~ /_trunc$/;
@@ -314,7 +330,7 @@ sub create_full_gene_Methods {
             # Do not add non-transcript mutable methods because
             # we don't need prefixed or truncated versions of them.
             if ($method->is_transcript) {
-                push(@mutable_methods, $method);
+                $self->add_mutable_GeneMethod($method);
                 $self->add_Method($self->make_trunc_Method($method));
                 next;
             }
@@ -323,7 +339,7 @@ sub create_full_gene_Methods {
 
     # Make copies of all the editable transcript methods for each prefix
     foreach my $prefix (@prefix_methods) {
-        foreach my $method (@mutable_methods) {
+        foreach my $method ($self->get_all_mutable_GeneMethods) {
             my $new = $method->clone;
             $new->column_parent($prefix->column_parent);
             $new->name($prefix->name . $method->name);

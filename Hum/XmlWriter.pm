@@ -25,9 +25,11 @@ sub new {
     
     my $scalar;
     my $self = bless \$scalar, $pkg;
+
     $indent{$self} = 2;
     $level{$self} = $x || 0;
     $open_tag{$self} = [];
+
     return $self;
 }
 
@@ -35,6 +37,9 @@ sub add_XML {
     my ($self, $xml) = @_;
     
     $xml->close_all_open_tags;
+    
+    ### Add indent to XML string?
+    
     $string{$self} .= $xml->flush;
 }
 

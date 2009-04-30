@@ -1132,6 +1132,7 @@ sub pre_otter_save_error {
     my $err = '';
     $err .= $self->error_start_not_found;
     $err .= $self->error_in_translation;
+    ### Add check for short translations that don't have start or end not-found
     $err .= $self->error_no_evidence;
     $err .= $self->error_in_name_format;
     $err .= $self->locus_level_errors;

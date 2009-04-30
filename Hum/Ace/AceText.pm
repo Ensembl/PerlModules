@@ -23,6 +23,13 @@ sub new {
     return bless \$txt, $pkg;
 }
 
+sub new_from_class_and_name {
+    my ($pkg, $class, $name) = @_;
+    
+    my $txt = qq{\n$class : "$name"\n};
+    return $pkg->new($txt);
+}
+
 sub ace_string {
     my( $self ) = @_;
     

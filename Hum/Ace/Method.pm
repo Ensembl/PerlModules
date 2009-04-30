@@ -205,7 +205,7 @@ sub remark {
 }
 
 sub mutable {
-    my( $self, $flag ) = @_;
+    my( $self ) = @_;
     
     # True if the attached Style is or descends from a "curated_*" style
     if (my $style = $self->Zmap_Style) {

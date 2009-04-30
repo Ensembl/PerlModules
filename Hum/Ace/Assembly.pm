@@ -144,6 +144,7 @@ sub set_SubSeq_locus_level_errors {
         $self->error_more_than_one_locus_name_root_in_transcript_names($tsct_list);
         $self->error_strand_in_transcript_set($tsct_list);
         $self->error_evidence_used_more_than_once_in_transcript_set($tsct_list);
+        ### Check for transcripts which don't overlap any others in the locus
     }
     
     $self->error_same_locus_name_root_in_transcripts_on_different_loci;

@@ -33,6 +33,7 @@ my @boolean_tags = qw{
     Frame_sensitive
     Show_only_as_3_columns
     Show_only_as_1_column
+    Bump_fixed
 };
 
 my @value_tags = qw{
@@ -72,10 +73,10 @@ sub new_from_name_AceText {
     }
     
     # Parse bump mode
-    if (my ($over) = $txt->get_values('Bump_mode.Overlap_mode')) {
-        $self->bump_mode($over->[0]);
+    if (my ($over) = $txt->get_values('Bump_initial.Bump_mode')) {
+        $self->bump_initial($over->[0]);
     }
-    if (my ($over) = $txt->get_values('Bump_default.Overlap_mode')) {
+    if (my ($over) = $txt->get_values('Bump_default.Bump_mode')) {
         $self->bump_default($over->[0]);
     }
     
@@ -168,13 +169,13 @@ sub new_from_name_AceText {
     }
 }
 
-sub bump_mode {
-    my( $self, $bump_mode ) = @_;
+sub bump_initial {
+    my( $self, $bump_initial ) = @_;
     
-    if ($bump_mode) {
-        $self->{'_bump_mode'} = $bump_mode;
+    if ($bump_initial) {
+        $self->{'_bump_initial'} = $bump_initial;
     }
-    return $self->{'_bump_mode'};
+    return $self->{'_bump_initial'};
 }
 
 sub bump_default {
@@ -231,6 +232,13 @@ sub ace_string {
     
     if (my $state = $self->column_state) {
         $txt->add_tag($state);
+    }
+    
+    if (my $mode = $self->bump_initial) {
+        $txt->add_tag(qw{ Bump_initial Bump_mode }, $mode);
+    }
+    if (my $mode = $self->bump_default) {
+        $txt->add_tag(qw{ Bump_default Bump_mode }, $mode);
     }
     
     return $txt->ace_string;
@@ -519,6 +527,15 @@ sub show_only_as_1_column {
         $self->{'_show_only_as_1_column'} = $flag ? 1 : 0;
     }
     return $self->{'_show_only_as_1_column'};
+}
+
+sub bump_fixed {
+    my( $self, $bump_fixed ) = @_;
+    
+    if ($bump_fixed) {
+        $self->{'_bump_fixed'} = $bump_fixed;
+    }
+    return $self->{'_bump_fixed'};
 }
 
 
