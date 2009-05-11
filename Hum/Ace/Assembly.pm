@@ -699,7 +699,7 @@ sub generate_keywords_for_clone {
 sub _generate_desc_and_kws_for_clone {
 	my ( $self, $clone ) = @_;
 	
-	my $DEBUG = 1;
+	my $DEBUG = 0;
 	
 	unless ($self->{_clone_desc_cache}->{$clone->accession}) {
 	
@@ -818,7 +818,7 @@ sub _generate_desc_and_kws_for_clone {
 	        next if $desc =~ /artefact|artifact/i;
 	       
 	        if ($desc =~ /novel\s+(protein|transcript|gene)\s+similar/) {
-	            $line .= "a gene for ".A($desc);
+	            $line .= "the gene for ".A($desc);
 	            push @DEline, \$line;
 	        }
 	        elsif (($desc =~ /(novel|putative) (protein|transcript|gene)/) ) {
