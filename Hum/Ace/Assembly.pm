@@ -6,6 +6,7 @@ package Hum::Ace::Assembly;
 use strict;
 
 use Carp;
+use Lingua::EN::Inflect qw( A NUMWORDS );
 
 use Hum::Ace::Locus;
 use Hum::Ace::Method;
@@ -698,7 +699,7 @@ sub generate_keywords_for_clone {
 sub _generate_desc_and_kws_for_clone {
 	my ( $self, $clone ) = @_;
 	
-	my $DEBUG = 0;
+	my $DEBUG = 1;
 	
 	unless ($self->{_clone_desc_cache}->{$clone->accession}) {
 	
@@ -729,6 +730,12 @@ sub _generate_desc_and_kws_for_clone {
 		my $cend = $clone->assembly_end;
 		
 		print "clone: $cstart-$cend\n" if $DEBUG;
+		
+	   	my $clone_accession = $clone->accession;
+	   	my $clone_name = $clone->clone_name;
+		
+		print "clone_accession: $clone_accession\n" if $DEBUG;
+	    print "clone_name: $clone_name\n" if $DEBUG;
 		
 		my $final_line = 'Contains ';
 		my @keywords;
@@ -805,12 +812,16 @@ sub _generate_desc_and_kws_for_clone {
 	        $line = $partial_text if $locus->is_truncated;
 	        
 	        $desc =~ s/\s+$//;
+	        
+	        print "desc: $desc\n" if $DEBUG;
+	        
+	        next if $desc =~ /artefact|artifact/i;
 	       
 	        if ($desc =~ /novel\s+(protein|transcript|gene)\s+similar/) {
-	            $line .= "a gene for a $desc";
+	            $line .= "a gene for ".A($desc);
 	            push @DEline, \$line;
 	        }
-	        elsif (($desc =~ /(novel protein|novel transcript|novel gene)/) ) {
+	        elsif (($desc =~ /(novel|putative) (protein|transcript|gene)/) ) {
 	            if ($desc =~ /(zgc:\d+)/) {
 	                $line .= "a gene for a novel protein ($1)";
 	                push @DEline, \$line;
@@ -820,20 +831,22 @@ sub _generate_desc_and_kws_for_clone {
 	            }
 	        }
 	        elsif ($desc =~ /pseudogene/) {
-	            $line .= "a $desc";
+	        	if ($locus->name !~ /$clone_accession/ && 
+	        		$locus->name !~ /$clone_name/) {
+	        		$line .= A($desc).' '.$locus->name;
+	        	}
+	        	else {
+	            	$line .= A($desc);
+	        	}
 	            push @DEline, \$line ;
-	        }
-	        elsif ($lname =~ $clone->accession) {
-	            $line .= "a gene for a $desc";
-	            push @DEline, \$line;
 	        }
 	        elsif ($lname !~ /-/) {
 	            $line .= "the $lname gene for $desc" ; 
-	            push @DEline,\$line ; 
-	            push @keywords, $locus;1
+	            push @DEline,\$line; 
+	            push @keywords, $locus;
 	        }
 	        else {
-	            $line .= "a gene for a $desc";
+	            $line .= "a gene for ".A($desc);
 	            push @DEline, \$line;
 	        }
 	        
@@ -846,7 +859,7 @@ sub _generate_desc_and_kws_for_clone {
 	           	push @DEline, \$line;
 	       	}
 	       	else {
-	           	my $line = $novel_gene_count." novel genes";
+	           	my $line = NUMWORDS($novel_gene_count)." novel genes";
 	           	push @DEline, \$line;
 	       	}
 	    }
@@ -857,7 +870,7 @@ sub _generate_desc_and_kws_for_clone {
 	           	push @DEline, \$line;
 	       	}
 	       	else {
-	           	my $line = "parts of ".$part_novel_gene_count." novel genes";
+	           	my $line = "parts of ".NUMWORDS($part_novel_gene_count)." novel genes";
 	           	push @DEline, \$line;
 	       	}
 	    }
