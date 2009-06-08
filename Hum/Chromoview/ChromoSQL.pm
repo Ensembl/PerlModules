@@ -101,12 +101,13 @@ sub fetch_all_species_subregions_Tpf {
 sub fetch_species_chrsTpf {
   my ($self, $species) = @_;
 
-  my $condition = $species ? qq{tg.subregion is null and c.speciesname = '$species'} : qq{tg.subregion is null};
+  my $condition = $species ? qq{AND c.speciesname = '$species'} : '';
 
   my $species_chr = prepare_track_statement(qq{
                                                SELECT c.speciesname, c.chromosome, tg.id_tpftarget
                                                FROM chromosomedict c, tpf_target tg, tpf t
-                                               WHERE $condition
+                                               WHERE tg.subregion is null
+                                               $condition
                                                AND t.id_tpftarget=tg.id_tpftarget
                                                AND tg.chromosome=c.id_dict and t.ISCURRENT=1
                                                ORDER BY c.speciesname, c.chromosome
