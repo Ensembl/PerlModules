@@ -198,16 +198,24 @@ sub authorize {
 
   die "No users in group '$user_group'" unless %users;
 
+	print "checking if $sanger_user is in $user_group? ".$users{$sanger_user}."\n";
+
   if ( $users{$sanger_user} ){
-  	my $db_user = $cfg->val('db','user');
-  	my $db_pass = $cfg->val('db','pass');
   	
-  	die "DB username and/or password missing from dbaccess file" unless ($db_user && $db_pass);
+  	if (wantarray) {
+  		my $db_user = $cfg->val('db','user');
+  		my $db_pass = $cfg->val('db','pass');
   	
-    return ($db_user, $db_pass);
+  		die "DB username and/or password missing from dbaccess file" unless ($db_user && $db_pass);
+  	
+    	return ($db_user, $db_pass);
+  	}
+  	else {
+  		return 1;
+  	}
   }
   else {
-    return undef;
+    return wantarray ? (undef, undef) : undef;
   }
 }
 
