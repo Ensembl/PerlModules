@@ -13,6 +13,7 @@ use Hum::Sort ('ace_sort');
 use Hum::Submission 'prepare_statement';
 use Hum::Tracking ('prepare_track_statement');
 use URI::Escape;
+use Config::IniFiles;
 #use CGI;
 #use CGI::Carp qw(warningsToBrowser fatalsToBrowser);
 
@@ -185,35 +186,29 @@ sub fetch_seq_region_id_by_accession {
 sub authorize {
 
   my $editor = shift;
-  my ($user, $pass, $editors);
+  $user_group = shift || 'editor'; 
+  
   my $sw = SangerWeb->new();
-  my $dbaccess = $sw->server_root."/data/humpub/dbaccess";
-  open(my $fh, "$dbaccess") or die $!;
-  my $conf = '';
-  my $flag = 0;
-  while(<$fh>){
-    chomp;
-    if ( /^USER\s+(.*)/ ){
-      $user = $1;
-    }
-    elsif ( /^PASS\s+(.*)/ ){
-      $pass = $1;
-    }
-    elsif ( /\[editors\]/ ){
-      $flag = 1;
-    }
-    elsif ( $flag == 1 ){
-      $editors->{$_}++;
-    }
-  }
+  
+  my $cfg = Config::IniFiles->new( file => $sw->server_root."/data/humpub/dbaccess" );
+  
+  die "Failed to parse dbaccess file" unless $cfg;
+  
+  my %users = map {$_ => 1} $cfg->val('users', $user_group);
 
-  if ( $editors->{$editor} ){
-    return ($user, $pass);
+  die "No users in group $user_group" unless %users;
+
+  if ( $users{$user} ){
+  	my $db_user = $cfg->val('db','user');
+  	my $db_pass = $cfg->val('db','pass');
+  	
+  	die "DB username and/or password missing" unless ($db_user && $db_pass);
+  	
+    return ($db_user, $db_pass);
   }
   else {
-    return (undef, undef);
+    return undef;
   }
-
 }
 
 sub get_chromoDB_handle {
