@@ -190,7 +190,7 @@ sub authorize {
   
   my $sw = SangerWeb->new();
   
-  my $cfg = Config::IniFiles->new( file => $sw->server_root."/data/humpub/dbaccess" );
+  my $cfg = Config::IniFiles->new( -file => $sw->server_root."/data/humpub/dbaccess" );
   
   die "Failed to parse dbaccess file" unless $cfg;
   
