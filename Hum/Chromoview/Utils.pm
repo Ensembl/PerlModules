@@ -202,7 +202,7 @@ sub authorize {
   	my $db_user = $cfg->val('db','user');
   	my $db_pass = $cfg->val('db','pass');
   	
-  	die "DB username and/or password missing" unless ($db_user && $db_pass);
+  	die "DB username and/or password missing from dbaccess file" unless ($db_user && $db_pass);
   	
     return ($db_user, $db_pass);
   }
