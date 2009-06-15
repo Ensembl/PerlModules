@@ -185,7 +185,7 @@ sub fetch_seq_region_id_by_accession {
 
 sub authorize {
 
-  my $editor = shift;
+  my $sanger_user = shift;
   my $user_group = shift || 'editor'; 
   
   my $sw = SangerWeb->new();
@@ -198,7 +198,7 @@ sub authorize {
 
   die "No users in group '$user_group'" unless %users;
 
-  if ( $users{$user} ){
+  if ( $users{$sanger_user} ){
   	my $db_user = $cfg->val('db','user');
   	my $db_pass = $cfg->val('db','pass');
   	
