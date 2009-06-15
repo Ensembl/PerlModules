@@ -198,8 +198,6 @@ sub authorize {
 
   die "No users in group '$user_group'" unless %users;
 
-	print "checking if $sanger_user is in $user_group? ".$users{$sanger_user}."\n";
-
   if ( $users{$sanger_user} ){
   	
   	if (wantarray) {
