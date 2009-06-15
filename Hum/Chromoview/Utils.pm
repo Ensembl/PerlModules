@@ -186,7 +186,7 @@ sub fetch_seq_region_id_by_accession {
 sub authorize {
 
   my $sanger_user = shift;
-  my $user_group = shift || 'editor'; 
+  my $user_group = shift || 'editors'; 
   
   my $sw = SangerWeb->new();
   
