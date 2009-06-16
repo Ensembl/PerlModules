@@ -14,15 +14,15 @@ use Bio::EnsEMBL::Analysis;
 use DBI;
 
 sub new {
-  my( $pkg, @data ) = @_;
-
-  my $self = {};
-  for (my $i=0; $i<scalar @data; $i=$i+2) {
-    my $method = "_$data[$i]";
-    $self->{$method} = $data[$i+1];
-  }
-
-  return bless $self, $pkg;
+    my ($pkg, @args) = @_;
+    
+    my $self = bless {}, $pkg;
+    for (my $i = 0; $i < @args; $i += 2) {
+        my ($method, $value) = @args[$i, $i+1];
+        $self->$method($value);
+    }
+    
+    return $self;
 }
 
 sub algorithm {

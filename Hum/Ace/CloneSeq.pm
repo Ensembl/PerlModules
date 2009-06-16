@@ -15,11 +15,11 @@ use Hum::Ace::Locus;
 use Hum::Ace::Method;
 use Hum::Ace::SubSeq;
 use Hum::Ace::AceText;
-use Bio::Otter::Keyword;
-use Bio::Otter::CloneRemark;
-use Bio::Otter::Author;
-use Bio::Otter::CloneInfo;
-use Bio::Otter::AnnotatedClone;
+# use Bio::Otter::Keyword;
+# use Bio::Otter::CloneRemark;
+# use Bio::Otter::Author;
+# use Bio::Otter::CloneInfo;
+# use Bio::Otter::AnnotatedClone;
 
 sub new {
     my( $pkg ) = shift;
@@ -139,55 +139,55 @@ sub get_all_SubSeqs {
     return @{$self->{'_SubSeq_list'}};
 }
 
-sub make_Otter_CloneInfo {
-    my ($self) = @_; 
-
-    require Hum::Fox::AceData::GenomeSequence;
-
-    my @clone_remarks;
-    foreach my $remark ($self->get_all_Remarks) {
-        push @clone_remarks,new Bio::Otter::CloneRemark(-remark => $remark);
-    }
-
-    my @clone_keywords;
-    foreach my $keyword ($self->get_all_Keywords) {
-        push @clone_keywords,new Bio::Otter::Keyword(-name => $keyword);
-    }
-
-    my ($author_name, $edit_time) = Hum::Fox::AceData::GenomeSequence
-        ->get_who_and_edit_time($self->sequence_name);
-    if (! $author_name or $author_name eq 'jgrg') {
-        $author_name = 'vega';
-    }
-    $edit_time ||= time;
-    my $author = new Bio::Otter::Author(
-        -name  => $author_name,
-        -email => "$author_name\@sanger.ac.uk",
-        );
-
-    my $ott_clone_info = new Bio::Otter::CloneInfo(
-        -clone_id  => $self->EnsEMBL_Contig->clone->dbID,
-        -author    => $author,
-        -remark    => \@clone_remarks,
-        -keyword   => \@clone_keywords,
-        );
-
-    return $ott_clone_info;
-}
-
-sub make_Otter_Clone {
-    my ($self) = @_; 
-
-    my $clone_info = $self->make_Otter_CloneInfo;
-
-    my $clone = $self->EnsEMBL_Contig->clone;
-
-    bless $clone, 'Bio::Otter::AnnotatedClone';
-
-    $clone->clone_info($clone_info);
-
-    return $clone;
-}
+# sub make_Otter_CloneInfo {
+#     my ($self) = @_; 
+# 
+#     require Hum::Fox::AceData::GenomeSequence;
+# 
+#     my @clone_remarks;
+#     foreach my $remark ($self->get_all_Remarks) {
+#         push @clone_remarks,new Bio::Otter::CloneRemark(-remark => $remark);
+#     }
+# 
+#     my @clone_keywords;
+#     foreach my $keyword ($self->get_all_Keywords) {
+#         push @clone_keywords,new Bio::Otter::Keyword(-name => $keyword);
+#     }
+# 
+#     my ($author_name, $edit_time) = Hum::Fox::AceData::GenomeSequence
+#         ->get_who_and_edit_time($self->sequence_name);
+#     if (! $author_name or $author_name eq 'jgrg') {
+#         $author_name = 'vega';
+#     }
+#     $edit_time ||= time;
+#     my $author = new Bio::Otter::Author(
+#         -name  => $author_name,
+#         -email => "$author_name\@sanger.ac.uk",
+#         );
+# 
+#     my $ott_clone_info = new Bio::Otter::CloneInfo(
+#         -clone_id  => $self->EnsEMBL_Contig->clone->dbID,
+#         -author    => $author,
+#         -remark    => \@clone_remarks,
+#         -keyword   => \@clone_keywords,
+#         );
+# 
+#     return $ott_clone_info;
+# }
+# 
+# sub make_Otter_Clone {
+#     my ($self) = @_; 
+# 
+#     my $clone_info = $self->make_Otter_CloneInfo;
+# 
+#     my $clone = $self->EnsEMBL_Contig->clone;
+# 
+#     bless $clone, 'Bio::Otter::AnnotatedClone';
+# 
+#     $clone->clone_info($clone_info);
+# 
+#     return $clone;
+# }
 
 sub EnsEMBL_Contig {
     my( $self, $ens_contig ) = @_;

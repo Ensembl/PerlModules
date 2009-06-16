@@ -65,29 +65,6 @@ sub class_and_name {
     }
 }
 
-
-### Not used - not as quick as get_values due to the checks it
-### does, but is nicer to use.
-#sub get_unique_value {
-#    my $self = shift;
-#    
-#    my @matches = $self->get_values(@_);
-#    if (@matches > 1) {
-#        confess 'Got ', scalar(@matches), ' matches, not 1. Is tag "UNIQUE"?';
-#    }
-#    elsif (@matches == 1) {
-#        if (@{$matches[0]} == 1) {
-#            return $matches[0][0];
-#        } else {
-#            confess "match is not a simple value:\n",
-#                join(', ', map "'$_'", @{$matches[0]});
-#        }
-#    }
-#    else {
-#        return;
-#    }
-#}
-
 sub count_tag {
     my( $self, $tag_path ) = @_;
     

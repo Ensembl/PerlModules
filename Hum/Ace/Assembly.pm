@@ -489,7 +489,7 @@ sub express_data_fetch {
     my( $self, $ace ) = @_;
     
     # Get Methods first, since they are used by other objects
-    $self->store_MethodCollection_from_ace_handle($ace);
+    # $self->store_MethodCollection_from_ace_handle($ace);
     my %name_method = map {$_->name, $_} $self->MethodCollection->get_all_transcript_Methods;
 
     my $name = $self->name;

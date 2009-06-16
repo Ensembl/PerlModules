@@ -31,7 +31,7 @@ my @boolean_tags = qw{
     Score_by_width
     Score_percent
     Frame_sensitive
-    Show_only_as_3_columns
+    Show_only_as_3_frame
     Show_only_as_1_column
     Bump_fixed
 };
@@ -301,6 +301,45 @@ sub inherited_mode {
     }
 }
 
+sub inherited {
+    my ($self, $method) = @_;
+    
+    return wantarray ? $self->_inherited_list($method) : $self->_inherited_scalar($method);
+}
+
+sub _inherited_scalar {
+    my ($self, $method) = @_;
+    
+    # warn "Returning '$method' in scalar context\n";
+    
+    if (defined(my $val = $self->$method())) {
+        return $val
+    }
+    elsif (my $style = $self->parent_Style) {
+        return $style->_inherited_scalar($method);
+    }
+    else {
+        return;
+    }
+}
+
+sub _inherited_list {
+    my ($self, $method) = @_;
+    
+    # warn "Returning '$method' in list context\n";
+    
+    if (my @val = $self->$method()) {
+        return @val
+    }
+    elsif (my $style = $self->parent_Style) {
+        return $style->_inherited_list($method);
+    }
+    else {
+        return;
+    }
+}
+
+
 sub mode_data {
     my ($self, $mode_data) = @_;
     
@@ -511,13 +550,13 @@ sub frame_sensitive {
     return $self->{'_frame_sensitive'};
 }
 
-sub show_only_as_3_columns {
+sub show_only_as_3_frame {
     my( $self, $flag ) = @_;
     
     if (defined $flag) {
-        $self->{'_show_only_as_3_columns'} = $flag ? 1 : 0;
+        $self->{'_show_only_as_3_frame'} = $flag ? 1 : 0;
     }
-    return $self->{'_show_only_as_3_columns'};
+    return $self->{'_show_only_as_3_frame'};
 }
 
 sub show_only_as_1_column {

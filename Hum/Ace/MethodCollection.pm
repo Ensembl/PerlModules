@@ -54,18 +54,20 @@ sub new_from_string {
     return $self;
 }
 
-sub new_from_ace_handle {
-    my ($pkg, $ace) = @_;
-    
-    $ace->raw_query('find Method *');
-    my $str = $ace->raw_query('show -a');
-    $ace->raw_query('find Zmap_Style *');
-    $str .= $ace->raw_query('show -a');
-    
-    # Using the AceText object strips out any server comments and nulls
-    my $meths = Hum::Ace::AceText->new($str);
-    return $pkg->new_from_string($meths->ace_string);
-}
+# # This isn't useful, because the methods are sorted by name, and
+# # the mutable GeneMethods don't get populated.
+# sub new_from_ace_handle {
+#     my ($pkg, $ace) = @_;
+#     
+#     $ace->raw_query('find Method *');
+#     my $str = $ace->raw_query('show -a');
+#     $ace->raw_query('find Zmap_Style *');
+#     $str .= $ace->raw_query('show -a');
+#     
+#     # Using the AceText object strips out any server comments and nulls
+#     my $meths = Hum::Ace::AceText->new($str);
+#     return $pkg->new_from_string($meths->ace_string);
+# }
 
 
 sub ace_string {
@@ -128,7 +130,7 @@ sub add_Method {
         my $lst = $self->get_all_Methods;
         push @$lst, $method;
         $self->{'_method_by_name'}{$name} = $method;
-        
+        # warn "Added Method '$name'\n";
     } else {
         confess "missing Hum::Ace::Method argument";
     }

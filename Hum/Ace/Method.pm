@@ -119,6 +119,18 @@ sub ace_string {
         }
     }
     
+    # A bit messy, but thank's to the sgifacesever's GFF
+    # dumping mechanism, it depends on these tags being
+    # present in the Method object to trigger the score
+    # being reported for Homols and Features
+    if (my $style = $self->Zmap_Style) {
+        if (my @bounds = $style->inherited('score_bounds')) {
+            $txt->add_tag('Score_bounds', @bounds);
+        }
+        $txt->add_tag('Score_by_width') if $style->inherited('score_by_width');
+        $txt->add_tag('Percent')        if $style->inherited('score_percent');
+    }
+    
     return $txt->ace_string;
 }
 

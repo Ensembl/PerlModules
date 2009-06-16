@@ -185,7 +185,7 @@ sub fetch_entry_date_from_id_tpf {
   my ( $pkg, $id_tpf ) = @_;
 
   my $qry = prepare_track_statement(qq{
-                             SELECT to_char(entry_date, 'yyyy-mm-dd')
+                             SELECT TO_CHAR(entry_date, 'yyyy-mm-dd')
                              FROM tpf
                              WHERE id_tpf = ?
                            });
