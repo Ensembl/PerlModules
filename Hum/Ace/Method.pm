@@ -129,6 +129,9 @@ sub ace_string {
         }
         $txt->add_tag('Score_by_width') if $style->inherited('score_by_width');
         $txt->add_tag('Percent')        if $style->inherited('score_percent');
+        if ($style->inherited_mode eq 'Graph') {
+            $txt->add_tag('Score_by_histogram');
+        }
     }
     
     return $txt->ace_string;
