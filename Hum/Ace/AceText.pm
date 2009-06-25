@@ -173,9 +173,6 @@ __END__
         print "desc = '$desc->[0]'\n";
     }
 
-    # Get the accession - which can only have a unique value
-    my $acc = $txt->get_single_value('Accession');
-
     # Count how many EST matches are recorded
     print "There are ", $txt->count_tag('EST_match'), " est matches\n";
 
@@ -214,17 +211,6 @@ model, which causes two tags to occur in a row in
 the .ace file, you can give multiple tags
 separated by a dot.  (See the
 'EMBL_dump_info.DE_line' example in SYNOPSIS.)
-
-=item get_single_value
-
-Given the name of a tag, returns a string which
-is the value under that tag. This will only work
-where there is a single UNIQUE value under the
-tag.
-
-Returns C<undef> if the tag is absent or empty.
-Throws an exception if there is more than one
-match.
 
 =item count_tag
 

@@ -468,7 +468,7 @@ sub cds_colour_normal_border {
 sub cds_colour_normal_fill {
     my( $self, $colour ) = @_;
     
-    return $self->get_set_mode_data($colour, qw{ CDS_Colour Normal Border });
+    return $self->get_set_mode_data($colour, qw{ CDS_Colour Normal Fill });
 }
 
 sub cds_colour_selected_border {
@@ -480,7 +480,7 @@ sub cds_colour_selected_border {
 sub cds_colour_selected_fill {
     my( $self, $colour ) = @_;
     
-    return $self->get_set_mode_data($colour, qw{ CDS_Colour Selected Border });
+    return $self->get_set_mode_data($colour, qw{ CDS_Colour Selected Fill });
 }
 
 

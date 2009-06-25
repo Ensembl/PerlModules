@@ -1413,8 +1413,7 @@ sub ace_string {
             $prefix = "$pre:";
         }
         $out .= qq{Method "$prefix$mn"\n};
-        my $type = $method->transcript_type;
-        if ($type and $type eq 'coding') {
+        if ($method->coding) {
             my ($cds_start, $cds_end) = $self->cds_coords;
             $out .= qq{CDS  $cds_start $cds_end\n};
         }
