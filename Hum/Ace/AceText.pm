@@ -30,6 +30,13 @@ sub new_from_class_and_name {
     return $pkg->new($txt);
 }
 
+sub new_from_class_and_name_with_delete {
+    my ($pkg, $class, $name) = @_;
+    
+    my $txt = qq{\n-D $class : "$name"\n\n$class : "$name"\n};
+    return $pkg->new($txt);
+}
+
 sub ace_string {
     my( $self ) = @_;
     
@@ -50,6 +57,18 @@ sub get_values {
     return @matches;
 }
 
+sub get_single_value {
+    my ($self, $tag_path) = @_;
+    
+    my ($pat, $offset) = _make_pattern_and_offset($tag_path);
+    
+    if ($$self =~ /$pat/) {
+        my ($value) = (quotewords('\s+', 0, $1))[$offset];
+        return $value;
+    } else {
+        return;
+    }
+}
 
 sub class_and_name {
     my ($self) = @_;
