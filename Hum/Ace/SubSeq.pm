@@ -1550,6 +1550,8 @@ sub zmap_xml_feature_tag {
     
     my $style = $self->GeneMethod->style_name;
 
+    print "\n\nSTYLE: $style\n\n";
+
     # Not all transcripts have a locus.
     # eg: Predicted genes (Genscan, Augustus) don't.
     my @locus_prop;
