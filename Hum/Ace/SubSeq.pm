@@ -1548,7 +1548,7 @@ sub zmap_create_xml_string {
 sub zmap_xml_feature_tag {
     my ($self, $xml) = @_;
     
-    my $style = $self->GeneMethod->name;
+    my $style = $self->GeneMethod->style_name;
 
     # Not all transcripts have a locus.
     # eg: Predicted genes (Genscan, Augustus) don't.
