@@ -231,6 +231,7 @@ sub _fetch_generic {
 
     my $sql = qq{
         SELECT t.id_tpf
+          , t.id_tpftarget
           , TO_CHAR(t.entry_date, 'YYYY-MM-DD HH24:MI:SS') entry_date
           , t.program
           , t.operator
@@ -248,7 +249,7 @@ sub _fetch_generic {
     #warn "$sql (@data)";
     my $sth = prepare_cached_track_statement($sql);
     $sth->execute(@data);
-    my ($db_id, $entry_date, $prog, $operator,
+    my ($db_id, $id_tpftarget, $entry_date, $prog, $operator,
         $subregion, $species, $chr, $iscurrent) = $sth->fetchrow;
     $sth->finish;
     
@@ -256,6 +257,7 @@ sub _fetch_generic {
     
     my $self = $pkg->new;
     $self->db_id($db_id);
+    $self->id_tpftarget($id_tpftarget);
     $self->entry_date(iso2time($entry_date));
     $self->program($prog);
     $self->operator($operator);
@@ -418,6 +420,15 @@ sub db_id {
         $self->{'_db_id'} = $db_id;
     }
     return $self->{'_db_id'};
+}
+
+sub id_tpftarget {
+    my( $self, $id ) = @_;
+    
+    if ($id) {
+        $self->{'_id_tpftarget'} = $id;
+    }
+    return $self->{'_id_tpftarget'};
 }
 
 sub add_Row {
