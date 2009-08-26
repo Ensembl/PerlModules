@@ -19,7 +19,7 @@ use Hum::Sequence::DNA;
 
 sub new {
     my( $pkg ) = shift;
-    
+
     return bless {
         '_SubSeq_list'  => [],
         }, $pkg;
@@ -27,7 +27,7 @@ sub new {
 
 sub name {
     my( $self, $name ) = @_;
-    
+
     if ($name) {
         $self->{'_name'} = $name;
     }
@@ -36,7 +36,7 @@ sub name {
 
 sub assembly_name { # or asm_type, or sequence_set_name
     my( $self, $aname ) = @_;
-    
+
     if ($aname) {
         $self->{'_aname'} = $aname;
     }
@@ -45,7 +45,7 @@ sub assembly_name { # or asm_type, or sequence_set_name
 
 sub species { # in fact, it is the dataset_name (so 'human' and 'test_human' are different species!)
     my( $self, $species ) = @_;
-    
+
     if ($species) {
         $self->{'_species'} = $species;
     }
@@ -54,7 +54,7 @@ sub species { # in fact, it is the dataset_name (so 'human' and 'test_human' are
 
 sub Sequence {
     my( $self, $seq ) = @_;
-    
+
     if ($seq) {
         $self->{'_sequence_dna_object'} = $seq;
     }
@@ -63,7 +63,7 @@ sub Sequence {
 
 sub MethodCollection {
     my( $self, $MethodCollection ) = @_;
-    
+
     if ($MethodCollection) {
         $self->{'_MethodCollection'} = $MethodCollection;
     }
@@ -72,7 +72,7 @@ sub MethodCollection {
 
 sub add_SubSeq {
     my( $self, $SubSeq ) = @_;
-    
+
     confess "'$SubSeq' is not a 'Hum::Ace::SubSeq'"
         unless $SubSeq->isa('Hum::Ace::SubSeq');
     push(@{$self->{'_SubSeq_list'}}, $SubSeq);
@@ -80,7 +80,7 @@ sub add_SubSeq {
 
 sub replace_SubSeq {
     my( $self, $sub, $old_name ) = @_;
-    
+
     my $name = $old_name || $sub->name;
     my $ss_list = $self->{'_SubSeq_list'}
         or confess "No SubSeq list";
@@ -96,7 +96,7 @@ sub replace_SubSeq {
 
 sub delete_SubSeq {
     my( $self, $name ) = @_;
-    
+
     my $ss_list = $self->{'_SubSeq_list'}
         or confess "No SubSeq list";
     for (my $i = 0; $i < @$ss_list; $i++) {
@@ -111,21 +111,21 @@ sub delete_SubSeq {
 
 sub get_all_SubSeqs {
     my( $self ) = @_;
-    
+
     return @{$self->{'_SubSeq_list'}};
 }
 
 sub set_SubSeq_locus_level_errors {
     my ($self) = @_;
-    
+
     my %locus_sub;
-    
+
     foreach my $sub (sort { ace_sort($a->name, $b->name) } $self->get_all_SubSeqs) {
         next unless $sub->is_mutable;
         my $tsct_list = $locus_sub{$sub->Locus->name} ||= [];
         push(@$tsct_list, $sub);
     }
-    
+
     foreach my $loc_name (keys %locus_sub) {
         my $tsct_list = $locus_sub{$loc_name};
 
@@ -133,7 +133,7 @@ sub set_SubSeq_locus_level_errors {
         ### object in memory attached to all its sequences.
         ### Would be v. bad if it wasn't!
         my $locus = $tsct_list->[0]->Locus;
-        
+
         # Is there anything wrong with the annotation of this locus?
         my $locus_err = $locus->pre_otter_save_error;
         foreach my $sub (@$tsct_list) {
@@ -147,16 +147,16 @@ sub set_SubSeq_locus_level_errors {
         $self->error_evidence_used_more_than_once_in_transcript_set($tsct_list);
         ### Check for transcripts which don't overlap any others in the locus
     }
-    
+
     $self->error_same_locus_name_root_in_transcripts_on_different_loci;
 }
 
 sub error_same_locus_name_root_in_transcripts_on_different_loci {
     my ($self) = @_;
-    
+
     # Check we don't have same locus name root in transcript names
     # shared amongst different loci.
-    
+
     my %root_locus_tsct;
     foreach my $sub (sort { ace_sort($a->name, $b->name) } $self->get_all_SubSeqs) {
         next unless $sub->is_mutable;
@@ -164,7 +164,7 @@ sub error_same_locus_name_root_in_transcripts_on_different_loci {
         my $sub_list = $root_locus_tsct{$root}{$sub->Locus->name} ||= [];
         push @$sub_list, $sub;
     }
-    
+
     foreach my $root (keys %root_locus_tsct) {
         my $locus_tsct = $root_locus_tsct{$root};
         my @loc_name = sort { ace_sort($a, $b) } keys %$locus_tsct;
@@ -187,7 +187,7 @@ sub error_same_locus_name_root_in_transcripts_on_different_loci {
 
 sub error_more_than_one_locus_name_root_in_transcript_names {
     my ($self, $tsct_list) = @_;
-    
+
     # Check that we don't have different locus name roots within
     # transcript names from the same locus.
 
@@ -196,10 +196,10 @@ sub error_more_than_one_locus_name_root_in_transcript_names {
         my $by_root = $lnr{$sub->locus_name_root} ||= [];
         push @$by_root, $sub;
     }
-    
+
     # Return if we've only got one root
     return unless keys %lnr > 1;
-    
+
     my ($most, @rest) = sort { @{$lnr{$b}} <=> @{$lnr{$a}} } keys %lnr;
     if (@{$lnr{$most}} > @{$lnr{$rest[0]}}) {
         # One root is used more frequently than others in locus
@@ -273,7 +273,7 @@ sub error_strand_in_transcript_set {
 
 sub error_evidence_used_more_than_once_in_transcript_set {
     my ($self, $tsct_list) = @_;
-    
+
     # Check that the same piece of evidence is not used in more than one transcript.
     my %evi_tsct;
 
@@ -288,7 +288,7 @@ sub error_evidence_used_more_than_once_in_transcript_set {
             }
         }
     }
-    
+
     foreach my $type_evi (sort { ace_sort($a, $b) } keys %evi_tsct) {
         my $sub_list = $evi_tsct{$type_evi};
         if (@$sub_list > 1) {
@@ -331,7 +331,7 @@ sub get_all_SimpleFeatures {
 
     my $feat_list = $self->{'_SimpleFeature_list'}
       or return;
-    
+
     # Set seq_name in features to our own
     if (my $name = $self->name) {
         foreach my $feat (@$feat_list) {
@@ -404,34 +404,34 @@ sub filter_SimpleFeature_list_from_ace_handle {
 
 sub ace_string {
     my ($self) = @_;
-    
+
     my $name = $self->name;
-    
+
     my $ace = qq{\nSequence "$name"\n};
     my $coll = $self->MethodCollection
       or confess "No MethodCollection attached";
     foreach my $method ($coll->get_all_mutable_non_transcript_Methods) {
         $ace .= sprintf qq{-D Feature "%s"\n}, $method->name;
     }
-    
+
     $ace .= qq{\nSequence "$name"\n};
-    
+
     foreach my $feat ($self->get_all_SimpleFeatures) {
         $ace .= $feat->ace_string;
     }
-    
+
     return $ace;
 }
 
 sub zmap_SimpleFeature_xml {
     my ($self, $old) = @_;
-    
+
     if ($old and $self == $old) {
         confess "Old and new assemblies are the same object!";
     }
-    
+
     # If $old is supplied, we create the minimum update transaction.
-    
+
     my %new_feat = map {$_->zmap_xml_feature_tag, 1} $self->get_all_SimpleFeatures;
     my %old_feat;
     if ($old) {
@@ -450,7 +450,7 @@ sub zmap_SimpleFeature_xml {
     if ($del_xml) {
         push(@xml, $self->zmap_delete_xml_string($del_xml));
     }
-        
+
     foreach my $str (keys %new_feat) {
         # Create if feature in new set is not in the old
         unless ($old_feat{$str}) {
@@ -460,13 +460,13 @@ sub zmap_SimpleFeature_xml {
     if ($cre_xml) {
         push(@xml, $self->zmap_create_xml_string($cre_xml));
     }
-    
+
     return @xml;
 }
 
 sub zmap_delete_xml_string {
     my ($self, $xml) = @_;
-    
+
     return qq{<zmap action="delete_feature">\n}
       . qq{\t<featureset>\n}
       . qq{\t\t} . $xml
@@ -476,7 +476,7 @@ sub zmap_delete_xml_string {
 
 sub zmap_create_xml_string {
     my ($self, $xml) = @_;
-    
+
     return qq{<zmap action="create_feature">\n}
       . qq{\t<featureset>\n}
       . qq{\t\t} . $xml
@@ -487,16 +487,16 @@ sub zmap_create_xml_string {
 
 sub express_data_fetch {
     my( $self, $ace ) = @_;
-    
+
     # Get Methods first, since they are used by other objects
     # $self->store_MethodCollection_from_ace_handle($ace);
     my %name_method = map {$_->name, $_} $self->MethodCollection->get_all_transcript_Methods;
 
     my $name = $self->name;
-    
+
     # To save memory we only store the DNA from this top level sequence object.
     $self->store_Sequence_from_ace_handle($ace);
-    
+
     # These raw_queries are much faster than
     # fetching the whole Genome_Sequence object!
     $ace->raw_query("find Sequence $name");
@@ -574,28 +574,28 @@ sub express_data_fetch {
         $clone->assembly_start($start);
         $clone->assembly_end($end);
         $clone->assembly_strand($strand);
-        
+
         $self->add_Clone($clone);
     }
 }
 
 sub store_MethodCollection_from_ace_handle {
     my ($self, $ace) = @_;
-    
+
     my $coll = Hum::Ace::MethodCollection->new_from_ace_handle($ace);
     $self->MethodCollection($coll);
 }
 
 sub store_Sequence_from_ace_handle {
     my( $self, $ace ) = @_;
-    
+
     my $seq = $self->new_Sequence_from_ace_handle($ace);
     $self->Sequence($seq);
 }
 
 sub new_Sequence_from_ace_handle {
     my( $self, $ace ) = @_;
-    
+
     my $name = $self->name;
     my $seq = Hum::Sequence::DNA->new;
     $seq->name($name);
@@ -612,13 +612,13 @@ sub new_Sequence_from_ace_handle {
         $dna_str =~ s/^>.+//m
             or confess "Can't strip fasta header";
         $dna_str =~ s/\s+//g;
-        
+
         ### Nasty hack sMap is putting dashes
         ### on the end of the sequence.
         $dna_str =~ s/[\s\-]+$//;
-        
+
         $seq->sequence_string($dna_str);
-        
+
         #use Hum::FastaFileIO;
         #my $debug = Hum::FastaFileIO->new_DNA_IO("> /tmp/spandit-debug.seq");
         #$debug->write_sequences($seq);
@@ -629,23 +629,23 @@ sub new_Sequence_from_ace_handle {
 
 sub add_Clone {
     my( $self, $clone ) = @_;
-    
+
     #print STDERR "Adding: $self, $name, $start, $end\n";
-    
+
     my $list = $self->{'_Clone_list'} ||= [];
     push @$list, $clone;
 }
 
 sub get_all_Clones {
     my ($self) = @_;
-    
+
     my $list = $self->{'_Clone_list'} or return;
     return @$list;
 }
 
 sub get_Clone {
     my ($self, $clone_name) = @_;
-    
+
     my $clone;
     foreach my $this ($self->get_all_Clones) {
         if ($this->name eq $clone_name) {
@@ -659,7 +659,7 @@ sub get_Clone {
 
 sub replace_Clone {
     my( $self, $clone ) = @_;
-    
+
     my $name = $clone->name;
     my $clone_list = $self->{'_Clone_list'}
         or confess "No Clone list";
@@ -675,9 +675,9 @@ sub replace_Clone {
 
 sub clone_name_overlapping {
     my( $self, $pos ) = @_;
-    
+
     # print STDERR "Getting: $self, $pos\n";
-    
+
     my $list = $self->{'_Clone_list'} or return;
     foreach my $clone (@$list) {
         if ($pos >= $clone->assembly_start and $pos <= $clone->assembly_end) {
@@ -698,75 +698,75 @@ sub generate_keywords_for_clone {
 
 sub _generate_desc_and_kws_for_clone {
 	my ( $self, $clone ) = @_;
-	
+
 	my $DEBUG = 0;
-	
+
 	unless ($self->{_clone_desc_cache}->{$clone->accession}) {
-	
-		# set to true to generate a description that specifies if the 
-		# clone contains a central part or the 5' or 3' end of partial 
-		# loci - but note that this can only work if the current assembly 
-		# happens to contain the remainder of the locus. Otherwise the 
-		# description will (rather boringly) just state that the clone 
+
+		# set to true to generate a description that specifies if the
+		# clone contains a central part or the 5' or 3' end of partial
+		# loci - but note that this can only work if the current assembly
+		# happens to contain the remainder of the locus. Otherwise the
+		# description will (rather boringly) just state that the clone
 		# contains 'part of' the locus, but will at least be consistent!
-		my $BE_CLEVER = 0; 
-		
+		my $BE_CLEVER = 0;
+
 		my $locus_sub;
-		
+
 		foreach my $sub (sort { ace_sort($a->name, $b->name) } $self->get_all_SubSeqs) {
-			
+
 			next unless $sub->Locus;
-			
+
 			# ignore loci that are not havana annotated genes
 			next unless ($sub->Locus->is_truncated || $sub->GeneMethod->mutable);
-			
+
 	        my $tsct_list = $locus_sub->{$sub->Locus->name} ||= [];
 	        push(@$tsct_list, $sub);
 	    }
-		
+
 		print "clone_desc_cache miss\n" if $DEBUG;
-		
+
 		my $cstart = $clone->assembly_start;
 		my $cend = $clone->assembly_end;
-		
+
 		print "clone: $cstart-$cend\n" if $DEBUG;
-		
+
 	   	my $clone_accession = $clone->accession;
 	   	my $clone_name = $clone->clone_name;
-		
+
 		print "clone_accession: $clone_accession\n" if $DEBUG;
 	    print "clone_name: $clone_name\n" if $DEBUG;
-		
+
 		my $final_line = 'Contains ';
 		my @keywords;
 		my $novel_gene_count = 0;
 		my $part_novel_gene_count = 0;
 		my @DEline;
-		
+
 		foreach my $loc_name (keys %$locus_sub) {
-			
+
 			print "checking next locus: $loc_name\n" if $DEBUG;
-			
+
 	        my $tsct_list = $locus_sub->{$loc_name};
 	        my $locus = $tsct_list->[0]->Locus;
 	        my $lname = $locus->name;
 	        my $lstrand = $tsct_list->[0]->strand;
-	        
+
 	        # ignore loci with prefixes
 	        next if $lname =~ /^.+:/;
-	        
+
 	        my $desc = $locus->description;
-	        
+
 	        # ignore loci without descriptions
 	        next unless $desc;
-	        
+
 	        # ignore transposons
 	        next if $desc =~ /transposon/i;
-	        
+
 	        # identify the start and end of the locus
 	        my $lstart = $tsct_list->[0]->start;
 	        my $lend = $tsct_list->[0]->end;
-	        
+
 	        for my $tsct (@$tsct_list) {
 	        	my $start = $tsct->start;
 	        	my $end = $tsct->end;
@@ -774,22 +774,22 @@ sub _generate_desc_and_kws_for_clone {
 	        	$lend = $end if $end > $lend;
 	        	die "mixed strands" if $tsct->strand != $lstrand;
 	        }
-	        
+
 	        print "locus: $lstart-$lend\n" if $DEBUG;
-	        
+
 	        # establish if any part of this locus lies on this clone
 	        my $line;
-	        
+
 	        my $partial_text = 'part of ';
-	        
+
 	        if ($lstart >= $cstart && $lend <= $cend) {
 	        	# this locus lies entirely within this clone
 	        	$line = '';
 	        }
 	        elsif ($lstart < $cstart && $lend > $cend) {
 	        	# a central part of the locus lies in this clone
-	        	$line = $BE_CLEVER ? 
-	        				'a central part of ' : 
+	        	$line = $BE_CLEVER ?
+	        				'a central part of ' :
 	        				$partial_text;
 	        }
 	        elsif ($lend >= $cstart && $lend <= $cend) {
@@ -808,30 +808,30 @@ sub _generate_desc_and_kws_for_clone {
 	        	# no part of this locus lies on this clone
 	        	next;
 	        }
-	        
+
 	        $line = $partial_text if $locus->is_truncated;
-	        
+
 	        $desc =~ s/\s+$//;
-	        
+
 	        print "desc: $desc\n" if $DEBUG;
-	        
+
 	        next if $desc =~ /artefact|artifact/i;
-	       
-	        if ($desc =~ /novel\s+(protein|transcript|gene)\s+similar/) {
+
+	        if ($desc =~ /novel\s+(protein|transcript|gene)\s+similar/i) {
 	            $line .= "the gene for ".A($desc);
 	            push @DEline, \$line;
 	        }
-	        elsif (($desc =~ /(novel|putative) (protein|transcript|gene)/) ) {
+	        elsif (($desc =~ /(novel|putative) (protein|transcript|gene)/i) ) {
 	            if ($desc =~ /(zgc:\d+)/) {
 	                $line .= "a gene for a novel protein ($1)";
 	                push @DEline, \$line;
 	            }
 	            else {
-	            	$line ? $part_novel_gene_count++ : $novel_gene_count++; 
+	            	$line ? $part_novel_gene_count++ : $novel_gene_count++;
 	            }
 	        }
-	        elsif ($desc =~ /pseudogene/) {
-	        	if ($locus->name !~ /$clone_accession/ && 
+	        elsif ($desc =~ /pseudogene/i) {
+	        	if ($locus->name !~ /$clone_accession/ &&
 	        		$locus->name !~ /$clone_name/) {
 	        		$line .= A($desc).' '.$locus->name;
 	        	}
@@ -841,18 +841,18 @@ sub _generate_desc_and_kws_for_clone {
 	            push @DEline, \$line ;
 	        }
 	        elsif ($lname !~ /-/) {
-	            $line .= "the $lname gene for $desc" ; 
-	            push @DEline,\$line; 
+	            $line .= "the $lname gene for $desc" ;
+	            push @DEline,\$line;
 	            push @keywords, $locus;
 	        }
 	        else {
 	            $line .= "a gene for ".A($desc);
 	            push @DEline, \$line;
 	        }
-	        
+
 	        print "line: $line\n" if $DEBUG;
 		}
-		
+
 		if ($novel_gene_count) {
 	        if ($novel_gene_count == 1) {
 	           	my $line = "a novel gene";
@@ -863,7 +863,7 @@ sub _generate_desc_and_kws_for_clone {
 	           	push @DEline, \$line;
 	       	}
 	    }
-	    
+
 	    if ($part_novel_gene_count) {
 	        if ($part_novel_gene_count == 1) {
 	           	my $line = "part of a novel gene";
@@ -874,8 +874,8 @@ sub _generate_desc_and_kws_for_clone {
 	           	push @DEline, \$line;
 	       	}
 	    }
-		
-		my $range = scalar @DEline; 
+
+		my $range = scalar @DEline;
 	    return '' if ($range < 1);
 	    if ($range == 1) {
 	        $final_line .= ${$DEline[0]}.".";
@@ -889,20 +889,20 @@ sub _generate_desc_and_kws_for_clone {
 	        }
 	        $final_line .= ${$DEline[$range -2]}." and ".${$DEline[$range-1]}.".";
 	    }
-		
+
 		print $final_line."\n" if $DEBUG;
-		
+
 		my $kws = '';
-		
+
 		$kws = join "\n", @keywords if @keywords;
-		
+
 		$self->{_clone_desc_cache}->{$clone->accession}->{keywords} = $kws;
 		$self->{_clone_desc_cache}->{$clone->accession}->{description} = $final_line;
 	}
 	else {
 		print "clone_desc_cache hit\n" if $DEBUG;
 	}
-	
+
 	return $self->{_clone_desc_cache}->{$clone->accession};
 }
 
