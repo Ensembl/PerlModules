@@ -18,7 +18,7 @@ use Hum::Species;
 
 sub new {
     my( $pkg ) = @_;
-    
+
     return bless {
         '_rows' => [],
         }, $pkg;
@@ -185,7 +185,7 @@ sub fetch_entry_date_from_id_tpf {
   my ( $pkg, $id_tpf ) = @_;
 
   my $qry = prepare_track_statement(qq{
-                             SELECT TO_CHAR(entry_date, 'yyyy-mm-dd')
+                             SELECT TO_CHAR(entry_date, 'yyyy-mm-dd hh:mm:ss')
                              FROM tpf
                              WHERE id_tpf = ?
                            });
@@ -204,7 +204,7 @@ sub new_from_db_id {
 
 sub current_from_species_chromsome {
     my( $pkg, $species, $chromsome ) = @_;
-    
+
     return $pkg->_fetch_generic(q{
           AND t.iscurrent = 1
           AND c.speciesname = ?
@@ -216,7 +216,7 @@ sub current_from_species_chromsome {
 
 sub current_from_species_chromsome_subregion {
     my( $pkg, $species, $chromsome, $subregion ) = @_;
-    
+
     return $pkg->_fetch_generic(q{
           AND t.iscurrent = 1
           AND c.speciesname = ?
@@ -252,9 +252,9 @@ sub _fetch_generic {
     my ($db_id, $id_tpftarget, $entry_date, $prog, $operator,
         $subregion, $species, $chr, $iscurrent) = $sth->fetchrow;
     $sth->finish;
-    
+
     confess "No tpf found" unless $db_id;
-    
+
     my $self = $pkg->new;
     $self->db_id($db_id);
     $self->id_tpftarget($id_tpftarget);
@@ -268,7 +268,7 @@ sub _fetch_generic {
 
     # Get all the row data
     $self->_express_fetch_TPF_Rows;
-    
+
     return $self;
 }
 
@@ -298,10 +298,10 @@ sub _express_fetch_TPF_Rows {
     $sth->execute($db_id);
     my( $clone_rank, $acc, $current_seq_id );
     $sth->bind_columns(\$clone_rank, \$acc, \$current_seq_id);
-    
+
     my $rank = 1;
     while ($sth->fetch) {
-        
+
         # Add any non-sequence entries before this position
         until ($clone_rank == $rank) {
             my $row = $rank_clone->{$rank} || $rank_gap->{$rank};
@@ -309,34 +309,34 @@ sub _express_fetch_TPF_Rows {
             $self->add_Row($row);
             $rank++;
         }
-        
+
         my $clone = $rank_clone->{$rank}
             or confess "Missing Clone for rank '$rank'";
         $clone->accession($acc);
         $clone->current_seq_id($current_seq_id);
-        
+
         # If the clonename is same as the accession,
         # set the international clone name to the accession
         if ($clone->sanger_clone_name eq $acc) {
             $clone->intl_clone_name('?');
         }
-        
+
         $self->add_Row($clone);
         $rank++;
     }
-    
+
     # Add any non-sequence entries onto the end
     while (my $gap = $rank_clone->{$rank} || $rank_gap->{$rank}) {
         $self->add_Row($gap);
         $rank++;
     }
-    
+
     return $self;
 }
 
 sub _express_fetch_TPF_Clones_hash {
     my( $self ) = @_;
-    
+
     my $sql = q{
         SELECT r.id_tpfrow
           , r.rank
@@ -360,7 +360,7 @@ sub _express_fetch_TPF_Clones_hash {
         $remark, $int_pre, $ext_pre, $clone_remark );
     $sth->bind_columns(\$clone_id, \$clone_rank, \$clonename, \$contigname,
         \$remark, \$int_pre, \$ext_pre, \$clone_remark );
-    
+
     my $rank_clone = {};
     while ($sth->fetch) {
         my $clone = Hum::TPF::Row::Clone->new;
@@ -375,7 +375,7 @@ sub _express_fetch_TPF_Clones_hash {
         elsif (! $clone_remark or $clone_remark !~ /UNKNOWN/) {
             $clone->set_intl_clone_name_from_sanger_int_ext($clonename, $int_pre, $ext_pre);
         }
-        
+
         $rank_clone->{$clone_rank} = $clone;
     }
     return $rank_clone;
@@ -383,7 +383,7 @@ sub _express_fetch_TPF_Clones_hash {
 
 sub _express_fetch_TPF_Gaps_rank_hash {
     my( $self ) = @_;
-    
+
     my $sql = q{
         SELECT r.id_tpfrow
           , r.rank
@@ -399,7 +399,7 @@ sub _express_fetch_TPF_Gaps_rank_hash {
     $sth->execute($self->db_id);
     my( $gap_id, $gap_rank, $remark, $gap_length, $gap_type );
     $sth->bind_columns(\$gap_id, \$gap_rank, \$remark, \$gap_length, \$gap_type);
-    
+
     my $rank_gap = {};
     while ($sth->fetch) {
         $gap_length = undef if defined($gap_length) and $gap_length eq '?';
@@ -415,7 +415,7 @@ sub _express_fetch_TPF_Gaps_rank_hash {
 
 sub db_id {
     my( $self, $db_id ) = @_;
-    
+
     if ($db_id) {
         $self->{'_db_id'} = $db_id;
     }
@@ -424,7 +424,7 @@ sub db_id {
 
 sub id_tpftarget {
     my( $self, $id ) = @_;
-    
+
     if ($id) {
         $self->{'_id_tpftarget'} = $id;
     }
@@ -433,19 +433,19 @@ sub id_tpftarget {
 
 sub add_Row {
     my( $self, $row ) = @_;
-    
+
     push @{$self->{'_rows'}}, $row;
 }
 
 sub fetch_all_Rows {
     my( $self ) = @_;
-    
+
     return @{$self->{'_rows'}};
 }
 
 sub string {
     my( $self ) = @_;
-    
+
     # Make the header
     my $str = "##";
     foreach my $method (qw{ species chromosome subregion }) {
@@ -454,7 +454,7 @@ sub string {
         }
     }
     $str .= "\n";
-    
+
     # Add the rows
     foreach my $row ($self->fetch_all_Rows) {
         $str .= $row->string;
@@ -561,13 +561,13 @@ sub ncbi_string {
 
 sub store {
     my( $self ) = @_;
-    
+
     confess("Already stored with id_tpf=", $self->db_id)
         if $self->db_id;
-    
+
     my ($chr_id, $id_tpftarget) = $self->get_store_chr_tpftarget_ids;
     $self->get_next_id_tpf;
-    
+
     # Set any existing to not_current
     my $not_current = prepare_cached_track_statement(q{
         UPDATE tpf
@@ -575,7 +575,7 @@ sub store {
         WHERE id_tpftarget = ?
         });
     $not_current->execute($id_tpftarget);
-    
+
     # Store self into TPF table
     my $sth = prepare_cached_track_statement(q{
         INSERT INTO tpf(id_tpf
@@ -591,7 +591,7 @@ sub store {
         $self->program,
         $self->operator,
         );
-    
+
     # Store all rows
     my $rank = 0;
     foreach my $row ($self->fetch_all_Rows) {
@@ -601,7 +601,7 @@ sub store {
 
 sub get_store_chr_tpftarget_ids {
     my( $self ) = @_;
-    
+
     my $species = $self->species
         or confess "species not set";
     my $chr = $self->chromosome
@@ -672,13 +672,13 @@ sub get_store_chr_tpftarget_ids {
             });
         $sth->execute($id_tpftarget, $chr_id, $subregion);
     }
-    
+
     return( $chr_id, $id_tpftarget );
 }
 
 sub get_next_id_tpftarget {
     my( $self ) = @_;
-    
+
     my $sth = prepare_track_statement(q{SELECT tpft_seq.nextval FROM dual});
     $sth->execute;
     my ($id) = $sth->fetchrow;
@@ -687,7 +687,7 @@ sub get_next_id_tpftarget {
 
 sub get_next_id_tpf {
     my( $self ) = @_;
-    
+
     my $sth = prepare_track_statement(q{SELECT tpf_seq.nextval FROM dual});
     $sth->execute;
     my ($id) = $sth->fetchrow;
