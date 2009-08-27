@@ -26,6 +26,7 @@ use Config::IniFiles;
                 get_mysql_datetime
                 datetime2unixTime
                 get_chromoDB_handle
+                get_loutredbh_from_species
                 make_hmenus
                 make_search_box
                 get_script_root
@@ -248,6 +249,56 @@ sub get_chromoDB_handle {
                          $user, $password, { RaiseError => 1, PrintError => 0 })
     or die "Can't connect to chromoDB as '$user' ",
       DBI::errstr();
+
+  return $dbh;
+}
+
+my $equiv_loutre_species = {
+		'x.tropicalis' => 'tropicalis',
+		'm.spretus'	   => 'mus_spretus',
+		's.lycopersicum' => 'tomato'
+};
+
+sub get_loutre_dbname {
+	my ($species) = @_;
+	my $dbname = "loutre_";
+	if($equiv_loutre_species->{$species}){
+		$dbname .= $equiv_loutre_species->{$species};
+	} else {
+		$dbname .= $species;
+	}
+
+	return $dbname;
+}
+
+sub get_loutredbh_from_species {
+
+  # $user will be coming from single sing on
+  # and has right to edit TPF
+  my ($species) = @_;
+
+  my $host     = 'otterlive';
+  my $port     = 3301;
+  my $user     = 'ottro';
+  my $password = undef;
+
+  if(!$species) {
+  	return undef;
+  }
+
+  $species = lc($species);
+  my $dbname = get_loutre_dbname($species);
+
+  my $dbh;
+
+  eval {
+  	$dbh = DBI->connect("DBI:mysql:host=$host;port=$port;database=$dbname",
+                         $user, $password, { RaiseError => 1, PrintError => 0 });
+  };
+
+  if(@$) {
+  	return undef;
+  }
 
   return $dbh;
 }
