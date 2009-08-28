@@ -4,6 +4,7 @@
 package Hum::Pfetch;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::EMBL;
 use Hum::StringHandle;

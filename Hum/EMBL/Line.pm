@@ -29,6 +29,7 @@ James Gilbert B<email> jgrg@sanger.ac.uk
 package Hum::EMBL::Line;
 
 use strict;
+use warnings;
 use Carp;
 
 
@@ -272,6 +273,7 @@ line) will not be allowed.
 package Hum::EMBL::Line::ID;
 
 use strict;
+use warnings;
 use Carp;
 use vars qw( @ISA );
 
@@ -334,6 +336,7 @@ sub _compose {
 package Hum::EMBL::Line::ID1;
 
 use strict;
+use warnings;
 use Carp;
 use vars qw( @ISA );
 
@@ -382,6 +385,7 @@ sub _compose {
 package Hum::EMBL::Line::AC;
 
 use strict;
+use warnings;
 use Carp;
 use vars qw( @ISA );
 
@@ -419,6 +423,7 @@ sub _compose {
 package Hum::EMBL::Line::CC;
 
 use strict;
+use warnings;
 use Carp;
 use vars qw( @ISA );
 
@@ -456,6 +461,7 @@ sub _compose {
 package Hum::EMBL::Line::KW;
 
 use strict;
+use warnings;
 use Carp;
 use vars qw( @ISA );
 
@@ -488,6 +494,7 @@ sub _compose {
 package Hum::EMBL::Line::DT;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::EMBL::Utils qw( EMBLdate dateEMBL );
 use vars qw( @ISA );
@@ -554,6 +561,7 @@ sub _compose {
 package Hum::EMBL::Line::DE;
 
 use strict;
+use warnings;
 use Carp;
 use vars qw( @ISA );
 
@@ -583,6 +591,7 @@ sub _compose {
 package Hum::EMBL::Line::XX;
 
 use strict;
+use warnings;
 use Carp;
 use vars qw( @ISA );
 @ISA = qw( Hum::EMBL::Line );
@@ -612,6 +621,7 @@ sub compose {
 package Hum::EMBL::Line::SV;
 
 use strict;
+use warnings;
 use Carp;
 use vars qw( @ISA );
 
@@ -641,6 +651,7 @@ sub _compose {
 package Hum::EMBL::Line::NI;
 
 use strict;
+use warnings;
 use Carp;
 use vars qw( @ISA );
 
@@ -668,6 +679,7 @@ sub _compose {
 package Hum::EMBL::Line::Reference;
 
 use strict;
+use warnings;
 use Carp;
 use vars qw( @ISA );
 
@@ -812,6 +824,7 @@ sub string_for_checksum {
 package Hum::EMBL::Line::XRef;
 
 use strict;
+use warnings;
 use Carp;
 use vars qw( @ISA );
 
@@ -830,6 +843,7 @@ Hum::EMBL::Line::XRef->makeFieldAccessFuncs(qw(
 package Hum::EMBL::Line::DR;
 
 use strict;
+use warnings;
 use Carp;
 use vars qw( @ISA );
 
@@ -878,6 +892,7 @@ sub _compose {
 package Hum::EMBL::Line::Organism;
 
 use strict;
+use warnings;
 use Carp;
 use vars qw( @ISA );
 
@@ -943,6 +958,7 @@ sub _compose {
 package Hum::EMBL::Line::OG;
 
 use strict;
+use warnings;
 use Carp;
 use vars qw( @ISA );
 @ISA = qw( Hum::EMBL::Line );
@@ -971,6 +987,7 @@ sub _compose {
 package Hum::EMBL::Line::FH;
 
 use strict;
+use warnings;
 use Carp;
 use vars qw( @ISA );
 @ISA = qw( Hum::EMBL::Line );
@@ -1000,6 +1017,7 @@ sub compose {
 package Hum::EMBL::Line::FT;
 
 use strict;
+use warnings;
 use Carp;
 use vars qw( @ISA );
 use Hum::EMBL::Location;
@@ -1131,6 +1149,7 @@ sub _compose {
 package Hum::EMBL::Line::Sequence;
 
 use strict;
+use warnings;
 use Carp;
 use vars qw( @ISA );
 use Hum::EMBL::Utils;
@@ -1207,6 +1226,7 @@ sub embl_checksum {
 package Hum::EMBL::Line::End;
 
 use strict;
+use warnings;
 use Carp;
 use vars qw( @ISA );
 @ISA = qw( Hum::EMBL::Line );

@@ -19,6 +19,7 @@ script dies.
 package Hum::Lock;
 
 use strict;
+use warnings;
 use Carp;
 use Sys::Hostname;
 use Cwd qw( cwd );

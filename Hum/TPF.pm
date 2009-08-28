@@ -4,6 +4,7 @@
 package Hum::TPF;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::TPF::Parser;
 use Hum::TPF::Row::Clone;

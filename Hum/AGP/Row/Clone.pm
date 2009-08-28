@@ -4,6 +4,7 @@
 package Hum::AGP::Row::Clone;
 
 use strict;
+use warnings;
 use Carp;
 use base 'Hum::AGP::Row';
 

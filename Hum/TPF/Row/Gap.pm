@@ -4,6 +4,7 @@
 package Hum::TPF::Row::Gap;
 
 use strict;
+use warnings;
 use Carp;
 use base 'Hum::TPF::Row';
 use Hum::Tracking 'prepare_cached_track_statement';

@@ -3,6 +3,7 @@ package Hum::EMBL::Utils;
 
 use Carp;
 use strict;
+use warnings;
 use Time::Local qw( timelocal );
 
 use Exporter;

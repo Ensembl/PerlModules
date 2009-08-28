@@ -4,6 +4,7 @@
 package Hum::FastaFileIO;
 
 use strict;
+use warnings;
 use Carp;
 use Symbol ();
 

@@ -2,6 +2,7 @@
 package Hum::Conf;
 
 use strict;
+use warnings;
 use Carp;
 
 use vars qw( %humConf );

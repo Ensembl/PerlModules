@@ -2,6 +2,7 @@
 package Hum::EMBL;
 
 use strict;
+use warnings;
 use Carp qw{ cluck confess };
 use Digest::MD5;
 use Symbol 'gensym';

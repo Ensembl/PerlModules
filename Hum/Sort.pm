@@ -4,6 +4,7 @@
 package Hum::Sort;
 
 use strict;
+use warnings;
 use base 'Exporter';
 
 our @EXPORT_OK = qw{ ace_sort };

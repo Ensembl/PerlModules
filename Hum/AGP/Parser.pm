@@ -4,6 +4,7 @@
 package Hum::AGP::Parser;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::AGP;
 use Symbol 'gensym';

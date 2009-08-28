@@ -5,6 +5,7 @@
 package Hum::Species;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::Submission qw{ prepare_statement };
 

@@ -22,6 +22,7 @@ I<Tracking> database.
 =cut
 
 use strict;
+use warnings;
 use WrapDBI;
 use Exporter;
 use Time::Local 'timelocal';

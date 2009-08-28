@@ -34,6 +34,7 @@ package Hum::EMBL::ExonLocation;
 
 use Carp;
 use strict;
+use warnings;
 
 =head2 new
 

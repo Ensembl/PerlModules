@@ -2,6 +2,7 @@
 package Hum::Submission;
 
 use strict;
+use warnings;
 use DBI;
 use Carp;
 use Time::Local qw( timelocal );

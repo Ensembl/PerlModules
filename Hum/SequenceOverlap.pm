@@ -4,6 +4,7 @@
 package Hum::SequenceOverlap;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::Tracking qw{ track_db prepare_track_statement };
 use Hum::SequenceOverlap::Position;

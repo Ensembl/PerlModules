@@ -4,6 +4,7 @@
 package Hum::TPF::Row;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::Tracking 'prepare_cached_track_statement';
 

@@ -2,6 +2,7 @@
 package Hum::NetFetch;
 
 use strict;
+use warnings;
 use Carp;
 use Exporter;
 use vars qw( @EXPORT_OK @ISA );

@@ -4,6 +4,7 @@
 package Hum::SequenceInfo;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::Submission 'prepare_statement';
 use Hum::Tracking qw{

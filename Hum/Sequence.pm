@@ -4,6 +4,7 @@
 package Hum::Sequence;
 
 use strict;
+use warnings;
 use Carp;
 
 sub new {
