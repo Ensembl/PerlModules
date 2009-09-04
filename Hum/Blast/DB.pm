@@ -494,10 +494,10 @@ __END__
     $blast_db->type('NUCLEOTIDE');
     
     # Set the name of the database file on success:
-    $blast_db->path('/nfs/disk100/humpub/blastdb/finished');
+    $blast_db->path('/lustre/cbi4/work1/humpub/blastdb/finished');
     
     # Set the name of the new fasta file
-    $blast_db->build_path('/nfs/disk100/humpub/blastdb/finished.build');
+    $blast_db->build_path('/lustre/cbi4/work1/humpub/blastdb/finished.build');
     
     # Index for both Blast 1.4/wublast and NCBI Blast 2
     # (This is fatal on failure.)
@@ -505,7 +505,7 @@ __END__
     
     ### Read info from an existing blast db ###
     my $blast_db = Hum::Blast::DB->new;
-    $blast_db->path('/nfs/disk100/pubseq/dbEST-2');
+    $blast_db->path('/lustre/cbi4/work1/pubseq/dbEST-2');
     
     # Get the date this was
     my $date = $blast_db->date;
