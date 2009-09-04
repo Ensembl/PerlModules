@@ -4,6 +4,7 @@
 package Hum::Ace::DotterLauncher;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::FastaFileIO;
 use Hum::Pfetch;

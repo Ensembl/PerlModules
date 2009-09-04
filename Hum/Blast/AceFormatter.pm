@@ -4,6 +4,7 @@
 package Hum::Blast::AceFormatter;
 
 use strict;
+use warnings;
 use Carp;
 
 sub new {

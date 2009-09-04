@@ -4,6 +4,7 @@
 package Hum::Ace::SeqFeature::Simple;
 
 use strict;
+use warnings;
 use Carp;
 use base 'Hum::Ace::SeqFeature';
 

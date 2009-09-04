@@ -763,3 +763,7 @@ sub get_species_chr_subregion_from_id_tpftarget {
 
 __END__
 
+=head1 AUTHOR
+
+James Gilbert email B<jgrg@sanger.ac.uk>
+

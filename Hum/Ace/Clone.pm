@@ -4,6 +4,7 @@
 package Hum::Ace::Clone;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::Sort 'ace_sort';
 

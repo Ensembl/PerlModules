@@ -4,6 +4,7 @@
 package Hum::Translator;
 
 use strict;
+use warnings;
 use Hum::Sequence::Peptide;
 use Carp;
 

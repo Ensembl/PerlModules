@@ -4,6 +4,7 @@
 package Hum::AnaStatus::AceDatabase;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::Submission 'prepare_statement';
 use Ace;

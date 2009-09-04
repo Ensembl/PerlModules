@@ -4,6 +4,7 @@
 package Hum::AnaStatus::Job;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::Submission qw{
     create_lock

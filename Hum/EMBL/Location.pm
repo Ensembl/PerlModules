@@ -3,6 +3,7 @@ package Hum::EMBL::Location;
 
 use Carp;
 use strict;
+use warnings;
 
 sub new {
     my( $pkg ) = @_;
@@ -234,4 +235,8 @@ sub location_qualifiers {
 1;
 
 __END__
+
+=head1 AUTHOR
+
+James Gilbert email B<jgrg@sanger.ac.uk>
 

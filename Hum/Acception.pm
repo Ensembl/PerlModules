@@ -2,6 +2,7 @@
 package Hum::Acception;
 
 use strict;
+use warnings;
 use DBI;
 use Carp;
 use Hum::Submission 'prepare_cached_statement';
@@ -499,6 +500,6 @@ piece, and are "A", "B", "C" etc...)
 Shows the secondary accessions associated with
 the primary accessions in the PROJECT_ACC table.
 
-=head2 Author
+=head1 AUTHOR
 
 James Gilbert email B<jgrg@sanger.ac.uk>

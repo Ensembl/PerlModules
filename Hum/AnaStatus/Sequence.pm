@@ -4,6 +4,7 @@
 package Hum::AnaStatus::Sequence;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::FastaFileIO;
 use Hum::Submission qw( prepare_statement timeace );

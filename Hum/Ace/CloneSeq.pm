@@ -8,6 +8,7 @@
 package Hum::Ace::CloneSeq;
 
 use strict;
+use warnings;
 use Carp;
 
 use Hum::Sequence::DNA;

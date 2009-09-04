@@ -4,6 +4,7 @@
 package Hum::Analysis::Factory::StringMatch;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::Ace::SeqFeature::Pair;
 

@@ -312,6 +312,7 @@ file was created.
 
 =back
 
-=head2 Author
+=head1 AUTHOR
 
 James Gilbert email B<jgrg@sanger.ac.uk>
+

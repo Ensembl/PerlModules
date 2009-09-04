@@ -4,6 +4,7 @@
 package Hum::Ace::AcePerlText;
 
 use strict;
+use warnings;
 use Carp;
 #use base 'Ace';
 use Ace;

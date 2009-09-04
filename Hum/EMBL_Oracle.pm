@@ -4,6 +4,7 @@
 package Hum::EMBL_Oracle;
 
 use strict;
+use warnings;
 use Carp;
 use DBI;
 use Net::Netrc;

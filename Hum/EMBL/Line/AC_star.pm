@@ -2,6 +2,7 @@
 package Hum::EMBL::Line::AC_star;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::EMBL::Line;
 use vars qw( @ISA );
@@ -52,3 +53,7 @@ contain only capital letters and numerals, and
 not exceed 35 characters.
 
 =back
+
+=head1 AUTHOR
+
+James Gilbert email B<jgrg@sanger.ac.uk>

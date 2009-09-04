@@ -823,3 +823,9 @@ sub _complement {
 
 
 1;
+
+__END__
+
+=head1 AUTHOR
+
+James Gilbert email B<jgrg@sanger.ac.uk>

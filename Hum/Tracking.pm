@@ -1396,8 +1396,7 @@ sub record_accession_data {
 
 __END__
 
-=back
-
-=head2 Author
+=head1 AUTHOR
 
 James Gilbert email B<jgrg@sanger.ac.uk>
+

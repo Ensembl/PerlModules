@@ -4,6 +4,7 @@
 package Hum::Ace::SubSeq;
 
 use strict;
+use warnings;
 use Carp;
 
 use Hum::Sequence::DNA;

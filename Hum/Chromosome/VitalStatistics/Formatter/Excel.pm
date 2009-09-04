@@ -4,6 +4,7 @@
 package Hum::Chromosome::VitalStatistics::Formatter::Excel;
 
 use strict;
+use warnings;
 use Carp;
 use Spreadsheet::WriteExcel;
 use base 'Hum::Chromosome::VitalStatistics::Formatter';

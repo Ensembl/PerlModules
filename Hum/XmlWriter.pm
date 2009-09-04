@@ -4,6 +4,7 @@
 package Hum::XmlWriter;
 
 use strict;
+use warnings;
 use Carp;
 
 

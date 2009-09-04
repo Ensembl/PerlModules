@@ -14,6 +14,7 @@ site.
 package Hum::EBI_FTP;
 
 use strict;
+use warnings;
 use Net::FTP;
 use Carp;
 
@@ -103,6 +104,6 @@ sure that it is unique before transfer.
 
 =back
 
-=head2 Author
+=head1 AUTHOR
 
 James Gilbert email B<jgrg@sanger.ac.uk>

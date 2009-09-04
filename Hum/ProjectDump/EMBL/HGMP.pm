@@ -4,6 +4,7 @@
 package Hum::ProjectDump::EMBL::HGMP;
 
 use strict;
+use warnings;
 use Hum::ProjectDump::EMBL;
 use Hum::EMBL::Utils qw( EMBLdate );
 

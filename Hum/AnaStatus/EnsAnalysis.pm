@@ -4,6 +4,7 @@
 package Hum::AnaStatus::EnsAnalysis;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::Submission 'prepare_statement';
 use Hum::AnaStatus::EnsAnalysisDB;

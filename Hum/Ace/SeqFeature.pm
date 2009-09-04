@@ -4,6 +4,7 @@
 package Hum::Ace::SeqFeature;
 
 use strict;
+use warnings;
 use Carp;
 
 sub new {

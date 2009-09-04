@@ -4,6 +4,7 @@
 package Hum::Ace::LocalServer;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::Ace::AcePerlText;
 use Socket; # For working out a port which is unused

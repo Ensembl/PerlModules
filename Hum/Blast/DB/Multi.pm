@@ -4,6 +4,7 @@
 package Hum::Blast::DB::Multi;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::Blast::DB;
 use vars '@ISA';

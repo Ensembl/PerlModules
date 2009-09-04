@@ -4,6 +4,7 @@
 package Hum::Analysis::Parser::CrossMatch;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::Ace::SeqFeature::Pair::CrossMatch;
 use File::Path 'rmtree';

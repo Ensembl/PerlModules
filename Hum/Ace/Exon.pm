@@ -4,6 +4,7 @@
 package Hum::Ace::Exon;
 
 use strict;
+use warnings;
 use Carp;
 
 sub new {

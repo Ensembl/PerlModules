@@ -2,6 +2,7 @@
 package Hum::Ace::Reverse;
 
 use strict;
+use warnings;
 
 use AceParse qw( aceParse aceQuote );
 use Sequence;
@@ -287,3 +288,9 @@ sub adjNumbers {
 }
 
 1;
+
+__END__
+
+=head1 AUTHOR
+
+James Gilbert email B<jgrg@sanger.ac.uk>

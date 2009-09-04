@@ -4,6 +4,7 @@
 package Hum::EnsCmdLineDB;
 
 use strict;
+use warnings;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
 use Getopt::Long 'GetOptions';

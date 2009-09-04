@@ -4,6 +4,7 @@
 package Hum::Ace::Assembly;
 
 use strict;
+use warnings;
 
 use Carp;
 use Lingua::EN::Inflect qw( A NUMWORDS );

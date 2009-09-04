@@ -4,6 +4,7 @@
 package Hum::SequenceOverlap::Cartoon;
 
 use strict;
+use warnings;
 use Carp;
 use GD;
 use Hum::SequenceOverlap;

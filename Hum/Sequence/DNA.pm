@@ -4,6 +4,7 @@
 package Hum::Sequence::DNA;
 
 use strict;
+use warnings;
 use vars '@ISA';
 use Carp;
 use Hum::Sequence;

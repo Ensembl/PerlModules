@@ -12,6 +12,7 @@ B<Hum::Exons>
 package Hum::Exons;
 
 use strict;
+use warnings;
 use Carp;
 
 # START and stop are coordinates relative to the DNA
@@ -226,6 +227,7 @@ Make a new B<Hum::Exons> object.
 
 =back
 
-=head2 Author
+=head1 AUTHOR
 
 James Gilbert email B<jgrg@sanger.ac.uk>
+

@@ -4,6 +4,7 @@
 package Hum::Ace::PolyA::Consensus;
 
 use strict;
+use warnings;
 use Carp;
 use POSIX qw{ ceil };
 use Statistics::Distributions 'uprob';

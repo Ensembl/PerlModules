@@ -2,6 +2,7 @@
 package Hum::EmblUtils;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::Tracking qw( ref_from_query external_clone_name );
 use Hum::Submission qw(project_name_and_suffix_from_sequence_name);
@@ -132,3 +133,8 @@ sub projectAndSuffix {
 1;
 
 __END__
+
+=head1 AUTHOR
+
+James Gilbert email B<jgrg@sanger.ac.uk>
+

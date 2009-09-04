@@ -3,6 +3,7 @@ package Hum::EMBL::LocationUtils;
 
 use Carp;
 use strict;
+use warnings;
 use Exporter;
 use vars qw( @ISA @EXPORT_OK );
 use Hum::EMBL::Location;
@@ -325,4 +326,8 @@ sub CDS_exons_from_mRNA_exons {
 1;
 
 __END__
+
+=head1 AUTHOR
+
+James Gilbert email B<jgrg@sanger.ac.uk>
 

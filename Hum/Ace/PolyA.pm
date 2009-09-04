@@ -4,6 +4,7 @@
 package Hum::Ace::PolyA;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::Ace::PolyA::Consensus;
 

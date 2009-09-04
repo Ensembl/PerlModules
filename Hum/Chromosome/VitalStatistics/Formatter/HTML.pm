@@ -4,6 +4,7 @@
 package Hum::Chromosome::VitalStatistics::Formatter::HTML;
 
 use strict;
+use warnings;
 use base 'Hum::Chromosome::VitalStatistics::Formatter';
 
 sub make_report {

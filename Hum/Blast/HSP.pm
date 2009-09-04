@@ -4,6 +4,7 @@
 package Hum::Blast::HSP;
 
 use strict;
+use warnings;
 
 sub new {
     my( $pkg ) = @_;

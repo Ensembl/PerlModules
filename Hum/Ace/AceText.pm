@@ -4,6 +4,7 @@
 package Hum::Ace::AceText;
 
 use strict;
+use warnings;
 use 5.006_001;  # Perl 5.6.1 is needed for qr support
 use Carp;
 use Text::ParseWords 'quotewords';

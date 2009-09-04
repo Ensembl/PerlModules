@@ -4,6 +4,7 @@
 package Hum::Blast::Subject;
 
 use strict;
+use warnings;
 use Hum::Blast::HSP;
 
 sub new {

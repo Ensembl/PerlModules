@@ -4,6 +4,7 @@
 package Hum::Ace::SeqFeature::Pair::CrossMatch;
 
 use strict;
+use warnings;
 use Hum::Ace::SeqFeature::Pair;
 use vars '@ISA';
 

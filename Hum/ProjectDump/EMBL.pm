@@ -2,6 +2,7 @@
 package Hum::ProjectDump::EMBL;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::ProjectDump;
 use Hum::Species;
@@ -773,6 +774,7 @@ __END__
 
 =head1 DESCRIPTION
 
-=head2 Author
+=head1 AUTHOR
 
 James Gilbert email B<jgrg@sanger.ac.uk>
+

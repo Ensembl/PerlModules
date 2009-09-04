@@ -4,6 +4,7 @@
 package Hum::Chromosome::VitalStatistics;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::Chromosome::VitalStatistics::NameValue;
 

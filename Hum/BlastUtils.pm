@@ -4,6 +4,7 @@
 package Hum::BlastUtils;
 
 use strict;
+use warnings;
 use Carp;
 use Exporter;
 use vars qw{ @ISA @EXPORT_OK };

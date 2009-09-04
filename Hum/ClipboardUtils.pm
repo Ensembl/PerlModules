@@ -4,6 +4,7 @@
 package Hum::ClipboardUtils;
 
 use strict;
+use warnings;
 use base 'Exporter';
 
 our @EXPORT_OK = qw{

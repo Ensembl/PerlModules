@@ -4,6 +4,7 @@
 package Hum::Ace::Locus;
 
 use strict;
+use warnings;
 use Carp qw{ confess cluck };
 
 use Bio::EnsEMBL::Exon;

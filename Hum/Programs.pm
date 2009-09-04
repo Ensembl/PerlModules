@@ -1,6 +1,7 @@
 
 package Hum::Programs;
 use strict;
+use warnings;
 use vars qw( %Program_Paths );
 use Carp;
 use Cwd;

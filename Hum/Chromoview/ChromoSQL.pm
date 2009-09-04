@@ -342,3 +342,9 @@ sub id_tpftarget {
 #}
 
 1;
+
+__END__
+
+=head1 AUTHOR
+
+Chao-Kung Chen email B<ck1@sanger.ac.uk>

@@ -4,6 +4,7 @@
 package Hum::Analysis::Factory::ExonLocator;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::Analysis::Factory::StringMatch;
 use Hum::Analysis::Factory::CrossMatch;

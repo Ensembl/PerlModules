@@ -4,6 +4,7 @@
 package Hum::Ace::Method;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::Ace::Colors qw{ acename_to_webhex };
 

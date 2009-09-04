@@ -4,6 +4,7 @@
 package Hum::Ace::SeqFeature::Pair;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::Ace::SeqFeature;
 use vars '@ISA';

@@ -4,6 +4,7 @@
 package Hum::Ace::MethodCollection;
 
 use strict;
+use warnings;
 use Carp;
 
 use Hum::Ace::Method;

@@ -2,6 +2,7 @@
 package Hum::EMBL::Line::BQ_star;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::EMBL::Line;
 use vars qw( @ISA );
@@ -53,3 +54,10 @@ sub _compose {
 }
 
 1;
+
+__END__
+
+=head1 AUTHOR
+
+James Gilbert email B<jgrg@sanger.ac.uk>
+

@@ -4,6 +4,7 @@
 package Hum::Ace::Colors;
 
 use strict;
+use warnings;
 use base 'Exporter';
 use Carp;
 

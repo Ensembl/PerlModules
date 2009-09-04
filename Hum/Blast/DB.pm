@@ -4,6 +4,7 @@
 package Hum::Blast::DB;
 
 use strict;
+use warnings;
 use Carp;
 use Digest::MD5;
 

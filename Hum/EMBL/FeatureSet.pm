@@ -2,6 +2,7 @@
 package Hum::EMBL::FeatureSet;
 
 use strict;
+use warnings;
 #use Carp 'cluck';
 use Hum::EMBL::Line;
 
@@ -92,3 +93,6 @@ sub addToEntry {
 
 __END__
 
+=head1 AUTHOR
+
+James Gilbert email B<jgrg@sanger.ac.uk>

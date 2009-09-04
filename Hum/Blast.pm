@@ -4,6 +4,7 @@
 package Hum::Blast;
 
 use strict;
+use warnings;
 use Hum::Blast::Subject;
 use Carp;
 

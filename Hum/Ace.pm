@@ -4,6 +4,7 @@
 package Hum::Ace;
 
 use strict;
+use warnings;
 
 use Hum::Ace::Exon;
 use Hum::Ace::SubSeq;

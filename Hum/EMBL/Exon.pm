@@ -26,6 +26,7 @@ the process (see Bio::Otter::EMBL::Factory)
 package Hum::EMBL::Exon;
 
 use strict;
+use warnings;
 use Carp;
 
 =head2 new

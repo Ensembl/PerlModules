@@ -4,6 +4,7 @@
 package Hum::AnaStatus;
 
 use strict;
+use warnings;
 use vars qw{ @ISA @EXPORT_OK };
 use Carp;
 use Exporter;

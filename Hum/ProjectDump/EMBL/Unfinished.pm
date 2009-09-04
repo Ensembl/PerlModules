@@ -4,6 +4,7 @@
 package Hum::ProjectDump::EMBL::Unfinished;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::ProjectDump::EMBL;
 use Hum::Submission 'prepare_statement';

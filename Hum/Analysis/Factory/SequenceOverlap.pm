@@ -4,6 +4,7 @@
 package Hum::Analysis::Factory::SequenceOverlap;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::Analysis::Factory::CrossMatch;
 use Hum::SequenceOverlap;

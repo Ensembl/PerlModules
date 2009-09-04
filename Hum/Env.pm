@@ -31,6 +31,7 @@ James Gilbert email B<jgrg@sanger.ac.uk>
 =cut
 
 use strict;
+use warnings;
 use Carp;
 
 # HOME environment variable (and LOGDIR)
@@ -49,3 +50,8 @@ $ENV{NCBI}          = '/nfs/disk100/pubseq/blastdb';
 1;
 
 __END__
+
+=head1 AUTHOR
+
+James Gilbert email B<jgrg@sanger.ac.uk>
+

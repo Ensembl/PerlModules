@@ -2,6 +2,7 @@
 package Hum::FileUtils;
 
 use strict;
+use warnings;
 use Carp;
 use Exporter;
 use File::Copy 'copy';

@@ -5,6 +5,7 @@
 package Hum::EMBL::Line::ST_star;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::EMBL::Line;
 use Hum::EMBL::Utils qw( EMBLdate dateEMBL );

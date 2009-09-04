@@ -4,6 +4,7 @@
 package Hum::Analysis::Factory::CrossMatch;
 
 use strict;
+use warnings;
 use Hum::Analysis::Parser::CrossMatch;
 use Hum::FastaFileIO;
 use Carp;

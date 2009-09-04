@@ -4,6 +4,7 @@
 package Hum::Chromosome::VitalStatistics::Formatter;
 
 use strict;
+use warnings;
 use Carp;
 use Symbol 'gensym';
 

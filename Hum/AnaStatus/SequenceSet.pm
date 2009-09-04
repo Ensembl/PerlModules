@@ -4,6 +4,7 @@
 package Hum::AnaStatus::SequenceSet;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::AnaStatus::Sequence;
 use Hum::Submission 'prepare_statement';

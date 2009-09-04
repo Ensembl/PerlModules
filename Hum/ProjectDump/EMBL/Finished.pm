@@ -4,6 +4,7 @@
 package Hum::ProjectDump::EMBL::Finished;
 
 use strict;
+use warnings;
 
 use Carp;
 use Hum::EMBL::FeatureSet;

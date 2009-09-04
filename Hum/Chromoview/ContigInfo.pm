@@ -136,3 +136,8 @@ sub fetch_id_tpftarget_by_id_tpf {
 }
 
 1;
+__END__
+
+=head1 AUTHOR
+
+James Gilbert email B<jgrg@sanger.ac.uk>

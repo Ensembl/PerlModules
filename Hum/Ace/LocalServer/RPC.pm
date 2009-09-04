@@ -4,6 +4,7 @@
 package Hum::Ace::LocalServer::RPC;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::Ace::LocalServer;
 use vars '@ISA';
