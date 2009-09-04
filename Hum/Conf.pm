@@ -28,7 +28,7 @@ if ($ENV{'PFETCH_SERVER_LIST'}) {
     # FTP site variables
     FTP_GHOST           =>  $ftp_ghost,
     FTP_ATTIC           => "$ftp_ghost/attic",
-    FTP_ROOT            => "/nfs/disk69/ftp/pub/sequences",
+    FTP_ROOT            => "\057nfs/disk69/ftp/pub/sequences",
 
     PFETCH_SERVER_LIST         => $pfetch_server_list,
 
@@ -37,7 +37,7 @@ if ($ENV{'PFETCH_SERVER_LIST'}) {
 
     HUMPUB_BLAST  => "$humpub/data/blast",
 
-    PUBLIC_HUMAN_DISK => '/nfs/repository/p100',
+    PUBLIC_HUMAN_DISK => '\057nfs/repository/p100',
 
     SPECIES_ANALYSIS_ROOT => {
         'Human'         => "$humpub/analysis/projects",
