@@ -424,6 +424,20 @@ sub ace_string {
     return $ace;
 }
 
+sub group_SimpleFeatures_by_featureset {
+	
+	my $self = shift;
+	
+	my %sfs_by_featureset = ();
+	 
+	for my $sf ($self->get_all_SimpleFeatures) {
+		$sfs_by_featureset{$sf->method_name} ||= [];
+		push @{ $sfs_by_featureset{$sf->method_name} }, $sf; 
+    }
+    
+    return \%sfs_by_featureset;
+}
+
 sub zmap_SimpleFeature_xml {
     my ($self, $old) = @_;
 
@@ -431,60 +445,88 @@ sub zmap_SimpleFeature_xml {
         confess "Old and new assemblies are the same object!";
     }
 
+    my $curr_sfs = $self->group_SimpleFeatures_by_featureset;
+    my $old_sfs;
+
     # If $old is supplied, we create the minimum update transaction.
-
-    my %new_feat = map {$_->zmap_xml_feature_tag, 1} $self->get_all_SimpleFeatures;
-    my %old_feat;
+    
     if ($old) {
-        %old_feat = map {$_->zmap_xml_feature_tag, 1} $old->get_all_SimpleFeatures;
-    } else {
-        %old_feat = ();
+    	$old_sfs = $old->group_SimpleFeatures_by_featureset;
     }
+    
+    my @xml = ();
+    my %to_delete_by_featureset = ();
+    my %to_create_by_featureset = ();
+    
+    my %featuresets = map {$_ => 1} (keys %$curr_sfs, keys %$old_sfs);
+    
+    for my $featureset (keys %featuresets) {
+    	
+    	# If $old is supplied, we create the minimum update transaction.
+    
+    	my %new_feat = map {$_->zmap_xml_feature_tag, 1} @{ $curr_sfs->{$featureset} };
+    	my %old_feat;
+    	if ($old) {
+        	%old_feat = map {$_->zmap_xml_feature_tag, 1} @{ $old_sfs->{$featureset} || [] };
+    	} else {
+        	%old_feat = ();
+    	}
 
-    my( $del_xml, $cre_xml, @xml);
-    foreach my $str (keys %old_feat) {
-        # Delete if feature in old set is not in the new
-        unless ($new_feat{$str}) {
-            $del_xml .= $str;
-        }
+    	my( $del_xml, $cre_xml );
+    	
+    	foreach my $str (keys %old_feat) {
+    		
+        	# Delete if feature in old set is not in the new
+        	unless ($new_feat{$str}) {
+            	$del_xml .= $str;
+        	}
+    	}
+    	if ($del_xml) {
+        	$to_delete_by_featureset{$featureset} = $del_xml;
+    	}
+        
+    	foreach my $str (keys %new_feat) {
+        	# Create if feature in new set is not in the old
+        	unless ($old_feat{$str}) {
+            	$cre_xml .= $str;
+        	}
+    	}
+    	if ($cre_xml) {
+        	$to_create_by_featureset{$featureset} = $cre_xml;
+    	}
     }
-    if ($del_xml) {
-        push(@xml, $self->zmap_delete_xml_string($del_xml));
+    
+    if (%to_delete_by_featureset) {
+    	push @xml, $self->zmap_request_xml('delete_feature', \%to_delete_by_featureset);
     }
-
-    foreach my $str (keys %new_feat) {
-        # Create if feature in new set is not in the old
-        unless ($old_feat{$str}) {
-            $cre_xml .= $str;
-        }
-    }
-    if ($cre_xml) {
-        push(@xml, $self->zmap_create_xml_string($cre_xml));
+    
+    if (%to_create_by_featureset) {
+    	push @xml, $self->zmap_request_xml('create_feature', \%to_create_by_featureset);
     }
 
     return @xml;
 }
 
-sub zmap_delete_xml_string {
-    my ($self, $xml) = @_;
-
-    return qq{<zmap action="delete_feature">\n}
-      . qq{\t<featureset>\n}
-      . qq{\t\t} . $xml
-      . qq{\t</featureset>\n}
-      . qq{</zmap>\n};
+sub zmap_request_xml {
+	my ($self, $action, $sf_hash) = @_;
+	
+	my $xml = Hum::XmlWriter->new;
+	
+	$xml->open_tag('zmap');
+	$xml->open_tag('request', {action => $action});
+	$xml->open_tag('align');
+	$xml->open_tag('block');
+	
+    for my $featureset (keys %$sf_hash) {
+    	$xml->open_tag('featureset', {name => $featureset});
+    	$xml->add_raw_data_with_indent($sf_hash->{$featureset});
+    	$xml->close_tag;
+    }
+    
+    $xml->close_all_open_tags;
+    
+    return $xml->flush;
 }
-
-sub zmap_create_xml_string {
-    my ($self, $xml) = @_;
-
-    return qq{<zmap action="create_feature">\n}
-      . qq{\t<featureset>\n}
-      . qq{\t\t} . $xml
-      . qq{\t</featureset>\n}
-      . qq{</zmap>\n};
-}
-
 
 sub express_data_fetch {
     my( $self, $ace ) = @_;

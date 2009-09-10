@@ -1495,8 +1495,11 @@ sub zmap_delete_xml_string {
     my ($self) = @_;
     
     my $xml = Hum::XmlWriter->new;
-    $xml->open_tag('zmap', {action => 'delete_feature'});
-    $xml->open_tag('featureset');
+    $xml->open_tag('zmap');
+    $xml->open_tag('request', {action => 'delete_feature'});
+    $xml->open_tag('align');
+    $xml->open_tag('block');
+    $xml->open_tag('featureset', {name => $self->GeneMethod->name});
     $self->zmap_xml_feature_tag($xml);
     $xml->close_all_open_tags;
     return $xml->flush;
@@ -1509,8 +1512,11 @@ sub zmap_create_xml_string {
     ### if there is more than one in the Zmap. Can probably be
     ### taken from the attached clone_Sequence.
     my $xml = Hum::XmlWriter->new;
-    $xml->open_tag('zmap', {action => 'create_feature'});
-    $xml->open_tag('featureset');
+    $xml->open_tag('zmap');
+    $xml->open_tag('request', {action => 'create_feature'});
+    $xml->open_tag('align');
+    $xml->open_tag('block');
+    $xml->open_tag('featureset', {name => $self->GeneMethod->name});
     $self->zmap_xml_feature_tag($xml);
     
     my @exons = $self->get_all_Exons
@@ -1550,8 +1556,6 @@ sub zmap_xml_feature_tag {
     my ($self, $xml) = @_;
     
     my $style = $self->GeneMethod->style_name;
-
-    print "\n\nSTYLE: $style\n\n";
 
     # Not all transcripts have a locus.
     # eg: Predicted genes (Genscan, Augustus) don't.

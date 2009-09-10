@@ -46,14 +46,30 @@ sub add_XML {
 
 sub add_data {
     my ($self, $data) = @_;
-    
     $string{$self} .= $self->xml_escape($data);
+}
+
+sub add_data_with_indent {
+    my ($self, $data) = @_;
+    $self->add_data($self->_indent_text($data));
 }
 
 sub add_raw_data {
     my ($self, $data) = @_;
-    
+     
     $string{$self} .= $data;
+}
+
+sub add_raw_data_with_indent {
+    my ($self, $data) = @_;
+    $self->add_raw_data($self->_indent_text($data));
+}
+
+sub _indent_text {
+	my ($self, $data) = @_;
+	my $ind = ' ' x $level{$self};
+	$data =~ s/(.+)(\n|$)/$ind$1\n/g;
+	return $data;
 }
 
 sub open_tag {
