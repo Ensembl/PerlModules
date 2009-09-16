@@ -24,14 +24,14 @@ our $magic_evi_name_matcher = qr{
         [A-Z]\d[A-Z\d]{4} # a capital letter, a digit, then 4 letters or digits.
     )
     (\-\d+)?              # Optional VARSPLICE suffix
-    (\.\d+)?              # Optional .SV            
+    (\.\d+)?              # Optional .SV
 }x;
 
 my $posn_int = qr{-?(\d+)};
 
 sub text_is_zmap_clip {
     my ($text) = @_;
-    
+
     if ($text =~ /^"$magic_evi_name_matcher"\s+$posn_int\s+$posn_int\s+\(\d+\)/m) {
         return 1;
     } else {
@@ -41,7 +41,7 @@ sub text_is_zmap_clip {
 
 sub accessions_from_text {
     my ($text) = @_;
-    
+
     my (%seen, @acc);
     while ($text =~ /($magic_evi_name_matcher)/g) {
         unless ($seen{$1}) {
@@ -54,7 +54,7 @@ sub accessions_from_text {
 
 sub integers_from_text {
     my ($text) = @_;
-    
+
     #warn "Trying to parse: [$text]\n";
 
     my (@ints);
@@ -82,7 +82,7 @@ sub integers_from_text {
         # "Em:AB056152.1"    87317 87472 (156)
         # "Em:CR600548.1"    -145886 -145723 (164)
         # "Em:CR600548.1"    -144505 -144330 (176)
-        
+
         unless (@ints = $text =~ /^\S+\s+$posn_int\s+$posn_int\s+\(\d+\)/mg) {
             # or just get all the integers
             @ints = grep !/\./, $text =~ /\b([\.\d]+)\b/g;
@@ -95,9 +95,11 @@ sub integers_from_text {
     my %column_type = (
         EST             => 'EST',
         vertebrate_mRNA => 'cDNA',
+        vertebrate_ncRNA => 'ncRNA',
         BLASTX          => 'Protein',
         SwissProt       => 'Protein',
         TrEMBL          => 'Protein',
+        OTF_ncRNA		=> 'ncRNA',
         OTF_EST			=> 'EST',
         OTF_mRNA		=> 'cDNA',
         OTF_Protein		=> 'Protein',
@@ -106,10 +108,11 @@ sub integers_from_text {
     sub evidence_type_and_name_from_text {
         my ($ace, $text) = @_;
 
-        #warn "Trying to parse: [$text]\n";
+
+        warn "Trying to parse: [$text]\n";
 
         # Sequence:Em:BU533776.1    82637 83110 (474)  EST_Human 99.4 (3 - 478) Em:BU533776.1
-        # Sequence:Em:AB042555.1    85437 88797 (3361)  vertebrate_mRNA 99.3 (709 - 4071) Em:AB042555.1
+        # Sequence:Em:AB042555.1    85437 88797 (3361vertebrate)  vertebrate_mRNA 99.3 (709 - 4071) Em:AB042555.1
         # Protein:Tr:Q7SYC3    75996 76703 (708)  BLASTX 77.0 (409 - 641) Tr:Q7SYC3
         # Protein:"Sw:Q16635-4.1"    14669 14761 (93)  BLASTX 100.0 (124 - 154) Sw:Q16635-4.1
 

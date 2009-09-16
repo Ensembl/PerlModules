@@ -16,7 +16,7 @@ use Hum::ClipboardUtils 'integers_from_text';
 
 sub new {
     my( $pkg ) = @_;
-    
+
     return bless {
         '_Exon_list'    => [],
         '_is_sorted'    => 0,
@@ -25,18 +25,18 @@ sub new {
 
 sub new_from_ace_subseq_tag {
     my( $pkg, $ace_trans ) = @_;
-    
+
     # Make a SubSeq object
     my $sub = $pkg->new;
-    
+
     $sub->process_ace_transcript($ace_trans);
-    
+
     return $sub;
 }
 
 sub new_from_subseq_list {
     my ($pkg, @subseq) = @_;
-    
+
     my $self = $subseq[0]->clone;
     bless $self, $pkg;
     for (my $i = 1; $i < @subseq; $i++) {
@@ -55,9 +55,9 @@ sub new_from_subseq_list {
 
 sub new_from_clipboard_text {
     my ($pkg, $text) = @_;
-    
+
     my @ints = integers_from_text($text);
-    
+
     if (@ints) {
         my $self = $pkg->new;
         my $fwd = 0;
@@ -87,7 +87,7 @@ sub new_from_clipboard_text {
 
 sub new_from_name_start_end_transcript_seq {
     my( $pkg, $name, $start, $end, $t_seq ) = @_;
-    
+
     my $self = $pkg->new;
     $self->name($name);
     $self->process_ace_start_end_transcript_seq($start, $end, $t_seq);
@@ -96,16 +96,16 @@ sub new_from_name_start_end_transcript_seq {
 
 sub process_ace_transcript {
     my( $self, $t ) = @_;
-    
+
     $self->name($t->name);
     # Get coordinates of Subsequence in parent
     my ($start, $end) = map $_->name, $t->row(1);
     die "Missing coordinate for '$t'\n"
         unless $start and $end;
-        
+
     # Fetch the Subsequence object
     my $t_seq = $t->fetch;
-    
+
     $self->process_ace_start_end_transcript_seq($start, $end, $t_seq);
 }
 
@@ -121,7 +121,7 @@ sub process_ace_start_end_transcript_seq {
         $strand = -1;
     }
     $self->strand($strand);
-    
+
     if (my $otter_id = $t_seq->at('Otter.Transcript_id[1]')) {
         $self->otter_id($otter_id->name);
     }
@@ -131,13 +131,13 @@ sub process_ace_start_end_transcript_seq {
     if (my $aut = $t_seq->at('Otter.Transcript_author[1]')) {
         $self->author_name($aut->name);
     }
-    
+
     # Make the exons
     foreach ($t_seq->at('Structure.From.Source_exons[1]')) {
-        
+
         # Make an Exon object
         my $exon = Hum::Ace::Exon->new;
-        
+
         my ($x, $y, $ott) = map $_->name, $_->row;
         die "Missing coordinate in '$t_seq' : start='$x' end='$y'\n"
             unless $x and $y;
@@ -154,10 +154,10 @@ sub process_ace_start_end_transcript_seq {
         $exon->start($x);
         $exon->end($y);
         $exon->otter_id($ott);
-        
+
         $self->add_Exon($exon);
     }
-    
+
     # Parse Contined_from and Continues_as
     if (my ($from) = $t_seq->at('Structure.Continued_from[1]')) {
         $self->upstream_subseq_name($self->strip_Em($from));
@@ -180,7 +180,7 @@ sub process_ace_start_end_transcript_seq {
     if (my $desc = $t_seq->at('DB_info.EMBL_dump_info.DE_line[1]')) {
         $self->description($desc->name);
     }
-    
+
     my( @annotation_remarks );
     foreach my $rem ($t_seq->at('Annotation.Annotation_remark[1]')) {
         push(@annotation_remarks, $rem->name);
@@ -188,7 +188,7 @@ sub process_ace_start_end_transcript_seq {
     $self->set_annotation_remarks(@annotation_remarks);
 
     # Parse Supporting evidence tags
-    foreach my $type (qw{ Protein EST cDNA Genomic }) {
+    foreach my $type (qw{ Protein EST ncRNA cDNA Genomic }) {
         my $tag = "${type}_match";
         my $list = [];
         foreach my $evidence ($t_seq->at('Annotation.Sequence_matches.' . $tag . '[1]')) {
@@ -198,7 +198,7 @@ sub process_ace_start_end_transcript_seq {
         }
         $self->add_evidence_list($type, $list) if @$list;
     }
-    
+
     my @exons = $self->get_all_Exons
         or confess "No exons in '", $self->name, "'";
 
@@ -234,7 +234,7 @@ sub process_ace_start_end_transcript_seq {
     if ($t_seq->at('Properties.End_not_found')) {
         $self->end_not_found(1);
     }
- 
+
     $self->validate;
 }
 
@@ -242,7 +242,7 @@ sub process_ace_start_end_transcript_seq {
 
 sub strip_Em {
     my( $self, $ace_obj ) = @_;
-    
+
     my $name = $ace_obj->name;
     $name =~ s/^em://i;
     return $name;
@@ -250,7 +250,7 @@ sub strip_Em {
 
 sub take_otter_ids {
     my( $self, $old ) = @_;
-    
+
     $self->otter_id($old->otter_id);
     $self->translation_otter_id($old->translation_otter_id);
 
@@ -278,10 +278,10 @@ sub take_otter_ids {
 
 sub clone {
     my( $old ) = @_;
-    
+
     # Make new SubSeq object
     my $new = ref($old)->new;
-    
+
     # Copy scalar fields (But not is_archival!)
     foreach my $meth (qw{
         name
@@ -297,7 +297,7 @@ sub clone {
     {
         $new->$meth($old->$meth());
     }
-    
+
     if ($old->translation_region_is_set) {
         $new->translation_region($old->translation_region);
     }
@@ -310,15 +310,15 @@ sub clone {
         my $new_ex = $old_ex->clone;
         $new->add_Exon($new_ex);
     }
- 
+
     $new->evidence_hash($old->clone_evidence_hash);
-    
+
     return $new;
 }
 
 sub name {
     my( $self, $name ) = @_;
-    
+
     if ($name) {
         $self->{'_name'} = $name;
     }
@@ -327,7 +327,7 @@ sub name {
 
 sub description {
     my ($self, $desc) = @_;
-    
+
     if ($desc) {
         $self->{'_description'} = $desc;
     }
@@ -336,7 +336,7 @@ sub description {
 
 sub start_phase {
     my( $self, $phase ) = @_;
-    
+
     if (defined $phase) {
         confess "start_phase is read_only method - use start_not_found";
     }
@@ -345,7 +345,7 @@ sub start_phase {
 
 sub start_not_found {
     my( $self, $phase ) = @_;
-    
+
     if (defined $phase) {
         confess "Bad phase '$phase'"
             unless $phase =~ /^[0123]$/;
@@ -356,7 +356,7 @@ sub start_not_found {
 
 sub utr_start_not_found {
     my( $self, $flag ) = @_;
-    
+
     if (defined $flag) {
         $self->{'_utr_start_not_found'} = $flag ? 1 : 0;
     }
@@ -365,7 +365,7 @@ sub utr_start_not_found {
 
 sub end_not_found {
     my( $self, $flag ) = @_;
-    
+
     if (defined $flag) {
         $self->{'_end_not_found'} = $flag ? 1 : 0;
     }
@@ -374,7 +374,7 @@ sub end_not_found {
 
 sub otter_id {
     my( $self, $otter_id ) = @_;
-    
+
     if ($otter_id) {
         $self->{'_otter_id'} = $otter_id;
     }
@@ -383,7 +383,7 @@ sub otter_id {
 
 sub translation_otter_id {
     my( $self, $translation_otter_id ) = @_;
-    
+
     if ($translation_otter_id) {
         $self->{'_translation_otter_id'} = $translation_otter_id;
     }
@@ -392,7 +392,7 @@ sub translation_otter_id {
 
 sub author_name {
     my ($self, $name) = @_;
-    
+
     if ($name) {
         $self->{'_author_name'} = $name;
     }
@@ -401,14 +401,14 @@ sub author_name {
 
 sub set_remarks {
     my( $self, @remarks ) = @_;
-    
+
     # The grep ensures that empty remarks are ingored
     $self->{'_remark_list'} = [grep $_, @remarks];
 }
 
 sub list_remarks {
     my( $self ) = @_;
-    
+
     if (my $rl = $self->{'_remark_list'}) {
         return @$rl;
     } else {
@@ -418,19 +418,19 @@ sub list_remarks {
 
 sub empty_remarks {
     my( $self ) = @_;
-    
+
     $self->{'_remark_list'} = undef;
 }
 
 sub set_annotation_remarks {
     my( $self, @annotation_remarks ) = @_;
-    
+
     $self->{'_annotation_remark_list'} = [@annotation_remarks];
 }
 
 sub list_annotation_remarks {
     my( $self ) = @_;
-    
+
     if (my $rl = $self->{'_annotation_remark_list'}) {
         return @$rl;
     } else {
@@ -440,19 +440,19 @@ sub list_annotation_remarks {
 
 sub empty_annotation_remarks {
     my( $self ) = @_;
-    
+
     $self->{'_annotation_remark_list'} = undef;
 }
 
 sub add_evidence_list {
     my($self, $type, $list) = @_;
-    
+
     $self->{'_evidence_hash'}{$type} = $list;
 }
 
 sub evidence_hash {
     my( $self, $evidence_hash ) = @_;
-    
+
     if ($evidence_hash) {
         $self->{'_evidence_hash'} = $evidence_hash;
     } else {
@@ -463,9 +463,9 @@ sub evidence_hash {
 
 sub clone_evidence_hash {
     my( $self ) = @_;
-    
+
     my $ev = $self->evidence_hash;
-    
+
     my $new_hash = {};
     foreach my $type (keys %$ev) {
         my $ev_list = $ev->{$type};
@@ -476,7 +476,7 @@ sub clone_evidence_hash {
 
 sub count_evidence {
     my ($self) = @_;
-    
+
     my $ev = $self->evidence_hash;
     my $count = 0;
     foreach my $ev_list (values %$ev) {
@@ -487,20 +487,20 @@ sub count_evidence {
 
 sub empty_evidence_hash {
     my( $self ) = @_;
-    
+
     $self->{'_evidence_hash'} = {};
 }
 
 sub locus_name_root {
     my ($self) = @_;
-    
+
     my ($root) = $self->name =~ /^(.+)-\d\d\d/;
     return $root || $self->name . ' (invalid format)';
 }
 
 sub clone_Sequence {
     my( $self, $seq ) = @_;
-    
+
     if ($seq) {
         $self->{'_clone_Sequence'} = $seq;
     }
@@ -509,12 +509,12 @@ sub clone_Sequence {
 
 sub exon_Sequence {
     my( $self ) = @_;
-    
+
     my $clone_seq = $self->clone_Sequence
         or confess "No clone_Sequence";
     my $seq = Hum::Sequence::DNA->new;
     $seq->name($self->name);
-    
+
     my $seq_str = '';
     foreach my $exon ($self->get_all_Exons) {
 	my $start = $exon->start;
@@ -524,20 +524,20 @@ sub exon_Sequence {
 	    ->sequence_string;
     }
     $seq->sequence_string($seq_str);
-    
+
     if ($self->strand == -1) {
         $seq = $seq->reverse_complement;
     }
-    
+
     return $seq;
 }
 
 sub exon_Sequence_array {
     my( $self ) = @_;
-    
+
     my $clone_seq = $self->clone_Sequence
         or confess "No clone_Sequence";
-    
+
     my $exon_seqs = [];
     my $i = 0;
     my $name = $self->name;
@@ -561,13 +561,13 @@ sub exon_Sequence_array {
 
 sub mRNA_Sequence {
     my( $self ) = @_;
-    
+
     my $strand    = $self->strand;
     my $clone_seq = $self->clone_Sequence or confess "No clone_Sequence";
-    
+
     my $seq = Hum::Sequence::DNA->new;
     $seq->name($self->name);
-    
+
     my $seq_str = '';
     foreach my $exon ($self->get_all_Exons) {
         $seq_str .= $clone_seq
@@ -575,39 +575,39 @@ sub mRNA_Sequence {
             ->sequence_string;
     }
     $seq->sequence_string($seq_str);
-    
+
     if ($strand == -1) {
         $seq = $seq->reverse_complement;
     }
-    
+
     return $seq;
 }
 
 sub translate {
     my ($self) = @_;
-    
+
     my $mRNA = $self->translatable_Sequence;
     return $self->translator->translate($mRNA);
 }
 
 sub translatable_Sequence {
     my( $self ) = @_;
-    
+
     my ($t_start, $t_end)   = $self->translation_region;
     my $strand              = $self->strand;
     my $phase               = $self->start_phase;
     my $clone_seq           = $self->clone_Sequence or confess "No clone_Sequence";
-    
+
     #warn "strand = $strand, phase = $phase\n";
-    
+
     my $seq = Hum::Sequence::DNA->new;
     $seq->name($self->name);
-    
+
     my $seq_str = '';
     foreach my $exon ($self->get_all_CDS_Exons) {
         my $start = $exon->start;
         my $end   = $exon->end;
-        
+
         $seq_str .= $clone_seq
             ->sub_sequence($start, $end)
             ->sequence_string;
@@ -626,13 +626,13 @@ sub translatable_Sequence {
             substr($seq_str, length($seq_str), 0) = $pad;
         }
     }
-    
+
     $seq->sequence_string($seq_str);
-    
+
     if ($strand == -1) {
         $seq = $seq->reverse_complement;
     }
-    
+
     return $seq;
 }
 
@@ -640,9 +640,9 @@ sub translatable_Sequence {
 # coordinates of each of the codons in the translation.
 sub codon_start_map {
     my( $self ) = @_;
-    
+
     my @exons = $self->get_all_CDS_Exons;
-    
+
     # Get phase in 0,1,2 convention instead of acedb 1,2,3
     # to make calculation of next exons's phase easiser
     my $phase = $self->start_phase - 1;
@@ -650,7 +650,7 @@ sub codon_start_map {
     #     ? $exons[0]->start + $phase
     #     : $exons[0]->end   - $phase;
     # warn "start phase = '$phase'  first exon = '$first_exon_start'\n";
-    
+
     my $map = [];
     if ($self->strand == 1) {
         foreach my $ex (@exons) {
@@ -675,7 +675,7 @@ sub codon_start_map {
             #warn "Exon $start -> $end  length is ", $ex->length, " ($length)\nnext exon phase = '$phase'\n";
         }
     }
-    
+
     return $map;
 }
 
@@ -689,11 +689,11 @@ sub get_all_CDS_Exons {
     foreach my $exon ($self->get_all_Exons) {
         my $start = $exon->start;
         my $end   = $exon->end;
-        
+
         # Skip non-coding exons
         next if $end   < $t_start;
         last if $start > $t_end;
-        
+
         # Trim coordinates to translation start and end
         if ($start < $t_start) {
             $start = $t_start;
@@ -701,27 +701,27 @@ sub get_all_CDS_Exons {
         if ($end > $t_end) {
             $end = $t_end;
         }
-        
+
         my $cds = Hum::Ace::Exon->new;
         $cds->start($start);
         $cds->end($end);
         $cds->otter_id($exon->otter_id);
         push(@cds_exons, $cds);
     }
-    
+
     # Add the phase to the first exon if start is not found.
     # (Needed by the ace -> ensembl transfer system.)
     my $start_exon = $strand == 1 ? $cds_exons[0] : $cds_exons[$#cds_exons];
     if ($self->start_not_found) {
         $start_exon->phase($self->start_phase);
     }
-    
+
     return @cds_exons;
 }
 
 sub get_all_exon_Sequences {
     my( $self ) = @_;
-    
+
     my $clone_seq = $self->clone_Sequence or confess "No clone_Sequence";
     my( @ex_seq );
     foreach my $exon ($self->get_all_Exons) {
@@ -729,7 +729,7 @@ sub get_all_exon_Sequences {
         my $end   = $exon->end;
         push(@ex_seq, $clone_seq->sub_sequence($start, $end));
     }
-    
+
     if ($self->strand == -1) {
         @ex_seq = reverse(@ex_seq);
         for (my $i = 0; $i < @ex_seq; $i++) {
@@ -737,13 +737,13 @@ sub get_all_exon_Sequences {
             $ex_seq[$i] = $ex->reverse_complement;
         }
     }
-    
+
     return @ex_seq;
 }
 
 sub drop_all_exon_otter_id {
     my ($self) = @_;
-    
+
     foreach my $exon ($self->get_all_Exons) {
         $exon->drop_otter_id;
     }
@@ -751,17 +751,17 @@ sub drop_all_exon_otter_id {
 
 sub GeneMethod {
     my( $self, $GeneMethod ) = @_;
-    
+
     if ($GeneMethod) {
         $self->{'_GeneMethod'} = $GeneMethod;
     }
-   
+
     return $self->{'_GeneMethod'};
 }
 
 sub Locus {
     my( $self, $Locus ) = @_;
-    
+
     if ($Locus) {
         unless (UNIVERSAL::isa($Locus, 'Hum::Ace::Locus')) {
             confess "Wrong kind of thing '$Locus'";
@@ -773,13 +773,13 @@ sub Locus {
 
 sub unset_Locus {
     my( $self ) = @_;
-    
+
     $self->{'_Locus'} = undef;
 }
 
 sub strand {
     my( $self, $strand ) = @_;
-    
+
     if (defined $strand) {
         confess "Illegal strand '$strand'; must be '1' or '-1'"
             unless $strand =~ /^-?1$/;
@@ -790,7 +790,7 @@ sub strand {
 
 sub add_Exon {
     my( $self, $Exon ) = @_;
-    
+
     confess "'$Exon' is not a 'Hum::Ace::Exon'"
         unless $Exon->isa('Hum::Ace::Exon');
     push(@{$self->{'_Exon_list'}}, $Exon);
@@ -799,7 +799,7 @@ sub add_Exon {
 
 sub new_Exon {
     my( $self ) = @_;
-    
+
     my $exon = Hum::Ace::Exon->new;
     $self->add_Exon($exon);
     return $exon;
@@ -807,7 +807,7 @@ sub new_Exon {
 
 sub is_sorted {
     my( $self, $flag ) = @_;
-    
+
     if (defined $flag) {
         $self->{'_is_sorted'} = $flag ? 1 : 0;
     }
@@ -816,7 +816,7 @@ sub is_sorted {
 
 sub is_archival {
     my( $self, $flag ) = @_;
-    
+
     if (defined $flag) {
         $self->{'_is_archival'} = $flag ? 1 : 0;
     }
@@ -838,7 +838,7 @@ sub is_mutable {
 
 sub sort_Exons {
     my( $self ) = @_;
-    
+
     @{$self->{'_Exon_list'}} =
         sort {
             $a->start <=> $b->start || $a->end <=> $b->end
@@ -848,14 +848,14 @@ sub sort_Exons {
 
 sub get_all_Exons {
     my( $self ) = @_;
-    
+
     $self->sort_Exons unless $self->is_sorted;
     return @{$self->{'_Exon_list'}};
 }
 
 sub get_all_Exons_in_transcript_order {
     my( $self ) = @_;
-    
+
     return $self->strand == 1 ?
         $self->get_all_Exons
       : reverse $self->get_all_Exons;
@@ -863,7 +863,7 @@ sub get_all_Exons_in_transcript_order {
 
 sub delete_Exon {
     my( $self, $gonner ) = @_;
-    
+
     for (my $i = 0; $i < @{$self->{'_Exon_list'}}; $i++) {
         my $exon = $self->{'_Exon_list'}[$i];
         if ($exon == $gonner) {
@@ -876,7 +876,7 @@ sub delete_Exon {
 
 sub replace_all_Exons {
     my( $self, @exons ) = @_;
-    
+
     $self->{'_Exon_list'} = [@exons];
     $self->is_sorted(0);
     return 1;
@@ -884,25 +884,25 @@ sub replace_all_Exons {
 
 sub start {
     my( $self ) = @_;
-    
+
     my @exons = $self->get_all_Exons or confess "No Exons";
     return $exons[0]->start;
 }
 
 sub end {
     my( $self ) = @_;
-    
+
     my @exons = $self->get_all_Exons or confess "No Exons";
     return $exons[$#exons]->end;
 }
 
 sub translator {
     my( $self, $translator ) = @_;
-    
+
     if ($translator) {
         $self->{'_translator'} = $translator;
     }
-    return $self->{'_translator'} || 
+    return $self->{'_translator'} ||
         $self->is_seleno_transcript
             ? Hum::Translator->new_seleno
             : Hum::Translator->new;
@@ -917,7 +917,7 @@ sub translator {
 
     sub is_seleno_transcript {
         my ($self) = @_;
-    
+
         foreach my $remark ($self->list_annotation_remarks) {
             return 1 if $remark =~ /$seleno_pat/;
         }
@@ -929,7 +929,7 @@ sub translator {
 
         # Seleno remark will be removed if transcript is non-coding
         # or if there are no selenocysteines in the translation.
-    
+
         my @rem = $self->list_annotation_remarks;
         my $is_seleno = 0;
         for (my $i = 0; $i < @rem;) {
@@ -960,39 +960,39 @@ sub translator {
 
 sub set_translation_region_from_cds_coords {
     my( $self, @coords ) = @_;
-    
+
     # This is fatal on failure
     my @t_region = $self->remap_coords_mRNA_to_genomic(@coords);
-    
+
     $self->translation_region(@t_region);
 }
 
 sub remap_coords_mRNA_to_genomic {
     my $self = shift;
-    
+
     # Sort coords so that we can bail out of the search
     # loop and go on to the next exon early.
     my @coords = sort {$a <=> $b} @_;
-    
+
     my $strand = $self->strand;
     my @exons = $self->get_all_Exons;
     if ($strand == -1) {
         @exons = reverse @exons;
     }
-    
+
     my $pos = 0;
     my( @remapped );
-    foreach my $ex (@exons) {    
-        
+    foreach my $ex (@exons) {
+
         # Calculate start and end of this exon in mRNA coordinates
         my $start = $pos + 1;
         my $end   = $pos + $ex->length;
-        
+
         while (@coords) {
             # Does the first (smallest) coordinate lie in this exon?
             if ($coords[0] <= $end) {
                 my $c = shift @coords;
-                
+
                 # Use of push or unshift with forward or reverse
                 # strand ensures that coordinates come out in
                 # @remapped sorted in genomic order
@@ -1006,36 +1006,36 @@ sub remap_coords_mRNA_to_genomic {
                 last;
             }
         }
-        
+
         last unless @coords;
         $pos = $end;
     }
-    
+
     if (@coords) {
         confess "Failed to remap coordinates: (",
             join(', ', map "'$_'", @coords),
             ") in transcript of length ",
             $pos + 1;
     }
-    
+
     return @remapped;
 }
 
 sub remap_coords_genomic_to_mRNA {
     my( $self, @coords ) = @_;
-    
+
     my $strand = $self->strand;
     my @exons = $self->get_all_Exons;
     if ($strand == -1) {
         @exons = reverse @exons;
     }
-    
+
     my( @remapped );
     my $cds_length = 0;
     foreach my $exon (@exons) {
         my $start = $exon->start;
         my $end   = $exon->end;
-        
+
         for (my $i = 0; $i < @coords; $i++) {
             next if $remapped[$i];  # Already remapped
             my $pos = $coords[$i];
@@ -1047,16 +1047,16 @@ sub remap_coords_genomic_to_mRNA {
                 }
             }
         }
-        
+
         $cds_length += $exon->length;
     }
-    
+
     return @remapped;
 }
 
 sub translation_region {
     my( $self, $start, $end ) = @_;
-    
+
     if (defined $start) {
 
         foreach ($start, $end) {
@@ -1077,19 +1077,19 @@ sub translation_region {
 
 sub unset_translation_region {
     my( $self ) = @_;
-    
+
     $self->{'_translation_region'} = undef;
 }
 
 sub translation_region_is_set {
     my( $self ) = @_;
-    
+
     return $self->{'_translation_region'} ? 1 : 0;
 }
 
 sub cds_coords {
     my( $self ) = @_;
-    
+
     my $err = '';
 
     my @t_region   = $self->translation_region;
@@ -1101,35 +1101,35 @@ sub cds_coords {
     unless ($cds_length >= 3) {
         $err .= "CDS must be at least 3 bp long, but is $cds_length bp\n";
     }
-    
+
     for (my $i = 0; $i < @t_region; $i++) {
         unless ($cds_coords[$i]) {
             $err .= qq{Translation coord '$t_region[$i]' does not lie within any Exon\n};
         }
     }
     confess $err if $err;
-    
+
     return @cds_coords;
 }
 
 sub subseq_length {
     my( $self ) = @_;
-    
+
     return $self->end - $self->start + 1;
 }
 
 sub validate {
     my( $self ) = @_;
-    
+
     confess "No Exons" unless $self->get_all_Exons;
-    
+
     $self->valid_exon_coordinates;
     $self->cds_coords;
 }
 
 sub pre_otter_save_error {
     my ($self) = @_;
-    
+
     my $err = '';
     $err .= $self->error_start_not_found;
     $err .= $self->error_in_translation;
@@ -1142,7 +1142,7 @@ sub pre_otter_save_error {
 
 sub locus_level_errors {
     my( $self, $locus_level_errors ) = @_;
-    
+
     if (defined $locus_level_errors) {
         $self->{'_locus_level_errors'} = $locus_level_errors;
     }
@@ -1151,7 +1151,7 @@ sub locus_level_errors {
 
 sub error_in_translation {
     my ($self) = @_;
-    
+
     my $err = '';
 
     return $err unless $self->translation_region_is_set;
@@ -1165,10 +1165,10 @@ sub error_in_translation {
     if ($i != -1 and $i != $end_i) {
         $err .= "Stops found in translation\n";
     }
-    
+
     # Check that if translation does not begin with an methionine then
     # Start_not_found is set, and if it does not end with a stop then
-    # End_not_found is set.    
+    # End_not_found is set.
     if (substr($pep_str, 0, 1) ne 'M') {
         unless ($self->start_not_found) {
             $err .= "Translation does not begin with Methionine, and 'Start not found (1 or 2 or 3)' is not set\n";
@@ -1181,15 +1181,15 @@ sub error_in_translation {
             $err .= "Translation does not end with stop, and 'End not found' is not set\n";
         }
     }
-    
+
     return $err;
 }
 
 sub error_start_not_found {
     my ($self) = @_;
-    
+
     my $err = '';
-    
+
     # Translation region should start on the first base of the
     # transcript if Start_not_found is set to 1, 2 or 3.
 
@@ -1217,7 +1217,7 @@ sub error_start_not_found {
 
 sub error_no_evidence {
     my ($self) = @_;
-    
+
     my $err = '';
     unless ($self->count_evidence) {
         $err .= "No evidence attached\n";
@@ -1230,10 +1230,10 @@ sub error_no_evidence {
 
     sub error_in_name_format {
         my ($self) = @_;
-    
+
         my $name = $self->name;
         my $locus_name = $self->Locus->name;
-        
+
         my $err = '';
         if ($self->name =~ /\.\d+-\d\d\d$/) {
             if ($locus_name =~ /\.\d+$/ and $self->locus_name_root ne $locus_name) {
@@ -1250,14 +1250,14 @@ sub error_no_evidence {
         if ($trsct_pre ne $locus_pre) {
             $err .= "Transcript name has prefix '$trsct_pre' but locus name has prefix '$locus_pre'\n";
         }
-        
+
         return $err;
     }
 }
 
 sub valid_exon_coordinates {
     my( $self ) = @_;
-    
+
     my( $last_end );
     foreach my $ex ($self->get_all_Exons) {
         my $start = $ex->start;
@@ -1282,12 +1282,12 @@ sub valid_exon_coordinates {
 
 sub contains_all_exons {
     my( $self, $other ) = @_;
-    
+
     confess "No other" unless $other;
-    
+
     my  @self_exons =  $self->get_all_Exons;
     my @other_exons = $other->get_all_Exons;
-    
+
     # Find the index of the first overlapping
     # exon in @self_exons.
     my( $first_i );
@@ -1301,7 +1301,7 @@ sub contains_all_exons {
             }
         }
     }
-    
+
     my $all_contained = 0;
     if (defined $first_i) {
         @self_exons = splice(@self_exons, $first_i, scalar(@other_exons));
@@ -1326,13 +1326,13 @@ sub contains_all_exons {
             }
         }
     }
-    
+
     return $all_contained;
 }
 
 sub ace_string {
     my( $self, $old_name ) = @_;
-        
+
     my $name        = $self->name
         or confess "name not set";
     my $clone_seq   = $self->clone_Sequence
@@ -1342,19 +1342,19 @@ sub ace_string {
     my @exons       = $self->get_all_Exons;
     my $method      = $self->GeneMethod;
     my $locus       = $self->Locus;
-    
+
     my $clone = $clone_seq->name
         or confess "No sequence name in clone_Sequence";
-    
+
     my $out = qq{\nSequence "$clone"\n};
     if ($old_name) {
         $out .= qq{-D SubSequence "$old_name"\n}
     } else {
         $out .= qq{-D SubSequence "$name"\n}
     }
-    
+
     $out .= qq{\nSequence "$clone"\n};
-    
+
     # Position in parent sequence
     my( $start, $end, $strand );
     if (@exons) {
@@ -1372,7 +1372,7 @@ sub ace_string {
     ### we edit is now in the interface.
     $out .= qq{\n-R Sequence "$old_name" "$name"\n}
         if $old_name;
-    
+
     $out .= qq{\nSequence "$name"\n}
         . qq{-D Source\n}
         . qq{-D Transcript_author\n}
@@ -1380,33 +1380,33 @@ sub ace_string {
         . qq{-D Locus\n}
         . qq{-D CDS\n}
         . qq{-D Source_Exons\n}
-        
+
         #. qq{-D Start_not_found\n}
         #. qq{-D End_not_found\n}
         #. qq{-D Predicted_gene\n}
         # Commented out block above and replaced with:
         . qq{-D Properties\n}
-        
+
         . qq{-D Continued_from\n}
         . qq{-D Continues_as\n}
         . qq{-D Remark\n}
         . qq{-D Annotation_remark\n}
 
         . qq{-D Sequence_matches\n}
-        
+
         # New SubSequencce object starts here
         . qq{\nSequence "$name"\n}
         . qq{Source "$clone"\n}
         . qq{Predicted_gene\n}
         ;
-    
+
     if ($ott) {
         $out .= qq{Transcript_id "$ott"\n};
     }
     if ($tsl_ott) {
         $out .= qq{Translation_id "$tsl_ott"\n};
     }
-    
+
     if ($method) {
         my $mn = $method->name;
         my $prefix = '';
@@ -1426,7 +1426,7 @@ sub ace_string {
             $out .= qq{Processed_mRNA\n};
         }
     }
-    
+
     if (my $phase = $self->start_not_found) {
         $out .= qq{Start_not_found $phase\n};
     }
@@ -1437,7 +1437,7 @@ sub ace_string {
     if ($self->end_not_found) {
         $out .= qq{End_not_found\n};
     }
-    
+
     # The exons
     if ($strand == 1) {
         foreach my $ex (@exons) {
@@ -1460,7 +1460,7 @@ sub ace_string {
             }
         }
     }
-    
+
     # Need to use AceText quoting because anything can be in the remark!
     my $txt = Hum::Ace::AceText->new;
     foreach my $remark ($self->list_remarks) {
@@ -1479,21 +1479,21 @@ sub ace_string {
             $out .= qq{${type}_match "$name"\n};
         }
     }
-    
+
     if ($locus) {
         my $ln = $locus->name;
         $out .= qq{Locus "$ln"\n};
         $out .= $locus->ace_string;
     }
-    
+
     $out .= "\n";
-    
+
     return $out;
 }
 
 sub zmap_delete_xml_string {
     my ($self) = @_;
-    
+
     my $xml = Hum::XmlWriter->new;
     $xml->open_tag('zmap');
     $xml->open_tag('request', {action => 'delete_feature'});
@@ -1507,7 +1507,7 @@ sub zmap_delete_xml_string {
 
 sub zmap_create_xml_string {
     my ($self) = @_;
-    
+
     ### featureset tag will require "align" and "block" attributes
     ### if there is more than one in the Zmap. Can probably be
     ### taken from the attached clone_Sequence.
@@ -1518,7 +1518,7 @@ sub zmap_create_xml_string {
     $xml->open_tag('block');
     $xml->open_tag('featureset', {name => $self->GeneMethod->name});
     $self->zmap_xml_feature_tag($xml);
-    
+
     my @exons = $self->get_all_Exons
         or confess "No exons";
     for (my $i = 0; $i < @exons; $i++) {
@@ -1554,19 +1554,19 @@ sub zmap_create_xml_string {
 
 sub zmap_xml_feature_tag {
     my ($self, $xml) = @_;
-    
+
     my $style = $self->GeneMethod->style_name;
 
     # Not all transcripts have a locus.
     # eg: Predicted genes (Genscan, Augustus) don't.
     my @locus_prop;
-    if (my $locus = $self->Locus) {        
+    if (my $locus = $self->Locus) {
         if (my $pre = $locus->gene_type_prefix) {
             $style = "$pre:$style";
         }
         @locus_prop = (locus => $locus->name);
     }
-    
+
     my $snf = $self->start_not_found;
     $xml->open_tag('feature', {
             name            => $self->name,
@@ -1582,7 +1582,7 @@ sub zmap_xml_feature_tag {
 
 sub zmap_transcript_info_xml {
     my ($self) = @_;
-    
+
     my $xml = Hum::XmlWriter->new(7);
     # Otter stable ID and Author
     if ($self->otter_id or $self->author_name) {
@@ -1649,7 +1649,7 @@ sub zmap_info_xml {
     my ($self) = @_;
 
     my $xml = Hum::XmlWriter->new(5);
-    
+
     # We can add our info for Zmap into the "Feature" and "Annotation" subsections of the "Details" page.
     $xml->open_tag('page', {name => 'Details'});
 
@@ -1667,7 +1667,7 @@ sub zmap_info_xml {
         $xml->close_tag;
         $xml->close_tag;
     }
-    
+
     if (my $locus = $self->Locus) {
         # This Locus stuff might be better in Hum::Ace::Locus
         $xml->open_tag('subsection', {name => 'Locus'});
@@ -1702,7 +1702,7 @@ sub zmap_info_xml {
         $xml->close_tag;
     }
     $xml->close_tag;
-    
+
     # Add our own page called "Exons"
     $xml->open_tag('page', {name => 'Exons'});
     $xml->open_tag('subsection');
@@ -1722,14 +1722,14 @@ sub zmap_info_xml {
         my $str = sprintf "%d %d %s", @pos, $exon->otter_id || '-';
         $xml->full_tag('tagvalue', {type => 'compound'}, $str);
     }
-    
+
     $xml->close_all_open_tags;
     return $xml->flush;
 }
 
 #sub DESTROY {
 #    my( $self ) = @_;
-#    
+#
 #    print STDERR "SubSeq ", $self->name, " is released\n";
 #}
 
