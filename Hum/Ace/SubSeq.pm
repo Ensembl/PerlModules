@@ -719,6 +719,46 @@ sub get_all_CDS_Exons {
     return @cds_exons;
 }
 
+sub splice_acceptor_seq_string {
+    my ($self, $exon_start, $exon_end, $strand) = @_;
+    
+    my $clone_seq = $self->clone_Sequence or confess "No clone_Sequence";
+    
+    my $str;
+    if ($strand == 1) {
+        $str = $clone_seq->sub_sequence(
+            $exon_start - 2,
+            $exon_start - 1,
+            )->sequence_string;
+    } else {
+        $str = $clone_seq->sub_sequence(
+            $exon_end + 1,
+            $exon_end + 2,
+            )->reverse_complement->sequence_string;
+    }
+    return $str;
+}
+
+sub splice_donor_seq_string {
+    my ($self, $exon_start, $exon_end, $strand) = @_;
+    
+    my $clone_seq = $self->clone_Sequence or confess "No clone_Sequence";
+    
+    my $str;
+    if ($strand == 1) {
+        $str = $clone_seq->sub_sequence(
+            $exon_end,
+            $exon_end + 2,
+            )->sequence_string;
+    } else {
+        $str = $clone_seq->sub_sequence(
+            $exon_start - 2,
+            $exon_start,
+            )->reverse_complement->sequence_string;
+    }
+    return $str;
+}
+
 sub get_all_exon_Sequences {
     my( $self ) = @_;
 
