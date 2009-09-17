@@ -62,7 +62,7 @@ sub zmap_xml_feature_tag {
         $self->seq_start,
         $self->seq_end,
         $self->seq_strand == -1 ? '-' : '+',
-        $self->method_name,
+        $self->Method->style_name,
         $self->score;
 
     # This will be how it works in the future:
