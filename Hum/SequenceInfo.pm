@@ -109,7 +109,7 @@ sub embl_sequence_get {
             });
         $sth->execute($acc);
 
-        my( @seq );
+        my( @seq_inf );
         while (my ($name, $sv, $cksum, $path, $htgs_phase, $proj) = $sth->fetchrow) {
             unless ($sv) {
                 warn "sv not set for '$acc' ($name)\n";
@@ -143,14 +143,14 @@ sub embl_sequence_get {
             $seq->name("$acc.$sv");
             $self->Sequence($seq);
 
-            push(@seq, $self);
+            push(@seq_inf, $self);
         }
 
-        if (@seq == 1) {
-            return $seq[0];
+        if (@seq_inf == 1) {
+            return $seq_inf[0];
         }
-        elsif (@seq) {
-            confess "got ", scalar(@seq), " sequences for accession '$acc'\n";
+        elsif (@seq_inf) {
+            confess "got ", scalar(@seq_inf), " sequences for accession '$acc'\n";
         }
         else {
             return;
