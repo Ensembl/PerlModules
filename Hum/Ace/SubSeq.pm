@@ -1173,6 +1173,7 @@ sub pre_otter_save_error {
     my $err = '';
     $err .= $self->error_start_not_found;
     $err .= $self->error_in_translation;
+    $err .= $self->error_short_introns;
     ### Add check for short translations that don't have start or end not-found
     $err .= $self->error_no_evidence;
     $err .= $self->error_in_name_format;
@@ -1293,6 +1294,29 @@ sub error_no_evidence {
 
         return $err;
     }
+}
+
+sub error_short_introns {
+    my ($self) = @_;
+    
+    my $min_intron_length = 30;
+    
+    my $err = '';
+    my $last_end;
+    foreach my $ex ($self->get_all_Exons) {
+        my $start = $ex->start;
+        if ($last_end) {
+            my $intron_start = $last_end + 1;
+            my $intron_end = $start - 1;
+            my $intron_length = $intron_end - $intron_start + 1;
+            if ($intron_length < $min_intron_length) {
+                $err .= "$intron_length bp Intron [$intron_start-$intron_end] too short (minimum length $min_intron_length bp)\n";
+            }
+        }
+        
+        $last_end = $ex->end;
+    }
+    return $err;
 }
 
 sub valid_exon_coordinates {
