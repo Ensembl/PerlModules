@@ -21,13 +21,15 @@ use Carp;
 use vars qw( @ISA );
 @ISA = qw( Net::FTP );
 
+# ftp://enaftp:Pk8bRHJF@ftp.ebi.ac.uk/LytjcwNniWkDRewDa4TP/to_ena/
+
 sub new {
-    my( $pkg, $host ) = @_;
-    $host ||= 'ftp1.ebi.ac.uk';
-    my $ftp = Net::FTP->new($host,
-        Passive => 1,
-        );
-    $ftp->login() or confess "Can't login() to '$host'";
+    my ($pkg, $host) = @_;
+
+    $host ||= 'ftp.ebi.ac.uk';
+    my $ftp = Net::FTP->new($host, Passive => 1);
+    $ftp->login() or confess "Can't login() to '$host'; ", $ftp->message;
+    $ftp->cwd('LytjcwNniWkDRewDa4TP/to_ena') or confess "Can't change working directory to depository; ", $ftp->message;
     return bless $ftp, $pkg;
 }
 
