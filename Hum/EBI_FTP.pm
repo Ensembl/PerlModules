@@ -21,8 +21,6 @@ use Carp;
 use vars qw( @ISA );
 @ISA = qw( Net::FTP );
 
-# ftp://enaftp:Pk8bRHJF@ftp.ebi.ac.uk/LytjcwNniWkDRewDa4TP/to_ena/
-
 sub new {
     my ($pkg, $host) = @_;
 
