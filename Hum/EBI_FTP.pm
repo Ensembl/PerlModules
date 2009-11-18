@@ -27,7 +27,7 @@ sub new {
     $host ||= 'ftp.ebi.ac.uk';
     my $ftp = Net::FTP->new($host, Passive => 1);
     $ftp->login() or confess "Can't login() to '$host'; ", $ftp->message;
-    $ftp->cwd('LytjcwNniWkDRewDa4TP/to_ena') or confess "Can't change working directory to depository; ", $ftp->message;
+    $ftp->cwd('/YUFSjj8seagh6J4iGCsc/to_ena') or confess "Can't change working directory to depository; ", $ftp->message;
     return bless $ftp, $pkg;
 }
 
