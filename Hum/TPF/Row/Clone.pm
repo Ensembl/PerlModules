@@ -58,10 +58,11 @@ sub set_intl_clone_name_from_sanger_int_ext {
 
     $clonename = uc $clonename;
     $int_pre ||= '';
-    $ext_pre ||= 'XX';
+    $ext_pre ||= '';
     if ($ext_pre =~ /^XX/) {
         $clonename = "$ext_pre-$clonename";
-    } else {
+    }
+    elsif ($ext_pre) {
         substr($clonename, 0, length($int_pre)) = "$ext_pre-";
     }
     $self->intl_clone_name($clonename);
