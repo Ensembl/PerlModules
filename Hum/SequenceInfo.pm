@@ -236,6 +236,12 @@ sub sequence_version {
     return $self->{'_sequence_version'};
 }
 
+sub accession_sv {
+    my ($self) = @_;
+    
+    return join('.' $self->accession, $self->sequence_version);
+}
+
 sub htgs_phase {
     my( $self, $htgs_phase ) = @_;
     
