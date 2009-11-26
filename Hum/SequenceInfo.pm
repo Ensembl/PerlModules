@@ -239,7 +239,7 @@ sub sequence_version {
 sub accession_sv {
     my ($self) = @_;
     
-    return join('.' $self->accession, $self->sequence_version);
+    return join('.', $self->accession, $self->sequence_version);
 }
 
 sub htgs_phase {
