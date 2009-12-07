@@ -4,15 +4,14 @@ package Hum::EmblUtils;
 use strict;
 use warnings;
 use Carp;
-use Hum::Tracking qw( ref_from_query external_clone_name );
+use Hum::Tracking qw( ref_from_query intl_clone_name );
 use Hum::Submission qw(project_name_and_suffix_from_sequence_name);
 use Hum::Species;
 
 use Exporter;
 use vars qw( @EXPORT_OK @ISA );
 @ISA       = qw( Exporter );
-@EXPORT_OK = qw( extCloneName projectAndSuffix
-                 add_source_FT add_Organism get_Organism
+@EXPORT_OK = qw( projectAndSuffix add_source_FT add_Organism get_Organism
                  );
 
 sub add_source_FT {
@@ -81,37 +80,6 @@ BEGIN {
         }
 
         return $og;
-    }
-}
-
-{
-    # For caching external clone names
-    my( %ext_clone_name );
-
-    sub extCloneName {
-        my( @list ) = @_;
-                
-        # Convert all the sequence names to projects
-        foreach (@list) {
-            if (ref($_)) {
-                die "Not an acedb object" unless $_->isa('Ace::Object');
-                ($_) = projectAndSuffix($_) || $_;
-            }
-        }
-        
-        # Fetch any names we don't have already
-        my @missing = grep ! $ext_clone_name{$_}, @list;
-        my $ext = external_clone_name(@missing);
-        foreach my $p (keys %$ext) {
-            $ext_clone_name{$p} = $ext->{$p};
-        }
-        
-        # Fill in the names in the return array
-        foreach (@list) {
-            $_ = $ext_clone_name{$_};
-        }
-        
-        return wantarray ? @list : $list[0];
     }
 }
 

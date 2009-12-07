@@ -10,30 +10,31 @@ use Hum::Tracking qw{ track_db prepare_track_statement };
 use Hum::SequenceOverlap::Position;
 
 sub new {
-    my( $pkg ) = @_;
-    
+    my ($pkg) = @_;
+
     return bless {}, $pkg;
 }
 
 sub fetch_by_SequenceInfo_pair {
-    my( $pkg, $seq_a, $seq_b ) = @_;
+    my ($pkg, $seq_a, $seq_b) = @_;
 
     return $pkg->_generic_fetch($seq_a, $seq_b, ' AND s.id_status != 3 ');
 }
 
 sub fetch_by_SequenceInfo_pair_including_refuted {
-    my( $pkg, $seq_a, $seq_b ) = @_;
+    my ($pkg, $seq_a, $seq_b) = @_;
 
     return $pkg->_generic_fetch($seq_a, $seq_b, '');
 }
 
 sub _generic_fetch {
-    my( $pkg, $seq_a, $seq_b, $where_clause ) = @_;
-    
+    my ($pkg, $seq_a, $seq_b, $where_clause) = @_;
+
     confess "Need two SequenceInfo objects, but got '$seq_a' and '$seq_b'"
-        unless $seq_a and $seq_b;
-    
-    my $sth = track_db->prepare_cached(qq{
+      unless $seq_a and $seq_b;
+
+    my $sth = track_db->prepare_cached(
+        qq{
         SELECT oa.position
           , oa.is_3prime
           , oa.dovetail_length
@@ -62,18 +63,19 @@ sub _generic_fetch {
           AND oa.id_sequence = ?
           AND ob.id_sequence = ?
           $where_clause
-        });
+        }
+    );
     $sth->execute($seq_a->db_id, $seq_b->db_id);
-    
-    my( $a_pos, $a_is3prime, $a_dovetail,
-        $b_pos, $b_is3prime, $b_dovetail,
-        $overlap_id, $length, $source_id,
-        $sub, $ins, $del,
-        $status, $remark, $program, $operator, $statusdate) = $sth->fetchrow;
+
+    my (
+        $a_pos,      $a_is3prime, $a_dovetail, $b_pos,    $b_is3prime, $b_dovetail,
+        $overlap_id, $length,     $source_id,  $sub,      $ins,        $del,
+        $status,     $remark,     $program,    $operator, $statusdate
+    ) = $sth->fetchrow;
     $sth->finish;
-    
+
     return unless $overlap_id;
-    
+
     my $self = $pkg->new;
     $self->db_id($overlap_id);
     $self->overlap_length($length);
@@ -83,8 +85,8 @@ sub _generic_fetch {
     $self->percent_deletion($del);
     $self->status_id($status);
     $self->remark($remark);
-    $self->program($program || '');
-    $self->operator($operator || '');
+    $self->program($program       || '');
+    $self->operator($operator     || '');
     $self->statusdate($statusdate || '');
 
     my ($pa, $pb) = $self->make_new_Position_objects;
@@ -96,15 +98,16 @@ sub _generic_fetch {
     $pb->is_3prime($b_is3prime);
     $pb->dovetail_length($b_dovetail);
     $pb->SequenceInfo($seq_b);
-    
+
     return $self;
 }
 
 # Is this any use, since it doesn't fetch the Overlap::Position objects
 sub fetch_by_db_id {
-    my( $pkg, $id ) = @_;
-    
-    my $sth = track_db->prepare_cached(q{
+    my ($pkg, $id) = @_;
+
+    my $sth = track_db->prepare_cached(
+        q{
         SELECT length
           , id_source
           , pct_substitutions
@@ -112,9 +115,10 @@ sub fetch_by_db_id {
           , pct_deletions
         FROM overlap
         WHERE id_overlap = ?
-        });
+        }
+    );
     $sth->execute($id);
-    my( $length, $source, $sub, $ins, $del ) = $sth->fetchrow;
+    my ($length, $source, $sub, $ins, $del) = $sth->fetchrow;
     $sth->finish;
     confess "No overlap with id '$id'" unless $length;
     my $self = $pkg->new;
@@ -128,8 +132,8 @@ sub fetch_by_db_id {
 }
 
 sub db_id {
-    my( $self, $db_id ) = @_;
-    
+    my ($self, $db_id) = @_;
+
     if ($db_id) {
         $self->{'_db_id'} = $db_id;
     }
@@ -137,8 +141,8 @@ sub db_id {
 }
 
 sub a_Position {
-    my( $self, $a_Position ) = @_;
-    
+    my ($self, $a_Position) = @_;
+
     if ($a_Position) {
         $self->{'_a_Position'} = $a_Position;
     }
@@ -146,8 +150,8 @@ sub a_Position {
 }
 
 sub b_Position {
-    my( $self, $b_Position ) = @_;
-    
+    my ($self, $b_Position) = @_;
+
     if ($b_Position) {
         $self->{'_b_Position'} = $b_Position;
     }
@@ -155,8 +159,8 @@ sub b_Position {
 }
 
 sub overlap_length {
-    my( $self, $overlap_length ) = @_;
-    
+    my ($self, $overlap_length) = @_;
+
     # overlap length is zero for abutting sequences
     if (defined $overlap_length) {
         $self->{'_overlap_length'} = $overlap_length;
@@ -165,8 +169,8 @@ sub overlap_length {
 }
 
 sub percent_substitution {
-    my( $self, $percent_substitution ) = @_;
-    
+    my ($self, $percent_substitution) = @_;
+
     if (defined $percent_substitution) {
         $self->{'_percent_substitution'} = $percent_substitution;
     }
@@ -174,8 +178,8 @@ sub percent_substitution {
 }
 
 sub percent_insertion {
-    my( $self, $percent_insertion ) = @_;
-    
+    my ($self, $percent_insertion) = @_;
+
     if (defined $percent_insertion) {
         $self->{'_percent_insertion'} = $percent_insertion;
     }
@@ -183,8 +187,8 @@ sub percent_insertion {
 }
 
 sub percent_deletion {
-    my( $self, $percent_deletion ) = @_;
-    
+    my ($self, $percent_deletion) = @_;
+
     if (defined $percent_deletion) {
         $self->{'_percent_deletion'} = $percent_deletion;
     }
@@ -192,16 +196,16 @@ sub percent_deletion {
 }
 
 sub matches {
-    my( $self, $othr ) = @_;
-    
+    my ($self, $othr) = @_;
+
     confess "Missing SequenceOverlap argument" unless $othr;
     my $self_a = $self->a_Position;
     my $self_b = $self->b_Position;
     my $othr_a = $othr->a_Position;
     my $othr_b = $othr->b_Position;
-    
+
     # Are the Position objects the other way around?
-    if    ($self_a->SequenceInfo->accession eq $othr_a->SequenceInfo->accession) {
+    if ($self_a->SequenceInfo->accession eq $othr_a->SequenceInfo->accession) {
         return 0 unless $self_a->matches($othr_a);
         return 0 unless $self_b->matches($othr_b);
     }
@@ -209,33 +213,35 @@ sub matches {
         return 0 unless $self_a->matches($othr_b);
         return 0 unless $self_b->matches($othr_a);
     }
-    
+
     return 1;
 }
 
 sub best_match_pair {
-  my( $self, $best_match_pair ) = @_;
+    my ($self, $best_match_pair) = @_;
 
-  if ( $best_match_pair ) {
-    $self->{'_best_matche_pair'} = $best_match_pair;
-  }
-  return $self->{'_best_matche_pair'};
+    if ($best_match_pair) {
+        $self->{'_best_match_pair'} = $best_match_pair;
+    }
+    return $self->{'_best_match_pair'};
 
 }
 
 sub other_match_pairs {
-  # a list of crossmatch matches other than the best one
-  my( $self, $other_match_pairs ) = @_;
 
-  if ( $other_match_pairs ) {
-    $self->{'_other_matche_pairs'} = $other_match_pairs;
-  }
-  return $self->{'_other_matche_pairs'};
+    # a list of crossmatch matches other than the best one
+    my ($self, $other_match_pairs) = @_;
+
+    if ($other_match_pairs) {
+        $self->{'_other_match_pairs'} = $other_match_pairs;
+    }
+    return $self->{'_other_match_pairs'};
 
 }
+
 sub source_name {
-    my( $self, $source_name ) = @_;
-    
+    my ($self, $source_name) = @_;
+
     if ($source_name) {
         $self->{'_source_name'} = $source_name;
     }
@@ -243,18 +249,19 @@ sub source_name {
 }
 
 sub status_id {
-    my( $self, $status_id ) = @_;
-    
+    my ($self, $status_id) = @_;
+
     if ($status_id) {
         $self->{'_status_id'} = $status_id;
     }
+
     # Default status is 1 ("Identified")
     return $self->{'_status_id'} || 1;
 }
 
 sub remark {
-    my( $self, $remark ) = @_;
-    
+    my ($self, $remark) = @_;
+
     if (defined $remark) {
         $self->{'_remark'} = $remark;
     }
@@ -262,8 +269,8 @@ sub remark {
 }
 
 sub program {
-    my( $self, $program ) = @_;
-    
+    my ($self, $program) = @_;
+
     if ($program) {
         $self->{'_program'} = $program;
     }
@@ -279,8 +286,8 @@ sub program {
 }
 
 sub operator {
-    my( $self, $operator ) = @_;
-    
+    my ($self, $operator) = @_;
+
     if ($operator) {
         $self->{'_operator'} = $operator;
     }
@@ -288,8 +295,8 @@ sub operator {
 }
 
 sub statusdate {
-    my( $self, $statusdate ) = @_;
-    
+    my ($self, $statusdate) = @_;
+
     if ($statusdate) {
         $self->{'_statusdate'} = $statusdate;
     }
@@ -305,22 +312,24 @@ sub statusdate {
 }
 
 {
-    my( %id_desc );
+    my (%id_desc);
 
     sub status_description {
-        my( $self ) = @_;
-        
+        my ($self) = @_;
+
         my $id = $self->status_id or return;
         $self->_fetch_status_descriptions unless %id_desc;
         return $id_desc{$id} || confess "No description for id_status '$id'";
     }
-    
+
     sub _fetch_status_descriptions {
-        my $sth = prepare_track_statement(q{
+        my $sth = prepare_track_statement(
+            q{
             SELECT id_status
               , description
             FROM overlapstatusdict
-            });
+            }
+        );
         $sth->execute;
         while (my ($id, $desc) = $sth->fetchrow) {
             $id_desc{$id} = $desc;
@@ -329,79 +338,84 @@ sub statusdate {
 }
 
 {
-    my( %id_name, %name_id );
+    my (%id_name, %name_id);
 
     sub _fill_id_name_hashes {
-        my $sth = prepare_track_statement(q{
+        my $sth = prepare_track_statement(
+            q{
             SELECT id_source
               , name
             FROM overlapsourcedict
-            });
+            }
+        );
         $sth->execute;
         while (my ($id, $name) = $sth->fetchrow) {
-            $id_name{$id} = $name;
+            $id_name{$id}   = $name;
             $name_id{$name} = $id;
         }
     }
 
     sub source_id {
-        my( $self ) = @_;
-        
+        my ($self) = @_;
+
         my $name = $self->source_name
-            or confess "source_name not set";
+          or confess "source_name not set";
         unless (%name_id) {
             _fill_id_name_hashes();
         }
         if (my $id = $name_id{$name}) {
             return $id;
-        } else {
+        }
+        else {
             confess "No id for overlap source name '$name'";
         }
     }
-    
+
     sub name_from_source_id {
-        my( $self, $id ) = @_;
-        
+        my ($self, $id) = @_;
+
         confess "Missing id argument" unless $id;
-        
+
         unless (%id_name) {
             _fill_id_name_hashes();
         }
         if (my $name = $id_name{$id}) {
             return $name;
-        } else {
+        }
+        else {
             confess "No name for overlap source id '$id'";
         }
     }
 }
 
 sub make_new_Position_objects {
-    my( $self ) = @_;
-    
+    my ($self) = @_;
+
     my $pa = Hum::SequenceOverlap::Position->new;
     $self->a_Position($pa);
     my $pb = Hum::SequenceOverlap::Position->new;
     $self->b_Position($pb);
-    return($pa, $pb);
+    return ($pa, $pb);
 }
 
 sub validate_Positions {
-    my( $self ) = @_;
-    
+    my ($self) = @_;
+
     $self->a_Position->validate;
     $self->b_Position->validate;
 }
 
 sub store {
-    my( $self ) = @_;
-    
+    my ($self) = @_;
+
     my $db_id = $self->db_id;
     if ($db_id) {
         confess "Already stored with db_id $db_id";
     }
     $db_id = $self->get_next_id;
-    
-    my $sth = track_db->prepare_cached(q{
+
+    my $sth = track_db->prepare_cached(
+        q{
         INSERT INTO overlap(
             id_overlap
           , length
@@ -410,37 +424,35 @@ sub store {
           , pct_insertions
           , pct_deletions )
         VALUES(?,?,?,?,?,?)
-        });
-    $sth->execute(
-        $db_id,
-        $self->overlap_length,
-        $self->source_id,
-        $self->percent_substitution,
-        $self->percent_insertion,
-        $self->percent_deletion,
-        );
-    
+        }
+    );
+    $sth->execute($db_id, $self->overlap_length, $self->source_id, $self->percent_substitution,
+        $self->percent_insertion, $self->percent_deletion,);
+
     $self->store_status;
-    
+
     $self->a_Position->store($db_id);
     $self->b_Position->store($db_id);
 }
 
 sub store_status {
-    my( $self ) = @_;
-    
+    my ($self) = @_;
+
     my $db_id = $self->db_id
-        or confess "Can't store status without db_id";
-    
-    my $unset_status = track_db->prepare_cached(q{
+      or confess "Can't store status without db_id";
+
+    my $unset_status = track_db->prepare_cached(
+        q{
         UPDATE overlap_status
         SET iscurrent = 0
         WHERE id_overlap = ?
-        });
+        }
+    );
     $unset_status->execute($db_id);
-    
+
     #### Should populate SESSIONID column?
-    my $store_status = track_db->prepare_cached(q{
+    my $store_status = track_db->prepare_cached(
+        q{
         INSERT INTO overlap_status(
             id_overlap
           , id_status
@@ -450,25 +462,28 @@ sub store_status {
           , statusdate
           , iscurrent )
         VALUES(?,?,?,?,?,sysdate,1)
-        });
+        }
+    );
 
     my $program = $self->program  || $self->default_program;
     my $who     = $self->operator || $self->default_operator;
 
-    $store_status->bind_param(1, $db_id,            DBI::SQL_INTEGER);
-    $store_status->bind_param(2, $self->status_id,  DBI::SQL_INTEGER);
-    $store_status->bind_param(3, $self->remark,     DBI::SQL_VARCHAR);
-    $store_status->bind_param(4, $program,          DBI::SQL_VARCHAR);
-    $store_status->bind_param(5, $who,              DBI::SQL_VARCHAR);
+    $store_status->bind_param(1, $db_id,           DBI::SQL_INTEGER);
+    $store_status->bind_param(2, $self->status_id, DBI::SQL_INTEGER);
+    $store_status->bind_param(3, $self->remark,    DBI::SQL_VARCHAR);
+    $store_status->bind_param(4, $program,         DBI::SQL_VARCHAR);
+    $store_status->bind_param(5, $who,             DBI::SQL_VARCHAR);
     $store_status->execute;
 }
 
 sub get_next_id {
-    my( $self ) = @_;
-    
-    my $sth = track_db()->prepare_cached(q{
+    my ($self) = @_;
+
+    my $sth = track_db()->prepare_cached(
+        q{
         SELECT over_seq.nextval FROM dual
-        });
+        }
+    );
     $sth->execute;
     my ($id) = $sth->fetchrow;
     $sth->finish;
@@ -476,27 +491,27 @@ sub get_next_id {
     return $id;
 }
 
-
 # This only stores the overlap if it is different
-# to the one in the database, or if there isn't 
+# to the one in the database, or if there isn't
 # one in the database.
 sub store_if_new {
-    my( $self ) = @_;
-    
+    my ($self) = @_;
+
     my $inf_a = $self->a_Position->SequenceInfo;
     my $inf_b = $self->b_Position->SequenceInfo;
-    
+
     # If there is an existing overlap, is it
     # identical to the new coordinates?
-    my $old = Hum::SequenceOverlap
-        ->fetch_by_SequenceInfo_pair($inf_a, $inf_b);
-    
+    my $old = Hum::SequenceOverlap->fetch_by_SequenceInfo_pair($inf_a, $inf_b);
+
     if ($old) {
         if ($self->matches($old)) {
+
             # Coordinates are identical to existing overlap
             return 0;
-        } else {
-            $old->status_id(3);  # Refuted
+        }
+        else {
+            $old->status_id(3);    # Refuted
             $old->program($old->default_program);
             ### Need to change to logged in user:
             $old->operator($old->default_operator);
@@ -504,21 +519,26 @@ sub store_if_new {
             $old->store_status;
         }
     }
-    
+
     $self->store;
     return 1;
 }
 
 sub remove {
-    my( $self ) = @_;
-    
-    my( @del_sth );
+    my ($self) = @_;
+
+    my (@del_sth);
     foreach my $table (qw{ OVERLAP_STATUS SEQUENCE_OVERLAP OVERLAP }) {
-        push(@del_sth, track_db()->prepare_cached(qq{
+        push(
+            @del_sth,
+            track_db()->prepare_cached(
+                qq{
             DELETE from $table WHERE id_overlap = ?
-            }));
+            }
+            )
+        );
     }
-    
+
     my $id = $self->db_id or confess "db_id not set - overlap not stored?";
     foreach my $sth (@del_sth) {
         $sth->execute($id);

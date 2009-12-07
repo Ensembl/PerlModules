@@ -157,12 +157,35 @@ sub is_truncated {
 sub pre_otter_save_error {
     my ($self) = @_;
 
+    my $err = '';
+    $err .= $self->error_no_description;
+    $err .= $self->error_alias_matches_name;
+    return $err;
+}
+
+sub error_alias_matches_name {
+    my ($self) = @_;
+
+    my $name = $self->name;
+    
+    my $err = '';
+    foreach my $alias ($self->list_aliases) {
+        if ($alias eq $name) {
+            $err .= qq{Alias '$alias' matches locus name\n};
+        }
+    }
+    return $err;
+}
+
+sub error_no_description {
+    my ($self) = @_;
+    
     my $desc = $self->description;
     if ($desc and $desc =~ /\w{3,}/) {    # Potential to be more sophisticated
         return '';
     } else {
         return qq{No full name (description) in Locus\n};
-    }
+    }    
 }
 
 

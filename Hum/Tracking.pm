@@ -36,12 +36,11 @@ use vars qw( @ISA @EXPORT_OK );
                 clone_from_project
                 clone_from_accession
                 current_project_status_number
-		        set_project_status
-		        session_id
+                set_project_status
+                session_id
                 chromosome_from_project
                 entry_name
                 expand_project_name
-                external_clone_name
                 intl_clone_name
                 find_project_directories
                 finished_accession
@@ -623,16 +622,11 @@ International Clone name for that clone.
             my ($int, $ext) = $sth->fetchrow;
             $sth->finish;
             
-            my $short = uc $clone;
-            if ($int) {
-                $int = uc $int;
-                $short =~ s/^$int//;
-            } else {
-                warn "No entry in Oracle CLONE table for '$clone'\n";
+            $intl = $clone;
+            if ($int and $ext) {
+                substr($intl, 0, length($int)) = "$ext-";
             }
-            $ext ||= 'XX';
-            
-            $intl = $clone_intl{$clone} = "$ext-$short";
+            $clone_intl{$clone} = $intl;
         }
         
         return $intl;
@@ -641,69 +635,6 @@ International Clone name for that clone.
 
 
 =pod
-
-=head2 HASH_REF = external_clone_name( LIST )
-
-Given a list of project names, it returns a
-reference to a hash, the keys of which are the
-Sanger project names, and the values the
-internationally approved convention for naming
-clones.
-
-=cut
-
-sub external_clone_name {
-    my( @projects ) = @_;
-    
-    confess "no project names" unless grep $_, @projects;
-    my $proj_list = join(',', map "'$_'", @projects);
-    
-    my $ans = ref_from_query(qq(
-        SELECT cp.projectname
-          , c.clonename
-          , l.internal_prefix
-          , l.external_prefix
-        FROM clone c
-          , clone_project cp
-          , library l
-        WHERE l.libraryname = c.libraryname
-          AND c.clonename = cp.clonename
-          AND cp.projectname IN($proj_list)
-        ));
-        
-    my %proj = map { $_->[0], [@{$_}[1,2,3]] } @$ans;
-    
-    # Fill in any clone names missing from %proj
-    my @missing = grep ! $proj{$_}, @projects;
-    if (@missing) {
-        my $miss_list = join(',', map "'$_'", @missing);
-        my $ans = ref_from_query(qq(
-            SELECT projectname
-              , clonename
-            FROM clone_project
-            WHERE projectname IN($miss_list)
-            ));
-        if (@$ans) {
-            foreach (@$ans) {
-                $proj{$_->[0]} = [$_->[1]];
-            }
-        }
-    }
-    
-    foreach my $p (keys %proj) {
-        my( $clone, $int, $ext ) = @{$proj{$p}};
-        
-        # Attempt to remove internal prefixes from the name
-        unless ($ext and $int and $clone =~ s/^$int//) {
-            $clone = uc $clone;
-        }
-        
-        # Clones with unknown external extensions get "XX"
-        $proj{$p} = $ext ? "$ext-$clone" : "XX-$clone";
-    }
-    
-    return \%proj;
-}
 
 =pod
 

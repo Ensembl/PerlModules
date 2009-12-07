@@ -152,6 +152,38 @@ __END__
 Baseclass for Hum::Sequence lightweight sequence
 modules.
 
+Single letter codes unique to amino acids:
+
+    E   Glu     Glutamic Acid
+    F   Phe     Phenylalanine
+    I   Ile     Isoleucine
+    L   Leu     Leucine
+    P   Pro     Proline
+    Q   Gln     Glutamine
+    X   Unk     Unknown amino acid
+
+Single letter codes only found in nucleotides:
+
+                                      B   C or G or T
+                                      U   Uracil
+
+Single letter codes shared by amino acid and nucleotide alphabets:
+
+    A   Ala     Alanine               A   Adenine
+    C   Cys     Cysteine              C   Cytosine
+    D   Asp     Aspartic Acid         D   A or G or T
+    G   Gly     Glycine               G   Guanine
+    H   His     Histidine             H   A or C or T
+    K   Lys     Lysine                K   G or T
+    M   Met     Methionine            M   A or C
+    N   Asn     Asparagine            N   any base
+    R   Arg     Arginine              R   A or G
+    S   Ser     Serine                S   G or C
+    T   Thr     Threonine             T   Thymine
+    V   Val     Valine                V   A or C or G
+    W   Trp     Tryptophan            W   A or T
+    Y   Tyr     Tyrosine              Y   C or T
+
 =head1 AUTHOR
 
 James Gilbert B<email> jgrg@sanger.ac.uk
