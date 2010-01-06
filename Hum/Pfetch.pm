@@ -107,6 +107,7 @@ sub get_Sequences {
         if ($seq_string eq 'no match') {
             # Add to list of indexes of missing sequences
             push(@missing_i, $i);
+            $seq_list[$i] = undef;
         } else {
             my $seq = Hum::Sequence->new;
             $seq->name($id_list[$i]);
