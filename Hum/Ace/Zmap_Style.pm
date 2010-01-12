@@ -352,14 +352,31 @@ sub mode_data {
 sub get_mode_data {
     my ($self, $tag_path) = @_;
     
-    my $mode_data = $self->mode_data or return;
+    # collect all the mode data from the style hierarchy
+    
+    my $all_mode_data = $self->mode_data || [];
+    
+    my $style = $self;
+    
+    while ($style = $style->parent_Style) {
+        if (my $mode_data = $style->mode_data) {
+            push @{ $all_mode_data }, @{ $mode_data };
+        }
+    }
+  
+    return unless $all_mode_data;
+    
+    # now see if there are any matches
+    
     my @matches;
-    DATA: foreach my $data (@$mode_data) {
+    
+    DATA: foreach my $data (@$all_mode_data) {
         for (my $i = 0; $i < @$tag_path; $i++) {
             next DATA if $data->[$i] ne $tag_path->[$i];
         }
         push(@matches, $data);
     }
+    
     return @matches;
 }
 
