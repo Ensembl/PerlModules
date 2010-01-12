@@ -90,11 +90,11 @@ sub assembly_strand {
     my( $self, $assembly_strand ) = @_;
     
     if (defined $assembly_strand) {
-        confess "Illegal assembly_strand '$assembly_strand'; must be '1' or '-1'"
-            unless $assembly_strand =~ /^-?1$/;
+        confess "Illegal assembly_strand '$assembly_strand'; must be '1', '-1' or '0'"
+            unless $assembly_strand =~ /^(-?1|0)$/;
         $self->{'_assembly_strand'} = $assembly_strand
     }
-    return $self->{'_assembly_strand'} || confess "assembly_strand not set";
+    $self->{'_assembly_strand'};
 }
 
 sub display_assembly_strand {
@@ -103,7 +103,19 @@ sub display_assembly_strand {
     if (@_) {
         confess "read-only method - got arguments: @_";
     }
-    return $self->assembly_strand == 1 ? 'Fwd' : 'Rev';
+    my $strand = $self->assembly_strand;
+    if ($strand == 1) {
+        return 'Fwd';
+    }
+    elsif ($strand == -1) {
+        return 'Rev';
+    }
+    elsif ($strand == 0) {
+        return 'Both';
+    }
+    else {
+        return;
+    }
 }
 
 sub golden_start {
@@ -269,7 +281,14 @@ sub express_data_fetch {
 
     # This is a clone component, so we only store the sequence length
     my ($dna_txt) = $ace->values_from_tag('DNA');
-    my $length = $dna_txt->[1];
+    my $length;
+    if ($dna_txt) {
+        $length = $dna_txt->[1]
+            or confess "No length next to DNA in Sequence '$name'";
+    }
+    elsif (my ($lt) = $ace->values_from_tag('Length')) {
+        $length = $lt->[0];
+    }
     $self->sequence_length($length);
     warn "Clone sequence '$name' is '$length' bp long\n";
 

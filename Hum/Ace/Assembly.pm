@@ -603,6 +603,7 @@ sub express_data_fetch {
 
     # Store the information from the clones
     $ace->raw_query("find Sequence $name");
+    my %name_clone;
     foreach my $frag ($ace->values_from_tag('AGP_Fragment')) {
         my ($clone_name, $start, $end) = @{$frag}[0,1,2];
         my $strand = 1;
@@ -611,14 +612,31 @@ sub express_data_fetch {
             $strand = -1;
         }
 
-        my $clone = Hum::Ace::Clone->new;
-        $clone->name($clone_name);
-        $clone->express_data_fetch($ace);
-        $clone->assembly_start($start);
-        $clone->assembly_end($end);
-        $clone->assembly_strand($strand);
+        if (my $clone = $name_clone{$clone_name}) {
+            if ($clone->assembly_strand != $strand) {
+                $clone->assembly_strand(0);
+            }
+            if ($start < $clone->assembly_start) {
+                $clone->assembly_start($start);
+            }
+            if ($end > $clone->assembly_end) {
+                $clone->assembly_end($end);
+            }
+            ### golden_start and golden_end are not set correctly
+            ### when there are multiple fragments of the same
+            ### clone in the assembly, and no NonGolden features.
+        } else {
+            $clone = Hum::Ace::Clone->new;
+            $clone->name($clone_name);
+            $clone->express_data_fetch($ace);
+            $clone->assembly_start($start);
+            $clone->assembly_end($end);
+            $clone->assembly_strand($strand);
 
-        $self->add_Clone($clone);
+            $self->add_Clone($clone);
+            
+            $name_clone{$clone_name} = $clone;
+        }
     }
 }
 
