@@ -133,6 +133,20 @@ sub ace_string {
         if ($style->inherited_mode eq 'Graph') {
             $txt->add_tag('Score_by_histogram');
         }
+        
+        if ($style->inherited_mode eq 'Alignment') {
+            if (my $opt_lists = $style->inherited('mode_data')) {
+                ALL_OPTS : for my $opt_list (@{ $opt_lists }) {
+                    for my $opt (@{ $opt_list } ) {
+                        if ($opt eq 'Gapped') {
+                            $txt->add_tag('Map_gaps');
+                            $txt->add_tag('Export_coords');
+                            last ALL_OPTS;
+                        }
+                    }
+                }
+            }
+        }
     }
     
     return $txt->ace_string;
@@ -177,7 +191,8 @@ sub style_name {
     my $self = shift;
     
     if (@_) {
-        $self->{'_style_name'} = shift;
+        my $style_name = shift;
+        $self->{'_style_name'} = $style_name;
     }
     if (my $style = $self->Zmap_Style) {
         my $name = $style->name
