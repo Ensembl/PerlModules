@@ -1555,6 +1555,20 @@ sub ace_string {
     return $out;
 }
 
+sub zmap_featureset_name {
+    my ($self) = @_;
+    
+    # we need to prepend the prefix if our Locus has one
+    
+    my $prefix = '';
+    
+    if ($self->Locus and my $pre = $self->Locus->gene_type_prefix) {
+        $prefix = "$pre:";
+    }
+    
+    return $prefix.$self->GeneMethod->name;
+}
+
 sub zmap_delete_xml_string {
     my ($self) = @_;
 
@@ -1563,7 +1577,7 @@ sub zmap_delete_xml_string {
     $xml->open_tag('request', {action => 'delete_feature'});
     $xml->open_tag('align');
     $xml->open_tag('block');
-    $xml->open_tag('featureset', {name => $self->GeneMethod->name});
+    $xml->open_tag('featureset', {name => $self->zmap_featureset_name});
     $self->zmap_xml_feature_tag($xml);
     $xml->close_all_open_tags;
     return $xml->flush;
@@ -1580,16 +1594,7 @@ sub zmap_create_xml_string {
     $xml->open_tag('request', {action => 'create_feature'});
     $xml->open_tag('align');
     $xml->open_tag('block');
-    
-    my $prefix = '';
-    
-    if ($self->Locus and my $pre = $self->Locus->gene_type_prefix) {
-        $prefix = "$pre:";
-    }
-    
-    my $featureset_name = $prefix.$self->GeneMethod->name;
-    
-    $xml->open_tag('featureset', {name => $featureset_name});
+    $xml->open_tag('featureset', {name => $self->zmap_featureset_name});
     $self->zmap_xml_feature_tag($xml);
 
     my @exons = $self->get_all_Exons
@@ -1649,7 +1654,7 @@ sub zmap_xml_feature_tag {
             start           => $self->start,
             end             => $self->end,
             strand          => $self->strand == -1 ? '-' : '+',
-            #style           => $style,
+            #style           => $style, # XXX: we shouldn't need the style as this can be established from the featureset name
             start_not_found => $snf ? $snf : 'false',
             end_not_found   => $self->end_not_found ? 'true' : 'false',
             @locus_prop,
