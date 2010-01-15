@@ -1580,7 +1580,16 @@ sub zmap_create_xml_string {
     $xml->open_tag('request', {action => 'create_feature'});
     $xml->open_tag('align');
     $xml->open_tag('block');
-    $xml->open_tag('featureset', {name => $self->GeneMethod->name});
+    
+    my $prefix = '';
+    
+    if ($self->Locus and my $pre = $self->Locus->gene_type_prefix) {
+        $prefix = "$pre:";
+    }
+    
+    my $featureset_name = $prefix.$self->GeneMethod->name;
+    
+    $xml->open_tag('featureset', {name => $featureset_name});
     $self->zmap_xml_feature_tag($xml);
 
     my @exons = $self->get_all_Exons
@@ -1619,15 +1628,18 @@ sub zmap_create_xml_string {
 sub zmap_xml_feature_tag {
     my ($self, $xml) = @_;
 
-    my $style = $self->GeneMethod->style_name;
+    #my $style = $self->GeneMethod->style_name;
+    
+    #print "XXX: gene method name: ".$self->GeneMethod->name."\n";
+    #print "XXX: gene method style name: ".$self->GeneMethod->style_name."\n";
 
     # Not all transcripts have a locus.
     # eg: Predicted genes (Genscan, Augustus) don't.
     my @locus_prop;
     if (my $locus = $self->Locus) {
-        if (my $pre = $locus->gene_type_prefix) {
-            $style = "$pre:$style";
-        }
+        #if (my $pre = $locus->gene_type_prefix) {
+        #    $style = "$pre:$style";
+        #}
         @locus_prop = (locus => $locus->name);
     }
 
@@ -1637,7 +1649,7 @@ sub zmap_xml_feature_tag {
             start           => $self->start,
             end             => $self->end,
             strand          => $self->strand == -1 ? '-' : '+',
-            style           => $style,
+            #style           => $style,
             start_not_found => $snf ? $snf : 'false',
             end_not_found   => $self->end_not_found ? 'true' : 'false',
             @locus_prop,
