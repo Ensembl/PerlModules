@@ -93,16 +93,17 @@ sub integers_from_text {
 
 {
     my %column_type = (
-        EST             => 'EST',
-        vertebrate_mRNA => 'cDNA',
+        EST              => 'EST',
+        vertebrate_mRNA  => 'cDNA',
         vertebrate_ncRNA => 'ncRNA',
-        BLASTX          => 'Protein',
-        SwissProt       => 'Protein',
-        TrEMBL          => 'Protein',
-        OTF_ncRNA		=> 'ncRNA',
-        OTF_EST			=> 'EST',
-        OTF_mRNA		=> 'cDNA',
-        OTF_Protein		=> 'Protein',
+        BLASTX           => 'Protein',
+        SwissProt        => 'Protein',
+        TrEMBL           => 'Protein',
+        OTF_ncRNA        => 'ncRNA',
+        OTF_EST          => 'EST',
+        OTF_mRNA         => 'cDNA',
+        OTF_Protein      => 'Protein',
+        Ens_cDNA         => 'cDNA',
     );
 
     sub evidence_type_and_name_from_text {
