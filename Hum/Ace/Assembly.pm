@@ -772,17 +772,45 @@ sub _generate_desc_and_kws_for_clone {
 		# contains 'part of' the locus, but will at least be consistent!
 		my $BE_CLEVER = 0;
 
-		my $locus_sub;
+		my %locus_sub;
+		
+		my %locus_is_transposon;
+		my %locus_start;
+		my %locus_end;
+		my %locus_strand;
 
+        # identify the loci in this assembly
+        
 		foreach my $sub (sort { ace_sort($a->name, $b->name) } $self->get_all_SubSeqs) {
 
 			next unless $sub->Locus;
+			
+			my $lname = $sub->Locus->name;
 
 			# ignore loci that are not havana annotated genes
 			next unless ($sub->Locus->is_truncated || $sub->GeneMethod->mutable);
 
-	        my $tsct_list = $locus_sub->{$sub->Locus->name} ||= [];
+	        my $tsct_list = $locus_sub{$lname} ||= [];
 	        push(@$tsct_list, $sub);
+	        
+	        # record if the locus is a transposon 
+	        
+	        $locus_is_transposon{$lname} = 1 if $sub->GeneMethod->name =~ /transposon/i;
+	        
+	        # track the start, end and strand of the locus
+	        
+	        my $start = $sub->start;
+	        my $end = $sub->end;
+	        my $strand = $sub->strand;
+	        
+	        $locus_start{$lname} ||= $start;
+	        $locus_end{$lname} ||= $end;
+	        $locus_strand{$lname} ||= $strand;
+	        
+	        $locus_start{$lname} = $start if $start < $locus_start{$lname};
+	        $locus_end{$lname} = $end if $end > $locus_end{$lname};
+	        die "Mixed transcript strands on locus $lname" if $strand != $locus_strand{$lname};
+	        
 	    }
 
 		print "clone_desc_cache miss\n" if $DEBUG;
@@ -804,11 +832,12 @@ sub _generate_desc_and_kws_for_clone {
 		my $part_novel_gene_count = 0;
 		my @DEline;
 
-		foreach my $loc_name (keys %$locus_sub) {
+        # loop through the loci in 5' -> 3' order 
+		foreach my $loc_name (sort {$locus_start{$a} <=> $locus_start{$b}} keys %locus_sub) {
 
 			print "checking next locus: $loc_name\n" if $DEBUG;
 
-	        my $tsct_list = $locus_sub->{$loc_name};
+	        my $tsct_list = $locus_sub{$loc_name};
 	        my $locus = $tsct_list->[0]->Locus;
 	        my $lname = $locus->name;
 	        my $lstrand = $tsct_list->[0]->strand;
@@ -818,23 +847,17 @@ sub _generate_desc_and_kws_for_clone {
 
 	        my $desc = $locus->description;
 
+            print "desc: $desc\n" if $DEBUG;
+
 	        # ignore loci without descriptions
 	        next unless $desc;
 
 	        # ignore transposons
-	        next if $desc =~ /transposon/i;
+	        next if $locus_is_transposon{$loc_name};
 
-	        # identify the start and end of the locus
-	        my $lstart = $tsct_list->[0]->start;
-	        my $lend = $tsct_list->[0]->end;
-
-	        for my $tsct (@$tsct_list) {
-	        	my $start = $tsct->start;
-	        	my $end = $tsct->end;
-	        	$lstart = $start if $start < $lstart;
-	        	$lend = $end if $end > $lend;
-	        	die "mixed strands" if $tsct->strand != $lstrand;
-	        }
+	        # get the start and end of the locus
+	        my $lstart = $locus_start{$lname};
+	        my $lend = $locus_end{$lname};
 
 	        print "locus: $lstart-$lend\n" if $DEBUG;
 
