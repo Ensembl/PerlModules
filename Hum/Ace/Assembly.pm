@@ -924,7 +924,7 @@ sub _generate_desc_and_kws_for_clone {
 	        	}
 	            push @DEline, \$line ;
 	        }
-	        elsif ($lname !~ /-/) {
+	        elsif ($lname !~ /\.\d/) {
 	            $line .= "the $lname gene for $desc" ;
 	            push @DEline,\$line;
 	            push @keywords, $locus;
