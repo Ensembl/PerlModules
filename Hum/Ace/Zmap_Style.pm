@@ -160,9 +160,10 @@ sub new_from_name_AceText {
                 $mode_data = [@data];
             }
         }
-        if ($found_mode) {            
-            # printf STDERR "Mode of Zmap_Style '%s' is '%s'\n",
-            #     $self->name, $found_mode;
+        if ($found_mode) {
+            # use Data::Dumper;
+            # printf STDERR "Mode of Zmap_Style '%s' is '%s' with data:\n%s",
+            #     $self->name, $found_mode, Dumper($mode_data);
             $self->mode($found_mode);
             $self->mode_data($mode_data);
         }
@@ -354,7 +355,7 @@ sub get_mode_data {
     
     # collect all the mode data from the style hierarchy
     
-    my $all_mode_data = $self->mode_data || [];
+    my $all_mode_data = $self->mode_data ? [@{$self->mode_data}] : [];
     
     my $style = $self;
     

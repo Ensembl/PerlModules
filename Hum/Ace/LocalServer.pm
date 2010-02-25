@@ -297,14 +297,16 @@ sub restart_server {
 sub kill_server {
     my( $self ) = @_;
 
-    my $pid = $self->server_pid;
     if (my $ace = $self->ace_handle) {
         $ace->raw_query('shutdown');
     }
     $self->disconnect_client;
     $self->forget_port;
-    $self->server_pid(undef);
-    waitpid $pid, 0;
+
+    if (my $pid = $self->server_pid) {
+        $self->server_pid(undef);
+        waitpid $pid, 0;
+    }
 }
 
 {

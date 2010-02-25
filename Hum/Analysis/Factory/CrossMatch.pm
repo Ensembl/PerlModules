@@ -62,8 +62,7 @@ sub show_alignments {
     return $self->{'_show_alignments'} || 0;
 }
 
-sub 
-run {
+sub run {
     my( $self, $query, $subject ) = @_;
 
     my $tmp = $self->make_tmp_dir;
