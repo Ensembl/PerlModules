@@ -270,10 +270,10 @@ sub server_executable {
 }
 
 sub server_pid {
-    my( $self, $pid ) = @_;
+    my $self = shift;
     
-    if ($pid) {
-        $self->{'_server_pid'} = $pid;
+    if (@_) {
+        $self->{'_server_pid'} = shift;
     }
     return $self->{'_server_pid'};
 }
@@ -297,16 +297,19 @@ sub restart_server {
 sub kill_server {
     my( $self ) = @_;
 
+    my $pid = $self->server_pid;
     if (my $ace = $self->ace_handle) {
         $ace->raw_query('shutdown');
     }
     $self->disconnect_client;
     $self->forget_port;
+    $self->server_pid(undef);
+    waitpid $pid, 0;
 }
 
 {
     my $INFO  = {};
-    my $DEBUG_THIS = 0;
+    my $DEBUG_THIS = 1;
     sub full_child_info {
         return $INFO;
     }
@@ -342,9 +345,9 @@ sub kill_server {
             return 1;
         }
         elsif (defined $pid) {
-            warn "child: Running ($exec_list)\n" if $DEBUG_THIS;
+            warn "child $$: Running ($exec_list)\n" if $DEBUG_THIS;
             exec $exec_list;
-            warn "child: exec ($exec_list) FAILED\n ** ERRNO $!\n ** CHILD_ERROR $?\n";
+            warn "child $$: exec ($exec_list) FAILED\n ** ERRNO $!\n ** CHILD_ERROR $?\n";
             CORE::exit( 255 );
         }
         else {
