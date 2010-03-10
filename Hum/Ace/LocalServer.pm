@@ -311,7 +311,7 @@ sub kill_server {
 
 {
     my $INFO  = {};
-    my $DEBUG_THIS = 1;
+    my $DEBUG_THIS = 0;
     sub full_child_info {
         return $INFO;
     }
