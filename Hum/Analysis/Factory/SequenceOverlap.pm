@@ -7,6 +7,7 @@ use strict;
 use warnings;
 use Carp;
 use Hum::Analysis::Factory::CrossMatch;
+use Hum::Analysis::Factory::Epic;
 use Hum::SequenceOverlap;
 use Symbol 'gensym';
 use Hum::Chromoview::Utils qw(store_failed_overlap_pairs);
@@ -339,6 +340,23 @@ sub get_end_features {
     
     return($seq_end, $hit_end);
 }
+
+
+
+
+
+sub epic_factory {
+    my( $self ) = @_;
+    
+    my( $factory );
+    unless ($factory = $self->{'_epic_factory'}) {
+        $factory = $self->{'_epic_factory'} = Hum::Analysis::Factory::Epic->new;
+    }
+    return $factory;
+}
+
+
+
 
 sub crossmatch_factory {
     my( $self ) = @_;

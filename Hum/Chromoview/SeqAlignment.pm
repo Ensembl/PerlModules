@@ -255,8 +255,7 @@ sub _make_daf_object {
   return $daf;
 }
 
-sub store_crossmatch_features {
-
+sub store_alignment_features {
   my ($self, $slice_Ad, $daf_Ad) = @_;
   my $best_daf;
 

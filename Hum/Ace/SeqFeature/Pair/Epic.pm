@@ -15,22 +15,23 @@ sub algorithm {
   return "epic";
 }
 
-sub cigar {
-  my( $self, $cigar ) = @_;
+
+sub cigar_string {
+    my( $self, $cigar_string ) = @_;
     
-  if (defined $cigar ) {
-    $self->{'_cigar'} = $cigar;
-  }
-  return $self->{'_cigar'};
+    if ($cigar_string) {
+        $self->{'_cigar_string'} = $cigar_string;
+    }
+    return $self->{'_cigar_string'};
 }
 
-sub length {
-  my( $self, $length ) = @_;
+sub alignment_length {
+    my( $self, $alignment_length ) = @_;
     
-  if (defined $length ) {
-    $self->{'_length'} = $length;
-  }
-  return $self->{'_length'};
+    if ($alignment_length) {
+        $self->{'_alignment_length'} = $alignment_length;
+    }
+    return $self->{'_alignment_length'};
 }
 
 sub percent_substitution {
