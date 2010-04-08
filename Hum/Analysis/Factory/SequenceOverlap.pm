@@ -35,6 +35,15 @@ sub new {
     return bless {}, $pkg;
 }
 
+sub algorithm {
+    my( $self, $algorithm ) = @_;
+    
+    if ($algorithm) {
+        $self->{'_algorithm'} = $algorithm;
+    }
+    return $self->{'_algorithm'};
+}
+
 sub matches_file {
     my( $self, $file ) = @_;
     
@@ -193,6 +202,17 @@ sub is_three_prime_hit {
     return $start_dist < $end_dist ? 0 : 1;
 }
 
+sub find_end_overlap {
+    my ($self, $query, $subject) = @_;
+    
+    if ($self->algorithm eq 'CrossMatch') {
+        return $self->find_end_overlap_crossmatch($query, $subject);
+    }
+    elsif ($self->algorithm eq 'epic') {
+        return $self->find_end_overlap_epic($query, $subject);
+    }
+}
+
 {
     ### In the future we this Factory object could contain
     ### a list of overlap detection factories.  This would
@@ -221,7 +241,7 @@ sub is_three_prime_hit {
             },
         );
 
-    sub find_end_overlap {
+    sub find_end_overlap_crossmatch {
         my( $self, $query, $subject ) = @_;
 
         my $factory = $self->crossmatch_factory;
