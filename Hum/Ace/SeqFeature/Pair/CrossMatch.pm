@@ -10,6 +10,9 @@ use vars '@ISA';
 
 @ISA = ('Hum::Ace::SeqFeature::Pair');
 
+sub algorithm {
+    return 'CrossMatch';
+}
 
 sub percent_substitution {
     my( $self, $percent_substitution ) = @_;

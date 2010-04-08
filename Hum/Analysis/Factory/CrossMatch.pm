@@ -9,7 +9,6 @@ use Hum::Analysis::Parser::CrossMatch;
 use Hum::FastaFileIO;
 use Carp;
 use Cwd;
-use Symbol 'gensym';
 
 sub new {
     my( $pkg ) = @_;
@@ -70,8 +69,7 @@ sub run {
     my $subject_file = $self->_get_file_path('subject', $tmp, $subject);
 
     my $cmd_pipe = $self->make_command_pipe($tmp, $query_file, $subject_file);
-    my $fh = gensym();
-    open $fh, $cmd_pipe or confess "Can't open pipe '$cmd_pipe' : $!";
+    open my $fh, $cmd_pipe or confess "Can't open pipe '$cmd_pipe' : $!";
 
     my $parser = Hum::Analysis::Parser::CrossMatch->new;
     $parser->results_filehandle($fh);

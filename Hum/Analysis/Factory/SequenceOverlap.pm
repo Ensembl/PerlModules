@@ -113,7 +113,7 @@ sub make_SequenceOverlap {
     foreach my $meth (qw{ percent_substitution percent_insertion percent_deletion }) {
         $overlap->$meth($feat->$meth());
     }
-    $overlap->source_name('CrossMatch');
+    $overlap->source_name($feat->algorithm);
 
     my ($pos_a, $pos_b) = $overlap->make_new_Position_objects;
     $pos_a->SequenceInfo($sa);
@@ -348,10 +348,7 @@ sub get_end_features {
 sub epic_factory {
     my( $self ) = @_;
     
-    my( $factory );
-    unless ($factory = $self->{'_epic_factory'}) {
-        $factory = $self->{'_epic_factory'} = Hum::Analysis::Factory::Epic->new;
-    }
+    my $factory = $self->{'_epic_factory'} ||= Hum::Analysis::Factory::Epic->new;
     return $factory;
 }
 

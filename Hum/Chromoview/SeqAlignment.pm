@@ -1,3 +1,4 @@
+
 package Hum::Chromoview::SeqAlignment;
 
 #author: ck1@sanger.ac.uk
