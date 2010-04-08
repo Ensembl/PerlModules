@@ -59,6 +59,10 @@ sub percent_deletion {
     return $self->{'_percent_deletion'};
 }
 
+sub pretty_alignment_string {
+    warn "Not implemented";
+}
+
 1;
 
 __END__

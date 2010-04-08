@@ -158,9 +158,6 @@ sub temporary_directory {
 sub DESTROY {
     my ($self) = @_;
 
-    if (my $log = $self->crossmatch_log_file) {
-        unlink($log);
-    }
     if (my $dir = $self->temporary_directory) {
 
         #warn "Removing '$dir'";

@@ -84,8 +84,15 @@ sub find_SequenceOverlap {
         confess "Didn't get Sequence for both a ('$seq_a') and b ('$seq_b')";
     }
     
-    # Run cross_match and find overlap
-    my $feat = $self->find_end_overlap($seq_a, $seq_b);
+    my $feat;   # Overlap feature
+    
+    if ($self->algorithm eq 'CrossMatch') {
+        # Run cross_match and find overlap
+        $feat = $self->find_end_overlap_crossmatch($seq_a, $seq_b);
+    }
+    elsif ($self->algorithm eq 'epic') {
+        $feat = $self->find_overlap_epic($seq_a, $seq_b);
+    }
 
     return unless $feat;
     
@@ -200,17 +207,6 @@ sub is_three_prime_hit {
 
     my( $start_dist, $end_dist ) = $end_distances{$type}->($feat, $length);
     return $start_dist < $end_dist ? 0 : 1;
-}
-
-sub find_end_overlap {
-    my ($self, $query, $subject) = @_;
-    
-    if ($self->algorithm eq 'CrossMatch') {
-        return $self->find_end_overlap_crossmatch($query, $subject);
-    }
-    elsif ($self->algorithm eq 'epic') {
-        return $self->find_end_overlap_epic($query, $subject);
-    }
 }
 
 {
@@ -372,7 +368,12 @@ sub epic_factory {
     return $factory;
 }
 
-
+sub find_overlap_epic {
+    my ($self, $query, $subject) = @_;
+    
+    my $parser = $self->epic_factory->run($query, $subject);
+    return $parser->next_Feature;
+}
 
 
 sub crossmatch_factory {
