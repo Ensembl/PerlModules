@@ -9,7 +9,6 @@ use Carp;
 use Hum::Analysis::Factory::CrossMatch;
 use Hum::Analysis::Factory::Epic;
 use Hum::SequenceOverlap;
-use Symbol 'gensym';
 use Hum::Chromoview::Utils qw(store_failed_overlap_pairs);
 
 
@@ -67,8 +66,7 @@ sub _open_file {
     
     my $type = ref($file);
     unless ($type and $type eq 'GLOB') {
-        my $fh = gensym();
-        open $fh, "> $file"
+        open my $fh, "> $file"
             or die "Can't write to '$file' : $!";
         $file = $fh;
     }
@@ -283,6 +281,13 @@ sub is_three_prime_hit {
     }
 }
 
+
+### This was supposed to be a Factory object, which, according to the design
+### pattern, processes data but does not store it. The "all_matches" and
+### "other_matches" subroutines mean that it now has state, which means that
+### if it is reused data from the last run might be returned as part of the
+### reuslts from the previous.
+
 sub all_matches {
   my( $self, $all_matches ) = @_;
 
@@ -300,6 +305,7 @@ sub other_matches {
   }
   return $self->{'_other_matches'};
 }
+
 
 sub filter_matches {
     my ($self, $match) = @_;
@@ -322,15 +328,18 @@ sub get_end_features {
     my( @matches );
     while (my $m = $parser->next_Feature) {
       push(@matches, $m);
+      $m->seq_Sequence($query);
+      $m->hit_Sequence($subject);
     }
 
     # checks jobs exceeding the ulimit virtual mem of 1.8G set in commandpipe
     if ( $parser->results_filehandle_status() != 0 ){
 
-      my $errmsg = "crossmatch has used up 1.8G of ulimit virtural memory ... given up";
+      my $errmsg = "error from cross_match ... giving up";
       print STDERR $errmsg, "\n";
-      Hum::Chromoview::Utils::store_failed_overlap_pairs($query->name, $subject->name, $errmsg);
+      # Hum::Chromoview::Utils::store_failed_overlap_pairs($query->name, $subject->name, $errmsg);
 
+      ### Why does this return undef, when other errors confess?
       return (undef, undef);
     }
 
@@ -372,7 +381,13 @@ sub find_overlap_epic {
     my ($self, $query, $subject) = @_;
     
     my $parser = $self->epic_factory->run($query, $subject);
-    return $parser->next_Feature;
+    if (my $feat = $parser->next_Feature) {
+        $feat->seq_Sequence($query);
+        $feat->hit_Sequence($subject);
+        return $feat;
+    } else {
+        return;
+    }
 }
 
 
@@ -383,9 +398,7 @@ sub crossmatch_factory {
     unless ($factory = $self->{'_crossmatch_factory'}) {
         $factory = $self->{'_crossmatch_factory'}
             = Hum::Analysis::Factory::CrossMatch->new;
-        $factory->show_alignments(
-            $self->matches_file or
-            $self->overlap_alignment_file ? 1 : 0);
+        $factory->show_alignments(1);
         $factory->show_all_matches(1);
     }
     return $factory;

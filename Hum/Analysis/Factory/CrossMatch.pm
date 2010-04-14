@@ -94,7 +94,7 @@ sub make_command_pipe {
         $cmd_pipe .= ' -masklevel 101';
     }
     $cmd_pipe .= " $query_file $subject_file 2>/dev/null |";
-    #$cmd_pipe .= " $query_file $subject_file |";
+    # $cmd_pipe .= " $query_file $subject_file |";
     #warn "PIPE = $cmd_pipe";
     return $cmd_pipe;
 }

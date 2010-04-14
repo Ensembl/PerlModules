@@ -37,7 +37,11 @@ sub run {
 sub make_command_pipe {
     my ($self, $dir, $query_file, $subject_file) = @_;
 
-    my $cmd_pipe = "cd $dir; /software/grit/bin/epic.pl -Bac $query_file $subject_file 2>/dev/null |";
+    ### It is not a good idea to have an absolute path to epic.pl encoded in a module
+    # my $cmd_pipe = "cd $dir; /software/grit/bin/epic.pl -Bac $query_file $subject_file 2>/dev/null |";
+
+    # my $cmd_pipe = "cd $dir; epic.pl -Bac $query_file $subject_file 2>/dev/null |";
+    my $cmd_pipe = "cd $dir; epic.pl -Bac $query_file $subject_file |";
 
     return $cmd_pipe;
 }

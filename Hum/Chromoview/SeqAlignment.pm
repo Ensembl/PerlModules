@@ -5,8 +5,6 @@ package Hum::Chromoview::SeqAlignment;
 
 use strict;
 use warnings;
-use Bio::Search::HSP::GenericHSP;
-use Bio::EnsEMBL::Utils::CigarString;
 use Hum::Pfetch 'get_Sequences';
 use Hum::Chromoview::Utils qw(get_id_tpftargets_by_acc_sv
                               get_id_tpftargets_by_seq_region_id
@@ -70,73 +68,6 @@ sub hit_seq {
   return $self->{'_hit_seq'};
 }
 
-sub parse_align_string {
-
-  # parse formats of specified algorithm
-  # currently only deals with crossmatch
-
-  my ( $self ) = @_;
-  my $algorithm = $self->algorithm;
-  my $feature = $self->best_feature;
-
-  if ( $algorithm eq 'crossmatch' ){
-
-    my $qry_aln = '';
-    my $hit_aln = '';
-    my $count = 0;
-
-    foreach ( split(/\n/, $feature->alignment_string) ){
-
-      #  AP003795.2           1 AAGCTTCCTGTGATGCTGGGGTGGAAGCTGTACTCCTCCCAGCCCTTCTC 50
-      # there is one field before ACC which is used for revcomp, if applied
-
-      my @fields = split(/\s+/, $_);
-      next if $_ !~ /.*\.\d+.*[ATCG-]*/;
-
-      $count++;
-
-      if ( $count % 2 == 0){
-        $hit_aln .= $fields[3];
-        #print "S: ", length $fields[3], "\n";
-        #print "S: ", $fields[3], "\n";
-      }
-      else {
-        $qry_aln .= $fields[3];
-        #print "Q: ", length $fields[3], "\n";
-        #print "Q: ", $fields[3], "\n";
-      }
-    }
-
-    #-----------------------------------------------------------------------------------
-    # crossmatch hack
-    # NOTE: crossmatch displays the alignment differently as the match coords line
-    # eg
-    # identity  query        start    end    subject     start    end    strand
-    #--------  ----------------------------- -------------------------------------
-    # 98.88%    AP003796.2   1        90648  BX640404.2  1        90774  -
-
-    #C AP003796.2       90648 AAGCTTGTACAGAGGGGAAAAATAATTGAGGATGGTGTTATTAGTGGAAT 90599
-    #  BX640404.2           1 AAGCTTGTACAGAGGGGAAAAATAATTGAGGATGGTGTTATTAGTGGAAT 50
-    #-----------------------------------------------------------------------------------
-
-    if ( $feature->seq_strand != $feature->hit_strand ){
-      # revcomp both query_alignment and hit_alignment
-      $qry_aln = $self->_revcomp($qry_aln);
-      $hit_aln = $self->_revcomp($hit_aln);
-    }
-
-    $self->query_align_string($qry_aln);
-    $self->hit_align_string($hit_aln);
-    #warn "Q_len: ", length $qry_aln;
-    #warn "H_len: ", length $hit_aln;
-
-    return $self;
-  }
-  else {
-    die "Don't know how to parse $algorithm alignment format";
-  }
-}
-
 sub name_padding {
   my ( $self, $padding ) =@_;
   if ($padding) {
@@ -145,57 +76,6 @@ sub name_padding {
   return $self->{'_name_padding'};
 }
 
-sub query_align_string {
-  my ( $self, $align_str ) =@_;
-  if ($align_str) {
-    $self->{'_query_align_string'} = $align_str;
-  }
-  return $self->{'_query_align_string'};
-}
-
-sub hit_align_string {
-  my ( $self, $align_str ) =@_;
-  if ($align_str) {
-    $self->{'_hit_align_string'} = $align_str;
-  }
-  return $self->{'_hit_align_string'};
-}
-
-sub make_cigar_string_from_align_strings {
-
-  my ( $self ) = @_;
-  my $feature = $self->best_feature;
-
-  my $hsp = new Bio::Search::HSP::GenericHSP
-               (
-                -score        => $feature->score,
-                -hsp_length   => length $self->query_align_string,
-                -query_name   => $feature->seq_name,
-                -query_start  => $feature->seq_start,
-                -query_end    => $feature->seq_end,
-                -hit_name     => $feature->hit_name,
-                -hit_start    => $feature->hit_start,
-                -hit_end      => $feature->hit_end,
-                -hit_length   => length $self->hit_seq,
-                -query_length => length $self->query_seq,
-                # query gapped sequence portion of the HSP
-                -query_seq    => $self->query_align_string,
-                # hit   gapped sequence portion of the HSP
-                -hit_seq      => $self->hit_align_string,
-                # so that we will not get
-                # MSG: Did not defined the number of conserved matches in the HSP assuming conserved == identical (0)
-                # assign 0 to both identical and conserved for DNA comparison
-                -identical    => 0,
-                -conserved    => 0
-               );
-
-  my $cigar_str = Bio::EnsEMBL::Utils::CigarString->generate_cigar_string_by_hsp($hsp);
-  #warn $feature->seq_name, " --- ", $feature->hit_name;
-  #warn "CIGAR: $cigar_str";
-  $self->cigar_string($cigar_str);
-
-  return $self;
-}
 
 sub cigar_string {
   my ( $self, $cigar_str ) = @_;
@@ -806,13 +686,6 @@ sub _split_to_blocks {
     push(@frags, $1);
   }
   return @frags;
-}
-
-sub _revcomp {
-  my ($self, $seq) = @_;
-  my $revcomp = reverse $seq;
-  $revcomp =~ tr/ACGTacgt/TGCAtgca/;
-  return $revcomp;
 }
 
 sub _complement {
