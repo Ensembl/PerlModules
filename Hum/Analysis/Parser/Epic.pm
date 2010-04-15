@@ -127,23 +127,10 @@ sub close_results_filehandle {
     my ($self) = @_;
 
     if (my $fh = $self->{'_results_filehandle'}) {
-
-        #close($fh) or confess "Error from cross_match filehandle exit($?)";
-        close($fh);
-        $self->{'_results_filehandle_status'} = $?;
+        close($fh) or confess "Error from epic filehandle exit($?)";
     }
 
     $self->{'_results_filehandle'} = undef;
-}
-
-sub results_filehandle_status {
-
-    my ($self, $status) = @_;
-    if ($status) {
-        $self->{'_results_filehandle_status'} = $status;
-    }
-
-    return $self->{'_results_filehandle_status'};
 }
 
 sub temporary_directory {

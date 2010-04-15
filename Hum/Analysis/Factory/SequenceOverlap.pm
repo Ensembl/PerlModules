@@ -43,24 +43,6 @@ sub algorithm {
     return $self->{'_algorithm'};
 }
 
-sub matches_file {
-    my( $self, $file ) = @_;
-    
-    if ($file) {
-        $self->{'_matches_file'} = $self->_open_file($file);
-    }
-    return $self->{'_matches_file'};
-}
-
-sub overlap_alignment_file {
-    my( $self, $file ) = @_;
-    
-    if ($file) {
-        $self->{'_overlap_alignment_file'} = $self->_open_file($file);
-    }
-    return $self->{'_overlap_alignment_file'};
-}
-
 sub _open_file {
     my( $self, $file ) = @_;
     
@@ -79,33 +61,43 @@ sub find_SequenceOverlap {
     my $seq_a = $sinf_a->Sequence;
     my $seq_b = $sinf_b->Sequence;
     unless ($seq_a and $seq_b) {
-        confess "Didn't get Sequence for both a ('$seq_a') and b ('$seq_b')";
+        confess sprintf "Didn't get Sequence for both a ('%s') and b ('%s')",
+            $sinf_a->accession_sv,
+            $sinf_b->accession_sv;
     }
     
-    my $feat;   # Overlap feature
-    
-    if ($self->algorithm eq 'CrossMatch') {
-        # Run cross_match and find overlap
-        $feat = $self->find_end_overlap_crossmatch($seq_a, $seq_b);
-    }
-    elsif ($self->algorithm eq 'epic') {
-        $feat = $self->find_overlap_epic($seq_a, $seq_b);
+    my ($feat,              # Overlap feature
+        $other_features,    # Other features found by algorithm
+        );
+    eval {
+        if ($self->algorithm eq 'CrossMatch') {
+            # Run cross_match and find overlap
+            ($feat, $other_features) = $self->find_end_overlap_crossmatch($seq_a, $seq_b);
+        }
+        elsif ($self->algorithm eq 'epic') {
+            # epic only returns one feature
+            $feat = $self->find_overlap_epic($seq_a, $seq_b);
+        }        
+    };
+    if (my $errmsg = $@) {
+        warn $errmsg;
+        Hum::Chromoview::Utils::store_failed_overlap_pairs($seq_a->name, $seq_b->name, $errmsg);
+        return;
     }
 
     return unless $feat;
     
-    if (my $over_fh = $self->overlap_alignment_file) {
-        print $over_fh $self->sequence_length_header($seq_a, $seq_b);
-        print $over_fh
-            $feat->pretty_header,
-            $feat->pretty_string, "\n",
-            $feat->pretty_alignment_string;
-    }
-
     # Convert into a SequenceOverlap object that
     # can be written into the tracking database.
-
-    return $self->make_SequenceOverlap($sinf_a, $sinf_b, $feat);
+    my ($so);
+    eval {
+        $so = $self->make_SequenceOverlap($sinf_a, $sinf_b, $feat, $other_features);
+    };
+    if ($@) {
+        Hum::Chromoview::Utils::store_failed_overlap_pairs($seq_a->name, $seq_b->name, $@);
+    } else {
+        return $so;
+    }
 }
 
 sub sequence_length_header {
@@ -120,9 +112,12 @@ sub sequence_length_header {
 }
 
 sub make_SequenceOverlap {
-    my ($self, $sa, $sb, $feat) = @_;
+    my ($self, $sa, $sb, $feat, $other_features) = @_;
 
     my $overlap = Hum::SequenceOverlap->new;
+    $overlap->best_match_pair($feat);
+    $overlap->other_match_pairs($other_features);
+    
     # Copy the percent sub, ins, del
     foreach my $meth (qw{ percent_substitution percent_insertion percent_deletion }) {
         $overlap->$meth($feat->$meth());
@@ -182,21 +177,8 @@ sub make_SequenceOverlap {
 
     # Check that the positions calculated aren't
     # off the end of the sequences.
-    eval{
-      $overlap->validate_Positions;
-    };
-    if ( $@ ) {
-      my $query_name = $sa->accession . '.' . $sa->sequence_version;
-      my $subjt_name = $sb->accession . '.' . $sb->sequence_version;
-      print STDERR "ERR: $@";
-      Hum::Chromoview::Utils::store_failed_overlap_pairs($query_name, $subjt_name, $@);
-
-      return $@;
-    }
-
-    $overlap->best_match_pair($feat);
-    $overlap->other_match_pairs($self->other_matches);
-
+    $overlap->validate_Positions;
+    
     return $overlap;
 }
 
@@ -239,8 +221,8 @@ sub is_three_prime_hit {
         my( $self, $query, $subject ) = @_;
 
         my $factory = $self->crossmatch_factory;
-        my( $seq_end, $hit_end );
 
+        my( $seq_end, $hit_end, $other_features );
         foreach my $param (@param_sets) {
             print STDERR "Running cross_match with:\n";
             foreach my $setting (sort keys %$param) {
@@ -248,9 +230,10 @@ sub is_three_prime_hit {
                 print STDERR "  $setting = $value\n";
                 $factory->$setting($param->{$setting});
             }
-            ($seq_end, $hit_end) = $self->get_end_features($query, $subject);
-            if ( ! defined $seq_end and ! defined $hit_end ){
-              return;
+            ($seq_end, $hit_end, $other_features) = $self->get_end_features($query, $subject);
+            
+            if (! $seq_end and ! $hit_end ) {
+                return;
             }
             elsif ($seq_end == $hit_end) {
                 # We have found the overlap in one piece
@@ -261,9 +244,9 @@ sub is_three_prime_hit {
 
         if ($seq_end == $hit_end) {
 
-          # so that we know which matches are not the best one
-          $self->filter_matches($seq_end);
-          return $seq_end;
+          # Remove end hit from the list of features
+          $self->filter_matches($seq_end, $other_features);
+          return ($seq_end, $other_features);
         } else {
 
             #print STDERR "Creating merged feature\n";
@@ -273,102 +256,50 @@ sub is_three_prime_hit {
             my $best = $self->choose_best_feature($query, $subject, $seq_end, $hit_end);
             print STDERR "Chose best feature:\n", $best->pretty_string;
 
-            # so that we know which matches are not the best one
-            $self->filter_matches($best);
-            return $best;
+            # Remove best hit from the list of features
+            $self->filter_matches($best, $other_features);
+            return ($best, $other_features);
         }
 
     }
-}
-
-
-### This was supposed to be a Factory object, which, according to the design
-### pattern, processes data but does not store it. The "all_matches" and
-### "other_matches" subroutines mean that it now has state, which means that
-### if it is reused data from the last run might be returned as part of the
-### reuslts from the previous.
-
-sub all_matches {
-  my( $self, $all_matches ) = @_;
-
-  if ($all_matches) {
-    $self->{'_all_matches'} = $all_matches;
-  }
-  return $self->{'_all_matches'};
-}
-
-sub other_matches {
-  my( $self, $other_matches ) = @_;
-
-  if ($other_matches) {
-    $self->{'_other_matches'} = $other_matches;
-  }
-  return $self->{'_other_matches'};
 }
 
 
 sub filter_matches {
-    my ($self, $match) = @_;
+    my ($self, $match, $other_features) = @_;
 
-    my @other_matches = @{$self->all_matches};
-    for (my $i=0; $i < @other_matches; $i++) {
-        if ($other_matches[$i] == $match) {
-            splice(@other_matches, $i, 1);
+    for (my $i=0; $i < @$other_features; $i++) {
+        if ($other_features->[$i] == $match) {
+            splice(@$other_features, $i, 1);
             last;
         }
     }
-
-    $self->other_matches(\@other_matches);
 }
 
 sub get_end_features {
-    my( $self, $query, $subject ) = @_;
+    my ($self, $query, $subject) = @_;
 
     my $parser = $self->crossmatch_factory->run($query, $subject);
-    my( @matches );
+    my $matches = [];
     while (my $m = $parser->next_Feature) {
-      push(@matches, $m);
-      $m->seq_Sequence($query);
-      $m->hit_Sequence($subject);
+        push(@$matches, $m);
+        $m->seq_Sequence($query);
+        $m->hit_Sequence($subject);
     }
 
-    # checks jobs exceeding the ulimit virtual mem of 1.8G set in commandpipe
-    if ( $parser->results_filehandle_status() != 0 ){
+    confess "No matches found" unless @$matches;
 
-      my $errmsg = "error from cross_match ... giving up";
-      print STDERR $errmsg, "\n";
-      # Hum::Chromoview::Utils::store_failed_overlap_pairs($query->name, $subject->name, $errmsg);
+    my $seq_end = $self->closest_end_best_pid($query->sequence_length,   $end_distances{'seq'}, @$matches);
+    my $hit_end = $self->closest_end_best_pid($subject->sequence_length, $end_distances{'hit'}, @$matches);
 
-      ### Why does this return undef, when other errors confess?
-      return (undef, undef);
-    }
-
-    # want to store all matches later in database
-    $self->all_matches(\@matches);
-
-    confess "No matches found" unless @matches;
-
-    if (my $matches_fh = $self->matches_file) {
-        print $matches_fh $self->sequence_length_header($query, $subject);
-        print $matches_fh $matches[0]->pretty_header, "\n";
-        print $matches_fh map($_->pretty_string, @matches), "\n";
-    }
-
-    my $seq_end = $self->closest_end_best_pid(  $query->sequence_length, $end_distances{'seq'}, @matches);
-    my $hit_end = $self->closest_end_best_pid($subject->sequence_length, $end_distances{'hit'}, @matches);
-    
     $self->warn_match($query, $subject, $seq_end, $hit_end);
-    
+
     unless ($seq_end and $hit_end) {
         confess "No end overlap found\n";
     }
-    
-    return($seq_end, $hit_end);
+
+    return ($seq_end, $hit_end, $matches);
 }
-
-
-
-
 
 sub epic_factory {
     my( $self ) = @_;
