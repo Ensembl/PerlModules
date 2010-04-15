@@ -195,11 +195,12 @@ sub add_Reference {
     unless ($pdmp->add_HGMP_Reference($embl, $seqlength)) {
         my $author = $pdmp->author;
         my $date = EMBLdate();
+        my $species = $pdmp->species;
 
         my $query_email  = 'vega';
         # clonerequest@sanger.ac.uk' is now obsolete
         my $clonerequest = qq{Geneservice (http://www.geneservice.co.uk/) and BACPAC Resources (http://bacpac.chori.org/)};
-        if ($pdmp->species eq 'Zebrafish') {
+        if ($species eq 'Zebrafish') {
             $query_email  = 'zfish-help';
             $clonerequest = "http://www.sanger.ac.uk/Projects/D_rerio/faqs.shtml#dataeight";
         }
@@ -212,6 +213,11 @@ sub add_Reference {
                         'Wellcome Trust Sanger Institute, Hinxton, Cambridgeshire, CB10 1SA, UK.',
                         "E-mail enquiries: $query_email\@sanger.ac.uk",
                         "Clone requests: $clonerequest");
+        
+        if ($species eq 'Human' or $species eq 'Mouse' or $species eq 'Zebrafish') {
+            $ref->group('Genome Reference Consortium');
+        }
+        
         $embl->newXX;
     }
     

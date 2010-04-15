@@ -27,6 +27,7 @@ BEGIN {
          OG => 'Hum::EMBL::Line::OG',
          RN => 'Hum::EMBL::Line::Reference',
          RC => 'Hum::EMBL::Line::Reference',
+         RG => 'Hum::EMBL::Line::Reference',
          RP => 'Hum::EMBL::Line::Reference',
          RX => 'Hum::EMBL::Line::Reference',
          RA => 'Hum::EMBL::Line::Reference',

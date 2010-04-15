@@ -687,6 +687,7 @@ use vars qw( @ISA );
 Hum::EMBL::Line::Reference->makeFieldAccessFuncs(qw(
                                                     number
                                                     title
+                                                    group
                                                     ));
 Hum::EMBL::Line::Reference->makeListAccessFuncs(qw(
                                                    authors
@@ -731,6 +732,13 @@ sub parse {
     }
     $line->xrefs( @xrefs );
     
+    # Reference group
+    my( @group );
+    while ($$s =~ /^RG   (.+)$/mg) {
+        push @group, $1;
+    }
+    $line->group(join ' ', @group);
+    
     # The authors of the reference
     my( @authors );
     while ($$s =~ /^RA   (.+)$/mg) {
@@ -772,6 +780,10 @@ sub _compose {
         my $db = $xr->db();
         my $id = $xr->id();
         push( @compose, "RX   $db; $id.\n" );
+    }
+    
+    if (my $group = $line->group) {
+        push(@compose, $line->wrap('RG   ', $group));
     }
     
     my $au_line = join(', ', $line->authors) . ';';
