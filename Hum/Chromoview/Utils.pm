@@ -20,34 +20,34 @@ use Config::IniFiles;
 @ISA = ('Exporter');
 @EXPORT_OK = qw(
                 authorize
-                make_table_row
-                extra_footer_browsers
-                get_yyyymmdd
-                get_mysql_datetime
-                datetime2unixTime
-                get_chromoDB_handle
-                get_loutredbh_from_species
-                make_hmenus
-                make_search_box
-                get_script_root
-                phase_2_status
+                check_for_crossmatch_errors_by_accSv
                 concat_js_params
-                unixtime2YYYYMMDD
-                unixtime2datetime
-                get_TPF_modtime
-                get_latest_clone_entrydate_of_TPF
-                get_latest_overlap_statusdate_of_TPF
-                get_DNA_from_ftpghost
-                get_latest_TPF_update_of_clone
-                get_all_current_TPFs
-                get_species_chr_subregion_from_id_tpftarget
-                get_latest_clone_entries_with_overlap_of_assembly
+                datetime2unixTime
+                extra_footer_browsers
                 fetch_seq_region_id_by_accession
-                get_seq_len_by_acc_sv
+                get_DNA_from_ftpghost
+                get_TPF_modtime
+                get_all_current_TPFs
+                get_chromoDB_handle
                 get_id_tpftargets_by_acc_sv
                 get_id_tpftargets_by_seq_region_id
-                check_for_crossmatch_errors_by_accSv
+                get_latest_TPF_update_of_clone
+                get_latest_clone_entries_with_overlap_of_assembly
+                get_latest_clone_entrydate_of_TPF
+                get_latest_overlap_statusdate_of_TPF
+                get_loutredbh_from_species
+                get_mysql_datetime
+                get_script_root
+                get_seq_len_by_acc_sv
+                get_species_chr_subregion_from_id_tpftarget
+                get_yyyymmdd
+                make_hmenus
+                make_search_box
+                make_table_row
+                phase_2_status
                 store_failed_overlap_pairs
+                unixtime2YYYYMMDD
+                unixtime2datetime
                );
 
 sub store_failed_overlap_pairs {
