@@ -71,13 +71,13 @@ sub new_Feature_from_epic_line {
     }
 
     my $count_D = 0;
-    while ($cigar =~ /(\d*)D/) {
+    while ($cigar =~ /(\d*)D/g) {
         $count_D += $1 || 1;
     }
     my $percent_deletion = 100 * ($count_D / $aln_length);
 
     my $count_I = 0;
-    while ($cigar =~ /(\d*)I/) {
+    while ($cigar =~ /(\d*)I/g) {
         $count_I += $1 || 1;
     }
     my $percent_insertion = 100 * ($count_I / $aln_length);

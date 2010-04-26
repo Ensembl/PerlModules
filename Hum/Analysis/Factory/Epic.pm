@@ -42,7 +42,7 @@ sub make_command_pipe {
 
     # my $cmd_pipe = "cd $dir; epic.pl -Bac $query_file $subject_file 2>/dev/null |";
     my $cmd_pipe = "cd $dir; epic.pl -Bac $query_file $subject_file |";
-
+    # warn "Running: $cmd_pipe";
     return $cmd_pipe;
 }
 
