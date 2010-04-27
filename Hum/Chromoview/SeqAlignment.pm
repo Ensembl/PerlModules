@@ -5,12 +5,12 @@ package Hum::Chromoview::SeqAlignment;
 
 use strict;
 use warnings;
+use Carp;
 use Hum::Pfetch 'get_Sequences';
-use Hum::Chromoview::Utils qw(get_id_tpftargets_by_acc_sv
-                              get_id_tpftargets_by_seq_region_id
-                             );
-use Bio::EnsEMBL::Analysis;
-use DBI;
+use Hum::Chromoview::Utils qw(
+  get_id_tpftargets_by_acc_sv
+  get_id_tpftargets_by_seq_region_id
+);
 
 sub new {
     my ($pkg, @args) = @_;
@@ -30,6 +30,20 @@ sub algorithm {
     $self->{'_algorithm'} = $name;
   }
   return $self->{'_algorithm'};
+}
+
+sub fetch_Analysis_object {
+    my ($self, $dba) = @_;
+    
+    my $ana_aptr = $dba->get_AnalysisAdaptor;
+    $self->{'_Analysis_object'} = $ana_aptr->fetch_by_logic_name($self->algorithm)
+        or confess(sprintf "No analysis '%s' in database", $self->algorithm);
+}
+
+sub Analysis_object {
+    my ($self) = @_;
+    
+    return $self->{'_Analysis_object'};
 }
 
 sub best_feature {
@@ -102,48 +116,37 @@ sub get_accession {
 }
 
 sub _make_daf_object {
+    my ($self, $slice_Ad, $feat) = @_;
 
-  my ($self, $slice_Ad, $otherFeat) = @_;
+    my $qry_slice = $slice_Ad->fetch_by_region('clone', get_accession($feat->seq_name));
 
-  my ($cigar_str, $seqAlignFeat) = $otherFeat ? ($otherFeat->cigar_string, $otherFeat->best_feature)
-                                              : ($self->cigar_string, $self->best_feature);
-
-  my $analysis = Bio::EnsEMBL::Analysis->new
-    (
-     -id         => 1,
-     -logic_name => $self->algorithm,
-     -program    => $self->algorithm,
+    return Bio::EnsEMBL::DnaDnaAlignFeature->new(
+        -slice        => $qry_slice,
+        -start        => $feat->seq_start,
+        -end          => $feat->seq_end,
+        -strand       => $feat->seq_strand,
+        -hseqname     => $feat->hit_name,
+        -hstart       => $feat->hit_start,
+        -hend         => $feat->hit_end,
+        -hstrand      => $feat->hit_strand,
+        -score        => $feat->score,
+        -percent_id   => $feat->percent_identity,
+        -cigar_string => $feat->cigar_str,
+        -analysis     => $self->Analysis_object,
     );
-
-  my $qry_slice = $slice_Ad->fetch_by_region('clone', get_accession($self->best_feature->seq_name) );
-
-  my $daf = Bio::EnsEMBL::DnaDnaAlignFeature
-    ->new(
-          -slice        => $qry_slice,
-          -start        => $seqAlignFeat->seq_start,
-          -end          => $seqAlignFeat->seq_end,
-          -strand       => $seqAlignFeat->seq_strand,
-          -hseqname     => $seqAlignFeat->hit_name,
-          -hstart       => $seqAlignFeat->hit_start,
-          -hend         => $seqAlignFeat->hit_end,
-          -hstrand      => $seqAlignFeat->hit_strand,
-          -score        => $seqAlignFeat->score,
-          -percent_id   => $seqAlignFeat->percent_identity,
-          -analysis     => $analysis,
-          -cigar_string => $cigar_str,
-         );
-
-  return $daf;
 }
+
 
 sub store_alignment_features {
   my ($self, $slice_Ad, $daf_Ad) = @_;
   my $best_daf;
 
-  if ( $self->best_feature ){
+  $self->fetch_Analysis_object($slice_Ad->db);
+
+  if (my $bf = $self->best_feature) {
     my $qry_slice = $slice_Ad->fetch_by_region('clone', get_accession($self->best_feature->seq_name) );
     my $qry_seq_region_id = $qry_slice->get_seq_region_id;
-    my $best_daf = $self->_make_daf_object($slice_Ad);
+    my $best_daf = $self->_make_daf_object($slice_Ad, $bf);
 
     # if new end_match alignment is available, it means new seq. version is available,
     # we need to remove previous best_alignment
@@ -183,17 +186,12 @@ sub store_alignment_features {
     $self->_store_best_alignment($slice_Ad, $daf_Ad, $best_daf, $qry_seq_region_id);
   }
 
-  # also store other less optimal alignments
-  my $other_features = $self->other_features;
-
-  if ( $other_features->[0] ){
-    my $msg = "MSG: About to store other_overlap(s) ...\n";
-    $self->_print_and_log_msg($msg);
+  if ($self->other_features) {
+    $self->_print_and_log_msg("MSG: About to store other_overlap(s) ...\n");
     $self->_store_other_overlaps($slice_Ad, $daf_Ad, $best_daf);
   }
   else {
-    my $msg = "MSG: No other_overlap(s) to store ...\n";
-    $self->_print_and_log_msg($msg);
+    $self->_print_and_log_msg("MSG: No other_overlap(s) to store ...\n");
   }
 }
 
@@ -325,56 +323,32 @@ sub _remove_old_best_alignment {
 }
 
 sub _store_other_overlaps {
+    my ($self, $slice_Ad, $daf_Ad) = @_;
 
-  my ($self, $slice_Ad, $daf_Ad, $best_daf) = @_;
+    my $other_overlaps = $self->other_features;
+    return unless @$other_overlaps;
 
-  my $other_overlaps = $self->other_features;
+    my $qry_slice = $slice_Ad->fetch_by_region('clone', get_accession($other_overlaps->[0]->seq_name));
+    my $qry_seq_region_id = $qry_slice->get_seq_region_id;
 
-  my $hit_name;
+    my $count = 0;
 
-  my $qry_slice = $slice_Ad->fetch_by_region('clone', get_accession($other_overlaps->[0]->seq_name));
-  my $qry_seq   = $qry_slice->seq;
+    foreach my $ol (@$other_overlaps) {
 
-  my $hit_slice = $slice_Ad->fetch_by_region('clone', get_accession($other_overlaps->[0]->hit_name));
-  my $hit_seq   = $hit_slice->seq;
+        my $hit_name = $ol->hit_name;
+        my $other_daf = $self->_make_daf_object($slice_Ad, $ol);
 
-  my $qry_seq_region_id = $qry_slice->get_seq_region_id;
-
-  my $count = 0;
-
-  foreach my $ol ( @$other_overlaps ) {
-
-    my $seqAlignFeat = Hum::Chromoview::SeqAlignment->
-      new(
-          algorithm      => 'crossmatch',
-          best_feature   => $ol,
-          query_seq      => $qry_seq,
-          hit_seq        => $hit_seq,
-         );
-
-    $seqAlignFeat->parse_align_string();
-    $seqAlignFeat->make_cigar_string_from_align_strings();
-
-    #test
-    #warn "QAS: ", substr($seqAlignFeat->query_align_string, 0, 50);
-    #warn "HAS: ", substr($seqAlignFeat->hit_align_string, 0, 50);
-
-    $hit_name = $ol->hit_name unless $hit_name;
-    my $other_daf = $self->_make_daf_object($slice_Ad, $seqAlignFeat);
-
-    if ( !daf_is_duplicate($slice_Ad, $other_daf, $qry_seq_region_id) ){
-      $count++;
-      $daf_Ad->store($other_daf);
+        if (daf_is_duplicate($slice_Ad, $other_daf, $qry_seq_region_id)) {
+            my $msg = "MSG: an identical other_overlap already exists ... skip\n";
+            $self->_print_and_log_msg($msg);
+        }
+        else {
+            $count++;
+            $daf_Ad->store($other_daf);
+        }
     }
-    else {
-      my $msg = "MSG: an identical other_overlap already exists ... skip\n";
-      $self->_print_and_log_msg($msg);
-    }
-  }
 
-  my $msg = "MSG: Stored $count other_overlap(s) in dna_align_feature table (seq_region_id: $qry_seq_region_id, hit_name: " . $hit_name . ")\n";
-  $self->_print_and_log_msg($msg);
-
+    $self->_print_and_log_msg("MSG: Stored $count other_overlap(s) in dna_align_feature table\n");
 }
 
 sub _get_daf_id_by_hit_name_analysis_name {
