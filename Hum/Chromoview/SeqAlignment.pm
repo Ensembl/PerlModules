@@ -131,7 +131,7 @@ sub _make_daf_object {
         -hstrand      => $feat->hit_strand,
         -score        => $feat->score,
         -percent_id   => $feat->percent_identity,
-        -cigar_string => $feat->cigar_str,
+        -cigar_string => $feat->cigar_string,
         -analysis     => $self->Analysis_object,
     );
 }
