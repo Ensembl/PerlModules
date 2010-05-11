@@ -77,7 +77,9 @@ sub find_SequenceOverlap {
         elsif ($self->algorithm eq 'epic') {
 
             # epic only returns one feature
-            $feat = $self->find_overlap_epic($seq_a, $seq_b);
+            # Note that "seq_a" and "seq_b" are the other way round to
+            # cross_match to get overlaps in the same direction.
+            $feat = $self->find_overlap_epic($seq_b, $seq_a);
         }
     };
     if (my $errmsg = $@) {

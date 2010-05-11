@@ -255,58 +255,6 @@ sub _store_best_alignment {
   $self->_print_and_log_msg($msg2);
 }
 
-sub _remove_old_features {
-
-  # When sequence version is changed
-  # remove old feature(s) in dna_align_feature table
-  # because a hit_name may belong to multiple TPFs (ref. chr. and subregion)
-
-  my ( $self, $daf_Ad, $slice_Ad, $qry_seq_region_id, $hit_name ) = @_;
-
-  # use queryname to find out the TPF of the hitname
-  my $id_tpftargets = get_id_tpftargets_by_seq_region_id($qry_seq_region_id);
-  my %tpfs = map {($_, 1)} @{$id_tpftargets};
-
-  my $msg = "MSG: Query sequence is from id_tpftarget: " . @$id_tpftargets ."\n";
-  $self->_print_and_log_msg($msg);
-
-
-  my $old_dafs = $slice_Ad->dbc->prepare(qq{
-                                            SELECT distinct seq_region_id
-                                            FROM dna_align_feature
-                                            WHERE hit_name = ?
-                                           });
-  my $del_daf = $slice_Ad->dbc->prepare(qq{
-                                           DELETE FROM dna_align_feature
-                                           WHERE hit_name = ?
-                                           AND seq_region_id = ?
-                                          }
-                                       );
-
-  $old_dafs->execute($hit_name);
-
-  my @srId_to_del;
-
-  while( my $srId = $old_dafs->fetchrow ){
-
-    my $idtpftargets = get_id_tpftargets_by_seq_region_id($srId);
-
-    foreach my $itt ( @$idtpftargets ){
-      # remove feature from same TPF
-      if ( $tpfs{$itt} ){
-        my $msg = "Found old overlap feature(s) with seq_region_id $srId (id_tpftarget: $itt)\n";
-        $self->_print_and_log_msg($msg);
-
-        $del_daf->execute($hit_name, $srId);
-        if (  $del_daf->rows != 0 ){
-          my $msg = "MSG: Removed $hit_name (seq_region_id = ${srId}) from dna_align_feature table ...\n";
-          $self->_print_and_log_msg($msg);
-        }
-      }
-    }
-  }
-}
-
 sub _remove_old_best_alignment {
 
   my ($self, $slice_Ad, $srId, $hit_name) = @_;
