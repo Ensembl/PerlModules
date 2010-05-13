@@ -448,7 +448,10 @@ block, to ensure a graceful exit.
         #warn $query;
         
         my $sth = track_db()->prepare($query);
-        push( @active_statements, $sth );   ### Could be cause of open cursors error?
+        push( @active_statements, $sth );   ### Could be cause of open cursors error? 
+        									### ... *is* the cause of open cursors error! 
+        									### Try moving your prepare statments outside any loop.
+        									
         #warn "Now ", scalar(@active_statements), " active statements\n";
         return $sth;
     }
