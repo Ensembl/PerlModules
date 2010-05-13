@@ -81,10 +81,6 @@ sub new_from_name_AceText {
             $new->$method($self->$method());
         }
 
-        # if (my $style = $self->Zmap_Style) {
-        #     $new->Zmap_Style($style->clone);
-        # }
-
         return $new;
     }
 }
@@ -124,20 +120,26 @@ sub ace_string {
     # dumping mechanism, it depends on these tags being
     # present in the Method object to trigger the score
     # being reported for Homols and Features
-    if (my $style = $self->Zmap_Style) {
-        if (my @bounds = $style->inherited('score_bounds')) {
-            $txt->add_tag('Score_bounds', @bounds);
+    if (my $style = $self->ZMapStyle) {
+        my $min_score = $style->min_score;
+        my $max_score = $style->max_score;
+        if (defined($min_score) && defined($max_score)) {
+            $txt->add_tag('Score_bounds', ($min_score, $max_score));
         }
-        $txt->add_tag('Score_by_width') if $style->inherited('score_by_width');
-        $txt->add_tag('Percent')        if $style->inherited('score_percent');
-        if ($style->inherited_mode eq 'Graph') {
-            $txt->add_tag('Score_by_histogram');
+        if (my $score_mode = $style->score_mode) {
+            $txt->add_tag('Score_by_width') if $score_mode eq 'width';
+            $txt->add_tag('Percent')        if $score_mode eq 'percent';
         }
-        
-        if ($style->inherited_mode eq 'Alignment') {
-            if ($style->get_mode_data(['Gapped'])) {
-                $txt->add_tag('Map_gaps');
-                $txt->add_tag('Export_coords');
+        if (my $mode = $style->mode) {
+            if ($mode eq 'Graph') {
+                $txt->add_tag('Score_by_histogram');
+            }
+            
+            if ($mode eq 'alignment') {
+                if ($style->alignment_parse_gaps) {
+                    $txt->add_tag('Map_gaps');
+                    $txt->add_tag('Export_coords');
+                }
             }
         }
     }
@@ -187,34 +189,31 @@ sub style_name {
         my $style_name = shift;
         $self->{'_style_name'} = $style_name;
     }
-    if (my $style = $self->Zmap_Style) {
+    if (my $style = $self->ZMapStyle) {
         my $name = $style->name
-            or confess "Anonymous Zmap_Style object attached to Method";
+            or confess "Anonymous ZMapStyle object attached to Method";
         return $name;
     } else {
         return $self->{'_style_name'};
     }
 }
 
-sub Zmap_Style {
-    my( $self, $Zmap_Style ) = @_;
+sub ZMapStyle {
+    my( $self, $ZMapStyle ) = @_;
     
-    if ($Zmap_Style) {
-        $self->{'_Zmap_Style'} = $Zmap_Style;
+    if ($ZMapStyle) {
+        $self->{'_ZMapStyle'} = $ZMapStyle;
         $self->style_name(undef);
     }
-    return $self->{'_Zmap_Style'};
+    return $self->{'_ZMapStyle'};
 }
 
 sub is_transcript {
     my ($self) = @_;
     
-    if (my $style = $self->Zmap_Style) {
-        # printf STDERR "Inherited mode of Zmap_Style '%s' is '%s'\n",
-        #     $style->name, $style->inherited_mode;
-        return $style->inherited_mode eq 'Transcript';
+    if (my $style = $self->ZMapStyle) {
+        return $style->mode && $style->mode eq 'transcript';
     } else {
-        # printf STDERR "No Zmap_Style attached to method '%s'\n", $self->name;
         return 0;
     }
 }
@@ -232,7 +231,7 @@ sub mutable {
     my( $self ) = @_;
     
     # True if the attached Style is or descends from a "curated_*" style
-    if (my $style = $self->Zmap_Style) {
+    if (my $style = $self->ZMapStyle) {
         return $style->is_mutable;
     } else {
         return 0;

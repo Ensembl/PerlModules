@@ -8,9 +8,9 @@ use warnings;
 use Carp;
 
 use Hum::Ace::Method;
-use Hum::Ace::Zmap_Style;
 use Hum::Ace::AceText;
 use Hum::Sort qw{ ace_sort };
+#use Graphics::ColorObject;
 
 sub new {
     my( $pkg ) = @_;
@@ -19,11 +19,13 @@ sub new {
 }
 
 sub new_from_string {
-    my( $pkg, $str ) = @_;
+    my( $pkg, $str, $styles_collection ) = @_;
     
     # warn "Collection:\n$str\n";
     
     my $self = $pkg->new;
+    
+    $self->ZMapStyleCollection($styles_collection);
 
     # Split text into paragraphs (which are separated by one or more blank lines).
     foreach my $para (split /\n{2,}/, $str) {
@@ -36,78 +38,40 @@ sub new_from_string {
                 my $meth = Hum::Ace::Method->new_from_name_AceText($name, $txt);
                 $self->add_Method($meth);                
             }
-            elsif ($class eq 'Zmap_Style') {
-                my $style = Hum::Ace::Zmap_Style->new_from_name_AceText($name, $txt);
-                $self->add_Zmap_Style($style);
-            }
             else {
                 warn qq{Ignoring unknown class: $class : "$name" in:\n$para};
             }
         }
     }
     
-    my $err = $self->link_Zmap_Styles;
-    $err .= $self->link_Methods_to_Zmap_Styles;
+    my $err = $self->link_Methods_to_ZMapStyles;
     $err .= $self->link_column_children;
-    $err .= $self->check_all_leaf_Methods_have_Zmap_Styles;
+    $err .= $self->check_all_leaf_Methods_have_ZMapStyles;
     confess $err if $err;
     
     return $self;
 }
 
-# # This isn't useful, because the methods are sorted by name, and
-# # the mutable GeneMethods don't get populated.
-# sub new_from_ace_handle {
-#     my ($pkg, $ace) = @_;
-#     
-#     $ace->raw_query('find Method *');
-#     my $str = $ace->raw_query('show -a');
-#     $ace->raw_query('find Zmap_Style *');
-#     $str .= $ace->raw_query('show -a');
-#     
-#     # Using the AceText object strips out any server comments and nulls
-#     my $meths = Hum::Ace::AceText->new($str);
-#     return $pkg->new_from_string($meths->ace_string);
-# }
-
-
 sub ace_string {
     my( $self ) = @_;
-    
-    my $z_styles = $self->get_Zmap_Styles_hash;
-    my %got_z_style;
     
     my $str = '';
     foreach my $meth (@{$self->get_all_Methods}) {
         $str .= $meth->ace_string;
-        if (my $style_name = $meth->style_name) {
-            if (my $style = delete $z_styles->{$style_name}) {
-                $str .= $style->ace_string;
-                $got_z_style{$style_name} = 1;
-            }
-            elsif (! $got_z_style{$style_name}) {
-                confess "Method refers to non-existant Zmap_Style '$style_name':\n",
-                    $meth->ace_string;
-            }
-        }
-    }
-    
-    foreach my $style (sort { ace_sort($a->name, $b->name) } values %$z_styles) {
-        $str .= $style->ace_string;
     }
     
     return $str;
 }
 
 sub new_from_file {
-    my( $pkg, $file ) = @_;
+    my( $pkg, $file, $styles_collection ) = @_;
     
     local $/ = undef;
     
     open my $fh, $file or die "Can't read '$file' : $!";
     my $str = <$fh>;
     close $fh or die "Error reading '$file' : $!";
-    return $pkg->new_from_string($str);
+    return $pkg->new_from_string($str, $styles_collection);
 }
 
 sub write_to_file {
@@ -137,69 +101,44 @@ sub add_Method {
     }
 }
 
-sub add_Zmap_Style {
+sub add_ZMapStyle {
     my ($self, $style) = @_;
     
     if ($style) {
         my $name = $style->name
-            or confess ("Can't add un-name Zmap_Style");
-        if (my $exisiting = $self->{'_zmap_style'}{$name}) {
-            confess "Already have Zmap_Style called '$name':\n",
-                $exisiting->ace_string;
+            or confess ("Can't add un-named ZMapStyle");
+        if (my $existing = $self->ZMapStyleCollection->get_style($name)) {
+            confess "Already have ZMapStyle called '$name'"
         } else {
-            $self->{'_zmap_style'}{$name} = $style;
+            $self->ZMapStyleCollection->add_style($style);
         }
     } else {
-        confess "missing Hum::Ace::Zmap_Style argument";
+        confess "missing Hum::ZMapStyle argument";
     }
 }
 
-sub get_Zmap_Style {
+sub get_ZMapStyle {
     my ($self, $name) = @_;
     
-    return $self->{'_zmap_style'}{$name};
+    return $self->ZMapStyleCollection->get_style($name);
 }
 
-sub get_Zmap_Styles_hash {
-    my ($self) = @_;
-    
-    my $zsh = $self->{'_zmap_style'} ||= {};
-
-    # Return a ref to a copy of the hash
-    return {%$zsh};
+sub ZMapStyleCollection {
+    my ($self, $zsc) = @_;
+    $self->{_zsc} = $zsc if $zsc;
+    return $self->{_zsc};
 }
 
-sub link_Zmap_Styles {
-    my ($self) = @_;
-    
-    my $zsh = $self->get_Zmap_Styles_hash;
-    my $err = '';
-    foreach my $style (values %$zsh) {
-        my $name = $style->parent_name or next;
-        if (my $parent = $zsh->{$name}) {
-            # printf STDERR "Adding style parent '%s' to Zmap_Style '%s'\n",
-            #     $parent->name, $style->name;
-            $style->parent_Style($parent);
-        } else {
-            $err .= sprintf qq{Style_parent '%s' of Zmap_Style '%s' does not exist\n},
-                $name, $style->name;
-        }
-    }
-    return $err;
-}
-
-sub link_Methods_to_Zmap_Styles {
+sub link_Methods_to_ZMapStyles {
     my ($self) = @_;
     
     my $err = '';
     foreach my $method (@{$self->get_all_Methods}) {
         if (my $name = $method->style_name) {
-            if (my $style = $self->get_Zmap_Style($name)) {
-                # printf STDERR "Adding Zmap_Style object '%s' to Method '%s'\n",
-                #     $style->name, $method->name;
-                $method->Zmap_Style($style);
+            if (my $style = $self->get_ZMapStyle($name)) {
+                $method->ZMapStyle($style);
             } else {
-                $err .= sprintf qq{Zmap_Style '%s' in Method '%s' does not exist\n},
+                $err .= sprintf qq{ZMapStyle '%s' in Method '%s' does not exist\n},
                     $name, $method->name;
             }
         }
@@ -223,14 +162,14 @@ sub link_column_children {
     return $err;
 }
 
-sub check_all_leaf_Methods_have_Zmap_Styles {
+sub check_all_leaf_Methods_have_ZMapStyles {
     my ($self) = @_;
     
     my $err = '';
     foreach my $method (@{$self->get_all_Methods}) {
         next if $method->get_all_child_Methods;
-        unless ($method->Zmap_Style) {
-            $err .= sprintf qq{Method '%s' has no children and no Zmap_Style\n}, $method->name;
+        unless ($method->ZMapStyle) {
+            $err .= sprintf qq{Method '%s' has no children and no ZMapStyle\n}, $method->name;
         }
     }
     return $err;
@@ -327,16 +266,24 @@ sub create_full_gene_Methods {
         # Skip any existing _trunc methods - we will make new ones
         next if $method->name =~ /_trunc$/;
         
+        # add the method itself
         $self->add_Method($method);
-
-        if ($method->mutable) {
-            # Do not add non-transcript mutable methods because
-            # we don't need prefixed or truncated versions of them.
-            if ($method->is_transcript) {
-                $self->add_mutable_GeneMethod($method);
-                $self->add_Method($self->make_trunc_Method($method));
-                next;
-            }
+        
+        if ($method->is_transcript) {
+            
+            $self->add_mutable_GeneMethod($method) if $method->mutable;
+            
+            unless ($method->column_parent) {
+                # we need to create a column parent to house both 
+                # the method and its truncated version
+                my $parent = Hum::Ace::Method->new;
+                $parent->name($method->name.'_parent');
+                $self->add_Method($parent);
+                $method->column_parent($parent->name);
+            } 
+            
+            # create a truncated method
+            $self->add_Method($self->make_trunc_Method($method));
         }
     }
 
@@ -346,7 +293,7 @@ sub create_full_gene_Methods {
             my $new = $method->clone;
             $new->column_parent($prefix->column_parent);
             $new->name($prefix->name . $method->name);
-            $new->Zmap_Style($prefix->Zmap_Style);
+            $new->ZMapStyle($prefix->ZMapStyle);
             $self->add_Method($new);
             $self->add_Method($self->make_trunc_Method($new));
         }
@@ -356,13 +303,100 @@ sub create_full_gene_Methods {
 sub make_trunc_Method {
     my( $self, $method ) = @_;
     
-    my $new = $method->clone;
-    $new->name($method->name . '_trunc');
-    my $style = $self->get_Zmap_Style('truncated_tsct');
-    $new->Zmap_Style($style);
-    ### Dullen colours
-    return $new;
+    my $new_meth = $method->clone;
+    $new_meth->name($method->name . '_trunc');
+    my $style = $self->get_ZMapStyle($method->style_name);
+    
+    my $new_style = Hum::ZMapStyle->new;
+    $new_style->name($style->name.'_trunc');
+    $new_style->parent_style($style);
+    $new_style->mode($style->mode);
+    $new_style->collection($style->collection);
+    
+    ### Lighten colours
+    
+#    for my $clr (qw{
+#        colours_normal_border
+#        colours_normal_fill
+#        cds_colour_normal_fill
+#        cds_colour_normal_border
+#    }) {
+#        my $new = $style->inherited($clr) || $style->$clr;
+#        eval {
+#            die "Colour '$new' not set" unless $new;
+#            $new = $self->lighten_color($new,0.6);
+#        };
+#        if ($@) {
+#            warn "Couldn't lighten colour: $@";
+#        }
+#             
+#        $new_style->$clr($new);        
+#    } 
+
+    ### Just use the old colours for all truncated transcripts for now
+
+    $new_style->colours("normal fill LightGray ; normal border SlateGray");
+    $new_style->transcript_cds_colours("normal fill WhiteSmoke ; normal border DarkSlateGray");
+    
+    $self->add_ZMapStyle($new_style) unless $self->get_ZMapStyle($new_style->name);
+    
+    $new_meth->ZMapStyle($new_style);
+    
+    return $new_meth;
 }
+
+#sub lighten_color {
+#    
+#    my ($self, $color, $factor) = @_;
+#    
+#    unless ($self->{_rgb_map}) {    
+#        my $rgb_txt_file;
+#        
+#        for my $rgbf (qw{
+#            /etc/X11/rgb.txt
+#            /usr/X11R6/lib/X11/rgb.txt
+#            /usr/X11/share/X11/rgb.txt
+#        }) {
+#            if (-e $rgbf) {
+#                $rgb_txt_file = $rgbf;
+#                last;
+#            }
+#        }
+#        
+#        die "Can't find rgb.txt file\n" unless $rgb_txt_file;
+#        
+#        open RGB_TXT, $rgb_txt_file or die "Can't read '$rgb_txt_file' : $!";
+#        
+#        while (<RGB_TXT>) {
+#            s/^\s+//;
+#            chomp;
+#            next if /^\!/;   # Skip comment lines
+#            my ($r, $g, $b, $name) = split /\s+/, $_, 4;
+#            $self->{_rgb_map}->{lc($name)} = [$r, $g, $b];
+#        }
+#        
+#        close RGB_TXT;
+#    }
+#    
+#    my $color_obj;
+#    
+#    if ($color =~ /[0-9A-Fa-f]{6}/) {
+#        $color_obj = Graphics::ColorObject->new_RGBhex($color);
+#    }
+#    elsif (my $rgb = $self->{_rgb_map}->{lc($color)}) {
+#        $color_obj = Graphics::ColorObject->new_RGB255($rgb);
+#    }
+#    else {
+#        die "Can't identify color: $color from rgb.txt";
+#    }
+#    
+#    my $lch = $color_obj->as_HSL;
+#    $lch->[0] = $lch->[0] + ($factor * (1 - $lch->[0]));
+#    $lch->[1] = $lch->[1] + ($factor * (1 - $lch->[1]));
+#    $lch->[2] = $lch->[2] + ($factor * (1 - $lch->[2]));
+#    return '#'.Graphics::ColorObject->new_HSL($lch)->as_RGBhex;
+#}
+
 
 1;
 

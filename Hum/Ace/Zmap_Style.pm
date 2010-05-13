@@ -396,8 +396,8 @@ sub get_set_mode_data {
     my $i = @tag_path;
     my ($clr_data) = $self->get_mode_data([@tag_path]);
     if ($value) {
-        confess "Mode not set" unless $self->mode;
-        $clr_data ||= $self->create_mode_data(@tag_path);
+        confess "Mode not set" unless $self->inherited_mode;
+        my $clr_data = $self->create_mode_data(@tag_path);
         $clr_data->[$i] = $value;
     }
     return $clr_data ? $clr_data->[$i] : undef;
