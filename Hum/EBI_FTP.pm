@@ -24,7 +24,7 @@ use vars qw( @ISA );
 sub new {
     my ($pkg, $host) = @_;
 
-    $host ||= 'ftp.ebi.ac.uk';
+    $host ||= 'ftp-private.ebi.ac.uk';
     my $ftp = Net::FTP->new($host, Passive => 1);
     $ftp->login() or confess "Can't login() to '$host'; ", $ftp->message;
     $ftp->cwd('/YUFSjj8seagh6J4iGCsc/to_ena') or confess "Can't change working directory to depository; ", $ftp->message;
