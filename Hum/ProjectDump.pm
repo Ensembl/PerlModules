@@ -422,6 +422,7 @@ sub chromosome_id {
     
     my $chr     = $pdmp->chromosome;
     my $species = $pdmp->species;
+    $chr        = 'UNKNOWN' if(ref($chr) eq 'HASH');
     my $chr_id = Hum::Submission::chromosome_id_from_species_and_chr_name($species, $chr);
     if (defined $chr_id) {
         return $chr_id;
@@ -521,7 +522,11 @@ sub set_ghost_path {
         # Get the chromosome name if this species splits on chromosome
         if (my $prefix = $sp->ftp_chr_prefix) {
             my $chr = $pdmp->chromosome || 'UNKNOWN';
-            $path .= "/$prefix$chr";
+            if(ref($chr) eq 'HASH'){
+            	$path .= "/pooled";
+            } else {
+                $path .= "/$prefix$chr";            	
+            }
         }
         
         if ($phase != 3) {
@@ -612,12 +617,12 @@ sub read_submission_data {
           , s.file_path
           , c.sequenced_by
           , c.funded_by
-        FROM project_check c
-          , project_acc a
+        FROM project_acc a
           , project_dump d
           , sequence s
-        WHERE c.project_name = a.project_name
-          AND a.sanger_id = d.sanger_id
+        LEFT JOIN project_check c 
+            ON c.project_name = a.project_name
+        WHERE a.sanger_id = d.sanger_id
           AND d.seq_id = s.seq_id
           AND a.sanger_id = '$sid'
           AND d.is_current = 'Y'
@@ -877,6 +882,7 @@ sub read_accession_data {
     }
     $pdmp->secondary(@secondaries) if @secondaries;
 }
+
 
 sub draft_institute {
     my( $pdmp, $institute ) = @_;

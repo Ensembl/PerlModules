@@ -52,6 +52,7 @@ use vars qw( @ISA @EXPORT_OK );
                 is_private
                 is_shotgun_complete
                 library_and_vector
+                library_and_vector_from_parent_project
                 library_from_clone
                 localisation_data
                 online_path_from_project
@@ -206,18 +207,24 @@ statuses.
 }
 
 {
-    my( $sth );
+    my( $sth, $sth_parent );
 
     sub is_private {
-        my( $project ) = @_;
-
-        $sth ||= prepare_track_statement(q{
-            SELECT isprivate
-            FROM project
-            WHERE projectname = ?
-            });
-        $sth->execute($project);
-        my ($is_private) = $sth->fetchrow;
+        my( $project, $is_parent ) = @_;
+        my $this_sth;
+        my $sql = q{SELECT DISTINCT isprivate FROM project};
+        
+        if($is_parent) {
+            $this_sth = $sth_parent ||= prepare_track_statement(
+            $sql.' WHERE parent_project = ?'
+            );
+        } else {
+            $this_sth = $sth ||= prepare_track_statement(
+            $sql.' WHERE projectname = ?'
+            );  	
+        }
+        $this_sth->execute($project);
+        my ($is_private) = $this_sth->fetchrow;
         return $is_private;
     }
 }
@@ -341,7 +348,7 @@ the library and the name of the library vector
 =cut
 
 {
-    my( $sth );
+    my( $sth, $sth_parent );
     
     sub library_and_vector {
         my( $project ) = @_;
@@ -366,6 +373,37 @@ the library and the name of the library vector
             ($lib, $vec, $desc) = (undef, undef, undef);
         }
         return ($lib, $vec, $desc);
+    }
+    
+    sub library_and_vector_from_parent_project {
+        my( $project ) = @_;
+        my $lib_hash;
+
+        $sth_parent ||= prepare_track_statement(q{
+            SELECT  replace(c.clonename,l.internal_prefix,concat(l.external_prefix,'-')), 
+			    nvl(l.external_libraryname,l.libraryname),
+			    l.vectorname,
+			    l.description
+			FROM clone_project cp,
+			    clone c,
+			    project p,
+			    library l
+			WHERE cp.clonename = c.clonename
+			AND c.libraryname = l.libraryname
+			AND cp.projectname = p.projectname
+			AND p.parent_project = ?
+            });
+        $sth_parent->execute($project);
+        while(my( $clone, $lib, $vec, $desc ) = $sth_parent->fetchrow){
+            # Catch bad vector and library names
+            if ($lib =~ /(^NONE$|UNKNOWN)/i) {
+                ($lib, $vec, $desc) = (undef, undef, undef);
+            }
+            $lib_hash->{$clone} = [$lib, $vec, $desc];	
+        	
+        }
+       
+        return $lib_hash;
     }
 }
 
@@ -800,19 +838,31 @@ where the draft sequence was produced elsewhere.
 =cut
 
 {
-    my( $sth );
+    my( $sth,$sth_parent );
     
     sub external_draft_info {
-        my( $project ) = @_;
-        
-        $sth ||= prepare_track_statement(q{
+        my( $project, $is_parent ) = @_;
+        my $this_sth;
+        if($is_parent){
+            $this_sth = $sth_parent ||= prepare_track_statement(
+            q{
+            SELECT DISTINCT s.remark
+            FROM project_status s, project p
+            WHERE s.status = 26
+            AND s.projectname = p.projectname
+            AND p.parent_project = ?    
+            });
+        } else {
+        	$this_sth = $sth ||= prepare_track_statement(
+            q{
             SELECT remark
             FROM project_status
             WHERE status = 26
-              AND projectname = ?
+              AND projectname = ?   
             });
-        $sth->execute($project);
-        while (my ($remark) = $sth->fetchrow) {
+        }
+        $this_sth->execute($project);
+        while (my ($remark) = $this_sth->fetchrow) {
             next unless $remark;
             my ($centre, $acc) = $remark =~ /^(\w+)\s+\((\w+)\)/;
             return ($acc, $centre) if $acc and $centre;
@@ -839,7 +889,7 @@ sub localisation_data {
 }
 
 {
-    my( $get_chr );
+    my( $get_chr, $get_clone2chr );
 
     sub chromosome_from_project {
         my( $project ) = @_;
@@ -861,6 +911,32 @@ sub localisation_data {
         } else {
             return;
         }
+    }
+    
+    sub clone_to_chromosome_from_parent_project {
+        my( $project ) = @_;
+        my $hash;
+
+        $get_clone2chr ||= prepare_track_statement(q{
+			SELECT replace(c.clonename,l.internal_prefix,concat(external_prefix,'-')), cd.chromosome
+			FROM chromosomedict cd,
+			    clone c,
+			    clone_project cp,
+			    project p,
+			    library l
+			WHERE cd.id_dict = c.chromosome
+			AND c.clonename = cp.clonename
+			AND cp.projectname =  p.projectname
+			AND p.parent_project = ?
+			AND c.libraryname = l.libraryname
+            });
+        $get_clone2chr->execute($project);
+
+        while( my ($clone,$chr) = $get_clone2chr->fetchrow){
+        	$hash->{$clone} = $chr;
+        };
+        
+        return $hash;
     }
 }
 
@@ -913,7 +989,7 @@ sub fishParse {
 }
 
 {
-    my( $get_species );
+    my( $get_species, $get_species_parent );
     
     sub species_from_project {
         my( $project ) = @_;
@@ -928,6 +1004,27 @@ sub fishParse {
         $get_species->execute($project);
         
         if (my($species) = $get_species->fetchrow) {
+            return $species;
+        } else {
+            return;
+        }
+    }
+    
+    sub species_from_parent_project {
+        my( $project ) = @_;
+        
+        $get_species_parent ||= prepare_track_statement(q{
+			SELECT DISTINCT c.speciesname
+			FROM clone c,
+			    clone_project cp,
+			    project p
+			WHERE c.clonename = cp.clonename
+			AND cp.projectname = p.projectname
+			AND p.parent_project = ?
+            });
+        $get_species_parent->execute($project);
+        
+        if (my($species) = $get_species_parent->fetchrow) {
             return $species;
         } else {
             return;
