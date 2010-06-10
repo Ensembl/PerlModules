@@ -319,15 +319,17 @@ sub add_FT {
     }
     
     push @fts, $ft;
+    my ($sstart,$send) = (0,0);
     
     foreach my $element (sort { $a->[2] <=> $b->[2] ||
     	                        $b->[3] <=> $a->[3] ||
     	                        $a->[4] <=> $b->[4]    } @{$pdmp->assembly_map}) {
     	
-    	my $ft = $embl->newFT;
+    	my $ft;
     	my ($class, $name, $start, $end, $group) = @{$element};
     	
     	if($class eq 'Clone'){
+    		$ft = $embl->newFT;
 		    $ft->key('source');
 		
 		    my $loc = $ft->newLocation;
@@ -348,14 +350,24 @@ sub add_FT {
 	            $ft->addQualifierStrings('chromosome', $clone_chr);
 	        }
     	} else {
-	        $ft->key('misc_feature');
-	        my $loc = $ft->newLocation;
-	        $loc->exons([$start, $end]);
-	        $loc->strand('W');
-	        $ft->addQualifierStrings('note', lc($class).":$name");
+    		if($start eq $sstart &&
+    		   $end   eq $send   && 
+    		   $class eq 'Contig' ){
+                # this will avoid duplicates of misc-features
+    		   	$fts[-1]->addQualifierStrings('note', lc($class).":$name");
+    		} else {
+    			$ft = $embl->newFT;
+		        $ft->key('misc_feature');
+		        my $loc = $ft->newLocation;
+		        $loc->exons([$start, $end]);
+		        $loc->strand('W');
+		        $ft->addQualifierStrings('note', lc($class).":$name");
+    		}
     	}
     	
-    	push @fts, $ft;
+    	($sstart,$send) = ($start, $end);
+    	
+    	push @fts, $ft if $ft;
     }
         
     return \@fts;
