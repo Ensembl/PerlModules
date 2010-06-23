@@ -82,7 +82,8 @@ sub find_SequenceOverlap {
             $feat = $self->find_overlap_epic($seq_b, $seq_a);
         }
     };
-    if (my $errmsg = $@) {
+    if ($@ or ! $feat) {
+        my $errmsg = $@;
         warn $errmsg;
         Hum::Chromoview::Utils::store_failed_overlap_pairs($seq_a->name, $seq_b->name, $errmsg);
         return;
@@ -94,7 +95,8 @@ sub find_SequenceOverlap {
     # can be written into the tracking database.
     my ($so);
     eval { $so = $self->make_SequenceOverlap($sinf_a, $sinf_b, $feat, $other_features); };
-    if (my $errmsg = $@) {
+    if ($@ or ! $so) {
+        my $errmsg = $@;
         warn $errmsg;
         Hum::Chromoview::Utils::store_failed_overlap_pairs($seq_a->name, $seq_b->name, $errmsg);
         return;

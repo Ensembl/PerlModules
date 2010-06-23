@@ -102,7 +102,7 @@ sub _generic_fetch {
     return $self;
 }
 
-# Is this any use, since it doesn't fetch the Overlap::Position objects
+# This doesn't fetch the Overlap::Position objects, so is it any use?
 sub fetch_by_db_id {
     my ($pkg, $id) = @_;
 
