@@ -55,6 +55,12 @@ sub _open_file {
 
 sub find_SequenceOverlap {
     my ($self, $sinf_a, $sinf_b) = @_;
+    
+    if ($self->algorithm eq 'epic') {
+        # Need sequences the other way round to
+        # cross_match to get overlaps in the same direction.
+        ($sinf_a, $sinf_b) = ($sinf_b, $sinf_a);
+    }
 
     my $seq_a = $sinf_a->Sequence;
     my $seq_b = $sinf_b->Sequence;
@@ -77,12 +83,10 @@ sub find_SequenceOverlap {
         elsif ($self->algorithm eq 'epic') {
 
             # epic only returns one feature
-            # Note that "seq_a" and "seq_b" are the other way round to
-            # cross_match to get overlaps in the same direction.
-            $feat = $self->find_overlap_epic($seq_b, $seq_a);
+            $feat = $self->find_overlap_epic($seq_a, $seq_b);
         }
     };
-    if ($@ or ! $feat) {
+    if ($@) {
         my $errmsg = $@;
         warn $errmsg;
         Hum::Chromoview::Utils::store_failed_overlap_pairs($seq_a->name, $seq_b->name, $errmsg);
@@ -95,7 +99,7 @@ sub find_SequenceOverlap {
     # can be written into the tracking database.
     my ($so);
     eval { $so = $self->make_SequenceOverlap($sinf_a, $sinf_b, $feat, $other_features); };
-    if ($@ or ! $so) {
+    if ($@) {
         my $errmsg = $@;
         warn $errmsg;
         Hum::Chromoview::Utils::store_failed_overlap_pairs($seq_a->name, $seq_b->name, $errmsg);

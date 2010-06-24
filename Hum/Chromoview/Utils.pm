@@ -93,7 +93,7 @@ sub store_failed_overlap_pairs {
   if ( $wanted_itt ){
     my $srids = join(', ', @srids);
 
-    my $insert_a = $dba->prepare(qq{INSERT INTO tpf_failed_overlap_pairs VALUES(?, $wanted_itt, $srids)});
+    my $insert_a = $dba->prepare(qq{REPLACE INTO tpf_failed_overlap_pairs VALUES(?, $wanted_itt, $srids)});
     $insert_a->execute();
 
     my $lastID = $dba->last_insert_id(undef, undef, undef, undef, undef);
