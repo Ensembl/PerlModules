@@ -301,7 +301,7 @@ sub get_end_features {
         $m->hit_Sequence($subject);
     }
 
-    confess "No matches found" unless @$matches;
+    die "No matches found by cross_match\n" unless @$matches;
 
     my $seq_end = $self->closest_end_best_pid($query->sequence_length,   $end_distances{'seq'}, @$matches);
     my $hit_end = $self->closest_end_best_pid($subject->sequence_length, $end_distances{'hit'}, @$matches);
@@ -309,7 +309,7 @@ sub get_end_features {
     $self->warn_match($query, $subject, $seq_end, $hit_end);
 
     unless ($seq_end and $hit_end) {
-        confess "No end overlap found\n";
+        die "No end overlap found\n";
     }
 
     return ($seq_end, $hit_end, $matches);
@@ -332,6 +332,7 @@ sub find_overlap_epic {
         return $feat;
     }
     else {
+        die "No match found by epic\n";
         return;
     }
 }
