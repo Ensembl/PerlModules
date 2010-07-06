@@ -147,7 +147,7 @@ sub DESTROY {
 
     if (my $dir = $self->temporary_directory) {
 
-        #warn "Removing '$dir'";
+        # warn "Not removing '$dir'"; return;
         rmtree($dir);
     }
 }

@@ -56,12 +56,6 @@ sub _open_file {
 sub find_SequenceOverlap {
     my ($self, $sinf_a, $sinf_b) = @_;
     
-    if ($self->algorithm eq 'epic') {
-        # Need sequences the other way round to
-        # cross_match to get overlaps in the same direction.
-        ($sinf_a, $sinf_b) = ($sinf_b, $sinf_a);
-    }
-
     my $seq_a = $sinf_a->Sequence;
     my $seq_b = $sinf_b->Sequence;
     unless ($seq_a and $seq_b) {
@@ -85,6 +79,9 @@ sub find_SequenceOverlap {
             # epic only returns one feature
             $feat = $self->find_overlap_epic($seq_a, $seq_b);
         }
+        else {
+            die sprintf("Unknown algorithm '%s'", $self->algorithm);
+        }
     };
     if ($@) {
         my $errmsg = $@;
@@ -92,7 +89,6 @@ sub find_SequenceOverlap {
         Hum::Chromoview::Utils::store_failed_overlap_pairs($seq_a->name, $seq_b->name, $errmsg);
         return;
     }
-
     return unless $feat;
 
     # Convert into a SequenceOverlap object that
