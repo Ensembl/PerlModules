@@ -26,7 +26,7 @@ use File::Path;
     my( $sth );
 
     sub fill_in_project_check_for_project {
-        my( $pkg, $project ) = @_;
+        my( $pkg, $project, $parent ) = @_;
 
         $sth ||= prepare_track_statement(q{
             SELECT c.sequenced_by
@@ -63,15 +63,17 @@ use File::Path;
                       , check_time
                       , modify_time
                       , sequenced_by
-                      , funded_by)
+                      , funded_by
+                      , pooled)
                 VALUES (?
                       , 'N'
                       , '0000-00-00 00:00:00'
                       , '0000-00-00 00:00:00'
                       , ?
+                      , ?
                       , ?)
                 });
-            $insert->execute($project, $seq_by, $fund_by);
+            $insert->execute($project, $seq_by, $fund_by, $parent ? 1 : 0);
         }
     }
 }
