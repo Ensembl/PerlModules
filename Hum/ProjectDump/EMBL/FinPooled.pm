@@ -6,7 +6,7 @@ package Hum::ProjectDump::EMBL::FinPooled;
 use strict;
 use warnings;
 use Carp;
-use Hum::ProjectDump::EMBL;
+use Hum::ProjectDump::EMBL::Finished;
 use Hum::Submission qw{
 	prepare_statement
 	accession_from_sanger_name
