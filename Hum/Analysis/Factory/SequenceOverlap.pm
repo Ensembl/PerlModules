@@ -333,7 +333,6 @@ sub find_overlap_epic {
     }
     else {
         die "No match found by epic\n";
-        return;
     }
 }
 
