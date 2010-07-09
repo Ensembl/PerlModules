@@ -235,9 +235,8 @@ sub _process_contig {
           $cl->join_error($join_err);
         }
         else {
-          if (0){ #my $dovetail = $pa->dovetail_length || $pb->dovetail_length) {
-            ### Should if overlap has been manually OK'd
-            my $dovetail;
+          if (my $dovetail = $pa->dovetail_length || $pb->dovetail_length) {
+            ### Should if overlap has been manually ail;
             printf STDERR "Dovetail of length '$dovetail' in overlap\n" if $verbose;
             $self->insert_missing_overlap_pad->remark("Bad overlap - dovetail of length $dovetail");
             $cl->strand($strand || 1);
