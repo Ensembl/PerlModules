@@ -25,6 +25,7 @@ use Net::Netrc;
   project_name_and_suffix_from_sequence_name
   project_name_from_accession
   submission_disconnect
+  is_dumped
   acetime
   acedate
   timeace
@@ -266,6 +267,25 @@ sub die_if_dumped_recently {
         }
     }
     return 1;
+}
+
+sub is_dumped {
+	my ($project) = @_;
+	my $last_dump = prepare_statement(
+        qq{
+        SELECT d.dump_time
+        FROM project_acc a
+          , project_dump d
+        WHERE a.sanger_id = d.sanger_id
+          AND a.project_name = '$project'
+        }
+    );
+    $last_dump->execute;
+
+    if (my ($dump_time) = $last_dump->fetchrow) {
+        return 1;
+    }
+    return 0;
 }
 
 {

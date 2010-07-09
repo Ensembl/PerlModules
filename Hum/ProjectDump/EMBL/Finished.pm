@@ -38,10 +38,10 @@ sub get_FT_Factory {
     my $ds  = $pdmp->DataSet          or return;
     my $acc = $pdmp->accession        or return;
     my $sv  = $pdmp->sequence_version or return;
-    
+
     my( $ft_factory );
     unless ($ft_factory = $pdmp->{'_ft_factory'}) {
-    
+
         $ft_factory = Bio::Otter::EMBL::Factory->new;
         $ft_factory->DataSet($ds);
         $ft_factory->accession($acc);
@@ -58,7 +58,7 @@ sub get_FT_Factory {
 
 sub add_Description {
     my( $pdmp, $embl ) = @_;
-    
+
     my $species   = $pdmp->species;
     my $ext_clone = $pdmp->external_clone_name;
     my $species_chr_desc = "$species DNA sequence from clone $ext_clone";
@@ -72,12 +72,12 @@ sub add_Description {
     if (my $map = $pdmp->fish_map) {
         $species_chr_desc .= $map;
     }
-    
+
     my @desc = ($species_chr_desc);
     if (my $ft_factory = $pdmp->get_FT_Factory) {
         push(@desc, $ft_factory->get_description_from_otter);
     }
-    
+
     my $de = $embl->newDE;
     $de->list(@desc);
     $embl->newXX;
@@ -89,6 +89,10 @@ sub add_Keywords {
     my @key_words = ('HTG');
     if (my $ft_factory = $pdmp->get_FT_Factory) {
         push(@key_words, $ft_factory->get_keywords_from_otter);
+    }
+    
+    if($pdmp->is_pool){
+    	push(@key_words, 'HTGS_POOLED_CLONE');
     }
 
     my $kw = $embl->newKW;
@@ -211,6 +215,11 @@ numbers given in the feature table with their source databases:
 Em:, EMBL; Sw:, SWISSPROT; Tr:, TREMBL; Wp:, WORMPEP;
 Information on the WORMPEP database can be found at
 http://www.sanger.ac.uk/Projects/C_elegans/wormpep');
+  my @pooled_std = (
+    ['This sequence was finished to the internationally agreed',
+     ' standards (PMID: 19815760) unless otherwise noted; and the assembly was confirmed by restriction digest.']
+  );
+  
 
     my @zfish_specific = (
 'Clone-derived Zebrafish pUC subclones occasionally display inconsistency
@@ -218,13 +227,20 @@ over the length of mononucleotide A/T runs and conserved TA repeats.
 Where this is found the longest good quality representation will be
 submitted.',
 
-'Any regions longer than 1kb tagged as misc-feature "unsure" are part of
-a tandem repeat of more than 10kb in length where it has not been possible
-to anchor the base differences between repeat copies.  The region has been
-built up based on the repeat element to match the total size of repeat
-indicated by restriction digest, but repeat copies may not be in the
-correct order and the usual finishing criteria may not apply.');
+'Any regions longer than 1kb tagged as misc-feature "unsure" are part of'.
+' a tandem repeat of more than 10kb in length where it has not been possible'.
+' to anchor the base differences between repeat copies.  The region has been'.
+' built up based on the repeat element to match the total size of repeat'.
+' indicated by restriction digest, but repeat copies may not be in the'.
+' correct order and the usual finishing criteria may not apply.');
 
+    my @pooled_zfish_specific = (
+        'Zebrafish sequence reads occasionally display inconsistency'.
+        ' over the length of mononucleotide A/T runs and conserved TA repeats.'.
+        ' Where this is found the longest good quality representation will be'.
+        ' submitted.',
+        $zfish_specific[1]
+    );
     my @mouse_specific = ('Sequence from the Mouse Genome Sequencing Consortium whole genome shotgun may have been used to confirm this sequence.  Sequence data from the whole genome shotgun alone has only been used where it has a phred quality of at least 30.');
 
   my @h_parasitica_specific = ('Sequence from a whole genome shotgun assembly by the Genome Sequencing Center at Washington University School of Medicine in St. Louis may have been used to confirm this sequence. Sequence from the whole genome shotgun alone has only been used where it has a phred quality of at least 30.');
@@ -240,14 +256,27 @@ correct order and the usual finishing criteria may not apply.');
         $embl->newXX;
 
         # Add the standard headers
-        foreach my $t (@std) {
+        foreach my $t ($pdmp->is_pool == 1 ? @pooled_std:@std) {
             my $cc = $embl->newCC;
-            $cc->list($t);
+            if(ref $t eq 'ARRAY'){
+                $cc->list(@$t);
+            } else {
+                $cc->list($t);
+            }
             $embl->newXX;
         }
         
+        if($pdmp->is_pool == 1){
+        	my $cc = $embl->newCC;
+        	$cc->list(
+        	    'This clone-specific sequence was deconvoluted from pooled'.
+                ' multi-clone record '.join(',',$pdmp->secondary)
+            );
+            $embl->newXX;
+        }
+
         if ($pdmp->species eq 'Zebrafish') {
-            foreach my $entry (@zfish_specific) {
+            foreach my $entry ($pdmp->is_pool == 1 ? @pooled_zfish_specific:@zfish_specific) {
                 my $cc = $embl->newCC;
                 $cc->list($entry);
                 $embl->newXX;
@@ -277,7 +306,7 @@ correct order and the usual finishing criteria may not apply.');
     sub add_MHC_Consortium_CC {
         my( $pdmp, $embl ) = @_;
 
-        return if $pdmp->chromosome ne "6";
+        return if !$pdmp->chromosome || $pdmp->chromosome ne "6";
 
         my ($tlp) = $pdmp->sequence_name =~ /^(...)/;
         if ($mhc_prefix{$tlp}) {
@@ -309,7 +338,7 @@ http://www.sanger.ac.uk/HGP/Chr6/MHC";
         return unless $species eq 'Human';
         return unless $www{$chr};
 
-        my $t = 
+        my $t =
 "This sequence was generated from part of bacterial clone contigs of
 human chromosome $chr, constructed by the Sanger Centre Chromosome $chr
 Mapping Group.  Further information can be found at
@@ -397,8 +426,8 @@ X chromosome cosmid library LL0XNC01";
                  RPCI-11.1 RPCI-11.2 RPCI-11.3 RPCI-11.4
                  RPCI-13.1 RPCI-13.2 RPCI-13.3 RPCI-13.4 )) {
         $lib_comments{$_} =
-"is from the library $_ constructed by the group of 
-Pieter de Jong. For further details see 
+"is from the library $_ constructed by the group of
+Pieter de Jong. For further details see
 http://bacpac.chori.org/"
     }
 
@@ -421,12 +450,12 @@ For further details see http://bacpac.chori.org/"
 
     sub add_library_CC {
         my( $pdmp, $embl ) = @_;
-        
+
         my $project = $pdmp->project_name;
         my ($lib, $vector, $des) = library_and_vector($project);
-        
+
         return unless $lib;
-        
+
         my $comment = $lib_comments{$lib};
         unless ($comment) {
             if ($des and $des =~ /\S/) {
@@ -443,11 +472,11 @@ For further details see http://bacpac.chori.org/"
                 die "No comment found for '$lib'";
             }
         }
-        
+
         my $clone = $pdmp->external_clone_name;
         my @list = ("$clone $comment");
         push(@list, "VECTOR: $vector") if $vector;
-        
+
         my $cc = $embl->newCC;
         $cc->list(@list);
         $embl->newXX;

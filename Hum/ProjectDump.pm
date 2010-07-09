@@ -302,6 +302,10 @@ sub is_private {
     return Hum::Tracking::is_private($pdmp->project_name);
 }
 
+sub is_pool {
+	return 0;
+}
+
 sub current_status_number {
     my( $pdmp ) = @_;
 

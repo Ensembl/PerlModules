@@ -601,6 +601,10 @@ sub add_Keywords {
 
     my $phase = $pdmp->htgs_phase or confess 'htgs_phase not set';
     push(@kw_list, "HTGS_PHASE$phase");
+    
+    if(my $pool_id = $pdmp->is_pool){ # 0 = not a pooled project ; 1 = pooled clone ; 2 = pooled project 
+    	push(@kw_list, ($pool_id == 2 ? 'HTGS_POOLED_MULTICLONE' : 'HTGS_POOLED_CLONE'));
+    }
 
     if ($pdmp->is_cancelled) {
         push( @kw_list, 'HTGS_CANCELLED' );

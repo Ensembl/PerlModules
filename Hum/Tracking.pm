@@ -56,6 +56,7 @@ use vars qw( @ISA @EXPORT_OK );
                 library_from_clone
                 localisation_data
                 online_path_from_project
+                parent_project
                 prepare_track_statement
                 prepare_cached_track_statement
                 project_from_clone
@@ -197,7 +198,7 @@ statuses.
             SELECT status
             FROM project_status
             WHERE projectname = ?
-              AND status IN(20,34,35,32,21,22,23)
+              AND status IN(20,34,35,32,21,22,23,44)
               AND iscurrent = 1
             });
         $sth->execute($project);
@@ -633,6 +634,33 @@ sub project_from_clone {
 
 =pod
 
+=head2 parent_project
+
+Returns the corresponding parent project name for a
+given project name or undef.
+
+=cut
+{
+	my( $get_parent );
+    sub parent_project {
+	    my( $project ) = @_;
+	    
+	    $get_parent ||= prepare_track_statement(q{
+	            SELECT parent_project
+                FROM project
+                WHERE projectname = ?
+	            });
+	    $get_parent->execute($project);
+	    if (my ($parent) = $get_parent->fetchrow) {
+	        return $parent;
+	    } else {
+	        return;
+	    }
+    }
+}
+
+=pod
+
 =head2 STRING = intl_clone_name( STRING )
 
 Given the name of a clone, returns the
@@ -1013,6 +1041,8 @@ sub fishParse {
     sub species_from_parent_project {
         my( $project ) = @_;
         
+        my $s;
+        
         $get_species_parent ||= prepare_track_statement(q{
 			SELECT DISTINCT c.speciesname
 			FROM clone c,
@@ -1024,11 +1054,11 @@ sub fishParse {
             });
         $get_species_parent->execute($project);
         
-        if (my($species) = $get_species_parent->fetchrow) {
-            return $species;
-        } else {
-            return;
+        while(my($species) = $get_species_parent->fetchrow) {
+            push @$s, $species;
         }
+        
+        return join(",",@$s);
     }
 }
 

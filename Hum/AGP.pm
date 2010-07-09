@@ -20,7 +20,7 @@ sub new {
 
 sub min_htgs_phase {
     my( $self, $min_htgs_phase ) = @_;
-    
+
     if ($min_htgs_phase) {
         confess "bad HTGS_PHASE '$min_htgs_phase'"
             unless $min_htgs_phase =~ /^\d+$/;
@@ -33,7 +33,7 @@ sub min_htgs_phase {
 
 sub allow_unfinished {
     my( $self, $flag ) = @_;
-    
+
     if (defined $flag) {
         $self->{'_allow_unfinished'} = $flag ? 1 : 0;
     }
@@ -42,7 +42,7 @@ sub allow_unfinished {
 
 sub missing_overlap_pad {
     my( $self, $overlap_pad ) = @_;
-    
+
     if ($overlap_pad) {
         $self->{'_overlap_pad'} = $overlap_pad;
     }
@@ -51,7 +51,7 @@ sub missing_overlap_pad {
 
 sub unknown_gap_length {
     my( $self, $unknown_gap_length ) = @_;
-    
+
     if ($unknown_gap_length) {
         $self->{'_unknown_gap_length'} = $unknown_gap_length;
     }
@@ -60,7 +60,7 @@ sub unknown_gap_length {
 
 sub new_Clone {
     my( $self ) = @_;
-    
+
     my $clone = Hum::AGP::Row::Clone->new;
     $self->add_Row($clone);
     return $clone;
@@ -68,7 +68,7 @@ sub new_Clone {
 
 sub new_Clone_from_tpf_Clone {
     my( $self, $tpf_cl ) = @_;
-    
+
     my $inf = $tpf_cl->SequenceInfo;
     my $acc = $inf->accession;
     my $sv  = $inf->sequence_version;
@@ -84,7 +84,7 @@ sub new_Clone_from_tpf_Clone {
 
 sub new_Gap {
     my( $self ) = @_;
-    
+
     my $gap = Hum::AGP::Row::Gap->new;
     $self->add_Row($gap);
     return $gap;
@@ -92,7 +92,7 @@ sub new_Gap {
 
 sub chr_name {
     my( $self, $chr_name ) = @_;
-    
+
     if ($chr_name) {
         $self->{'_chr_name'} = $chr_name;
     }
@@ -195,7 +195,7 @@ sub _process_contig {
         my $inf_b = $contig->[$i    ]->SequenceInfo;
         my $over = Hum::SequenceOverlap
             ->fetch_by_SequenceInfo_pair($inf_a, $inf_b);
-        
+
         # Add gap if no overlap
         unless ($over) {
             # Set strand for current clone
@@ -206,10 +206,10 @@ sub _process_contig {
             $cl = $self->new_Clone_from_tpf_Clone($contig->[$i]);
             next;
         }
-        
+
         my $pa = $over->a_Position;
         my $pb = $over->b_Position;
-        
+
         my $miss_join = 0;
         if ($pa->is_3prime) {
             if ($strand and $was_3prime) {
@@ -235,8 +235,9 @@ sub _process_contig {
           $cl->join_error($join_err);
         }
         else {
-          if (my $dovetail = $pa->dovetail_length || $pb->dovetail_length) {
+          if (0){ #my $dovetail = $pa->dovetail_length || $pb->dovetail_length) {
             ### Should if overlap has been manually OK'd
+            my $dovetail;
             printf STDERR "Dovetail of length '$dovetail' in overlap\n" if $verbose;
             $self->insert_missing_overlap_pad->remark("Bad overlap - dovetail of length $dovetail");
             $cl->strand($strand || 1);

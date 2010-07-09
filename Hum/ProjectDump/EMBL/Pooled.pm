@@ -206,6 +206,11 @@ sub make_embl {
     my $acc         = $pdmp->accession || ''; # null
     my @sec         = $pdmp->secondary; # null
     my $species     = $pdmp->species;
+    # Believe it or not a pooled project can be multi-species
+    # But this is not handled at the moment !!!
+    confess "Pooled project $project contains more than 1 species (".join(",",split(/,/,$species)).")"
+        unless(scalar split(/,/,$species) == 1);
+    
     my $chr         = $pdmp->chromosome;
     my $binomial    = $pdmp->species_binomial;
     my $dataclass   = $pdmp->EMBL_dataclass;
@@ -297,6 +302,10 @@ sub sequence_name {
     return $pdmp->project_name;
 }
 
+sub is_pool {
+    return 2;
+}
+
 sub add_FT {
     my( $pdmp, $embl, $length, $binomial,
         $chr, $libraryname ) = @_;
@@ -317,6 +326,8 @@ sub add_FT {
             $ft->addQualifierStrings('cultivar', 'Heinz 1706');
         }
     }
+    my $clone_list = join(';',sort @{$pdmp->clone_names});
+    $ft->addQualifierStrings('clone',   $clone_list) if $clone_list;
     
     push @fts, $ft;
     my ($sstart,$send) = (0,0);
@@ -377,9 +388,10 @@ sub add_Description {
     my( $pdmp, $embl ) = @_;
     
     my $species   = $pdmp->species;
-    my $clone_list = join(', ',sort @{$pdmp->clone_names});
+    #my $clone_list = join(', ',sort @{$pdmp->clone_names});
+    my $clones_nb = scalar @{$pdmp->clone_names};
     my $de = $embl->newDE;
-    $de->list("$species DNA sequence HIGH QUALITY DRAFT from pooled clones $clone_list");
+    $de->list("$species DNA sequence HIGH QUALITY DRAFT from $clones_nb pooled clone".($clones_nb > 1 ? "s" :""));
     $embl->newXX;
 }
 
