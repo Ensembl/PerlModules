@@ -28,15 +28,13 @@ sub create_new_dump_object {
     # get the parent project acc and set it as project secondary acc
     my $parent = parent_project($project);
     if(!$parent) {
-    	warn "No parent project name associated with $project\n";
-    	return;
+    	die "No parent project name associated with $project\n";
     }
     $pdmp->parentproject($parent);
     # the pooled project name is also the sequence name
     my $second_acc = accession_from_sanger_name($parent);
     if(!$second_acc){
-    	warn "No parent project accession for $project\n";
-        return;
+    	die "No parent project accession for $project\n";
     }
     $pdmp->add_secondary($second_acc);
     
