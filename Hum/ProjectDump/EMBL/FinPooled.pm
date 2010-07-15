@@ -59,7 +59,7 @@ sub add_parent {
     }
     my $seen;
     foreach my $sec ($pdmp->secondary){
-    	$seen = 1 if $seq eq $second_acc;
+    	$seen = 1 if $sec eq $second_acc;
     }
     $pdmp->add_secondary($second_acc) unless $seen;
 }
