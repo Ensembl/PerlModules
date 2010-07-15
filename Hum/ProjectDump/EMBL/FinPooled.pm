@@ -24,11 +24,33 @@ sub new {
     my( $pkg, $parent ) = @_;
 
     my $pdmp = bless {}, $pkg;
-    $pdmp->parentproject($parent);
+    $pdmp->add_parent($parent) if $parent;    
     
-    if(!$parent) {
+    return $pdmp;    
+}
+
+sub new_from_sanger_id {
+    my( $pkg, $sanger_id ) = @_;
+    
+    my $pdmp = $pkg->new;
+    $pdmp->sanger_id($sanger_id);
+    $pdmp->read_submission_data;
+    $pdmp->read_accession_data;
+    my $project = $pdmp->project_name;
+    # set parent accession as secondary id
+    my $parent = parent_project($project);
+    $pdmp->add_parent($parent); 
+    
+    return $pdmp;
+}
+
+sub add_parent {
+	my ( $pdmp, $parent ) = @_;
+	
+	if(!$parent) {
         die "No parent project name provided\n";
     }
+    $pdmp->parentproject($parent);
     
     # the pooled project name is also the sequence name
     my $second_acc = accession_from_sanger_name($parent);
@@ -36,10 +58,7 @@ sub new {
         die "No accession for parent project $parent\n";
     }
     $pdmp->add_secondary($second_acc);
-    
-    return $pdmp;    
 }
-
 
 sub parentproject {
 	my ( $pdmp, $parent ) = @_;
