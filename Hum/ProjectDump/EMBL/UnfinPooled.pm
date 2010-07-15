@@ -36,7 +36,11 @@ sub create_new_dump_object {
     if(!$second_acc){
     	die "No parent project accession for $project\n";
     }
-    $pdmp->add_secondary($second_acc);
+    my $seen;
+    foreach my $sec ($pdmp->secondary){
+        $seen = 1 if $seq eq $second_acc;
+    }
+    $pdmp->add_secondary($second_acc) unless $seen;
     
     return $pdmp;    
 }

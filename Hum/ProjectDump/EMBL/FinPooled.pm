@@ -57,7 +57,11 @@ sub add_parent {
     if(!$second_acc){
         die "No accession for parent project $parent\n";
     }
-    $pdmp->add_secondary($second_acc);
+    my $seen;
+    foreach my $sec ($pdmp->secondary){
+    	$seen = 1 if $seq eq $second_acc;
+    }
+    $pdmp->add_secondary($second_acc) unless $seen;
 }
 
 sub parentproject {
