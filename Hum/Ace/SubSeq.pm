@@ -235,7 +235,8 @@ sub process_ace_start_end_transcript_seq {
         $self->end_not_found(1);
     }
 
-    $self->validate;
+    ### This check prevents annotator from fixing transcripts with abutting exons
+    # $self->validate;
 }
 
 
