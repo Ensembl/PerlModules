@@ -66,10 +66,10 @@ sub add_raw_data_with_indent {
 }
 
 sub _indent_text {
-	my ($self, $data) = @_;
-	my $ind = ' ' x $level{$self};
-	$data =~ s/(.+)(\n|$)/$ind$1\n/g;
-	return $data;
+    my ($self, $data) = @_;
+    my $ind = ' ' x $level{$self};
+    $data =~ s/(.+)(\n|$)/$ind$1\n/g;
+    return $data;
 }
 
 sub open_tag {

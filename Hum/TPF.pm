@@ -181,19 +181,24 @@ sub fetch_all_id_tpfs_from_id_tpftarget {
   return $id_tpf;
 }
 
-sub fetch_entry_date_from_id_tpf {
+{
+    my $qry;
 
-  my ( $pkg, $id_tpf ) = @_;
+    sub fetch_entry_date_from_id_tpf {
 
-  my $qry = prepare_track_statement(qq{
-                             SELECT TO_CHAR(entry_date, 'yyyy-mm-dd hh:mm:ss')
-                             FROM tpf
-                             WHERE id_tpf = ?
-                           });
+        my ($pkg, $id_tpf) = @_;
 
-  $qry->execute($id_tpf);
-  return $qry->fetchrow;
+        $qry ||= prepare_track_statement(qq{
+             SELECT TO_CHAR(entry_date, 'yyyy-mm-dd hh:mm:ss')
+             FROM tpf
+             WHERE id_tpf = ?
+        });
+
+        $qry->execute($id_tpf);
+        return $qry->fetchrow;
+    }
 }
+
 
 sub new_from_db_id {
     my( $pkg, $db_id ) = @_;
