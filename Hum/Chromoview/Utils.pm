@@ -132,42 +132,50 @@ sub get_seq_len_by_acc_sv {
   return $qry->fetchrow;
 }
 
-sub get_id_tpftargets_by_seq_region_id {
-  my ($srId) = @_;
-  my $dba = get_chromoDB_handle();
-  my $qry = $dba->prepare(q{SELECT name FROM seq_region WHERE seq_region_id = ?});
-  $qry->execute($srId);
-  my $accSv = $qry->fetchrow;
-  if ( defined $accSv and $accSv =~ /\./ ){
-    return get_id_tpftargets_by_acc_sv( split(/\./, $accSv) );
-  }
+{
+	my $qry;
 
-  return 0;
+	sub get_id_tpftargets_by_seq_region_id {
+	  my ($srId) = @_;
+	  my $dba = get_chromoDB_handle();
+	  $qry ||= $dba->prepare(q{SELECT name FROM seq_region WHERE seq_region_id = ?});
+	  $qry->execute($srId);
+	  my $accSv = $qry->fetchrow;
+	  if ( defined $accSv and $accSv =~ /\./ ){
+    	return get_id_tpftargets_by_acc_sv( split(/\./, $accSv) );
+	  }
+
+	  return 0;
+	}
 }
 
-sub get_id_tpftargets_by_acc_sv {
+{
+	my $qry;
 
-  my ($acc, $sv) = @_;
-  my $qry = prepare_track_statement(qq{
-                                       SELECT DISTINCT tt.id_tpftarget
-                                       FROM sequence s, clone_sequence cs, tpf_row tr, tpf t, tpf_target tt
-                                       WHERE t.iscurrent=1
-                                       AND s.accession=?
-                                       AND s.sv=?
-                                       AND s.id_sequence=cs.id_sequence
-                                       AND cs.clonename=tr.clonename
-                                       AND tr.id_tpf=t.id_tpf
-                                       AND t.id_tpftarget=tt.id_tpftarget
-                                     });
-  $qry->execute($acc, $sv);
+	sub get_id_tpftargets_by_acc_sv {
 
-  my $id_tpftargets = [];
-  while ( my $id = $qry->fetchrow ){
-    push(@$id_tpftargets, $id);
-  }
+	  my ($acc, $sv) = @_;
+	  $qry ||= prepare_track_statement(qq{
+                                    	   SELECT DISTINCT tt.id_tpftarget
+                                    	   FROM sequence s, clone_sequence cs, tpf_row tr, tpf t, tpf_target tt
+                                    	   WHERE t.iscurrent=1
+                                    	   AND s.accession=?
+                                    	   AND s.sv=?
+                                    	   AND s.id_sequence=cs.id_sequence
+                                    	   AND cs.clonename=tr.clonename
+                                    	   AND tr.id_tpf=t.id_tpf
+                                    	   AND t.id_tpftarget=tt.id_tpftarget
+                                    	 });
+	  $qry->execute($acc, $sv);
 
-  return $id_tpftargets;
+	  my $id_tpftargets = [];
+	  while ( my $id = $qry->fetchrow ){
+    	push(@$id_tpftargets, $id);
+	  }
 
+	  return $id_tpftargets;
+
+	}
 }
 
 sub fetch_seq_region_id_by_accession {
