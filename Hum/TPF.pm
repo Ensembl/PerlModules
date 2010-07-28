@@ -160,46 +160,6 @@ sub iscurrent {
     return $self->{'_iscurrent'};
 }
 
-sub fetch_all_id_tpfs_from_id_tpftarget {
-
-  my ( $pkg, $id_tpftarget ) = @_;
-
-  my $qry = prepare_track_statement(qq{
-                             SELECT id_tpf
-                             FROM tpf
-                             WHERE id_tpftarget = ?
-                             ORDER BY entry_date
-                             DESC
-                           });
-
-  $qry->execute($id_tpftarget);
-  my $id_tpf = [];
-  while ( my ($id) = $qry->fetchrow ){
-    push(@$id_tpf, $id);
-  }
-
-  return $id_tpf;
-}
-
-{
-    my $qry;
-
-    sub fetch_entry_date_from_id_tpf {
-
-        my ($pkg, $id_tpf) = @_;
-
-        $qry ||= prepare_track_statement(qq{
-             SELECT TO_CHAR(entry_date, 'yyyy-mm-dd hh:mm:ss')
-             FROM tpf
-             WHERE id_tpf = ?
-        });
-
-        $qry->execute($id_tpf);
-        return $qry->fetchrow;
-    }
-}
-
-
 sub new_from_db_id {
     my( $pkg, $db_id ) = @_;
 
