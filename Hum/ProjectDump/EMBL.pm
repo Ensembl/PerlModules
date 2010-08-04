@@ -192,7 +192,6 @@ Do not put clonerequest email if library is one of:
 sub add_Reference {
     my( $pdmp, $embl, $seqlength ) = @_;
     
-    unless ($pdmp->add_HGMP_Reference($embl, $seqlength)) {
         my $author = $pdmp->author;
         my $date = EMBLdate();
         my $species = $pdmp->species;
@@ -219,7 +218,6 @@ sub add_Reference {
         }
         
         $embl->newXX;
-    }
     
     $pdmp->add_extra_headers($embl, 'reference', $seqlength);
 }
