@@ -349,9 +349,6 @@ sub make_alignment_from_cigar_string {
      $query_align_str = substr($qry_seq, $daf->start-1, $daf->end - $daf->start + 1);
   }
 
-  $self->query_align_string($query_align_str);
-  $self->hit_align_string($hit_align_str);
-
   $query_align_str = uc $query_align_str;
   $hit_align_str   = uc $hit_align_str;
 
