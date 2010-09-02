@@ -594,10 +594,9 @@ sub translate {
 sub translatable_Sequence {
     my( $self ) = @_;
 
-    my ($t_start, $t_end)   = $self->translation_region;
-    my $strand              = $self->strand;
-    my $phase               = $self->start_phase;
-    my $clone_seq           = $self->clone_Sequence or confess "No clone_Sequence";
+    my $strand      = $self->strand;
+    my $phase       = $self->start_phase;
+    my $clone_seq   = $self->clone_Sequence or confess "No clone_Sequence";
 
     #warn "strand = $strand, phase = $phase\n";
 
@@ -1174,10 +1173,12 @@ sub pre_otter_save_error {
     my $err = '';
     $err .= $self->error_start_not_found;
     $err .= $self->error_in_translation;
+    $err .= $self->error_nonsense_mediated_decay;
     $err .= $self->error_short_introns;
     ### Add check for short translations that don't have start or end not-found
     $err .= $self->error_no_evidence;
     $err .= $self->error_in_name_format;
+    $err .= $self->error_obsolete_transcript_type;
     $err .= $self->locus_level_errors;
     return $err;
 }
@@ -1198,29 +1199,37 @@ sub error_in_translation {
 
     return $err unless $self->translation_region_is_set;
 
-
     my $pep_str = $self->translate->sequence_string;
 
     # Check that there are no internal stops in the translation
     my $end_i = length($pep_str) - 1;
     my $i = index($pep_str, '*');
     if ($i != -1 and $i != $end_i) {
-        $err .= "Stops found in translation\n";
+        $err .= "Stop codon found in translation\n";
     }
 
     # Check that if translation does not begin with an methionine then
     # Start_not_found is set, and if it does not end with a stop then
-    # End_not_found is set.
-    if (substr($pep_str, 0, 1) ne 'M') {
-        unless ($self->start_not_found) {
-            $err .= "Translation does not begin with Methionine, and 'Start not found (1 or 2 or 3)' is not set\n";
+    # End_not_found is set.  And visa versa!
+    if (substr($pep_str, 0, 1) eq 'M') {
+        if ($self->start_not_found) {
+            $err .= "Translation begins with Methionine, but 'Start: CDS not found (1 or 2 or 3)' is set\n";
         }
     }
-    if (substr($pep_str, -1, 1) ne '*') {
-        ### Add check when end_not_found is set, and translation does not end
-        ### in a stop, then the translation end should be the transcript end.
+    else {
+        unless ($self->start_not_found) {
+            $err .= "Translation does not begin with Methionine, and 'Start: CDS not found (1 or 2 or 3)' is not set\n";
+        }
+    }
+
+    if (substr($pep_str, -1, 1) eq '*') {
+        if ($self->end_not_found) {
+            $err .= "Translation ends with a stop, but 'End: Not found' is set\n";
+        }
+    }
+    else {
         unless ($self->end_not_found) {
-            $err .= "Translation does not end with stop, and 'End not found' is not set\n";
+            $err .= "Translation does not end with stop, and 'End: Not found' is not set\n";
         }
     }
 
@@ -1297,6 +1306,25 @@ sub error_no_evidence {
     }
 }
 
+{
+    my %obsolete = map {$_ => 1} qw{
+        Coding
+        Pseudogene
+    };
+
+    sub error_obsolete_transcript_type {
+        my ($self) = @_;
+
+        my $meth_name = $self->GeneMethod->name;
+        if ($obsolete{$meth_name}) {
+            return "Obsolete transcript type '$meth_name'\n";
+        }
+        else {
+            return '';
+        }
+    }
+}
+
 sub error_short_introns {
     my ($self) = @_;
     
@@ -1318,6 +1346,73 @@ sub error_short_introns {
         $last_end = $ex->end;
     }
     return $err;
+}
+
+sub error_nonsense_mediated_decay {
+    my ($self) = @_;
+    
+    my $err = '';
+    
+    my $is_NMD = $self->is_NMD;
+    if ($self->GeneMethod->name eq 'Nonsense_mediated_decay') {
+        unless ($is_NMD) {
+            $err .= "Transcript has type 'Nonsense_mediated_decay', but is not subject to NMD\n";
+        }
+    }
+    elsif ($is_NMD) {
+        # warn "Remarks:\n", map { "  * $_\n" } $self->list_remarks;
+        unless (grep {$_ eq 'NMD exception'} $self->list_remarks) {
+            $err .= "Transcript is subject to nonsense mediated decay, and is not tagged with 'NMD exception'."
+              . sprintf(" (Distance from stop codon to last splice = %d nucleotides)\n", $is_NMD);
+        }
+    }
+    return $err;
+}
+
+sub is_NMD {
+    my ($self) = @_;
+    
+    # Return if transcript is non-coding
+    return 0 unless $self->translation_region_is_set;
+    my @tr = $self->translation_region;
+    my $t_end = $self->strand == 1 ? $tr[1] : $tr[0];
+    
+    my @exons = $self->get_all_Exons_in_transcript_order;
+    
+    # Discard the terminal exon - we don't need it.
+    pop(@exons);
+    
+    # Is it actually NMD?
+    my $is_NMD = 0;
+    for (my $i = 0; $i < @exons; $i++) {
+        my $ex = $exons[$i];
+        if ($t_end >= $ex->start and $t_end <= $ex->end) {
+            # This is the exon where the translation ends            
+            my $distance_to_last_splice;
+            if ($self->strand == 1) {
+                $distance_to_last_splice = $ex->end - $t_end;
+            }
+            else {
+                $distance_to_last_splice = $t_end - $ex->start;
+            }
+            
+            # Add on the length of any exons between this one
+            # and the terminal one.
+            for (my $j = $i + 1; $j < @exons; $j++) {
+                my $j_ex = $exons[$j];
+                printf STDERR "Adding exon length %d to splice distance\n", $j_ex->length;
+                $distance_to_last_splice += $j_ex->length;
+            }
+            
+            printf STDERR "Distance to end = %d (%s strand)\n",
+                $distance_to_last_splice, $self->strand == 1 ? 'plus' : 'minus';
+
+            if ($distance_to_last_splice >= 50) {
+                $is_NMD = $distance_to_last_splice;
+            }
+        }
+    }
+    return $is_NMD;
 }
 
 sub valid_exon_coordinates {
