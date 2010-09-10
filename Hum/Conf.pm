@@ -17,8 +17,7 @@ if ($ENV{'PFETCH_SERVER_LIST'}) {
     $pfetch_server_list = parse_servers($ENV{'PFETCH_SERVER_LIST'});
 } else {
     $pfetch_server_list = [
-        [qw{ 172.18.62.3  22400 }],     # cbi3 cluster
-        [qw{ 172.17.62.2  22400 }],     # cbi3a machine
+	[qw{ 193.62.203.7 22400 }], # zeus front end load balancer; was cbi3, cbi3a
         ];
 }
 
