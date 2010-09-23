@@ -17,7 +17,7 @@ if ($ENV{'PFETCH_SERVER_LIST'}) {
     $pfetch_server_list = parse_servers($ENV{'PFETCH_SERVER_LIST'});
 } else {
     $pfetch_server_list = [
-	[qw{ 193.62.203.7 22400 }], # zeus front end load balancer; was cbi3, cbi3a
+	[qw{ pfetch.sanger.ac.uk 22400 }], # zeus front end load balancer(s), by name
         ];
 }
 
