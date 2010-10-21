@@ -19,6 +19,7 @@ use Config::IniFiles;
 
 @ISA = ('Exporter');
 @EXPORT_OK = qw(
+				is_local
                 authorize
                 check_for_crossmatch_errors_by_accSv
                 concat_js_params
@@ -49,6 +50,15 @@ use Config::IniFiles;
                 unixtime2YYYYMMDD
                 unixtime2datetime
                );
+
+sub is_local {
+	if($ENV{HTTP_CLIENTREALM} =~/sanger/) {
+		return 1;
+	}
+	else {
+		return 0;
+	}
+}
 
 sub store_failed_overlap_pairs {
   my ($qry_accSv, $hit_accSv, $errmsg) = @_;
