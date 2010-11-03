@@ -1013,7 +1013,7 @@ sub fishParse {
     } else {
 	return;
     }
-    return join '', @catch;
+    return join('', @catch);
 }
 
 {
@@ -1058,7 +1058,7 @@ sub fishParse {
             push @$s, $species;
         }
         
-        return join(",",@$s);
+        return join(",", @$s);
     }
 }
 

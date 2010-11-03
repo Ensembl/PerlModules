@@ -184,8 +184,8 @@ sub htgs_phase {
               , a.sequence_length
               , a.htgs_phase
               , s.secondary add_secondary
-            FROM project_acc p
-              , acception a
+            FROM (project_acc p
+              , acception a)
             LEFT JOIN secondary_acc s
               ON p.accession = s.accession
             WHERE p.sanger_id = a.sanger_id
@@ -229,8 +229,8 @@ sub htgs_phase {
               , a.sequence_length
               , a.htgs_phase
               , s.secondary add_secondary
-            FROM project_acc p
-              , acception a
+            FROM (project_acc p
+              , acception a)
             LEFT JOIN secondary_acc s
               ON p.accession = s.accession
             WHERE p.sanger_id = a.sanger_id

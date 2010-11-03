@@ -58,7 +58,7 @@ sub new_from_ana_job_id {
         my $error = "Got multiple answers for ana_job_id '$ana_job_id' :\n";
         foreach my $row (@$ans) {
             pop(@$row);     # Don't want big error string
-            $error .= "  [" . join (", ", map "'$_'", @$row) . "]\n";
+            $error .= "  [" . join(", ", map "'$_'", @$row) . "]\n";
         }
         confess $error;
     }

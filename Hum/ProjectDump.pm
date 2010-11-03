@@ -623,9 +623,9 @@ sub read_submission_data {
           , s.file_path
           , c.sequenced_by
           , c.funded_by
-        FROM project_acc a
+        FROM (project_acc a
           , project_dump d
-          , sequence s
+          , sequence s)
         LEFT JOIN project_check c 
             ON c.project_name = a.project_name
         WHERE a.sanger_id = d.sanger_id

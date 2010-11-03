@@ -91,10 +91,10 @@ sub get_all_for_sequence_name_root {
           , person.annotator_uname
           , sc.chr_name
           , sc.species_name
-        FROM sequence s
+        FROM (sequence s
           , ana_sequence a
           , ana_status status
-          , species_chromosome sc
+          , species_chromosome sc)
         LEFT JOIN ana_sequence_person person
           ON a.ana_seq_id = person.ana_seq_id
 		  WHERE s.seq_id = a.seq_id
@@ -174,7 +174,7 @@ sub get_all_for_sequence_name_root {
             my $rows = @$ans;
             my $error = "Got $rows entries for $parameter:\n";
             foreach my $r (@$ans) {
-                $error .= "[" . join (", ", map "'$_'", @$r) . "]\n";
+                $error .= "[" . join(", ", map "'$_'", @$r) . "]\n";
             }
             confess $error;
         }
@@ -243,9 +243,9 @@ sub fetch_old_by_ana_seq_id {
           , person.annotator_uname
           , sc.chr_name
           , sc.species_name
-        FROM sequence s
+        FROM (sequence s
           , ana_sequence a
-          , species_chromosome sc
+          , species_chromosome sc)
         LEFT JOIN ana_sequence_person person
           ON a.ana_seq_id = person.ana_seq_id
         WHERE s.seq_id = a.seq_id
