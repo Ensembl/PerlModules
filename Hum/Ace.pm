@@ -8,7 +8,6 @@ use warnings;
 
 use Hum::Ace::Exon;
 use Hum::Ace::SubSeq;
-use Hum::Ace::CloneSeq;
 use Hum::Ace::Assembly;
 use Hum::Ace::Clone;
 use Hum::Ace::Locus;
