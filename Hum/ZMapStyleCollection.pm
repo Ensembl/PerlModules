@@ -8,6 +8,10 @@ use warnings;
 use Carp;
 
 use Config::IniFiles;
+use IO::Scalar;     # Needed by Config::IniFiles for
+                    # Config::IniFiles->new( -file => \$string )
+                    # to work, but you don't get an obvious
+                    # error message if it is not installed.
 use Data::Dumper;
 
 use Hum::ZMapStyle;
@@ -23,7 +27,9 @@ sub new_from_string {
     my $self = $pkg->new;
  
     my $cfg = Config::IniFiles->new( -file => \$string ) 
-        or die "Failed to create cfg for styles file: {@Config::IniFiles::errors}" ;
+        or die "Error parsing styles from server:\n",
+            join("\n", @Config::IniFiles::errors),
+            "\nString was: ", substr($string, 0, 250);
     
     for my $sect ($cfg->Sections) {
         my $style = Hum::ZMapStyle->new(name => $sect, collection => $self); 
