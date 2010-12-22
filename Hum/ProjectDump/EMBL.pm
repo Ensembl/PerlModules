@@ -232,7 +232,17 @@ sub add_Description {
     if ($pdmp->is_cancelled) {
         $in_progress = 'SEQUENCING CANCELLED';
     }
-    $de->list("$species DNA sequence *** $in_progress *** from clone $ext_clone");
+    my $clone_type;
+    if ($pdmp->clone_type eq 'Genomic clone') {
+        $clone_type = 'clone';
+    }
+    elsif ($pdmp->clone_type eq 'PCR product') {
+        $clone_type = 'PCR product';
+    }
+    else {
+        confess "Unsupported clone type: ", $pdmp->clone_type;
+    }
+    $de->list("$species DNA sequence *** $in_progress *** from $clone_type $ext_clone");
     $embl->newXX;
 }
 
@@ -544,6 +554,13 @@ sub add_Keywords {
     
     if(my $pool_id = $pdmp->is_pool){ # 0 = not a pooled project ; 1 = pooled clone ; 2 = pooled project 
     	push(@kw_list, ($pool_id == 2 ? 'HTGS_POOLED_MULTICLONE' : 'HTGS_POOLED_CLONE'));
+    }
+    
+    if ($pdmp->seq_reason eq 'PCR_correction') {
+        push ( @kw_list, 'PCR_CORRECTION');
+    }
+    elsif ($pdmp->seq_reason eq 'Gap closure') {
+        push ( @kw_list, 'GAP_CLOSURE');
     }
 
     if ($pdmp->is_cancelled) {

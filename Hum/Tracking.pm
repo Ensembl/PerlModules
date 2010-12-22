@@ -609,6 +609,43 @@ given project name if there is only one, or undef.
 
 =pod
 
+=head2 clone_type_seq_reason
+
+Returns the corresponding clone type and sequencing reason for the
+given project name, or undef.
+
+=cut
+
+{
+    my( $get_type_reason );
+
+    sub clone_type_seq_reason {
+        my( $project ) = @_;
+
+        $get_type_reason ||= prepare_track_statement(q{
+            SELECT ctd.description
+              , srd.description
+            FROM clone_project cp
+              , clone c
+              , clonetypedict ctd
+              , seqreasondict srd
+            WHERE cp.clonename = c.clonename
+              AND c.clone_type = ctd.id_dict
+              AND c.seq_reason = srd.id_dict
+              AND cp.projectname = ?
+            });
+        $get_type_reason->execute($project);
+        
+        if (my($type, $reason) = $get_type_reason->fetchrow) {
+            return ($type, $reason);
+        } else {
+            return;
+        }
+    }
+}
+
+=pod
+
 =head2 project_from_clone
 
 Returns the corresponding project name for a

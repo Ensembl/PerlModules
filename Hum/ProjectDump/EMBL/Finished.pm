@@ -61,7 +61,17 @@ sub add_Description {
 
     my $species   = $pdmp->species;
     my $ext_clone = $pdmp->external_clone_name;
-    my $species_chr_desc = "$species DNA sequence from clone $ext_clone";
+    my $clone_type;
+    if ($pdmp->clone_type eq 'Genomic clone') {
+        $clone_type = 'clone';
+    }
+    elsif ($pdmp->clone_type eq 'PCR product') {
+        $clone_type = 'PCR product';
+    }
+    else {
+        confess "Unsupported clone type: ", $pdmp->clone_type;
+    }
+    my $species_chr_desc = "$species DNA sequence from $clone_type $ext_clone";
     if (my $chr = $pdmp->chromosome) {
         if ($species eq 'Zebrafish') {
             $species_chr_desc .= " in linkage group $chr";
@@ -93,6 +103,13 @@ sub add_Keywords {
     
     if($pdmp->is_pool){
     	push(@key_words, 'HTGS_POOLED_CLONE');
+    }
+
+    if ($pdmp->seq_reason eq 'PCR_correction') {
+        push ( @key_words, 'PCR_CORRECTION');
+    }
+    elsif ($pdmp->seq_reason eq 'Gap closure') {
+        push ( @key_words, 'GAP_CLOSURE');
     }
 
     my $kw = $embl->newKW;

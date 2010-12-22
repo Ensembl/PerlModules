@@ -478,6 +478,29 @@ sub external_clone_name {
     return $pdmp->{'_external_clone_name'};
 }
 
+sub clone_type {
+    my ($pdmp) = @_;
+    
+    $pdmp->_fetch_clone_type_reason unless $pdmp->{'_clone_type'};
+    return $pdmp->{'_clone_type'};
+}
+
+sub seq_reason {
+    my ($pdmp) = @_;
+    
+    $pdmp->_fetch_clone_type_reason unless $pdmp->{'_seq_reason'};
+    return $pdmp->{'_seq_reason'};
+}
+
+
+sub _fetch_clone_type_reason {
+    my ($pdmp) = @_;
+    
+    my ($type, $reason) = Hum::Tracking::clone_type_seq_reason($pdmp->project_name);
+    $pdmp->{'_clone_type'} = $type;
+    $pdmp->{'_seq_reason'} = $reason;
+}
+
 sub author {
     my( $pdmp ) = @_;
     
