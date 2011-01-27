@@ -705,17 +705,33 @@ sub get_all_Clones {
 }
 
 sub get_Clone {
-    my ($self, $clone_name) = @_;
+    my ($self, $name) = @_;
 
     my $clone;
     foreach my $this ($self->get_all_Clones) {
-        if ($this->name eq $clone_name) {
+        if ($this->name eq $name) {
             $clone = $this;
             last;
         }
     }
-    confess "Can't find clone '$clone_name' in list"
+    confess "Can't find clone '$name' in list"
       unless $clone;
+    return $clone;
+}
+
+sub get_Clone_by_accession_version {
+    my ($self, $acc_sv) = @_;
+    
+    my $clone;
+    foreach my $this ($self->get_all_Clones) {
+        if ($this->accession_version eq $acc_sv) {
+            $clone = $this;
+            last;
+        }
+    }
+    confess "Can't find clone '$acc_sv' in list"
+      unless $clone;
+    return $clone;
 }
 
 sub replace_Clone {
