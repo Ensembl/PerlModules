@@ -244,7 +244,7 @@ sub get_chromoDB_handle {
 
   my $host     = 'otterpipe2';
   my $dbname   = 'chromoDB';
-  my $port     = 3303;
+  my $port     = 3323;
   my $mach     = Net::Netrc->lookup($host);
 
   if ( (defined $user and $user eq 'public') ){
@@ -291,12 +291,12 @@ sub get_loutre_dbname {
 
 sub get_loutredbh_from_species {
 
-  # $user will be coming from single sing on
+  # $user will be coming from single sign on
   # and has right to edit TPF
   my ($species) = @_;
 
   my $host     = 'otterlive';
-  my $port     = 3301;
+  my $port     = 3324;
   my $user     = 'ottro';
   my $password = undef;
 

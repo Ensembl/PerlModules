@@ -64,7 +64,7 @@ sub ref_from_query {
     sub sub_db () {
         unless ($db) {
             my $host   = 'otterlive';
-            my $port   = 3301;
+            my $port   = 3324;
             my $dbname = 'submissions';
 
             my ($user, $password);
