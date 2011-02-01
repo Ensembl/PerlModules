@@ -106,9 +106,11 @@ sub add_Keywords {
     }
 
     if ($pdmp->seq_reason eq 'PCR_correction') {
+        @key_words = grep { $_ !~ /HTG/ }  @key_words; # no HTG keywords for PCR submissions, please
         push ( @key_words, 'PCR_CORRECTION');
     }
     elsif ($pdmp->seq_reason eq 'Gap closure') {
+        @key_words = grep { $_ !~ /HTG/ }  @key_words; # no HTG keywords for PCR submissions, please
         push ( @key_words, 'GAP_CLOSURE');
     }
 
@@ -272,6 +274,9 @@ submitted.',
         $seq_cen->list($pdmp->seq_center_lines, '--------------');
         $embl->newXX;
 
+        # no standard blurb for PCRs
+        return if ($pdmp->clone_type eq 'PCR product');
+        
         # Add the standard headers
         foreach my $t ($pdmp->is_pool == 1 ? @pooled_std:@std) {
             my $cc = $embl->newCC;
