@@ -35,6 +35,7 @@ use vars qw( @ISA @EXPORT_OK );
 @EXPORT_OK = qw(
                 clone_from_project
                 clone_from_accession
+                clone_type_seq_reason
                 current_project_status_number
                 set_project_status
                 session_id
@@ -370,7 +371,7 @@ the library and the name of the library vector
         my( $lib, $vec, $desc ) = $sth->fetchrow;
         
         # Catch bad vector and library names
-        if ($lib =~ /(^NONE$|UNKNOWN)/i) {
+        if ((!$lib) || ($lib =~ /(^NONE$|UNKNOWN)/i)) {
             ($lib, $vec, $desc) = (undef, undef, undef);
         }
         return ($lib, $vec, $desc);
@@ -644,6 +645,41 @@ given project name, or undef.
     }
 }
 
+=pod
+
+=head2 primer_pair
+
+Returns the primer pair used for obtaining the PCR product with the given project name, or undef.
+
+=cut
+
+{
+    my( $get_primer_pair );
+
+    sub primer_pair {
+        my( $project ) = @_;
+
+        $get_primer_pair ||= prepare_track_statement(q{
+            SELECT p1.primerseq
+              , p2.primerseq 
+            FROM primer p1
+              , primer p2
+              , pcr_product pp 
+              , clone_project cp
+            WHERE pp.primer_1 = p1.id_primer
+              AND pp.primer_2 = p2.id_primer 
+              AND pp.dna_source = cp.projectname 
+              AND cp.projectname = ?
+            });
+        $get_primer_pair->execute($project);
+        
+        if (my($primer1, $primer2) = $get_primer_pair->fetchrow) {
+            return ($primer1,$primer2);
+        } else {
+            return;
+        }
+    }
+}
 =pod
 
 =head2 project_from_clone
