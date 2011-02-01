@@ -478,6 +478,18 @@ sub external_clone_name {
     return $pdmp->{'_external_clone_name'};
 }
 
+sub primer_pair {
+    my ($pdmp) = @_;
+    if ($pdmp->clone_type eq 'PCR product') {
+        unless ($pdmp->{'_primer_pair'}) {
+            my ($primer1,$primer2) = Hum::Tracking::primer_pair($pdmp->project_name);
+            $pdmp->{'_primer_pair'} = "fwd_seq: $primer1, rev_seq: $primer2";
+        }
+        return $pdmp->{'_primer_pair'};
+    }
+}
+
+
 sub clone_type {
     my ($pdmp) = @_;
     
