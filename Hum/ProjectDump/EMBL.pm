@@ -45,6 +45,7 @@ sub make_embl {
     my $binomial    = $pdmp->species_binomial;
     my $dataclass   = $pdmp->EMBL_dataclass;
     my $division    = $pdmp->EMBL_division;
+    my $primer_pair = $pdmp->primer_pair;
 
     # Get the DNA, base quality string,
     # and map of contig positions.
@@ -106,7 +107,7 @@ sub make_embl {
     # Feature table source feature
     my( $libraryname ) = library_and_vector( $project );
     add_source_FT( $embl, $seqlength, $binomial, $ext_clone,
-                   $chr, $map, $libraryname );
+                   $chr, $map, $libraryname, $primer_pair );
 
     # Feature table assembly fragments
     $pdmp->add_FT_entries($embl, $contig_map);
@@ -557,9 +558,11 @@ sub add_Keywords {
     }
     
     if ($pdmp->seq_reason eq 'PCR_correction') {
+        @kw_list = grep { $_ !~ /'HTG'/ }  @kw_list; # no HTG keywords for PCR submissions, please
         push ( @kw_list, 'PCR_CORRECTION');
     }
     elsif ($pdmp->seq_reason eq 'Gap closure') {
+        @kw_list = grep { $_ !~ /'HTG'/ }  @kw_list; # no HTG keywords for PCR submissions, please
         push ( @kw_list, 'GAP_CLOSURE');
     }
 
