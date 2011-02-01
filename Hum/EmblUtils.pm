@@ -16,7 +16,7 @@ use vars qw( @EXPORT_OK @ISA );
 
 sub add_source_FT {
     my( $embl, $length, $binomial, $external_clone,
-        $chr, $map, $libraryname ) = @_;
+        $chr, $map, $libraryname, $primer_pair ) = @_;
 
     my $ft = $embl->newFT;
     $ft->key('source');
@@ -40,9 +40,10 @@ sub add_source_FT {
         $ft->addQualifierStrings('chromosome', $chr);
     }
 
-    $ft->addQualifierStrings('map',        $map)                if $map;
-    $ft->addQualifierStrings('clone',      $external_clone)     if $external_clone;
-    $ft->addQualifierStrings('clone_lib',  $libraryname)        if $libraryname;
+    $ft->addQualifierStrings('map',         $map)                if $map;
+    $ft->addQualifierStrings('clone',       $external_clone)     if $external_clone;
+    $ft->addQualifierStrings('clone_lib',   $libraryname)        if $libraryname;
+    $ft->addQualifierStrings('PCR_primers', $primer_pair)        if $primer_pair; 
 
     return $ft;
 }
