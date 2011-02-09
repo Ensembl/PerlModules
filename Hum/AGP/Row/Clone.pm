@@ -105,9 +105,9 @@ sub elements {
         $self->seq_end,
         $self->strand == 1 ? '+' : '-',
         );
-    if (my $rem = $self->remark) {
-        push(@ele, "# $rem");
-    }
+#    if (my $rem = $self->remark) {
+#        push(@ele, "# $rem");
+#    }
     return @ele;
 }
 

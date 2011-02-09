@@ -25,7 +25,7 @@ use strict;
 use warnings;
 use WrapDBI;
 use Exporter;
-use Time::Local 'timelocal';
+use POSIX ();
 use Carp;
 
 use vars qw( @ISA @EXPORT_OK );
@@ -1324,7 +1324,7 @@ sub iso2time {
         or confess "Can't parse ISO time string '$iso'";
     $year -= 1900;
     $mon--;
-    return timelocal($sec,$min,$hour,$mday,$mon,$year);
+    return POSIX::mktime($sec,$min,$hour,$mday,$mon,$year);
 }
 
 =head2 record_finished_length

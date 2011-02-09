@@ -32,6 +32,20 @@ sub new {
     return bless {}, $pkg;
 }
 
+sub contained {
+    my ($self, $contained) = @_;
+
+    if ($contained) {
+        $self->{'_contained'} = $contained;
+    }
+    if(!exists($self->{'_contained'})) {
+    	return 0;
+    }
+    else {
+    	return $self->{'_contained'};
+    }
+}
+
 sub algorithm {
     my ($self, $algorithm) = @_;
 
@@ -91,19 +105,37 @@ sub find_SequenceOverlap {
     }
     return unless $feat;
 
-    # Convert into a SequenceOverlap object that
-    # can be written into the tracking database.
-    my ($so);
-    eval { $so = $self->make_SequenceOverlap($sinf_a, $sinf_b, $feat, $other_features); };
-    if ($@) {
-        my $errmsg = $@;
-        warn $errmsg;
-        Hum::Chromoview::Utils::store_failed_overlap_pairs($seq_a->name, $seq_b->name, $errmsg);
-        return;
-    }
-    else {
-        return $so;
-    }
+	#### COMMENTED OUT CODE FOR HANDLING CONTAINED CLONES
+	# If this is a contained clone, convert into multiple SequenceOverlaps
+	#if($self->contained) {
+	#    my (@so);
+	#    eval { @so = $self->make_contained_SequenceOverlap($sinf_a, $sinf_b, $feat, $other_features); };
+	#    if ($@) {
+	#        my $errmsg = $@;
+	#        warn $errmsg;
+	#        Hum::Chromoview::Utils::store_failed_overlap_pairs($seq_a->name, $seq_b->name, $errmsg);
+	#        return;
+	#    }
+	#    else {
+	#        return @so;
+	#    }
+	#}
+	# Otherwise, process as a single overlap
+	#else {
+	    # Convert into a SequenceOverlap object that
+	    # can be written into the tracking database.
+	    my ($so);
+	    eval { $so = $self->make_SequenceOverlap($sinf_a, $sinf_b, $feat, $other_features); };
+	    if ($@) {
+	        my $errmsg = $@;
+	        warn $errmsg;
+	        Hum::Chromoview::Utils::store_failed_overlap_pairs($seq_a->name, $seq_b->name, $errmsg);
+	        return;
+	    }
+	    else {
+	        return $so;
+	    }
+	#}
 }
 
 sub sequence_length_header {
@@ -194,6 +226,75 @@ sub make_SequenceOverlap {
 
     return $overlap;
 }
+
+### This procedure is not presently called. It needs further development
+#sub make_contained_SequenceOverlap {
+#    my ($self, $sa, $sb, $feat, $other_features) = @_;
+#
+#    my $overlap_a = Hum::SequenceOverlap->new;
+#    my $overlap_b = Hum::SequenceOverlap->new;
+#    
+#	# Set up overlap parameters that are the same for both
+#    foreach my $overlap ($overlap_a, $overlap_b) {
+#	    $overlap->best_match_pair($feat);
+#	    $overlap->other_match_pairs($other_features);
+#	
+#	    # Copy the percent sub, ins, del
+#	    foreach my $meth (qw{ percent_substitution percent_insertion percent_deletion }) {
+#	        $overlap->$meth($feat->$meth());
+#	    }
+#	    $overlap->source_name($feat->algorithm);
+#    }
+#
+#### CORRECT THE BELOW!!! YOU MAY NEED INFO ABOUT CLONE ORIENTATION IF YOU WANT TO MAKE THIS WORK!!!
+####	 ... or do I? Can this be done in a way that doesn't care about that?
+#		either the strand is +ve, in which case the point with the lower seq-value is 3'/5' (container/contained), then the later is 3'/5' (container/contained)
+#		or it's -ve, in which case the same is 3'/3', then the later is 5'/5'
+#		Mind out though: it seems that both hit_strand and seq_strand exist, and both can have either value, so need to look at parser more closely.
+#    my ($pos_a, $pos_b) = $overlap_a->make_new_Position_objects;
+#    $pos_a->SequenceInfo($sa);
+#    $pos_b->SequenceInfo($sb);
+#    $pos_a->is_3prime($self->is_three_prime_hit($feat, $sa->sequence_length, 'seq'));
+#    $pos_b->is_3prime($self->is_three_prime_hit($feat, $sb->sequence_length, 'hit'));
+#
+#	# The first overlap is always an "upstairs" overlap
+#    $overlap->overlap_length($feat->hit_length);
+#    if ($pos_a->is_3prime) {
+#        $pos_a->position($feat->seq_start - 1);
+#    }
+#    else {
+#        $pos_a->position($feat->seq_end + 1);
+#    }
+#    if ($pos_b->is_3prime) {
+#        $pos_b->position($feat->hit_end);
+#    }
+#    else {
+#        $pos_b->position($feat->hit_start);
+#    }
+#
+#	### NOW ADD IN SECOND OVERLAP
+#
+#    # Record the length of any unmatched sequence at
+#    # the end of either sequence beyond the match.
+#    if ($pos_a->is_3prime) {
+#        $pos_a->dovetail_length($sa->sequence_length - $feat->seq_end);
+#    }
+#    else {
+#        $pos_a->dovetail_length($feat->seq_start - 1);
+#    }
+#    if ($pos_b->is_3prime) {
+#        $pos_b->dovetail_length($sb->sequence_length - $feat->hit_end);
+#    }
+#    else {
+#        $pos_b->dovetail_length($feat->hit_start - 1);
+#    }
+#
+#    # Check that the positions calculated aren't
+#    # off the end of the sequences.
+#    $overlap->validate_Positions;
+#
+#    return $overlap;
+#}
 
 sub is_three_prime_hit {
     my ($self, $feat, $length, $type) = @_;
@@ -319,6 +420,7 @@ sub epic_factory {
     my ($self) = @_;
 
     my $factory = $self->{'_epic_factory'} ||= Hum::Analysis::Factory::Epic->new;
+    # if($self->contained) {$factory->set_contained_mode}
     return $factory;
 }
 

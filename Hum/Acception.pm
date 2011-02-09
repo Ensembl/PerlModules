@@ -7,7 +7,7 @@ use DBI;
 use Carp;
 use Hum::Submission 'prepare_cached_statement';
 use Hum::Tracking 'prepare_cached_track_statement';
-use Time::Local qw( timelocal );
+use POSIX ();
 
 
 sub new {
@@ -25,7 +25,7 @@ sub new {
         my( $my_date ) = @_;
         my( $year, $mon, $mday ) = split /-/, $my_date;
         $year -= 1900;
-        return timelocal( 0, 0, 0, $mday, $mon, $year );
+        return POSIX::mktime( 0, 0, 0, $mday, $mon, $year );
     }
 
     # Convert unix time int to MySQL date

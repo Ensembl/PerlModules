@@ -40,6 +40,15 @@ sub allow_unfinished {
     return $self->{'_allow_unfinished'};
 }
 
+sub allow_dovetails {
+    my( $self, $flag ) = @_;
+
+    if (defined $flag) {
+        $self->{'_allow_dovetails'} = $flag ? 1 : 0;
+    }
+    return $self->{'_allow_dovetails'};
+}
+
 sub missing_overlap_pad {
     my( $self, $overlap_pad ) = @_;
 
@@ -135,7 +144,7 @@ sub process_TPF {
 
     my $verbose = $self->verbose;
 
-    my @rows = $tpf->fetch_all_Rows;
+    my @rows = $tpf->fetch_non_contained_Rows;
     my $contig = [];
     my $min_phase  = $self->min_htgs_phase;
     unless ($min_phase) {
@@ -200,7 +209,7 @@ sub _process_contig {
         unless ($over) {
             # Set strand for current clone
             $cl->strand($strand || 1);
-
+			$self->check_for_contained_clones($cl, $contig->[$i-1]);
             $self->insert_missing_overlap_pad->remark('No overlap in database');
             $strand = undef;
             $cl = $self->new_Clone_from_tpf_Clone($contig->[$i]);
@@ -217,14 +226,12 @@ sub _process_contig {
                 $strand = undef;
                 $miss_join = 3;
             }
-            $cl->seq_end($pa->position);
         } else {
             if ($strand and ! $was_3prime) {
                 $self->insert_missing_overlap_pad->remark('Bad overlap - double 5 prime join');
                 $strand = undef;
                 $miss_join = 5;
             }
-            $cl->seq_start($pa->position);
         }
 
         # Report miss-join errors
@@ -234,12 +241,13 @@ sub _process_contig {
           printf STDERR $join_err if $verbose;
           $cl->join_error($join_err);
         }
-        else {
+        elsif (!($self->allow_dovetails)) {
           if (my $dovetail = $pa->dovetail_length || $pb->dovetail_length) {
             ### Should if overlap has been manually ail;
             printf STDERR "Dovetail of length '$dovetail' in overlap\n" if $verbose;
             $self->insert_missing_overlap_pad->remark("Bad overlap - dovetail of length $dovetail");
             $cl->strand($strand || 1);
+			$cl = $self->check_for_contained_clones($cl, $contig->[$i-1]);
             $strand = undef;
             if ($pa->is_3prime) {
               $cl->seq_end($inf_a->sequence_length);
@@ -257,6 +265,15 @@ sub _process_contig {
         }
         $cl->strand($strand);
 
+        $cl = $self->check_for_contained_clones($cl, $contig->[$i-1]);
+
+        if ($pa->is_3prime) {
+        	$cl->seq_end($pa->position);
+        }
+        else {
+        	$cl->seq_start($pa->position);
+        }
+
         # Flip the strand if this is a
         # head to head or tail to tail join.
         $strand *= $pa->is_3prime == $pb->is_3prime ? -1 : 1;
@@ -272,6 +289,216 @@ sub _process_contig {
         }
     }
     $cl->strand($strand || 1);
+	$self->check_for_contained_clones($cl, $contig->[-1]);
+}
+
+sub _process_contained_contig {
+    my( $self, $container_clone, $container_tpf_clone) = @_;
+
+    my $verbose = $self->verbose;
+
+	# Establish what the contained clones are and how they relate to one another
+	my @contained_clones = $container_tpf_clone->get_contained_clones;
+	
+	# PROVISIONALLY, LEAVE THIS
+	# The subsequent section deals with the possibility that the contained clones
+	# might be in an order other than that in the TPF
+	# This is tricky to implement, so I'm going to leave it for now.
+	# Provisionally, I'll assume that they're in the order designated in the TPF
+	if(0) {
+		# Check the contained clones pairwise for any overlap between them
+		my %overlaps_between_contained_clones;
+		for my $i (0..$#contained_clones) {
+			for my $j ($i+1 .. $#contained_clones) {
+		        my $inf_a = $contained_clones[$i]->SequenceInfo;
+		        my $inf_b = $contained_clones[$j]->SequenceInfo;
+	    	    my $over = Hum::SequenceOverlap
+	        	    ->fetch_by_SequenceInfo_pair($inf_a, $inf_b);
+				if($over) {
+					my @accessions = sort {$a cmp $b} ($contained_clones[$i]->accession, $contained_clones[$j]->accession);
+					$overlaps_between_contained_clones{$accessions[0]}{$accessions[1]} = $over;
+				}
+			}
+		}
+		
+		# Get all overlaps between the container clone and the contained clones
+		# Then sort the contained clones in order of these overlaps
+		# Note that this will be in reverse order if the strand is -1
+		my %overlaps_between_contained_clones_and_container;
+		my @contained_clones_overlapping_container;
+		my @contained_clones_not_overlapping_container;
+		foreach my $contained_clone (@contained_clones) {
+			my @overlaps = Hum::SequenceOverlap
+	           ->fetch_contained_by_SequenceInfo_pair($container_tpf_clone->SequenceInfo, $contained_clone->SequenceInfo);
+	
+			if(scalar @overlaps > 0) {
+	   			@overlaps = sort {$a->a_Position->position <=> $b->a_Position->position} @overlaps;
+				$overlaps_between_contained_clones_and_container{$contained_clone->accession} = \@overlaps;
+				push(@contained_clones_overlapping_container, $contained_clone);
+			}
+			else {
+				push(@contained_clones_not_overlapping_container, $contained_clone);
+			}
+		}
+		
+		# Now sort contained clones according to the order of their overlaps
+		# Note that this only sorts those clones which have overlaps with the container clone;
+		# any contained clones which overlap other contained clones at both ends are set aside
+		my @sorted_contained_clones = sort {
+			$overlaps_between_contained_clones_and_container{$a->accession}->[0]->a_Position->position
+			<=>
+			$overlaps_between_contained_clones_and_container{$b->accession}->[0]->a_Position->position
+		} @contained_clones_overlapping_container;
+	
+		if($container_clone->strand == -1) {
+			@sorted_contained_clones = reverse @sorted_contained_clones;
+		}
+	
+		# Now splice in those clones which overlap other contained clones
+		## COME BACK TO IMPLEMENTING THIS!!!
+	}	
+	# END SKIPPED SECTION
+
+	# Now go through the contained clones and process them one by one
+	my $clone = $container_clone;
+	my $contained_clone_overlap;
+	CONTAINED_CLONE: for my $i (0 .. $#contained_clones) {
+
+		# Get overlaps (if any) between the present clone and the container
+		my @overlaps = Hum::SequenceOverlap
+           ->fetch_contained_by_SequenceInfo_pair($container_tpf_clone->SequenceInfo, $contained_clones[$i]->SequenceInfo);						
+		
+		# The overlap that we use depends upon the strand of the container clone
+		if($container_clone->strand == 1) {
+			@overlaps = sort {$a->a_Position->position <=> $b->a_Position->position} @overlaps;
+		}
+		else {
+			@overlaps = sort {$b->a_Position->position <=> $a->a_Position->position} @overlaps;
+		}
+		
+		# Initially check for an overlap between the two successive clones
+		# This will have been obtained in a previous loop
+		my $first_overlap;
+		if(defined($contained_clone_overlap)) {
+			$first_overlap = $contained_clone_overlap;
+			$contained_clone_overlap = undef;
+		}
+
+		if(!defined($first_overlap)) {
+			# Otherwise, use the overlap with the container
+			# Note that this also copes with the scenario where only one overlap with
+			# the container clone exists
+			if(scalar @overlaps == 0) {
+				my $join_err = "Cannot find overlap between container clone " . $container_tpf_clone->accession;
+				for my $j ($i .. $#contained_clones) {
+					$join_err .= " and contained clone " . $contained_clones[$j]->accession;
+				}
+				$join_err .= "\n";
+				$clone->join_error($join_err);
+				print STDERR $join_err if $verbose;
+				last CONTAINED_CLONE;
+			}
+			$first_overlap = $overlaps[0];
+		}
+		# If there is neither an overlap between the contained clones
+		# or between them and their container, throw a wobbly
+		if(!defined($first_overlap)) {
+			my $join_err = "Cannot find overlap between container clone " . $container_tpf_clone->accession;
+			for my $j ($i .. $#contained_clones) {
+				$join_err .= " and contained clone " . $contained_clones[$j]->accession;
+			}
+			$join_err .= "\n";
+			$clone->join_error($join_err);
+			print STDERR $join_err if $verbose;
+			last CONTAINED_CLONE;
+		}
+		
+		# Use the first overlap to specify the ending of the current clone
+		my $pa = $first_overlap->a_Position;
+        if ($pa->is_3prime and $clone->strand == 1) {
+            $clone->seq_end($pa->position);
+		}
+		elsif (!$pa->is_3prime and $clone->strand == -1) {
+            $clone->seq_start($pa->position);
+        }
+        # If the 5'/3' settings of the overlap are inconsistent with the clone orientation,
+        # then throw an error
+        else {
+        	my $join_err = "Orientation and overlap information are inconsistent for container clone " . $container_tpf_clone->accession;
+			for my $j ($i .. $#contained_clones) {
+				$join_err .= " and contained clone " . $contained_clones[$j]->accession;
+			}
+			$join_err .= "\n";
+			$clone->join_error($join_err);
+			print STDERR $join_err if $verbose;
+			last CONTAINED_CLONE;
+        }
+        
+        # Now move on to the start of the next clone
+        my $pb = $first_overlap->b_Position;
+		$clone = $self->new_Clone_from_tpf_Clone($contained_clones[$i]);
+		
+		# Now specify the position and orientation of the second clone
+		if($pb->is_3prime) {
+			$clone->seq_end($pb->position);
+			$clone->strand(-1);
+		}
+		else {
+			$clone->seq_start($pb->position);
+			$clone->strand(1);
+		}
+
+		# Does this clone have an overlap with the subsequent contained clone?
+		if($i < $#contained_clones) {
+			$contained_clone_overlap = Hum::SequenceOverlap
+	            ->fetch_by_SequenceInfo_pair($contained_clones[$i]->SequenceInfo, $contained_clones[$i+1]->SequenceInfo);
+		}
+
+		# If there's no overlap with a subsequent contained clone,
+		# create a pseudo-clone corresponding to the container clone,
+		# and use it as the "clone"
+		if(!defined($contained_clone_overlap)) {
+			# Use the last of the overlaps with the container
+			if(scalar @overlaps == 0) {
+				croak "Cannot find overlap between container clone " . $container_tpf_clone->accession . " and contained clone " . $contained_clones[$i]->accession . "\n";
+			}
+			
+			# Finish up the contained clone
+			$clone = $self->check_for_contained_clones($clone, $contained_clones[$i]);
+			if($clone->strand == 1) {
+				$clone->seq_end($overlaps[-1]->b_Position->position);
+			}
+			else {
+				$clone->seq_start($overlaps[-1]->b_Position->position);
+			}
+			
+			# Return to the container
+			$clone = $self->new_Clone_from_tpf_Clone($container_tpf_clone);
+			$clone->strand($container_clone->strand);
+			if($clone->strand == 1) {
+				$clone->seq_start($overlaps[-1]->a_Position->position);
+			}
+			else {
+				$clone->seq_end($overlaps[-1]->a_Position->position);
+			}
+		}
+		
+	}
+
+	return $clone;
+
+}
+
+sub check_for_contained_clones {
+	my ($self, $clone, $tpf_clone) = @_;
+
+	my @contained_clones = $tpf_clone->get_contained_clones;
+	if(scalar @contained_clones > 0) {	
+		return $self->_process_contained_contig($clone, $tpf_clone);
+	}
+	else {
+		return $clone;
+	}
 }
 
 sub insert_missing_overlap_pad {

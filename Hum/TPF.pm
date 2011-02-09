@@ -248,6 +248,7 @@ sub _express_fetch_TPF_Rows {
 
     my $sql = q{
         SELECT r.rank
+		  , r.remark
           , s.accession
           , s.id_sequence
         FROM tpf_row r
@@ -262,8 +263,12 @@ sub _express_fetch_TPF_Rows {
     #warn $sql;
     my $sth = prepare_cached_track_statement($sql);
     $sth->execute($db_id);
-    my( $clone_rank, $acc, $current_seq_id );
-    $sth->bind_columns(\$clone_rank, \$acc, \$current_seq_id);
+    my( $clone_rank, $remark, $acc, $current_seq_id );
+    $sth->bind_columns(\$clone_rank, \$remark, \$acc, \$current_seq_id);
+
+	# Keep track of clones by name so you can add contained clones to their container
+	my %clone_for_accession;
+	my %contained_by_container_accession;
 
     my $rank = 1;
     while ($sth->fetch) {
@@ -287,7 +292,15 @@ sub _express_fetch_TPF_Rows {
             $clone->intl_clone_name('?');
         }
 
+		# If the clone is contained, store a note of this
+		# so we can put the clones together once all clones have been loaded
+		if(defined($remark) and $remark =~ /CONTAINED\s+(\S+)/) {
+			my $container_accession = $1;
+			push(@{$contained_by_container_accession{$container_accession}}, $clone);
+		}
+
         $self->add_Row($clone);
+		$clone_for_accession{$acc} = $clone;
         $rank++;
     }
 
@@ -296,6 +309,22 @@ sub _express_fetch_TPF_Rows {
         $self->add_Row($gap);
         $rank++;
     }
+
+	# Add contained clones to their containers
+	# and containers to the contained clones
+	# This happens at the end to allow for the possibility of contained clones
+	# that are in the TPF before their containers
+	foreach my $container_accession (keys %contained_by_container_accession) {
+		foreach my $clone (@{$contained_by_container_accession{$container_accession}}) {
+			if(exists($clone_for_accession{$container_accession})) {
+				$clone->container_clone($clone_for_accession{$container_accession});
+				$clone_for_accession{$container_accession}->add_contained_clone($clone);
+			}
+			else {
+				carp("Cannot identify container clone $container_accession for contained clone " . $clone->accession . "\n");
+			}
+		}
+	}
 
     return $self;
 }
@@ -408,6 +437,20 @@ sub fetch_all_Rows {
 
     return @{$self->{'_rows'}};
 }
+
+sub fetch_non_contained_Rows {
+    my( $self ) = @_;
+
+	my @non_contained_rows;
+	foreach my $row (@{$self->{'_rows'}}) {
+		if($row->is_gap or not defined($row->container_clone)) {
+			push(@non_contained_rows, $row);
+		}
+	}
+	
+	return @non_contained_rows;
+}
+
 
 sub string {
     my( $self ) = @_;

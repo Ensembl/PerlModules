@@ -4,7 +4,7 @@ package Hum::EMBL::Utils;
 use Carp;
 use strict;
 use warnings;
-use Time::Local qw( timelocal );
+use POSIX ();
 
 use Exporter;
 use vars qw( @ISA @EXPORT_OK );
@@ -27,7 +27,7 @@ BEGIN {
         my( $mday, $mon, $year ) = split /-/, $embl;
         $year -= 1900;
         $mon = $months{ $mon };
-        return timelocal( 0, 0, 0, $mday, $mon, $year );
+        return POSIX::mktime( 0, 0, 0, $mday, $mon, $year );
     }
 
     # Convert unix time int to EMBL date

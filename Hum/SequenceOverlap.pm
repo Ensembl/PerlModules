@@ -15,6 +15,12 @@ sub new {
     return bless {}, $pkg;
 }
 
+sub fetch_contained_by_SequenceInfo_pair {
+    my ($pkg, $seq_a, $seq_b) = @_;
+
+    return $pkg->_generic_fetch_contained($seq_a, $seq_b, ' AND s.id_status != 3 ');
+}
+
 sub fetch_by_SequenceInfo_pair {
     my ($pkg, $seq_a, $seq_b) = @_;
 
@@ -101,6 +107,88 @@ sub _generic_fetch {
 
     return $self;
 }
+
+sub _generic_fetch_contained {
+    my ($pkg, $seq_a, $seq_b, $where_clause) = @_;
+
+    confess "Need two SequenceInfo objects, but got '$seq_a' and '$seq_b'"
+      unless $seq_a and $seq_b;
+
+    my $sth = track_db->prepare_cached(
+        qq{
+        SELECT oa.position
+          , oa.is_3prime
+          , oa.dovetail_length
+          , ob.position
+          , ob.is_3prime
+          , ob.dovetail_length
+          , o.id_overlap
+          , o.length
+          , o.id_source
+          , o.pct_substitutions
+          , o.pct_insertions
+          , o.pct_deletions
+          , s.id_status
+          , s.remark
+          , s.program
+          , s.operator
+          , to_char(s.statusdate, 'yyyy-mm-dd')
+        FROM sequence_overlap oa
+          , overlap o
+          , sequence_overlap ob
+          , overlap_status s
+        WHERE oa.id_overlap = o.id_overlap
+          AND o.id_overlap = ob.id_overlap
+          AND o.id_overlap = s.id_overlap
+          AND s.iscurrent = 1
+          AND oa.id_sequence = ?
+          AND ob.id_sequence = ?
+          $where_clause
+        }
+    );
+    $sth->execute($seq_a->db_id, $seq_b->db_id);
+
+	my @overlaps;
+	while(
+	    my (
+	        $a_pos,      $a_is3prime, $a_dovetail, $b_pos,    $b_is3prime, $b_dovetail,
+	        $overlap_id, $length,     $source_id,  $sub,      $ins,        $del,
+	        $status,     $remark,     $program,    $operator, $statusdate
+	    ) = $sth->fetchrow
+	) {
+
+    	return unless $overlap_id;
+
+	    my $self = $pkg->new;
+	    $self->db_id($overlap_id);
+	    $self->overlap_length($length);
+	    $self->source_name($self->name_from_source_id($source_id));
+	    $self->percent_substitution($sub);
+	    $self->percent_insertion($ins);
+	    $self->percent_deletion($del);
+	    $self->status_id($status);
+	    $self->remark($remark);
+	    $self->program($program       || '');
+	    $self->operator($operator     || '');
+	    $self->statusdate($statusdate || '');
+	
+	    my ($pa, $pb) = $self->make_new_Position_objects;
+	    $pa->position($a_pos);
+	    $pa->is_3prime($a_is3prime);
+	    $pa->dovetail_length($a_dovetail);
+	    $pa->SequenceInfo($seq_a);
+	    $pb->position($b_pos);
+	    $pb->is_3prime($b_is3prime);
+	    $pb->dovetail_length($b_dovetail);
+	    $pb->SequenceInfo($seq_b);
+	    push(@overlaps, $self);
+	}
+
+    $sth->finish;
+
+    return @overlaps;
+}
+
 
 # This doesn't fetch the Overlap::Position objects, so is it any use?
 sub fetch_by_db_id {
@@ -520,6 +608,34 @@ sub store_if_new {
         }
     }
 
+    $self->store;
+    return 1;
+}
+
+# This only stores the overlap if it is different
+# to the one in the database, or if there isn't
+# one in the database.
+sub store_if_new_without_deletion {
+    my ($self) = @_;
+
+    my $inf_a = $self->a_Position->SequenceInfo;
+    my $inf_b = $self->b_Position->SequenceInfo;
+
+    # If there is an existing overlap, is it
+    # identical to the new coordinates?
+	# This will only be called where there are multiple overlaps,
+	# so it's pertinent to look up on the assumption of contained clones
+    my @old_overlaps = Hum::SequenceOverlap->fetch_contained_by_SequenceInfo_pair($inf_a, $inf_b);
+
+    foreach my $old (@old_overlaps) {
+        if ($self->matches($old)) {
+
+            # Coordinates are identical to existing overlap
+            return 0;
+        }
+    }
+
+	print "Storing\n";
     $self->store;
     return 1;
 }

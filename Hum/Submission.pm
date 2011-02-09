@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use DBI;
 use Carp;
-use Time::Local qw( timelocal );
+use POSIX ();
 use Exporter;
 use vars qw( @ISA @EXPORT_OK );
 use Net::Netrc;
@@ -301,7 +301,7 @@ sub is_dumped {
           or confess "Can't parse acedb time string '$acetime'";
         $year -= 1900;
         $mon--;
-        return timelocal($sec, $min, $hour, $mday, $mon, $year);
+        return POSIX::mktime($sec, $min, $hour, $mday, $mon, $year);
     }
 
 =head2 acetime
@@ -373,7 +373,7 @@ a time string as input, or defaulting to current time.
           or confess "Can't parse '$mydate'";
         $year -= 1900;
         $mon  -= 1;
-        return timelocal(0, 0, 0, $mday, $mon, $year);
+        return POSIX::mktime(0, 0, 0, $mday, $mon, $year);
     }
 
     # Convert unix time int to MySQL datetime
@@ -399,7 +399,7 @@ a time string as input, or defaulting to current time.
           or confess "Can't parse '$mydatetime'";
         $year -= 1900;
         $mon  -= 1;
-        return timelocal($sec, $min, $hour, $mday, $mon, $year);
+        return POSIX::mktime($sec, $min, $hour, $mday, $mon, $year);
     }
 
     my (%months);

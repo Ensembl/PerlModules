@@ -14,6 +14,39 @@ use Hum::Tracking qw{
 use Hum::Submission 'prepare_statement';
 use Hum::SequenceInfo;
 
+sub container_clone {
+	my ($self, $container_clone) = @_;
+	
+    if ($container_clone) {
+    	$self->{'_container_clone'} = $container_clone;
+    }
+	if(exists($self->{'_container_clone'})) {
+	    return $self->{'_container_clone'};
+	}
+	else {
+		return undef;
+	}
+}
+
+sub add_contained_clone {
+	my ($self, $contained_clone) = @_;
+	
+	push(@{$self->{'_contained_clones'}}, $contained_clone);
+	
+	return;
+}
+
+sub get_contained_clones {
+	my ($self) = @_;
+		
+	if(exists($self->{'_contained_clones'}) and ref($self->{'_contained_clones'}) eq 'ARRAY') {
+	    return @{$self->{'_contained_clones'}};
+	}
+	else {
+		return ();
+	}
+}
+
 sub accession {
     my( $self, $accession ) = @_;
     

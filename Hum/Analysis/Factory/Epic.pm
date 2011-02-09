@@ -13,7 +13,19 @@ use Cwd;
 sub new {
     my ($pkg) = @_;
 
-    return bless {}, $pkg;
+	my $self = {
+		'_dovetail_threshold' => 400,
+	};
+
+    return bless $self, $pkg;
+}
+
+sub set_contained_mode {
+	my ($self) = @_;	
+	
+	$self->{'_dovetail_threshold'} = 1000000;
+	
+	return;
 }
 
 sub run {
@@ -41,7 +53,7 @@ sub make_command_pipe {
     # my $cmd_pipe = "cd $dir; /software/grit/bin/epic.pl -Bac $query_file $subject_file 2>/dev/null |";
 
     # my $cmd_pipe = "cd $dir; epic.pl -Bac $query_file $subject_file 2>/dev/null |";
-    my $cmd_pipe = "cd $dir; epic.pl -Bac $query_file $subject_file |";
+    my $cmd_pipe = "cd $dir; epic.pl -Bac -D $self->{_dovetail_threshold} $query_file $subject_file |";
     # warn "Running: $cmd_pipe";
     return $cmd_pipe;
 }
