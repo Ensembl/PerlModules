@@ -547,15 +547,17 @@ sub order_contigs {
         next unless (exists($contig_lengths{$contig}));
         my $clen = $contig_lengths{$contig};
 
-        if ($reverse) {
-            if ($ce < $insert_size) {
-                $overhanging_templates{$template}->{$contig} =
-                    [$read, 'L', $ce, $insert_size - $ce];
-            }
-        } else {
-            if (($clen - $cs) < $insert_size) {
-                $overhanging_templates{$template}->{$contig} =
-                    [$read, 'R', $clen - $cs, $insert_size - ($clen - $cs)];
+        if ($insert_size) {
+            if ($reverse) {
+                if ($ce < $insert_size) {
+                    $overhanging_templates{$template}->{$contig} =
+                        [$read, 'L', $ce, $insert_size - $ce];
+                }
+            } else {
+                if (($clen - $cs) < $insert_size) {
+                    $overhanging_templates{$template}->{$contig} =
+                        [$read, 'R', $clen - $cs, $insert_size - ($clen - $cs)];
+                }
             }
         }
     }
