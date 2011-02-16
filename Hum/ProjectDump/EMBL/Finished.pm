@@ -274,9 +274,16 @@ submitted.',
         $seq_cen->list($pdmp->seq_center_lines, '--------------');
         $embl->newXX;
 
-        # no standard blurb for PCRs
-        return if ($pdmp->clone_type eq 'PCR product');
-        
+        # no standard blurb for PCRs, only single sentences
+        if ($pdmp->clone_type eq 'PCR product') {
+            if ($pdmp->seq_reason eq 'PCR_correction') {
+                @std = "This PCR was performed to audit a questionable region.";    
+            }
+            elsif ($pdmp->seq_reason eq 'Gap closure') {
+                @std = "This PCR was performed to close a gap between HTG clones in the reference genome.";
+            }
+        }
+
         # Add the standard headers
         foreach my $t ($pdmp->is_pool == 1 ? @pooled_std:@std) {
             my $cc = $embl->newCC;
