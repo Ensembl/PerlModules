@@ -277,7 +277,7 @@ submitted.',
         # no standard blurb for PCRs, only single sentences
         if ($pdmp->clone_type eq 'PCR product') {
             if ($pdmp->seq_reason eq 'PCR_correction') {
-                @std = "This PCR was performed to audit a questionable region.";    
+                @std = "This PCR was performed to audit a questionable region in the reference genome sequence.";    
             }
             elsif ($pdmp->seq_reason eq 'Gap closure') {
                 @std = "This PCR was performed to close a gap between HTG clones in the reference genome.";
