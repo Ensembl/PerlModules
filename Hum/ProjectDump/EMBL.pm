@@ -398,7 +398,7 @@ sub add_FT_entries {
         5  => ['Center: Wellcome Trust Sanger Institute',
                'Center code: SC',
                'Web site: http://www.sanger.ac.uk',
-               'Contact: vega@sanger.ac.uk',],
+               'Contact: grc-help@sanger.ac.uk',],
         57 => ['Center: UK Medical Research Council',
                'Center code: UK-MRC',
                'Web site: http://mrcseq.har.mrc.ac.uk',],  # contact is removed as it became obsolete
@@ -420,9 +420,9 @@ sub add_FT_entries {
             @$genome_center_lines,
             );
         
-        if ($pdmp->species eq 'Zebrafish') {
-            $seq_center[4] =~ s/vega/zfish-help/;
-        }
+        #if ($pdmp->species eq 'Zebrafish') {
+        #    $seq_center[4] =~ s/grc-help/zfish-help/;
+        #}
         
         return @seq_center;
     }
