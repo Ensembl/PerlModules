@@ -197,7 +197,8 @@ sub add_Reference {
         my $date = EMBLdate();
         my $species = $pdmp->species;
 
-        my $query_email  = 'vega';
+        my $query_email  = 'grc-help';
+        # my $query_email  = 'vega'; is now obsolete
         # clonerequest@sanger.ac.uk' is now obsolete
         my $clonerequest = qq{Geneservice (http://www.geneservice.co.uk/) and BACPAC Resources (http://bacpac.chori.org/)};
         if ($species eq 'Zebrafish') {
