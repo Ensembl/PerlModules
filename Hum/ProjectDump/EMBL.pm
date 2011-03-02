@@ -202,7 +202,7 @@ sub add_Reference {
         # clonerequest@sanger.ac.uk' is now obsolete
         my $clonerequest = qq{Geneservice (http://www.geneservice.co.uk/) and BACPAC Resources (http://bacpac.chori.org/)};
         if ($species eq 'Zebrafish') {
-            $query_email  = 'zfish-help';
+#            $query_email  = 'zfish-help'; # see above
             $clonerequest = "http://www.sanger.ac.uk/Projects/D_rerio/faqs.shtml#dataeight";
         }
 
