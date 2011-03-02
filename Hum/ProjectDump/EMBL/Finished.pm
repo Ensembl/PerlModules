@@ -229,11 +229,12 @@ sub add_extra_CC {
 
 'This sequence was finished as follows unless otherwise noted: all regions were either double-stranded or sequenced with an alternate chemistry or covered by high quality data (i.e., phred quality >= 30); an attempt was made to resolve all sequencing problems, such as compressions and repeats; all regions were covered by at least one subclone; and the assembly was confirmed by restriction digest, except on the rare occasion of the clone being a YAC.',
 
-'The following abbreviations are used to associate primary accession
-numbers given in the feature table with their source databases:
-Em:, EMBL; Sw:, SWISSPROT; Tr:, TREMBL; Wp:, WORMPEP;
-Information on the WORMPEP database can be found at
-http://www.sanger.ac.uk/Projects/C_elegans/wormpep');
+'The following abbreviations are used to associate primary accession numbers given in the feature table with their source databases: '.
+'Em:, EMBL; Sw:, SWISSPROT; Tr:, TREMBL; Wp:, WORMPEP; '.
+'Information on the WORMPEP database can be found at '.
+'http://www.sanger.ac.uk/Projects/C_elegans/wormpep)'
+  );
+  
   my @pooled_std = (
     ['This sequence was finished to the internationally agreed',
      ' standards (PMID: 19815760) unless otherwise noted; and the assembly was confirmed by restriction digest.']
@@ -241,10 +242,10 @@ http://www.sanger.ac.uk/Projects/C_elegans/wormpep');
   
 
     my @zfish_specific = (
-'Clone-derived Zebrafish pUC subclones occasionally display inconsistency
-over the length of mononucleotide A/T runs and conserved TA repeats.
-Where this is found the longest good quality representation will be
-submitted.',
+'Clone-derived Zebrafish pUC subclones occasionally display inconsistency '.
+'over the length of mononucleotide A/T runs and conserved TA repeats.'.
+'Where this is found the longest good quality representation will be '.
+'submitted.',
 
 'Any regions longer than 1kb tagged as misc-feature "unsure" are part of'.
 ' a tandem repeat of more than 10kb in length where it has not been possible'.
