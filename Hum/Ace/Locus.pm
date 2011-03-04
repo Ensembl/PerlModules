@@ -7,9 +7,6 @@ use strict;
 use warnings;
 use Carp qw{ confess cluck };
 
-use Bio::EnsEMBL::Exon;
-use Bio::EnsEMBL::Translation;
-
 sub new {
     my( $pkg ) = shift;
     

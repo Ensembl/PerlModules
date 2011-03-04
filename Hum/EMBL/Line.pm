@@ -154,6 +154,8 @@ sub data {
     return $line->{'_data'};
 }
 
+
+
 {
     my $max   = 75;         # Maximum length for a line
     my $limit = $max - 1;
@@ -161,11 +163,13 @@ sub data {
     sub wrap {
         my( $line, $prefix, $text ) = @_;
 
+        # Test for a string longer than $max which can't be split on spaces
+        confess "String '$1' too long to wrap"
+            if $text =~ /(\S\S{$max,})/o;
+
         my( @lines );
-        while ($text =~ /\s?\b(.{0,$limit}\S?)\b(\W?)/g) {
-          next if $1 eq '';
-          next if $2 eq "\n";
-          push( @lines, "$prefix$1$2\n" );
+        while ($text =~ /(.{0,$limit}\S)(\s+|$)/og) {
+            push( @lines, "$prefix$1\n" );
         }
 
         return @lines;
