@@ -1713,7 +1713,13 @@ sub zmap_create_xml_string {
         });
     }
 
-    if ($self->translation_region_is_set) {
+    my $is_pseudo = 0;
+    if (my $meth = $self->GeneMethod) {
+        # We set a CDS in pseudogene transcripts so that
+        # it can be inspected in zmap.
+        $is_pseudo = $meth->name =~ /pseudo/i;
+    }
+    if ($is_pseudo or $self->translation_region_is_set) {
         my @tr = $self->translation_region;
         $xml->full_tag('subfeature', {
             ontology    => 'cds',
