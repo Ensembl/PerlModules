@@ -3,7 +3,6 @@
 use strict;
 use warnings;
 
-use FindBin;
 use lib "${ENV{TEAM_TOOLS}}/t/tlib";
 use CriticModule (-severity => 4);
 
