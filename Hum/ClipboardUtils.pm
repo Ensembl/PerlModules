@@ -13,6 +13,7 @@ our @EXPORT_OK = qw{
     integers_from_text
     evidence_type_and_name_from_text
     $magic_evi_name_matcher
+    magic_evi_name_match
     };
 
 our $magic_evi_name_matcher = qr{
@@ -85,12 +86,36 @@ sub integers_from_text {
 
         unless (@ints = $text =~ /^\S+\s+$posn_int\s+$posn_int\s+\(\d+\)/mg) {
             # or just get all the integers
-            @ints = grep !/\./, $text =~ /\b([\.\d]+)\b/g;
+            @ints = grep { !/\./ } $text =~ /\b([\.\d]+)\b/g;
         }
     }
     return @ints;
 }
 
+# Returns (prefix, accession, sv, accession-without-splice-variant, splice-variant)
+# NB prefix, sv and splice-variant are numeric, NOT decorated with ':', '.' or '-' respectively
+#
+# Used by mg13's vega evidence script (not checked in as of 14/03/2011).
+# Tested by PerlModules/t/HumClipboardUtils.t
+#
+sub magic_evi_name_match {
+    my $text = shift;
+
+    my ($prefix, $acc_only, $splv, $sv) = ($text =~ /
+                                                     ^\s*                      # Optional leading whitespace
+                                                     ${magic_evi_name_matcher} # see above
+                                                     \s*$                      # Optional trailing whitespace
+                                                    /ox);
+
+    $prefix =~ s/:$//  if $prefix; # trim trailing :
+    $splv   =~ s/^-//  if $splv;   # trim leading -
+    $sv     =~ s/^\.// if $sv;     # trim leading .
+
+    my $acc = $acc_only;
+    $acc .= "-$splv" if $splv;
+
+    return ($prefix, $acc, $sv, $acc_only, $splv);
+}
 
 1;
 
