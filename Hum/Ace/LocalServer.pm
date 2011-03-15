@@ -182,6 +182,7 @@ sub save_ace {
     } else {
         # Make sure that changes to acedb are saved to disk
         my $save_msg = $ace->raw_query('save -regain');
+        $save_msg =~ s/\0//g;
         print STDERR $save_msg;
         if ($save_msg =~ /sorry|error|keyword/i) {
             confess "Error from sgifaceserver save: $save_msg";
