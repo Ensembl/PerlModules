@@ -109,7 +109,7 @@ sub sanger_clone_name {
     } else {
         unless ($clone = $self->{'_sanger_clone_name'}) {
             my $intl = $self->intl_clone_name;
-            if (! $intl or $intl =~ /Multiple/) {
+            if (! $intl or $intl =~ /Multiple/i) {
                 # We use the accession as the clone name where
                 # intl = '?' or where it is "Multiple"
                 return $self->accession;
