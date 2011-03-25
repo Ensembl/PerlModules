@@ -24,7 +24,7 @@ our $magic_evi_name_matcher = qr{
         |                 # or, for TrEMBL,
         [A-Z]\d[A-Z\d]{4} # a capital letter, a digit, then 4 letters or digits.
     )
-    (\-\d+)?              # Optional VARSPLICE suffix
+    (\-\d+)?              # Optional VARSPLICE suffix found on Uniprot isoforms
     (\.\d+)?              # Optional .SV
 }x;
 
@@ -44,10 +44,13 @@ sub accessions_from_text {
     my ($text) = @_;
 
     my (%seen, @acc);
-    while ($text =~ /($magic_evi_name_matcher)/g) {
-        unless ($seen{$1}) {
-            $seen{$1} = 1;
-            push @acc, $1;
+    while ($text =~ /$magic_evi_name_matcher/g) {
+        # Strip out the prefix
+        my ($acc, $isoform, $sv) = ($2, $3, $4);
+        my $name = join('', $acc, $isoform || '', $sv || '');
+        unless ($seen{$name}) {
+            $seen{$name} = 1;
+            push @acc, $name;
         }
     }
     return @acc;
