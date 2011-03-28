@@ -38,7 +38,7 @@ my %type_phase = (
     'A' => 2,
     'P' => 2,
     'F' => 3,
-#	'O' => 3,
+	'O' => 3,
     );
 
 sub parse {
