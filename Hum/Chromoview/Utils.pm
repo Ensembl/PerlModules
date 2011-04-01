@@ -44,6 +44,7 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
                 get_seq_len_by_acc_sv
                 get_species_chr_subregion_from_id_tpftarget
                 get_yyyymmdd
+				google_analytics
                 make_hmenus
                 make_search_box
                 make_table_row
@@ -51,7 +52,28 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
                 store_failed_overlap_pairs
                 unixtime2YYYYMMDD
                 unixtime2datetime
+                unixtime2tpftime
                );
+			   
+sub google_analytics {
+
+	my $google_code = <<BLOCK;
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-22455456-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+BLOCK
+
+	return $google_code;
+
+}
 
 sub is_local {
 	if($ENV{HTTP_CLIENTREALM} =~/sanger/) {
@@ -375,6 +397,27 @@ sub unixtime2datetime {
               join(':', ( sprintf("%02d",$h), sprintf("%02d",$min), sprintf("%02d",$s)) );
 }
 
+sub unixtime2tpftime {
+  my $time = shift;
+  my @t = localtime($time);
+  #  0    1    2     3     4    5     6     7     8
+  # ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)
+
+  my ($s, $min, $h, $d, $m, $y) = @t[0..5];
+
+  my @months = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
+  my $daypart;
+  if($h > 12) {
+  	$h -= 12;
+  	$daypart = 'PM';
+  }
+  else {
+  	$daypart = 'AM';
+  }
+
+  return sprintf("%s %2d %s %2d:%02d%s", $months[$m], $d, $y+1900, $h, $min, $daypart);
+
+}
 
 sub get_DNA_from_ftpghost {
   my ($acc ) = @_;
