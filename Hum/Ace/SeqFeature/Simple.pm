@@ -55,24 +55,17 @@ sub ace_string {
 }
 
 sub zmap_xml_feature_tag {
-    my ($self) = @_;
+    my ($self, $offset) = @_;
+    
+    $offset ||= 0;
     
     return sprintf qq{<feature name="%s" start="%d" end="%d" strand="%s" style="%s" score="%.3f"></feature>\n},
         $self->method_name,
-        $self->seq_start,
-        $self->seq_end,
+        $offset + $self->seq_start,
+        $offset + $self->seq_end,
         $self->seq_strand == -1 ? '-' : '+',
         $self->Method->style_name,
         $self->score;
-
-    # This will be how it works in the future:
-    # return sprintf qq{<feature id="Sequence|%s|Feature" object_name="%s" start="%d" end="%d" strand="%s" score="%.3f" remark="%s" />\n},
-    #     $self->seq_name,
-    #     $self->seq_start,
-    #     $self->seq_end,
-    #     $self->seq_strand == -1 ? '-' : '+',
-    #     $self->score,
-    #     $self->text;
 }
 
 

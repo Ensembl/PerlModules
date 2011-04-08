@@ -1666,7 +1666,7 @@ sub zmap_featureset_name {
 }
 
 sub zmap_delete_xml_string {
-    my ($self) = @_;
+    my ($self, $offset) = @_;
 
     my $xml = Hum::XmlWriter->new;
     $xml->open_tag('zmap');
@@ -1674,13 +1674,15 @@ sub zmap_delete_xml_string {
     $xml->open_tag('align');
     $xml->open_tag('block');
     $xml->open_tag('featureset', {name => $self->zmap_featureset_name});
-    $self->zmap_xml_feature_tag($xml);
+    $self->zmap_xml_feature_tag($xml, $offset);
     $xml->close_all_open_tags;
     return $xml->flush;
 }
 
 sub zmap_create_xml_string {
-    my ($self) = @_;
+    my ($self, $offset) = @_;
+
+    $offset ||= 0;
 
     ### featureset tag will require "align" and "block" attributes
     ### if there is more than one in the Zmap. Can probably be
@@ -1691,7 +1693,7 @@ sub zmap_create_xml_string {
     $xml->open_tag('align');
     $xml->open_tag('block');
     $xml->open_tag('featureset', {name => $self->zmap_featureset_name});
-    $self->zmap_xml_feature_tag($xml);
+    $self->zmap_xml_feature_tag($xml, $offset);
 
     my @exons = $self->get_all_Exons
         or confess "No exons";
@@ -1702,14 +1704,14 @@ sub zmap_create_xml_string {
             my $pex = $exons[$i - 1];
             $xml->full_tag('subfeature', {
                 ontology    => 'intron',
-                start       => $pex->end + 1,
-                end         => $ex->start - 1,
+                start       => $offset + $pex->end + 1,
+                end         => $offset + $ex->start - 1,
             });
         }
         $xml->full_tag('subfeature', {
             ontology    => 'exon',
-            start       => $ex->start,
-            end         => $ex->end,
+            start       => $offset + $ex->start,
+            end         => $offset + $ex->end,
         });
     }
 
@@ -1723,8 +1725,8 @@ sub zmap_create_xml_string {
         my @tr = $self->translation_region;
         $xml->full_tag('subfeature', {
             ontology    => 'cds',
-            start       => $tr[0],
-            end         => $tr[1],
+            start       => $offset + $tr[0],
+            end         => $offset + $tr[1],
         });
     }
 
@@ -1733,7 +1735,9 @@ sub zmap_create_xml_string {
 }
 
 sub zmap_xml_feature_tag {
-    my ($self, $xml) = @_;
+    my ($self, $xml, $offset) = @_;
+
+    $offset ||= 0;
 
     #my $style = $self->GeneMethod->style_name;
     
@@ -1753,8 +1757,8 @@ sub zmap_xml_feature_tag {
     my $snf = $self->start_not_found;
     $xml->open_tag('feature', {
             name            => $self->name,
-            start           => $self->start,
-            end             => $self->end,
+            start           => $offset + $self->start,
+            end             => $offset + $self->end,
             strand          => $self->strand == -1 ? '-' : '+',
             #style           => $style, # XXX: we shouldn't need the style as this can be established from the featureset name
             start_not_found => $snf ? $snf : 'false',
