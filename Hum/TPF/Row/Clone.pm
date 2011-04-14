@@ -215,6 +215,27 @@ sub sanger_library_name {
     }
 }
 
+sub project_status_history_includes {
+    my ($self, @accept_status) = @_;
+    # Joined through clone_project.  Used for QC status check.
+
+    my $placeholders = # e.g. '?,?,?'
+      join ',', ('?') x @accept_status;
+    my $sth = prepare_cached_track_statement(qq{
+        SELECT cp.*, statusdate
+        FROM project_status ps, clone_project cp
+        WHERE ps.projectname = cp.projectname
+        AND cp.clonename = ?
+        AND status in ($placeholders)
+        /* nb. no test for ps.iscurrent=1 */
+    });
+    $sth->execute(scalar $self->sanger_clone_name, @accept_status);
+    my $rows = $sth->fetchall_arrayref;
+# use YAML; warn Dump({ scalar $self->sanger_clone_name, $rows });
+    return @$rows ? 1 : 0;
+}
+
+
 sub contig_name {
     my( $self, $contig_name ) = @_;
     

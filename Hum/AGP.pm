@@ -6,6 +6,12 @@ use strict;
 use warnings;
 use Carp;
 
+=head1 NAME - Hum::AGP
+
+=head1 METHODS
+
+=cut
+
 use Hum::AGP::Row::Clone;
 use Hum::AGP::Row::Gap;
 use Hum::SequenceOverlap;
@@ -18,6 +24,14 @@ sub new {
         }, $pkg;
 }
 
+
+=head2 min_htgs_phase
+
+Get/set the minimum High Throughput Genome Sequencing phase to let
+through.
+
+=cut
+
 sub min_htgs_phase {
     my( $self, $min_htgs_phase ) = @_;
 
@@ -29,6 +43,28 @@ sub min_htgs_phase {
         $self->{'_min_htgs_phase'} = $min_htgs_phase;
     }
     return $self->{'_min_htgs_phase'};
+}
+
+
+=head2 effective_min_htgs_phase
+
+Get the minimum C<SEQUENCE.ID_HTGSPHASE> to allow, taking into account
+L</min_htgs_phase> and L</allow_unfinished>.
+
+=cut
+
+# Trades some inefficiency for min_htgs_phase being a pure accessor.
+sub effective_min_htgs_phase {
+    my ($self) = @_;
+    my $min_phase  = $self->min_htgs_phase;
+    unless ($min_phase) {
+        if ($self->allow_unfinished) {
+            $min_phase = 1;
+        } else {
+            $min_phase = 2;
+        }
+    }
+    return $min_phase;
 }
 
 sub allow_unfinished {
@@ -48,6 +84,32 @@ sub allow_dovetails {
     }
     return $self->{'_allow_dovetails'};
 }
+
+
+=head2 accept_visited_project_statuses
+
+Get/set a list of C<project_status.status> ID values.  A project is
+acceptable if its status history includes any of these.
+
+Set to C<undef> to not check project_status.  This is the default.
+
+Returns a copy of the list, or C<undef> if no check should be
+performed.
+
+=cut
+
+sub accept_visited_project_statuses {
+    my $self = shift;
+    if (@_) {
+	my $ary = shift;
+	confess "accept_visited_project_statuses: Expected an ARRAY ref but got $ary"
+	  if defined $ary && ref($ary) ne 'ARRAY';
+	$self->{'_accept_visited_project_statuses'} = $ary;
+    }
+    my $list = $self->{'_accept_visited_project_statuses'};
+    return $list ? [ @$list ] : ();
+}
+
 
 sub missing_overlap_pad {
     my( $self, $overlap_pad ) = @_;
@@ -146,14 +208,7 @@ sub process_TPF {
 
     my @rows = $tpf->fetch_non_contained_Rows;
     my $contig = [];
-    my $min_phase  = $self->min_htgs_phase;
-    unless ($min_phase) {
-        if ($self->allow_unfinished) {
-            $min_phase = 1;
-        } else {
-            $min_phase = 2;
-        }
-    }
+
     for (my $i = 0; $i < @rows; $i++) {
         my $row = $rows[$i];
         if ($row->is_gap) {
@@ -163,27 +218,44 @@ sub process_TPF {
             $gap->chr_length($row->gap_length || $self->unknown_gap_length);
             $gap->set_remark_from_Gap($row);
         } else {
+	    my ($skip_gap, $skip_why);
+
             my $inf = $row->SequenceInfo;
             my $phase = $inf ? $inf->htgs_phase : 0;
-            if ($phase >= $min_phase) {
+            if ($phase < $self->effective_min_htgs_phase) {
+		$skip_gap = 50_000;
+		$skip_why = sprintf("Skipping HTGS_PHASE%d sequence '%s'\n",
+				    $phase, $row->sanger_clone_name);
+	    }
+	    elsif (my $statuses = $self->accept_visited_project_statuses) {
+		# We must do project-QC-like checks
+		unless ($row->project_status_history_includes(@$statuses)) {
+		    $skip_gap = 50_000;
+		    $skip_why = sprintf("Skipping sequence '%s', project_status does not include (%s)\n",
+					$row->sanger_clone_name, join " ", @$statuses);
+		}
+	    }
+
+	    unless ($skip_gap) {
+		# accept the row
                 push(@$contig, $row);
-            } else {
-                printf STDERR "Skipping HTGS_PHASE$phase sequence '%s'\n",
-                  $row->sanger_clone_name if $verbose;
-                $self->_process_contig($contig) if @$contig;
-                $contig = [];
-                my $gap = $self->new_Gap;
-                $gap->chr_length(50_000);
-                my $is_linked = 'yes';
-                if ($i == 0 or $i == $#rows  # We're the first or last row or
-                    or $rows[$i - 1]->is_gap # the previous row was a gap or
-                    or $rows[$i + 1]->is_gap # the next row is a gap.
-                    )
-                {
-                    $is_linked = 'no';
-                }
-                $gap->remark("clone\t$is_linked");
+		next;
             }
+
+	    printf STDERR $skip_why if $verbose;
+	    $self->_process_contig($contig) if @$contig;
+	    $contig = [];
+	    my $gap = $self->new_Gap;
+	    $gap->chr_length($skip_gap);
+	    my $is_linked = 'yes';
+	    if ($i == 0 or $i == $#rows  # We're the first or last row or
+		or $rows[$i - 1]->is_gap # the previous row was a gap or
+		or $rows[$i + 1]->is_gap # the next row is a gap.
+	       )
+	      {
+		  $is_linked = 'no';
+	      }
+	    $gap->remark("clone\t$is_linked");
         }
     }
 
@@ -587,8 +659,6 @@ sub string {
 1;
 
 __END__
-
-=head1 NAME - Hum::AGP
 
 =head1 AUTHOR
 
