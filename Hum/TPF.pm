@@ -709,6 +709,11 @@ __END__
 
 =head1 NAME - Hum::TPF
 
+=head1 SEE ALSO
+
+http://www.ncbi.nlm.nih.gov/projects/genome/assembly/grc/info/index.shtml
+for the TPF specification and diagrams of various types of overlap.
+
 =head1 AUTHOR
 
 James Gilbert B<email> jgrg@sanger.ac.uk
