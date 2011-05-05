@@ -153,7 +153,7 @@ sub check_for_crossmatch_errors_by_accSv {
 
   if ( my $err = $qry->fetchrow ){
     $err = $err eq 'c' ? 'Job terminated: crossmatch used up virtual memory set for finding end-overlap' : 
-                         'Error: end-overlap position lies outside sequence length';
+                         'No alignment found between clones';
     return $err;
   }
 }
