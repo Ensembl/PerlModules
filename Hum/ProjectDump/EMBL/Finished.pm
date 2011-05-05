@@ -246,6 +246,16 @@ Sw: SWISSPROT; Tr:, TREMBL.',
 restriction digest.',
     );
 
+    my @pig_std = (
+        'This sequence was finished as follows unless otherwise noted: all regions
+were covered by high quality data (i.e. phred quality data >= 30); an
+attempt was made to resolve all sequencing problems, such as compressions
+and repeats; all regions are covered by at least one subclone or data from
+direct sequencing of BAC DNA; and the assembly was confirmed by restriction
+digest. No attempt has been made to double-clone regions where the phred
+quality was > 30',
+    );
+
     my @zfish_specific = (
         'Clone-derived Zebrafish pUC subclones occasionally display inconsistency
 over the length of mononucleotide A/T runs and conserved TA repeats. Where
@@ -292,16 +302,22 @@ alone has only been used where it has a phred quality of at least 30.',
         # no standard blurb for PCRs, only single sentences
         if ($pdmp->clone_type eq 'PCR product') {
             if ($pdmp->seq_reason eq 'PCR_correction') {
-                @std = ("This PCR was performed to audit a questionable region in the reference genome sequence.");
+                @std = ('This PCR was performed to audit a questionable region in the reference genome sequence.');
             }
             elsif ($pdmp->seq_reason eq 'Gap closure') {
-                @std = ("This PCR was performed to close a gap between HTG clones in the reference genome.");
+                @std = ('This PCR was performed to close a gap between HTG clones in the reference genome.');
             }
+        }
+        elsif ($pdmp->is_pool == 1) {
+            @std = @pooled_std;
+        }
+        elsif ($pdmp->specific eq 'Pig') {
+            @std = @pig_std;
         }
 
         # Add the standard headers
         my $cc = $embl->newCC;
-        $cc->list($pdmp->is_pool == 1 ? @pooled_std : @std);
+        $cc->list(@std);
         $embl->newXX;
 
         if ($pdmp->is_pool == 1) {
