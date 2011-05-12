@@ -664,11 +664,15 @@ Returns the primer pair used for obtaining the PCR product with the given projec
               , p2.primerseq 
             FROM primer p1
               , primer p2
-              , pcr_product pp 
+              , pcr_product pp
+              , pcrproduct_status pps 
               , clone_project cp
             WHERE pp.primer_1 = p1.id_primer
               AND pp.primer_2 = p2.id_primer 
               AND pp.dna_source = cp.projectname 
+              AND pp.id_pcrproduct = pps.id_pcrproduct
+              AND pps.status = 1 
+              AND pps.iscurrent = 1
               AND cp.projectname = ?
             });
         $get_primer_pair->execute($project);
