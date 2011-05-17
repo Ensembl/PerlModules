@@ -105,6 +105,9 @@ sub add_Keywords {
     	push(@key_words, 'HTGS_POOLED_CLONE');
     }
 
+    ### VERY BAD!  Duplicate code to Hum::ProjectDump::EMBL
+    ### Both modules should use a common piece of code!
+
     if ($pdmp->seq_reason eq 'PCR_correction') {
         @key_words = grep { $_ !~ /HTG/ }  @key_words; # no HTG keywords for PCR submissions, please
         push ( @key_words, 'PCR_CORRECTION');
@@ -311,7 +314,7 @@ alone has only been used where it has a phred quality of at least 30.',
         elsif ($pdmp->is_pool == 1) {
             @std = @pooled_std;
         }
-        elsif ($pdmp->specific eq 'Pig') {
+        elsif ($pdmp->species eq 'Pig') {
             @std = @pig_std;
         }
 
