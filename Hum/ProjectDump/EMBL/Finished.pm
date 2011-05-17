@@ -23,7 +23,6 @@ use Hum::EMBL::LocationUtils qw{
 use Hum::EmblUtils qw{
     projectAndSuffix
     };
-use Bio::Otter::EMBL::Factory;
 use Hum::Species;
 
 use vars qw{ @ISA };
@@ -33,24 +32,9 @@ use vars qw{ @ISA };
 sub get_FT_Factory {
     my( $pdmp ) = @_;
 
-    # Can't do this without an attached Otter database
-    # and the acc and sv to use to get the data from it
-    my $ds  = $pdmp->DataSet          or return;
-    my $acc = $pdmp->accession        or return;
-    my $sv  = $pdmp->sequence_version or return;
+    # Removed ability to dump data from otter database
 
-    my( $ft_factory );
-    unless ($ft_factory = $pdmp->{'_ft_factory'}) {
-
-        $ft_factory = Bio::Otter::EMBL::Factory->new;
-        $ft_factory->DataSet($ds);
-        $ft_factory->accession($acc);
-        $ft_factory->sequence_version($sv);
-        $ft_factory->fetch_clone_and_chromosome_Slices;
-
-        $pdmp->{'_ft_factory'} = $ft_factory;
-    }
-    return $ft_factory;
+    return;
 }
 
 ### These first subroutines override
