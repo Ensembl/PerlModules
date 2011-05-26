@@ -247,12 +247,31 @@ sub _store_best_alignment {
 
   # remove best_alignment with same seq_region_id but diff. daf_id
   # as the same sequence can be in another TPF, which will have another seq_region_id
-  $self->_remove_old_best_alignment($slice_Ad, $qry_seq_region_id, $hit_name);
+  $self->_remove_old_best_alignment_both_ways($slice_Ad, $qry_seq_region_id, $hit_name);
 
   my $insert = $slice_Ad->dbc->prepare(qq{INSERT IGNORE INTO tpf_best_alignment VALUES (?,?,?)});
   $insert->execute($qry_seq_region_id, $daf_id, $hit_name);
   my $msg2 = "MSG: Inserted " . $insert->rows . " best_overlap (daf_id: ${daf_id}, srid: ${qry_seq_region_id}) into tpf_best_alignment table ...\n";
   $self->_print_and_log_msg($msg2);
+}
+
+sub _remove_old_best_alignment_both_ways {
+	my ($self, $slice_Ad, $srId, $hit_name) = @_;
+	
+	$self->_remove_old_best_alignment($slice_Ad, $srId, $hit_name);
+	
+	my $hit_srId_arrayref = $slice_Ad->dbc->selectcol_arrayref(qq{
+		SELECT seq_region_id FROM seq_region WHERE name = '$hit_name'
+	});
+	my $slice_name_arrayref = $slice_Ad->dbc->selectcol_arrayref(qq{
+		SELECT name FROM seq_region WHERE seq_region_id = $srId
+	});
+	
+	if(exists($hit_srId_arrayref->[0]) and exists($slice_name_arrayref->[0])) {
+		$self->_remove_old_best_alignment($slice_Ad, $hit_srId_arrayref->[0], $slice_name_arrayref->[0]);
+	}
+	
+	return;
 }
 
 sub _remove_old_best_alignment {
