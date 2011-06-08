@@ -7,6 +7,7 @@ use vars qw{ @ISA @EXPORT_OK };
 use strict;
 use warnings;
 use DBI;
+use SangerPaths qw(ensembl60);
 use Net::Netrc;
 use Hum::Chromoview::ChromoSQL;
 use Hum::Sort ('ace_sort');
