@@ -15,7 +15,6 @@ use Hum::Submission 'prepare_statement';
 use Hum::Tracking ('prepare_track_statement');
 use URI::Escape;
 use Config::IniFiles;
-use Bio::EnsEMBL::DBSQL::DBAdaptor;
 #use CGI;
 #use CGI::Carp qw(warningsToBrowser fatalsToBrowser);
 
@@ -31,7 +30,6 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
                 get_DNA_from_ftpghost
                 get_TPF_modtime
                 get_all_current_TPFs
-                get_chromoDB_ensembl_handle
                 get_chromoDB_handle
                 get_id_tpftargets_by_acc_sv
                 get_id_tpftargets_by_seq_region_id
@@ -259,34 +257,6 @@ sub authorize {
   else {
     return wantarray ? (undef, undef) : undef;
   }
-}
-
-sub get_chromoDB_ensembl_handle {
-
-  my ($user, $password) = @_;
-
-  my $host     = 'lutra7';
-  my $dbname   = 'chromoDB';
-  my $port     = 3323;
-
-  if ( $user and $password ){
-    $password = $password;
-  }	
-  else {
-    $user = 'ottro';
-    $password = undef;
-  }
-
-	my $ensembl_dbh = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-	                                                    -host   => $host,
-	                                                    -dbname => $dbname,
-	                                                    -user   => $user,
-	                                                    -pass   => $password,
-	                                                    -port   => $port,
-	                                                   )
-    or die "Can't connect to chromoDB as '$user' ";
-
-  return $ensembl_dbh;
 }
 
 sub get_chromoDB_handle {
