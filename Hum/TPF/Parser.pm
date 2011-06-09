@@ -193,7 +193,7 @@ sub check_for_repeated_clone_names_and_accessions {
     sub parse_comment_line {
         my( $self, $line ) = @_;
 
-        while ($line =~ /([^\s=]+)=([%\s=]+)/g) {
+        while ($line =~ /([^\s=]+)=([^\s=]+)/g) {
             my $field = $1;
             my $value = $2;
             if ($accepted_field{$field}) {
