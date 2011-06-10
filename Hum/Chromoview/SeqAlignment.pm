@@ -260,10 +260,11 @@ sub _remove_old_best_alignment_both_ways {
 	
 	$self->_remove_old_best_alignment($slice_Ad, $srId, $hit_name);
 	
-	my $hit_srId_arrayref = $slice_Ad->dbc->selectcol_arrayref(qq{
+	my $hit_srId_arrayref = $slice_Ad->dbc->db_handle->selectcol_arrayref(qq{
 		SELECT seq_region_id FROM seq_region WHERE name = '$hit_name'
 	});
-	my $slice_name_arrayref = $slice_Ad->dbc->selectcol_arrayref(qq{
+	
+	my $slice_name_arrayref = $slice_Ad->dbc->db_handle->selectcol_arrayref(qq{
 		SELECT name FROM seq_region WHERE seq_region_id = $srId
 	});
 	
