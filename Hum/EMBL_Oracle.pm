@@ -11,48 +11,47 @@ use Net::Netrc;
 use Exporter;
 use vars qw( @ISA @EXPORT_OK );
 
-@ISA = ('Exporter');
+@ISA       = ('Exporter');
 @EXPORT_OK = qw{
-    prepare_embl_statement
-    embl_disconnect
-    };
-
+  prepare_embl_statement
+  embl_disconnect
+};
 
 sub _raw_dbh {
     my $host = 'oracle.ebi.ac.uk';
     my $mach = Net::Netrc->lookup($host);
-    my $dbh = eval {
-	DBI->connect("dbi:Oracle:host=$host;sid=PRDB1;port=2001",
-		     $mach->login,
-		     $mach->password,
-		     {RaiseError => 1});
+    my $dbh  = eval {
+        DBI->connect("dbi:Oracle:host=$host;sid=ENAPRO;port=2001", $mach->login, $mach->password, { RaiseError => 1 });
     };
     my $prob = $@;
-    $mach = undef;  # Remove password from memory
+    $mach = undef;    # Remove password from memory
 
     return $dbh if defined $dbh;
 
     if ($prob =~ /\bORA-01035:/) {
-	# "ORACLE only available to users with RESTRICTED SESSION privilege"
-	die("EMBL_Oracle connection blocked.\n".
-	    "Assume they are preparing a release - please wait.\n".
-	    "\n   $prob");
-    } else {
-	# Some other error
-	die "EMBL_Oracle: connect failed, $@";
+
+        # "ORACLE only available to users with RESTRICTED SESSION privilege"
+        die(    "EMBL_Oracle connection blocked.\n"
+              . "Assume they are preparing a release - please wait.\n"
+              . "\n   $prob");
+    }
+    else {
+
+        # Some other error
+        die "EMBL_Oracle: connect failed, $@";
     }
 }
 
 {
-    my( $dbh, @active_statements );
-    
+    my ($dbh, @active_statements);
+
     sub dbh {
         unless ($dbh) {
-	    $dbh = _raw_dbh();
+            $dbh = _raw_dbh();
         }
         return $dbh;
     }
-    
+
     sub embl_disconnect {
         return unless $dbh;
         foreach my $sth (grep $_, @active_statements) {
@@ -67,11 +66,10 @@ END {
 }
 
 sub prepare_embl_statement {
-    my( $sql ) = @_;
+    my ($sql) = @_;
 
     return dbh()->prepare($sql);
 }
-
 
 1;
 
