@@ -43,8 +43,6 @@ sub _init {
 
     HUMPUB_BLAST  => "$humpub_scratch/data/blast",
 
-    PUBLIC_HUMAN_DISK => '\057nfs/repository/p100',
-
     SPECIES_ANALYSIS_ROOT => {
         'Human'         => "$humpub/analysis/projects",
         'Mouse'         => "$humpub/analysis/mouse",
