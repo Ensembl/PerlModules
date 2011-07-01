@@ -7,29 +7,37 @@ use Carp;
 
 use vars qw( %humConf );
 
-# Could change user in future
-my $humpub = '/lustre/cbi4/work1/humpub';
 
-my $ftp_ghost = "$humpub/ftp_ghost";
+sub _init {
 
-my $pfetch_server_list;
-if ($ENV{'PFETCH_SERVER_LIST'}) {
-    $pfetch_server_list = parse_servers($ENV{'PFETCH_SERVER_LIST'});
-} else {
-    $pfetch_server_list = [
-	[qw{ pfetch.sanger.ac.uk 22400 }], # zeus front end load balancer(s), by name
-        ];
-}
+    # Could change user in future
+    my $humpub = '/lustre/cbi4/work1/humpub';
 
-# Hash containing config info
-%humConf = (
+    my $ftp_ghost = "$humpub/ftp_ghost";
+
+    # The Plan: build config from static strings, such as could be
+    # loaded from a text file.  Make any substitutions or overrides
+    # _after_ that.  Then put the result in %humConf.
+    #
+    # TODO: post-load substitutions like s{\$FOO}{$humConf{FOO}}, to make the lexicals above unnecessary
+    # TODO: make it all Readonly - could break stuff?
+    #
+    # Eventual aim is for this module to be static, and for the actual
+    # config changes to be made in a YAML file.
+
+    # Hash containing config info
+    my %cfg =
+   (
 
     # FTP site variables
     FTP_GHOST           =>  $ftp_ghost,
     FTP_ATTIC           => "$ftp_ghost/attic",
     FTP_ROOT            => "\057nfs/disk69/ftp/pub/sequences",
 
-    PFETCH_SERVER_LIST         => $pfetch_server_list,
+    # May be overridden by %ENV
+    PFETCH_SERVER_LIST  => [
+	[qw{ pfetch.sanger.ac.uk 22400 }], # zeus front end load balancer(s), by name
+                           ],
 
     # The humpub disks
     HUMPUB_ROOT   => $humpub,
@@ -50,7 +58,15 @@ if ($ENV{'PFETCH_SERVER_LIST'}) {
 
     EMBL_FILE_DIR => "$humpub/data/EMBL",
     CONFIG_DEFAULT => "$humpub/scripts/haceprep.cfg",
-    );
+   );
+
+    if ($ENV{'PFETCH_SERVER_LIST'}) {
+        $cfg{PFETCH_SERVER_LIST} = parse_servers($ENV{'PFETCH_SERVER_LIST'});
+    }
+
+    %humConf = %cfg;
+    return 1;
+}
 
 sub import {
     my ($callpack) = caller(0); # Name of the calling package
@@ -97,6 +113,7 @@ sub parse_servers {
     return $list;
 }
 
+_init();
 1;
 
 
