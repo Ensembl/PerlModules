@@ -10,10 +10,9 @@ use vars qw( %humConf );
 
 sub _init {
 
-    # Could change user in future
-    my $humpub = '/lustre/cbi4/work1/humpub';
+    my $humpub = '/warehouse/cbi4_wh01/work1/humpub'; # TRANSIENT WAREHOUSE = slow, needs to be relocated
 
-    my $ftp_ghost = "$humpub/ftp_ghost";
+    my $humpub_scratch = '/lustre/scratch101/sanger/humpub'; # SCRATCH = not backed up
 
     # The Plan: build config from static strings, such as could be
     # loaded from a text file.  Make any substitutions or overrides
@@ -30,8 +29,8 @@ sub _init {
    (
 
     # FTP site variables
-    FTP_GHOST           =>  $ftp_ghost,
-    FTP_ATTIC           => "$ftp_ghost/attic",
+    FTP_GHOST           => "$humpub_scratch/ftp_ghost",
+    FTP_ATTIC           => "$humpub_scratch/ftp_ghost/attic",
     FTP_ROOT            => "\057nfs/disk69/ftp/pub/sequences",
 
     # May be overridden by %ENV
@@ -42,7 +41,7 @@ sub _init {
     # The humpub disks
     HUMPUB_ROOT   => $humpub,
 
-    HUMPUB_BLAST  => "$humpub/data/blast",
+    HUMPUB_BLAST  => "$humpub_scratch/data/blast",
 
     PUBLIC_HUMAN_DISK => '\057nfs/repository/p100',
 
