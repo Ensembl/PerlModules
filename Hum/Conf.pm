@@ -38,6 +38,8 @@ sub _init {
 	[qw{ pfetch.sanger.ac.uk 22400 }], # zeus front end load balancer(s), by name
                            ],
 
+    WAREHOUSE_MYSQL => '/warehouse/humpub_wh01/mysql_backup',
+
     # The humpub disks
     HUMPUB_ROOT   => $humpub,
 
