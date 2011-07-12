@@ -9,6 +9,7 @@ use Carp;
 use Hum::ProjectDump::EMBL;
 use Hum::Submission 'prepare_statement';
 use Hum::Tracking 'prepare_track_statement';
+use Hum::Conf 'HUMPUB_BLAST';
 
 use vars qw{ @ISA };
 @ISA = qw{ Hum::ProjectDump::EMBL };
@@ -66,8 +67,8 @@ sub read_gap_contigs {
     my $contig_prefix = "Contig_prefix_ezelthrib";
 
     $pdmp->dump_time(time); # Record the time of the dump
-    #my $gaf_pipe = "ssh -T -n -x -o 'StrictHostKeyChecking no' $cluster 'cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $contig_prefix | caf_depad | caftagfeature -tagid CONT -clean -vector /nfs/disk100/humpub3/data/blast/contamdb' |";
-    my $gaf_pipe = "cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $contig_prefix | caf_depad | caftagfeature -tagid CONT -clean -vector /lustre/cbi4/work1/humpub/data/blast/contamdb |";
+    #my $gaf_pipe = "ssh -T -n -x -o 'StrictHostKeyChecking no' $cluster 'cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $contig_prefix | caf_depad | caftagfeature -tagid CONT -clean -vector $HUMPUB_BLAST/contamdb' |";
+    my $gaf_pipe = "cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $contig_prefix | caf_depad | caftagfeature -tagid CONT -clean -vector $HUMPUB_BLAST/contamdb |";
     warn "gap2caf pipe: $gaf_pipe\n";
     open(GAP2CAF, $gaf_pipe)
         || die "COULDN'T OPEN PIPE FROM GAP2CAF : $!\n";
