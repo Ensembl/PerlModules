@@ -560,8 +560,8 @@ sub express_data_fetch {
 
     my( $err, %name_locus );
     foreach my $sub_txt ($ace->values_from_tag('Subsequence')) {
+        my($name, $start, $end) = @$sub_txt;
         eval{
-            my($name, $start, $end) = @$sub_txt;
             my $t_seq = $ace->fetch(Sequence => $name)
                 or die "No such Subsequence '$name'\n";
             $name =~ s/^em://i;
@@ -600,7 +600,7 @@ sub express_data_fetch {
 
             $self->add_SubSeq($sub);
         };
-        $err .= $@ if $@;
+        $err .= "Error fetching '$name':\n$@" if $@;
     }
     warn $err if $err;
 
