@@ -59,6 +59,36 @@ sub quality_string {
     }
 }
 
+sub fastq_string {
+    my( $seq_obj ) = @_;
+    
+    my $name = $seq_obj->name
+        or confess "No name";
+    my $desc = $seq_obj->description;
+    my $seq  = $seq_obj->sequence_string
+        or confess "No sequence in '$name'";
+    my $qual = $seq_obj->quality_string
+        or confess "No quality in '$name'";
+
+    my $fastq_string = "\@$name";
+    $fastq_string .= "  $desc" if $desc;
+    $fastq_string .= "\n";
+    while ($seq =~ /(.{1,60})/g) {
+        $fastq_string .= $1 . "\n";
+    }
+
+    my $count = $qual =~ tr/\000-\135/\041-\176/;
+    if ($count != $seq_obj->sequence_length) {
+        confess sprintf("Sequence '%s' has %d values in quality string outside range 0-93", $name, $count);
+    }
+    $fastq_string .= "+\n";
+    while ($qual =~ /(.{1,60})/g) {
+        $fastq_string .= $1 . "\n";
+    }
+    
+    return $fastq_string;
+}
+
 sub reverse_complement {
     my( $seq_obj ) = @_;
     
