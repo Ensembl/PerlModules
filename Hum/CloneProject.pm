@@ -34,7 +34,7 @@ sub _p_status {
 
 sub fetch_projectname_from_clonename {
   my ($clonename) = @_;
-  _cp()->execute($clonename);
+  my $cp = _cp()->execute($clonename);
 
   return $cp->fetchrow;
 }
