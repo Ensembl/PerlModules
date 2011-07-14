@@ -437,7 +437,14 @@ sub ref_from_query {
 
 =head2 track_db
 
-Returns a B<DBI> handle to the Tracking database.
+Cache and return a B<DBI> handle to the Tracking database.
+
+Note that once this is created, further changes to configuration will
+have no effect.
+
+Also when using L<WrapDBI>s WRAPDBI_TEST_CONFIG environment variable,
+note that it only has effect if set before C<use WrapDBI> is called by
+I<any> module.
 
 =head2 prepare_track_statement
 
@@ -455,14 +462,24 @@ block, to ensure a graceful exit.
 {
     my( $dbh, $user, @active_statements );
 
+    my $done_init; # temporary 2011-07
+    INIT {
+        # Do this just before runtime.  Until then, we want to avoid
+        # (accidental) calls to WrapDBI->connect because they
+        #    a) will slow down compilation (perhaps pointlessly)
+        #    b) can confuse later callers of track_db_user($new_user)
+        $done_init = 1;
+    }
+
     sub track_db {
-        $dbh ||= WrapDBI->connect(track_db_user(),
+        my $u = track_db_user();
+        $dbh ||= WrapDBI->connect($u,
             {
               RaiseError  => 1,
               AutoCommit  => 0,
             });
         
-        return $dbh || confess "Can't connect as user '$user'";
+        return $dbh || confess "Can't connect as user '$u'";
     }
 
     sub track_db_commit {
@@ -478,6 +495,14 @@ block, to ensure a graceful exit.
         
         if ($arg) {
             $user = $arg;
+        } else {
+            if (!$done_init) {
+                # This is a temporary (2011-07) solution to pick up accidental early calls.
+                # Better but heavy-handed would be to confess if !defined $user
+                # RT 223851
+                require Carp;
+                Carp::cluck("track_db_user() called during compilation / before program runtime - probably bad");
+            }
         }
         return $user || 'reports';
     }
