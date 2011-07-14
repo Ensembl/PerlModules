@@ -216,8 +216,8 @@ sub make_embl {
 
     # Believe it or not a pooled project can be multi-species
     # But this is not handled at the moment !!!
-    confess "Pooled project $project contains more than 1 species (" . join(",", split(/,/, $species)) . ")"
-      unless (scalar split(/,/, $species) == 1);
+    confess "Pooled project $project contains more than 1 species ($species)"
+      if $species =~ /,/;
 
     my $chr       = $pdmp->chromosome;
     my $binomial  = $pdmp->species_binomial;
