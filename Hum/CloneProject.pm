@@ -34,16 +34,20 @@ sub _p_status {
 
 sub fetch_projectname_from_clonename {
   my ($clonename) = @_;
-  my $cp = _cp()->execute($clonename);
+  my $sth = _cp();
+  $sth->execute($clonename);
 
-  return $cp->fetchrow;
+  return $sth->fetchrow;
 }
 
 sub fetch_project_status {
   my ($projectname) = @_;
-  _p_status()->execute($projectname);
+  die "Requires list context" unless wantarray;
 
-  return  my($status, $statusdate) = _p_status()->fetchrow;
+  my $sth = _p_status();
+  $sth->execute($projectname);
+
+  return  my($status, $statusdate) = $sth->fetchrow;
 }
 
 
