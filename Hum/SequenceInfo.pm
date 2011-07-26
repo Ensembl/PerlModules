@@ -122,26 +122,10 @@ sub embl_sequence_get {
                 $self->accession($acc);
                 $self->sequence_version($sv);
                 $self->projectname($proj);
+				
             }
             $self->htgs_phase($htgs_phase);
-
-            my( $seq );
-            if ($htgs_phase == 3) {
-                # Finished sequences may not have an EMBL file
-                my $fasta = Hum::FastaFileIO->new_DNA_IO("$path/$name");
-                $seq = $fasta->read_one_sequence;
-            } else {
-                # Unfinished sequences may be in multiple pieces
-                # so we need the sequence from the EMBL file where
-                # it is in one piece.
-                $self->embl_file_path("$path/$name.embl");
-                my $entry = $self->get_EMBL_entry;
-                $seq = $entry->hum_sequence;
-            }
-
-            
-            $seq->name("$acc.$sv");
-            $self->Sequence($seq);
+            $self->sanger_sequence_file("$path/$name");
 
             push(@seq_inf, $self);
         }
@@ -242,6 +226,15 @@ sub accession_sv {
     return join('.', $self->accession, $self->sequence_version);
 }
 
+sub sanger_sequence_file {
+    my( $self, $sanger_sequence_file ) = @_;
+    
+    if ($sanger_sequence_file) {
+        $self->{'_sanger_sequence_file'} = $sanger_sequence_file;
+    }
+    return $self->{'_sanger_sequence_file'};
+}
+
 sub htgs_phase {
     my( $self, $htgs_phase ) = @_;
     
@@ -257,6 +250,13 @@ sub sequence_length {
     if ($sequence_length) {
         $self->{'_sequence_length'} = $sequence_length;
     }
+	elsif (
+		!defined($self->{'_sequence_length'})
+		and defined($self->{'_sanger_sequence_file'})
+	) {
+		$self->_lazy_load_sanger_sequence;
+	}
+	
     return $self->{'_sequence_length'};
 }
 
@@ -266,6 +266,14 @@ sub embl_checksum {
     if ($embl_checksum) {
         $self->{'_embl_checksum'} = $embl_checksum;
     }
+	elsif (
+		!defined($self->{'_embl_checksum'})
+		and defined($self->{'_sanger_sequence_file'})
+	) {
+		$self->_lazy_load_sanger_sequence;
+	}
+
+	
     return $self->{'_embl_checksum'};
 }
 
@@ -319,6 +327,29 @@ sub fetch_embl_file_path {
     }
 }
 
+sub _lazy_load_sanger_sequence {
+
+	my ($self) = @_;
+
+    my( $seq );
+    if ($self->htgs_phase == 3) {
+        # Finished sequences may not have an EMBL file
+        my $fasta = Hum::FastaFileIO->new_DNA_IO( $self->sanger_sequence_file );
+        $seq = $fasta->read_one_sequence;
+    } else {
+        # Unfinished sequences may be in multiple pieces
+        # so we need the sequence from the EMBL file where
+        # it is in one piece.
+        $self->embl_file_path( $self->sanger_sequence_file . ".embl" );
+        my $entry = $self->get_EMBL_entry;
+        $seq = $entry->hum_sequence;
+    }
+    $seq->name($self->accession . '.' . $self->sequence_version);
+	
+	$self->Sequence($seq);
+	
+	return;
+}
 
 sub Sequence {
     my( $self, $seq ) = @_;
@@ -328,6 +359,15 @@ sub Sequence {
         $self->sequence_length($seq->sequence_length);
         $self->embl_checksum($seq->embl_checksum);
     }
+	# If sequence has been requested and does not exist
+	# then lazy-load sanger sequence
+	elsif (
+		!defined($self->{'Sequence'})
+		and defined($self->{'_sanger_sequence_file'})
+	) {
+		$self->_lazy_load_sanger_sequence;
+	}
+	
     return $self->{'_Sequence'};
 }
 
