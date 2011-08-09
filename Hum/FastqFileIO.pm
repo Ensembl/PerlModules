@@ -57,6 +57,10 @@ sub read_one_sequence {
                 # We've hit the start of the quality data
                 my $qual_str;
                 while ($dna_line_count) {
+                    if (eof $fh) {
+                        # Need to test for this or parser can hang trying to read from a closed filehandle
+                        die "Error: reached end of fastq file with fewer quality lines than expected";
+                    }
                     chomp($qual_str .= <$fh>);
                     $dna_line_count--;
                 }
@@ -67,9 +71,8 @@ sub read_one_sequence {
 
                 # Check that the quality string didn't have any values outside the range 33..126
                 if ($count != length($qual_str)) {
-                    $qual_str =~ tr/\000-\135/\041-\176/;   # Translate back for error message
-                    confess sprintf "%d invalid values outside the range 33..126 in sequence '%s' quality string: %s",
-                      length($qual_str) - $count, $seq_obj->name, $qual_str;
+                    confess sprintf "%d invalid values outside the range 33..126 in fastq quality string for sequence '%s'",
+                      length($qual_str) - $count, $seq_obj->name;
                 }
 
                 $seq_obj->quality_string($qual_str);
