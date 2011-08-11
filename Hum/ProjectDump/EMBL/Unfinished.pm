@@ -6,13 +6,11 @@ package Hum::ProjectDump::EMBL::Unfinished;
 use strict;
 use warnings;
 use Carp;
-use Hum::ProjectDump::EMBL;
 use Hum::Submission 'prepare_statement';
 use Hum::Tracking 'prepare_track_statement';
 use Hum::Conf 'HUMPUB_BLAST';
 
-use vars qw{ @ISA };
-@ISA = qw{ Hum::ProjectDump::EMBL };
+use base 'Hum::ProjectDump::EMBL';
 
 
 # Overrides method in Hum::ProjectDump
