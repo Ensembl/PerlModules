@@ -74,7 +74,7 @@ sub embl_sequence_get {
         }
     }
     unless ($htgs_phase) {
-        if ($embl->ID->division eq 'HTG') {
+        if ($embl->ID->dataclass eq 'HTG') {
             $htgs_phase = 1;
         } else {
             $htgs_phase = 3;
