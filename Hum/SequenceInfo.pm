@@ -14,7 +14,7 @@ use Hum::Tracking qw{
 use Hum::Pfetch 'get_EMBL_entries';
 use Hum::NetFetch 'wwwfetch_EMBL_object';
 use Hum::FastaFileIO;
-
+use Hum::Mole;
 
 sub new {
     my( $pkg ) = @_;
@@ -49,14 +49,14 @@ sub fetch_latest_with_Sequence {
         || $pkg->embl_sequence_get($acc);
 }
 
-
 sub embl_sequence_get {
     my( $pkg, $acc ) = @_;
     
-    my ($embl) = get_EMBL_entries($acc);
-    return unless $embl;
+	my $mole_entry = Hum::Mole->new($acc);
+	return unless $mole_entry;
 
-    my $sv  = $embl->ID->version;
+	my $sv = $mole_entry->sv;
+    return unless $sv;
     
     my( $self );
     unless ($self = $pkg->fetch_by_accession_sv($acc, $sv)) {
@@ -64,25 +64,11 @@ sub embl_sequence_get {
         $self->accession($acc);
         $self->sequence_version($sv);
     }
-    
-    my( $htgs_phase );
-    foreach my $word ($embl->KW->list) {
-        #warn "KW: $word\n";
-        if ($word =~ /HTGS_PHASE(\d)/) {
-            $htgs_phase = $1;
-            last;
-        }
-    }
-    unless ($htgs_phase) {
-        if ($embl->ID->dataclass eq 'HTG') {
-            $htgs_phase = 1;
-        } else {
-            $htgs_phase = 3;
-        }
-    }
-    $self->htgs_phase($htgs_phase);
-
-    $self->Sequence($embl->hum_sequence);
+  	$self->htgs_phase($mole_entry->htgs_phase);
+  	return unless $self->htgs_phase;
+  	
+    $self->_lazy_load_method('_lazy_load_embl_sequence');
+	
     return $self;
 }
 
@@ -125,6 +111,7 @@ sub embl_sequence_get {
 				
             }
             $self->htgs_phase($htgs_phase);
+            $self->_lazy_load_method('_lazy_load_sanger_sequence');
             $self->sanger_sequence_file("$path/$name");
 
             push(@seq_inf, $self);
@@ -254,7 +241,7 @@ sub sequence_length {
 		!defined($self->{'_sequence_length'})
 		and defined($self->{'_sanger_sequence_file'})
 	) {
-		$self->_lazy_load_sanger_sequence;
+		$self->_lazy_load_sequence;
 	}
 	
     return $self->{'_sequence_length'};
@@ -270,7 +257,7 @@ sub embl_checksum {
 		!defined($self->{'_embl_checksum'})
 		and defined($self->{'_sanger_sequence_file'})
 	) {
-		$self->_lazy_load_sanger_sequence;
+		$self->_lazy_load_sequence;
 	}
 
 	
@@ -351,6 +338,42 @@ sub _lazy_load_sanger_sequence {
 	return;
 }
 
+sub _lazy_load_embl_sequence {
+
+	my ($self) = @_;
+
+    my ($embl) = get_EMBL_entries($self->accession);
+    return unless $embl;
+
+    $self->Sequence($embl->hum_sequence);
+	
+	return;
+}
+
+sub _lazy_load_method {
+	my ($self, $method) = @_;
+	
+	if ($method) {
+        $self->{'_lazy_load_method'} = $method;
+    }
+    return $self->{'_lazy_load_method'};
+	
+}
+
+sub _lazy_load_sequence {
+	my ($self) = @_;
+	
+	if( $self->can($self->_lazy_load_method) ) {
+		my $method = $self->_lazy_load_method;
+		$self->$method;
+	}
+	else {
+		confess("Lazy load method " . $self->_lazy_load_method . " wrongly specified\n");
+	} 
+	
+	return;
+}
+
 sub Sequence {
     my( $self, $seq ) = @_;
     
@@ -363,9 +386,8 @@ sub Sequence {
 	# then lazy-load sanger sequence
 	elsif (
 		!defined($self->{'Sequence'})
-		and defined($self->{'_sanger_sequence_file'})
 	) {
-		$self->_lazy_load_sanger_sequence;
+		$self->_lazy_load_sequence;
 	}
 	
     return $self->{'_Sequence'};
