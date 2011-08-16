@@ -29,6 +29,28 @@ sub embl_checksum {
 #    return $pdmp->{'_actual_htgs_phase'};
 #}
 
+sub process_gap_db_data {
+    my ($pdmp) = @_;
+    
+    warn "Reading gap contigs\n";
+    $pdmp->read_gap_contigs;
+
+    warn "Removing contig under 1kb\n";
+    $pdmp->contig_length_cutoff(1000);
+    $pdmp->cleanup_contigs;
+
+    warn "Making Q20 depth report\n";
+    $pdmp->contig_and_agarose_depth_estimate;
+
+    $pdmp->contig_length_cutoff($pdmp->htgs_phase == 2 ? 250 : 2000);
+
+    warn "Decontaminating contigs\n";
+    $pdmp->decontaminate_contigs;
+
+    warn "Ordering contigs\n";
+    $pdmp->order_contigs;
+}
+
 sub store_dump {
     my( $pdmp ) = @_;
     
