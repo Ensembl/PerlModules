@@ -62,6 +62,7 @@ use vars qw( @ISA @EXPORT_OK );
   prepare_cached_track_statement
   project_from_clone
   project_finisher
+  project_type
   project_team_leader
   record_accession_data
   record_finished_length
@@ -1448,26 +1449,60 @@ more than one match in the project table.
 
 
 {
-    my $get_statuses;
+    my $guess_type;
 
     my %status_type = (
+        43 => 'POOLED',
+        44 => 'POOLED',
+
         46 => 'MULTIPLEXED',
         47 => 'MULTIPLEXED',
         48 => 'MULTIPLEXED',
-        
+
         );
+
+    # SELECT p.projectname
+    #   , p.parent_project
+    #   , ps.status
+    #   , ps.statusdate
+    #   , d.description
+    # FROM project p
+    #   , project_status ps
+    #   , projectstatusdict d
+    # WHERE p.projectname = ps.projectname
+    #   AND ps.status = d.id_dict
+    #   AND p.parent_project IS NOT NULL
+    # ORDER BY p.projectname
+    #   , ps.statusdate
 
     sub project_type {
         my ($project) = @_;
         
-        $get_statuses ||= prepare_track_statement(q{
-            SELECT status
-            FROM project_status
-            WHERE projectname = ?
+        $guess_type ||= prepare_track_statement(q{
+            SELECT child_p.projectname
+              , ps.status
+            FROM project p
+              , project_status ps
+              , project child_p
+            WHERE p.projectname = ps.projectname
+              AND p.projectname = child_p.parent_project (+)
+              AND p.projectname = ?
         });
-        $get_statuses->execute($project);
+        $guess_type->execute($project);
         
-        
+        my $type = 'GAP4';
+        while (my ($child, $status) = $guess_type->fetchrow) {
+            if ($child) {
+                $guess_type->finish;    # Don't need to see any more rows
+                $type = 'PROJECT_POOL'; 
+            }
+            elsif (my $t = $status_type{$status}) {
+                $guess_type->finish;
+                $type = $t;
+            }
+        }
+
+        return $type;
     }
 }
 
