@@ -1452,34 +1452,23 @@ more than one match in the project table.
     my $guess_type;
 
     my %status_type = (
-        43 => 'POOLED',
-        44 => 'POOLED',
+        15 => 'GAP4',           # Shotgun complete
+        16 => 'GAP4',           # Assembly start
+        30 => 'GAP4',           # Half shotgun complete
 
-        46 => 'MULTIPLEXED',
-        47 => 'MULTIPLEXED',
-        48 => 'MULTIPLEXED',
+        43 => 'POOLED',         # Pooled Clone Assigned
+        44 => 'POOLED',         # Pooled Clone Finished
 
+        46 => 'MULTIPLEXED',    # SS Indexed Workflow Complete
+        47 => 'MULTIPLEXED',    # Indexed Clone Assinged
+        48 => 'MULTIPLEXED',    # Indexed Clone Finished
         );
-
-    # SELECT p.projectname
-    #   , p.parent_project
-    #   , ps.status
-    #   , ps.statusdate
-    #   , d.description
-    # FROM project p
-    #   , project_status ps
-    #   , projectstatusdict d
-    # WHERE p.projectname = ps.projectname
-    #   AND ps.status = d.id_dict
-    #   AND p.parent_project IS NOT NULL
-    # ORDER BY p.projectname
-    #   , ps.statusdate
 
     sub project_type {
         my ($project) = @_;
-        
+
         $guess_type ||= prepare_track_statement(q{
-            SELECT child_p.projectname
+            SELECT child_p.projectname child
               , ps.status
             FROM project p
               , project_status ps
@@ -1487,17 +1476,16 @@ more than one match in the project table.
             WHERE p.projectname = ps.projectname
               AND p.projectname = child_p.parent_project (+)
               AND p.projectname = ?
+            ORDER BY ps.statusdate ASC
         });
         $guess_type->execute($project);
-        
-        my $type = 'GAP4';
+
+        my $type;
         while (my ($child, $status) = $guess_type->fetchrow) {
             if ($child) {
-                $guess_type->finish;    # Don't need to see any more rows
                 $type = 'PROJECT_POOL'; 
             }
-            elsif (my $t = $status_type{$status}) {
-                $guess_type->finish;
+            elsif (my $t = $status_type{$status})
                 $type = $t;
             }
         }
