@@ -27,7 +27,7 @@ use Hum::EmblUtils qw{
 
 my $number_Ns = 100;
 
-sub read_yaml_file {
+sub process_repository_data {
     my ($pdmp) = @_;
 
     my $db_name = uc $pdmp->project_name;

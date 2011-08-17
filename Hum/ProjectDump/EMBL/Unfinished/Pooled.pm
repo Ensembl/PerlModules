@@ -19,8 +19,6 @@ use Hum::Tracking qw{
 
 use base qw{ Hum::ProjectDump::EMBL::Unfinished };
 
-
-
 sub create_new_dump_object {
     my( $pkg, $project, $force_flag ) = @_;
     my $pdmp = $pkg->SUPER::create_new_dump_object($project, $force_flag);

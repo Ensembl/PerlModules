@@ -29,7 +29,7 @@ sub embl_checksum {
 #    return $pdmp->{'_actual_htgs_phase'};
 #}
 
-sub process_gap_db_data {
+sub process_repository_data {
     my ($pdmp) = @_;
     
     warn "Reading gap contigs\n";

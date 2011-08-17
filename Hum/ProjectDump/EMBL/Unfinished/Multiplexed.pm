@@ -11,7 +11,7 @@ use Hum::FastqFileIO;
 
 use base 'Hum::ProjectDump::EMBL::Unfinished';
 
-sub process_gap_db_data {
+sub process_repository_data {
     my ($self) = @_;
 
     my $fastq_file = $self->dump_gap5_data;
