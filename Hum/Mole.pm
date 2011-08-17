@@ -92,7 +92,7 @@ sub _get_embl_databases {
 	my $embl_dsn = "DBI:mysql:database=${latest_embl};host=${mole_host}";
 	$CLASS_emblrelease_db = DBI->connect($embl_dsn, $mole_user);
 
-	my $emblnew_dsn = "DBI:mysql:database=${latest_embl};host=${mole_host}";
+	my $emblnew_dsn = "DBI:mysql:database=${latest_emblnew};host=${mole_host}";
 	$CLASS_emblnew_db = DBI->connect($emblnew_dsn, $mole_user);
 		
 	return;						
