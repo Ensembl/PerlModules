@@ -1485,7 +1485,7 @@ more than one match in the project table.
             if ($child) {
                 $type = 'PROJECT_POOL'; 
             }
-            elsif (my $t = $status_type{$status})
+            elsif (my $t = $status_type{$status}) {
                 $type = $t;
             }
         }
