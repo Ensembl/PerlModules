@@ -566,7 +566,7 @@ sub set_ghost_path {
             if(ref($chr) eq 'HASH'){
             	$path .= "/pooled";
             } else {
-                $path .= "/$prefix$chr";            	
+                $path .= "/$prefix$chr";
             }
         }
         
