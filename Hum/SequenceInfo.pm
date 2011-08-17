@@ -239,7 +239,6 @@ sub sequence_length {
     }
 	elsif (
 		!defined($self->{'_sequence_length'})
-		and defined($self->{'_sanger_sequence_file'})
 	) {
 		$self->_lazy_load_sequence;
 	}
@@ -255,11 +254,9 @@ sub embl_checksum {
     }
 	elsif (
 		!defined($self->{'_embl_checksum'})
-		and defined($self->{'_sanger_sequence_file'})
 	) {
 		$self->_lazy_load_sequence;
 	}
-
 	
     return $self->{'_embl_checksum'};
 }
