@@ -31,7 +31,13 @@ my %results_for_accession = (
 		sequence_length => '186272',
 		embl_checksum => '1929818599',
 	},
-
+	# Recently updated clone
+	'AC087063' => {
+		accession_sv => 'AC087063.21',
+		htgs_phase => '3',
+		sequence_length => '241350',
+		embl_checksum => '1100462988',
+	},
 );
 
 foreach my $accession (sort keys %results_for_accession) {

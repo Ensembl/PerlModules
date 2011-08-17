@@ -25,7 +25,11 @@ my %results_for_accession = (
 		sv => '35',
 		htgs_phase => '3',
 	},
-
+	# Recently updated clone
+	'AC087063' => {
+		sv => '21',
+		htgs_phase => '3',
+	},	
 );
 
 foreach my $accession (sort keys %results_for_accession) {
