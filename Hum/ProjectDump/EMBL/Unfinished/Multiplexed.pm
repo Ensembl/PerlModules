@@ -70,7 +70,7 @@ sub strip_zero_quality_data {
     my $min_length = $self->contig_length_cutoff;
     my $n          = 1;
     while (my $seq = $in->read_one_sequence) {
-        my $dna  = $seq->sequence_string;
+        my $dna  = lc $seq->sequence_string;
         my $qual = $seq->quality_string;
         if ($qual =~ s/^\0+//) {
             my $clip_length = length($dna) - length($qual);
@@ -88,8 +88,12 @@ sub strip_zero_quality_data {
             my $desc     = $seq->description;
             my $name     = sprintf 'contig_%05d', $n++;
             $seq->name($name);
-            $seq->description("($old_name) $desc");
-            $seq->sequence_string($dna);
+            $seq->description("($old_name)" . ($desc ? " $desc" : ''));
+
+            # We're going to run exonerate, so it is safest to upper case the
+            # DNA, since exonerate uses softmasking (though we don't set it for
+            # the query).
+            $seq->sequence_string(uc $dna);
             $seq->quality_string($qual);
 
             $out->write_sequences($seq);
@@ -100,10 +104,10 @@ sub strip_zero_quality_data {
 
             # We don't submit quality data from gap5, because it doesn't look useful.
             # Scores tend to be either 93 (max) or 0.
-            # $self->BaseQuality($name, \$qual);
+            $self->BaseQuality($name, \$qual);
         }
     }
-    return $self->temp_file($fastq_file);
+    return $self->temp_file($fasta_file);
 }
 
 sub find_contaminants_with_exonerate {
