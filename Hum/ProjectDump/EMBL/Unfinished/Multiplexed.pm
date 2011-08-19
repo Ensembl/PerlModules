@@ -11,6 +11,67 @@ use Hum::FastqFileIO;
 
 use base 'Hum::ProjectDump::EMBL::Unfinished';
 
+# sub author {
+#     # Multiplexed projects are missing the link to a team
+#     # so we return a default author here instead.
+#     return "Whitehead S.";
+# }
+
+sub write_quality_file {
+    # Quality info in gap5 projects is not worth submitting.
+    return;
+}
+
+sub embl_sequence_and_contig_map {
+    my ($self) = @_;
+    
+    # Discard quality info from gap5, which is not worth submitting.
+    my ($dna, $quality, $contig_map) = $self->SUPER::embl_sequence_and_contig_map;
+    return($dna, undef, $contig_map);
+}
+
+sub add_Headers {
+    my( $self, $embl, $contig_map ) = @_;
+
+    my $project = $self->project_name;
+
+    my @comment_lines = (
+        $self->seq_center_lines,
+        '-------------- Project Information',
+        "Center project name: $project",
+        '--------------',
+
+        #########################################################################
+
+        "* NOTE: This is an unfinished sequence. It currently consists of ". scalar(@$contig_map),
+        "* contigs. The true order of the pieces is not known and their order in",
+        "* this sequence record is arbitrary. Gaps between the contigs are",
+        "* represented as runs of N, but the exact sizes of the gaps are unknown.",
+    );
+
+    if ($self->is_cancelled) {
+        push(@comment_lines,
+            "*",
+            "* The sequencing of this clone has been cancelled. The most likely reason",
+            "* for this is that its sequence is redundant, and therefore not needed to",
+            "* complete the finished genome.",
+            );
+    } else {
+        push(@comment_lines,
+            "* This record will be updated with the finished sequence as soon as it is",
+            "* available and the accession number will be preserved.",
+            );
+    }
+
+    $embl->newCC->list(
+        @comment_lines,
+        "*",
+        $self->make_fragment_summary($embl, $contig_map),
+    );   
+
+    $self->add_extra_headers($embl, 'comment');
+}
+
 sub process_repository_data {
     my ($self) = @_;
 
@@ -54,6 +115,7 @@ sub dump_gap5_data {
     my $user                = (getpwuid($<))[0];
     my $out_fastq           = "/tmp/$user-$$-gap5-dump.fastq";
     my @gap_5_consensus_cmd = (qw{ gap5_consensus -format fastq -strip_pads -out }, $out_fastq, $gap_5_db,);
+    warn "Fetching data from gap5 db: @gap_5_consensus_cmd\n";
     system(@gap_5_consensus_cmd) == 0
       or die "Error running '@gap_5_consensus_cmd'; exit($?)";
     return $self->temp_file($out_fastq);
@@ -129,6 +191,7 @@ sub find_contaminants_with_exonerate {
         '--query'  => $fasta_file,
         '--target' => "$HUMPUB_BLAST/contamdb_dustmasked",
     );
+    warn "Looking for contaminants with: @exonerate\n";
     open(my $find_contaminants, '-|', @exonerate)
       or confess "Error starting '@exonerate |'; $!";
     my %contig_contamination;

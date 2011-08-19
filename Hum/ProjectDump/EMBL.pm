@@ -215,7 +215,7 @@ sub add_Reference {
         "Submitted ($date) to the EMBL/Genbank/DDBJ databases.",
         'Wellcome Trust Sanger Institute, Hinxton, Cambridgeshire, CB10 1SA, UK.',
         "E-mail enquiries: $query_email\@sanger.ac.uk",
-        "Clone requests: $clonerequest"
+        "Clone requests: $clonerequest",
     );
 
     if ($species eq 'Human' or $species eq 'Mouse' or $species eq 'Zebrafish') {
@@ -299,7 +299,7 @@ sub make_fragment_summary {
     my (@list);
     for (my $i = 0; $i < @$contig_map; $i++) {
         my ($contig, $start, $end) = @{ $contig_map->[$i] };
-        my $frag = sprintf("* %8d %8d contig of %d bp in length", $start, $end, $end - $start + 1);
+        my $frag = sprintf("* %8d %8d contig %6d bp long", $start, $end, $end - $start + 1);
         if ($pdmp->can('contig_chain') and my $group = $pdmp->contig_chain($contig)) {
             $frag .= "; fragment_chain $group";
         }
