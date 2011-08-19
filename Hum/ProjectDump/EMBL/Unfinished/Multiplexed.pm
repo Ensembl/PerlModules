@@ -197,6 +197,7 @@ sub find_contaminants_with_exonerate {
       or confess "Error starting '@exonerate |'; $!";
     my %contig_contamination;
     while (<$find_contaminants>) {
+        chomp;
         my ($type, $percent_identity, $contig, $start, $end, $strand, $contaminant) = split /\t/;
         unless ($type and $type eq 'CONTAMINANT') {
             next;
