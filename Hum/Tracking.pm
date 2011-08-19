@@ -201,7 +201,7 @@ statuses.
             SELECT status
             FROM project_status
             WHERE projectname = ?
-              AND status IN(20,34,35,32,21,22,23,44)
+              AND status IN(20,34,35,32,21,22,23,44,48)
               AND iscurrent = 1
             }
         );
@@ -471,16 +471,6 @@ block, to ensure a graceful exit.
 {
     my ($dbh, $user, @active_statements);
 
-    my $done_init;    # temporary 2011-07
-    INIT {
-
-        # Do this just before runtime.  Until then, we want to avoid
-        # (accidental) calls to WrapDBI->connect because they
-        #    a) will slow down compilation (perhaps pointlessly)
-        #    b) can confuse later callers of track_db_user($new_user)
-        $done_init = 1;
-    }
-
     sub track_db {
         my $u = track_db_user();
         $dbh ||= WrapDBI->connect(
@@ -506,17 +496,11 @@ block, to ensure a graceful exit.
         my ($arg) = @_;
 
         if ($arg) {
-            $user = $arg;
-        }
-        else {
-            if (!$done_init) {
-
-                # This is a temporary (2011-07) solution to pick up accidental early calls.
-                # Better but heavy-handed would be to confess if !defined $user
-                # RT 223851
-                require Carp;
-                Carp::cluck("track_db_user() called during compilation / before program runtime - probably bad");
+            if ($dbh) {
+                confess "Trying to set user to '$arg' but already connected as user '$user'\n",
+                    "Call track_db_user(\$user) before track_db() or prepare_track_statement()";
             }
+            $user = $arg;
         }
         return $user || 'reports';
     }
