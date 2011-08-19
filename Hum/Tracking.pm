@@ -502,7 +502,8 @@ block, to ensure a graceful exit.
             }
             $user = $arg;
         }
-        return $user || 'reports';
+        $user ||= 'reports';
+        return $user;
     }
 
     sub prepare_track_statement {
