@@ -60,15 +60,11 @@ BEGIN {
         my %packages = map {$_, 1} values %_handler;
         CLASS: foreach my $class (keys %packages) {
         
-            # Load line modules not in Hum/EMBL/Line.pm (scary)
-            {
-                no strict 'refs';
-                my $symbol_table = "${class}::";
-                unless (defined %{$symbol_table}) {
-                    my $file = "$class.pm";
-                    $file =~ s{::}{/}g;
-                    require $file;
-                }
+            # Load line modules not in Hum/EMBL/Line.pm (yagni?)
+            unless (__symbols_in_package($class)) {
+                my $file = "$class.pm";
+                $file =~ s{::}{/}g;
+                require $file;
             }
         
             my ($name) = $class =~ /([^:]+)$/;
@@ -153,6 +149,17 @@ BEGIN {
         }, $class;
     }    
 }
+
+
+# Returns count (in scalar context) or list of the symbols in the
+# package
+sub __symbols_in_package {
+    my ($class) = @_;
+    my $symbol_table = "${class}::";
+    no strict 'refs';
+    return keys %{$symbol_table};
+}
+
 
 sub parse {
     my( $embl, $arg ) = @_;
