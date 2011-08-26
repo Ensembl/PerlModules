@@ -327,10 +327,9 @@ sub _get_daf_id_by_hit_name_analysis_name {
   return $stored_feat->dbID;
 }
 
-sub make_alignment_from_cigar_string {
-
-  my ( $self ) = @_;
-
+sub make_hsps {
+	my ($self) = @_;
+	
   my $daf = $self->best_feature;
   my $qry_slice = $daf->slice;
   my $qry_seq = $qry_slice->seq;
@@ -375,19 +374,6 @@ sub make_alignment_from_cigar_string {
   my $hit_strand = $daf->hstrand;
   my $qry_strand = $daf->strand;
 
-  #test
-#  #warn $daf->analysis->parameters, "\n";
-#  warn "Q: ", $daf->slice->seq_region_name, "\n";
-#  warn "QS-E: ", $daf->start, " ", $daf->end, "\n";
-#  warn "QSTR: $qry_strand\n", "\n";
-#  #warn $query_align_str;
-#  warn length $query_align_str;
-#  warn "H: ", $daf->hseqname, "\n";
-#  warn "HS-E: ", $daf->hstart, " ", $daf->hend, "\n";
-#  warn "HSTR: $hit_strand\n", "\n";
-#  #warn $hit_align_str;
-#  warn length $hit_align_str;
-
   my $query_hsp = '';
   my $hit_hsp   = '';
 
@@ -425,10 +411,10 @@ sub make_alignment_from_cigar_string {
     die "Sequence length of reconstructed HSP is different!\n";
     return;
   }
-
-  $self->_pretty_alignment($query_hsp, $hit_hsp);
-
-  return $self;
+  $self->query_hsp($query_hsp);
+  $self->hit_hsp($hit_hsp);
+  
+  return;
 }
 
 sub alignment {
@@ -436,7 +422,23 @@ sub alignment {
   if ($alignment) {
     $self->{'_alignment'} = $alignment;
   }
+  elsif(!defined($self->{'_alignment'})) {
+	$self->_pretty_alignment();
+  }
+  
   return $self->{'_alignment'};
+}
+
+sub html_alignment_with_repeats {
+  my ( $self, $html_alignment_with_repeats ) = @_;
+  if ($html_alignment_with_repeats) {
+    $self->{'_html_alignment_with_repeats'} = $html_alignment_with_repeats;
+  }
+  elsif(!defined($self->{'_html_alignment_with_repeats'})) {
+	$self->_pretty_alignment('REPEATS');
+  }
+  
+  return $self->{'_html_alignment_with_repeats'};
 }
 
 sub compact_alignment {
@@ -444,26 +446,70 @@ sub compact_alignment {
   if ($calignment) {
     $self->{'_compact_alignment'} = $calignment;
   }
+  elsif(!defined($self->{'_compact_alignment'})) {
+	$self->_pretty_alignment();
+  }
+  
   return $self->{'_compact_alignment'};
 }
+
+sub compact_html_alignment_with_repeats {
+  my ( $self, $calignment ) = @_;
+  if ($calignment) {
+    $self->{'_compact_html_alignment_with_repeats'} = $calignment;
+  }
+  elsif(!defined($self->{'_compact_html_alignment_with_repeats'})) {
+	$self->_pretty_alignment('REPEATS');
+  }
+  
+  return $self->{'_compact_html_alignment_with_repeats'};
+}
+
 
 sub compact_alignment_length {
   my ( $self, $len ) = @_;
   if ($len) {
     $self->{'_compact_alignment_length'} = $len;
   }
+  elsif(!defined($self->{'_compact_alignment_length'})) {
+	$self->_pretty_alignment();
+  }
 
   return $self->{'_compact_alignment_length'};
 }
 
+sub query_hsp {
+  my ( $self, $query_hsp ) = @_;
+  if ($query_hsp) {
+    $self->{'_query_hsp'} = $query_hsp;
+  }
+  elsif(!defined($self->{'_query_hsp'})) {
+	$self->make_hsps();
+  }
+  
+  return $self->{'_query_hsp'};
+}
+
+sub hit_hsp {
+  my ( $self, $hit_hsp ) = @_;
+  if ($hit_hsp) {
+    $self->{'_hit_hsp'} = $hit_hsp;
+  }
+  elsif(!defined($self->{'_hit_hsp'})) {
+	$self->make_hsps();
+  }
+  
+  return $self->{'_hit_hsp'};
+}
+
 sub _pretty_alignment {
 
-  my ($self, $query_hsp, $hit_hsp) = @_;
+  my ($self, $repeat_flag) = @_;
 
   my $block_len = 50; # hard-coded
 
-  my @qry_frags = $self->_split_to_blocks($query_hsp, $block_len);
-  my @hit_frags = $self->_split_to_blocks($hit_hsp, $block_len);
+  my @qry_frags = $self->_split_to_blocks($self->query_hsp, $block_len);
+  my @hit_frags = $self->_split_to_blocks($self->hit_hsp, $block_len);
 
   my $matches = [];
   for ( my $i=0; $i < @qry_frags; $i++){
@@ -502,8 +548,6 @@ sub _pretty_alignment {
   my $first_qry_s_coord;
   my $cpcount; # compact align counter
 
-  #my $padding = $self->name_padding ? '%s' : '%-20s';
-
   my $j = 0;
   for ( my $i=0; $i< scalar @qry_frags; $i++) {
 
@@ -540,6 +584,12 @@ sub _pretty_alignment {
       $qry_e_coord = $qry_s_coord + ($hsp_piece_len - $num_qry_indels) - 1;
       $hit_e_coord = $hit_s_coord + ($hsp_piece_len - $num_hit_indels) - 1;
     }
+
+	# Insert repeat HTML if requested
+	if($repeat_flag) {
+		$qry_hsp_frag = $self->add_repeat_html('QUERY', $qry_hsp_frag, $qry_strand, $qry_s_coord);
+		$hit_hsp_frag = $self->add_repeat_html('HIT', $hit_hsp_frag, $hit_strand, $hit_s_coord);
+	}
 
     # should be more clever by taking padding param from constructor
     if ( $self->name_padding ){
@@ -605,17 +655,182 @@ sub _pretty_alignment {
     }
   }
 
-  $self->compact_alignment($compact_pretty_align);
-  $self->alignment($pretty_align);
+	if($repeat_flag) {
+	  $self->compact_html_alignment_with_repeats($compact_pretty_align);
+	  $self->html_alignment_with_repeats($pretty_align);
+	}
+	else {
+	  $self->compact_alignment($compact_pretty_align);
+	  $self->alignment($pretty_align);
+	}
 
   if ( $compact_pretty_align eq '' ){
-    $self->compact_alignment_length(length $query_hsp);
+    $self->compact_alignment_length(length $self->query_hsp);
   }
   else {
     $self->compact_alignment_length($compact_alignment_length);
   }
 
+
   return $self;
+}
+
+sub repeat_termini {
+	my ($self, $slice) = @_;
+  		
+  	my %repeat_termini;
+  	
+	if(defined($slice)) {  	
+		my @repeats = @{ $slice->get_all_RepeatFeatures };
+	  	foreach my $repeat (@repeats) {
+	  		push(
+	  			@{ $repeat_termini{$repeat->start}{START} },
+	  			$repeat,
+	  		);
+	  		push(
+	  			@{ $repeat_termini{$repeat->end+1}{END} },
+	  			$repeat,
+	  		);
+	  	}
+	}
+  	
+  	return \%repeat_termini;
+}
+
+sub add_repeat_html {
+	my ($self, $type, $hsp_frag, $strand, $coord) = @_;
+	
+	my $hsp_frag_with_repeats;
+
+	# Get a slice corresponding to this frag
+	my $slice;
+	
+	if($type eq 'QUERY') {
+		$slice = $self->best_feature->slice;
+	}
+	elsif($type eq 'HIT') {
+		$slice = $self->best_feature->slice->adaptor->fetch_by_region('clone', get_accession($self->best_feature->hseqname) );
+	}
+	else {
+		confess "Non-standard type $type\n";
+	}
+	
+	my @bases =  $hsp_frag =~ /[^-]/g;
+	my $fragment_length = scalar @bases;
+	
+	# Treat fragment-length as 1 to handle all-gap rows
+	if($fragment_length == 0) {$fragment_length = 1}
+	
+	my ($fragment_start, $fragment_end);
+	if($strand == 1) {
+		$fragment_start = $coord;
+		$fragment_end = $coord+$fragment_length-1;
+	}
+	else {
+		$fragment_start = $coord - $fragment_length + 1;
+		$fragment_end = $coord;
+	}
+	
+	my $fragment_slice = $slice->sub_Slice($fragment_start, $fragment_end, $strand);
+	
+	my @fragment_list = split(//, $hsp_frag);
+	
+	# Go through all repeats
+	my %repeat_termini = %{ $self->repeat_termini($fragment_slice) };
+	
+	my $next_fragment_position;
+
+	my %repeat_names;
+	my $open_tag_flag = 0;
+	
+	REPEAT_TERMINUS_POSITION: foreach my $repeat_terminus_position (sort {$a <=> $b} keys %repeat_termini) {
+
+		my @previous_repeat_names = keys %repeat_names;
+		
+		foreach my $terminus (sort sort_start_end keys %{$repeat_termini{$repeat_terminus_position}}) {
+			
+			# Keep track of the present set of repeats
+			foreach my $repeat (@{$repeat_termini{$repeat_terminus_position}{$terminus}}) {		
+				if($terminus eq 'START') {
+					$repeat_names{ $repeat->display_id } = 1;
+				}
+				else {
+					delete($repeat_names{ $repeat->display_id });
+				}
+			}
+		}
+			
+		# Is the terminus within the present alignment-fragment?
+		if(
+			$repeat_terminus_position > 0
+		) {
+			# Add start tag at beginning of string if necessary
+			if(
+				!defined($next_fragment_position)
+			) {
+				if($fragment_list[0] !~ /-/) {
+					$next_fragment_position = 1;
+				}
+				else {
+					$next_fragment_position = 0;
+				}
+				
+				if(
+					@previous_repeat_names > 0
+					and $repeat_terminus_position > 1
+				) {
+					$hsp_frag_with_repeats .= tag_for_repeat_names(sort @previous_repeat_names);
+					$open_tag_flag = 1;
+				}
+			}
+			
+			if($repeat_terminus_position <= $fragment_length) {
+	
+				while($next_fragment_position < $repeat_terminus_position and scalar @fragment_list > 0) {
+					my $fragment_character = shift(@fragment_list);
+					$hsp_frag_with_repeats .= $fragment_character;
+					if(scalar @fragment_list > 0 and $fragment_list[0] !~ /-/) {
+						$next_fragment_position++;
+					}
+				}
+			
+			#	my $substring_length = $repeat_terminus_position - $last_fragment_position;
+			#	$hsp_frag_with_repeats .= substr($hsp_frag, $last_fragment_position, $substring_length);
+			#	$last_fragment_position += $substring_length;
+				
+				if($open_tag_flag) {
+					$hsp_frag_with_repeats .= "</SPAN>";
+				}
+				if(scalar keys %repeat_names > 0) {
+					$hsp_frag_with_repeats .= tag_for_repeat_names(sort keys %repeat_names);
+					$open_tag_flag = 1;
+				}
+				else {
+					$open_tag_flag = 0;
+				}
+			}
+			# If this position is higher than the end of the fragment, we can end the loop
+			else {
+				last REPEAT_TERMINUS_POSITION;
+			}
+		}
+	}
+	
+	# Add on any remaining fragment
+	$hsp_frag_with_repeats .= join('', @fragment_list);
+	
+	# Add a closing tag if necessary
+	if($open_tag_flag) {
+		$hsp_frag_with_repeats .= "</SPAN>";
+	}
+	
+	return $hsp_frag_with_repeats;
+}
+
+sub tag_for_repeat_names {
+	my (@repeat_names) = @_;
+	my $repeat_name_string = join(' ', @repeat_names);
+	return qq(<SPAN class="repeat" title="$repeat_name_string">);
 }
 
 sub _split_to_blocks {
@@ -633,6 +848,12 @@ sub _complement {
   return $seq;
 }
 
+# We need to sort ENDS before STARTS for a given terminus-position
+sub sort_start_end {
+	if($a eq 'START' and $b eq 'END') {return 1}
+	elsif($a eq 'END' and $b eq 'START') {return -1}
+	else {return 0}
+}
 
 1;
 
