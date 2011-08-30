@@ -443,7 +443,7 @@ sub html_alignment_with_repeats {
 
 sub compact_alignment {
   my ( $self, $calignment ) = @_;
-  if ($calignment) {
+  if (defined($calignment)) {
     $self->{'_compact_alignment'} = $calignment;
   }
   elsif(!defined($self->{'_compact_alignment'})) {
@@ -455,7 +455,7 @@ sub compact_alignment {
 
 sub compact_html_alignment_with_repeats {
   my ( $self, $calignment ) = @_;
-  if ($calignment) {
+  if (defined($calignment)) {
     $self->{'_compact_html_alignment_with_repeats'} = $calignment;
   }
   elsif(!defined($self->{'_compact_html_alignment_with_repeats'})) {
