@@ -47,53 +47,27 @@ sub new {
 sub _get_embl_databases {
 	my $mole_user = 'genero';
 	my $mole_host = 'cbi5d';
-	my $mole_login_db = 'mysql';
+	my $mole_login_db = 'mm_ini';
 		
 	my $mole_dsn = "DBI:mysql:database=${mole_login_db};host=${mole_host}";
 	my $mole_db = DBI->connect($mole_dsn, $mole_user);
+	
+	my %database_handle_for_category = (
+		emblrelease => \$CLASS_emblrelease_db,
+		emblnew => \$CLASS_emblnew_db,
+	);
 		
-	my @databases = @{$mole_db->selectcol_arrayref("show databases")};
-
-	# Find latest EMBL
-	my $latest_embl;
-	my $highest_embl_number = 0;
-	foreach my $database (@databases) {
-		if($database =~ /^embl_(\d+)$/) {
-			my $embl_number = $1;
-			if($embl_number > $highest_embl_number) {
-				$highest_embl_number = $embl_number;
-				$latest_embl = $database;
-			}
+	foreach my $database_category (keys %database_handle_for_category) {
+		
+		my @database_names = @{$mole_db->selectcol_arrayref(qq/select database_name from ini where database_category='$database_category' and current='yes' and available='yes'/)};
+	
+		if(scalar @database_names == 1) {
+			my $current_name = $database_names[0];
+			my $dsn = "DBI:mysql:database=${current_name};host=${mole_host}";
+			${$database_handle_for_category{$database_category}} = DBI->connect($dsn, $mole_user);
+			
 		}
 	}
-		
-	# Find latest EMBLNEW
-	my $latest_emblnew;
-	my $latest_emblnew_date;
-	foreach my $database (@databases) {
-		if($database =~ /^emnew_(\d{4})(\d{2})(\d{2})$/) {
-			my $emblnew_date = DateTime->new(
-				year => $1,
-				month => $2,
-				day => $3,
-			);
-				
-			if(
-				!defined($latest_emblnew_date)
-				or $emblnew_date > $latest_emblnew_date
-			) {
-				$latest_emblnew_date = $emblnew_date;
-				$latest_emblnew = $database;
-			}
-		}
-	}
-				
-	# Connect to these databases
-	my $embl_dsn = "DBI:mysql:database=${latest_embl};host=${mole_host}";
-	$CLASS_emblrelease_db = DBI->connect($embl_dsn, $mole_user);
-
-	my $emblnew_dsn = "DBI:mysql:database=${latest_emblnew};host=${mole_host}";
-	$CLASS_emblnew_db = DBI->connect($emblnew_dsn, $mole_user);
 		
 	return;						
 }
