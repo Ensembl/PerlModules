@@ -152,6 +152,21 @@ sub set_SubSeq_locus_level_errors {
     $self->error_same_locus_name_root_in_transcripts_on_different_loci;
 }
 
+sub get_all_annotation_in_progress_Loci {
+    my ($self) = @_;
+    
+    my %name_locus;
+    foreach my $sub ($self->get_all_SubSeqs) {
+        next unless $sub->is_mutable;
+        my $locus = $sub->Locus;
+        if ($locus->annotation_in_progress) {
+            $name_locus{$locus->name} = $locus;
+        }
+    }
+    
+    return map {$name_locus{$_}} sort {ace_sort($a, $b)} keys %name_locus;
+}
+
 sub error_same_locus_name_root_in_transcripts_on_different_loci {
     my ($self) = @_;
 

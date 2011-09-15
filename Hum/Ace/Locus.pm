@@ -279,6 +279,51 @@ sub list_remarks {
     }
 }
 
+{
+    my $aip = 'annotation in progress';
+
+    sub annotation_in_progress {
+        my ($self) = @_;
+
+        my @rem = $self->list_remarks;
+        foreach my $r (@rem) {
+            if ($r eq $aip) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    sub set_annotation_in_progress {
+        my ($self) = @_;
+
+        my @rem = $self->list_remarks;
+        foreach my $r (@rem) {
+            if ($r eq $aip) {
+                return 1;
+            }
+        }
+        $self->set_remarks($aip, @rem);
+        return 1;
+    }
+
+    sub unset_annotation_in_progress {
+        my ($self) = @_;
+        
+        my @rem = $self->list_remarks;
+        for (my $i = 0; $i < @rem; ) {
+            if ($rem[$i] eq $aip) {
+                splice(@rem, $i, 1);
+            }
+            else {
+                $i++;
+            }
+        }
+        $self->set_remarks(@rem);
+        return 1;
+    }
+}
+
 sub set_annotation_remarks {
     my( $self, @annotation_remarks ) = @_;
     
