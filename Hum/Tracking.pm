@@ -476,8 +476,9 @@ block, to ensure a graceful exit.
         $dbh ||= WrapDBI->connect(
             $u,
             {
-                RaiseError => 1,
-                AutoCommit => 0,
+                RaiseError  => 1,
+                AutoCommit  => 0,
+                LongReadLen => 1024 ** 2,
             }
         );
 
