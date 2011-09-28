@@ -52,7 +52,12 @@ use Config::IniFiles;
                 unixtime2YYYYMMDD
                 unixtime2datetime
                 unixtime2tpftime
+				make_error_email
                );
+
+sub make_error_email {
+	return q{<b>Problems with Chromoview?</b> Email <a href="mailto:grc-help@sanger.ac.uk">grc-help@sanger.ac.uk</a>};
+}
 			   
 sub google_analytics {
 
