@@ -44,6 +44,7 @@ sub _init {
     HUMPUB_ROOT   => $humpub,
 
     HUMPUB_BLAST  => "$humpub_scratch/data/blast",
+    HUMPUB_CHROMOVIEW  => "$humpub_scratch/data/chromoview/",
 
     SPECIES_ANALYSIS_ROOT => {
         'Human'         => "$humpub/analysis/projects",
