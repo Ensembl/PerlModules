@@ -384,7 +384,13 @@ sub Sequence {
 	elsif (
 		!defined($self->{'Sequence'})
 	) {
-		$self->_lazy_load_sequence;
+		# Only attempt lazy-load if the lazy load method is defined.
+		if(defined($self->{'_lazy_load_method'})) {
+			$self->_lazy_load_sequence;
+		}
+		else {
+			return;
+		}
 	}
 	
     return $self->{'_Sequence'};
