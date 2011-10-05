@@ -725,67 +725,104 @@ sub concat_js_params {
   return join(', ', map { "'".$_."'" } @params);
 }
 
-sub get_latest_TPF_update_of_clone {
+{
+	# Store handles to avoid opening too many Oracle cursors
+	my %latest_tpf_update_handle_for_sql;
+	
+	sub get_latest_TPF_update_of_clone {
+	
+	  my ($species, $chr, $subregion, $daySpan) = @_;
+	  # get latest entrydate of current clone in a TPF
+	
+	  my @arguments;
+	
+	  my $sql = qq{
+	               SELECT * from (
+	               SELECT TO_CHAR(cs.entrydate, 'yyyy-mm-dd'), tg.id_tpftarget, cd.chromosome, tg.subregion, cd.speciesname, ROWNUM
+	               FROM clone_sequence cs, clone c, tpf_row tr, tpf t, tpf_target tg, chromosomedict cd
+	               WHERE cs.is_current=1
+	               AND cs.clonename = c.clonename
+	               AND c.clonename=tr.clonename
+	               AND tr.id_tpf = t.id_tpf
+	               AND t.ID_TPFTARGET=tg.ID_TPFTARGET
+	               AND tg.chromosome=cd.id_dict
+	               AND t.iscurrent=1
+	               AND cd.speciesname = ?
+	               AND cd.chromosome = ?
+	             };
+	             
+	  push(@arguments, $species, $chr);
+	             
+	  my $csWindow;
+	  if($daySpan) {
+	  	$csWindow = qq{ AND cs.ENTRYDATE > sysdate-?};
+	  	push(@arguments, $daySpan);
+	  }
+	  else {
+	  	$csWindow = qq{ AND cs.ENTRYDATE < sysdate};
+	  }
 
-  my ($species, $chr, $subregion, $daySpan) = @_;
-  # get latest entrydate of current clone in a TPF
-
-  my $sql = qq{
-               SELECT * from (
-               SELECT TO_CHAR(cs.entrydate, 'yyyy-mm-dd'), tg.id_tpftarget, cd.chromosome, tg.subregion, cd.speciesname, ROWNUM
-               FROM clone_sequence cs, clone c, tpf_row tr, tpf t, tpf_target tg, chromosomedict cd
-               WHERE cs.is_current=1
-               AND cs.clonename = c.clonename
-               AND c.clonename=tr.clonename
-               AND tr.id_tpf = t.id_tpf
-               AND t.ID_TPFTARGET=tg.ID_TPFTARGET
-               AND tg.chromosome=cd.id_dict
-               AND t.iscurrent=1
-               AND cd.speciesname = '$species'
-               AND cd.chromosome = '$chr'
-             };
-  my $csWindow = $daySpan ? qq{ AND cs.ENTRYDATE > sysdate-$daySpan} : qq{ AND cs.ENTRYDATE < sysdate};
-  my $region = $subregion ? qq{ AND tg.subregion = '$subregion'} : qq{ AND tg.subregion IS NULL};
-
-  $sql .= $csWindow . $region;
-  $sql .= qq{ ORDER BY cs.entrydate DESC) WHERE ROWNUM <=1};
-  $sql .= qq{ UNION};
-  $sql .= qq{ SELECT DISTINCT TO_CHAR(t.entry_date, 'yyyy-mm-dd'), tg.id_tpftarget, cd.chromosome, tg.subregion, cd.speciesname, ROWNUM
-              FROM tpf t, tpf_target tg, chromosomedict cd
-              WHERE t.ID_TPFTARGET=tg.ID_TPFTARGET
-              AND tg.chromosome=cd.id_dict
-              AND t.iscurrent=1};
-  $sql .= qq{ AND cd.speciesname = '$species'
-              AND cd.chromosome = '$chr'};
-  my $tpfWindow = $daySpan ? qq{ AND t.entry_date > sysdate-$daySpan} : qq{ AND t.entry_date < sysdate};
-  $sql .= $tpfWindow . $region;
-
-  #print $sql;
-
-  my $qry = prepare_track_statement($sql);
-  $qry->execute();
-
-  my $date_data = {};
-  my $date = '';
-  my $counter;
-  while ( my (@fields) = $qry->fetchrow() ){
-    $counter++;
-    pop @fields;
-    $date_data->{$fields[0]} = \@fields;
-  }
-  return unless $counter;
-
-  #warn "NUM: ", scalar keys %$date_data;
-  if (scalar keys %$date_data == 0 ){
-    return;
-  }
-  elsif (scalar keys %$date_data == 1 ){
-    return map { @{$date_data->{$_}} } keys %$date_data;
-  }
-  else {
-    my @Dt = sort { ace_sort($b, $a) } keys %$date_data;
-    return @{$date_data->{$Dt[0]}};
-  }
+	  my $region;
+	  if($subregion) {
+	  	$region = qq{ AND tg.subregion = ?};
+	  	push(@arguments, $subregion);
+	  }
+	  else {
+	  	$region = qq{ AND tg.subregion IS NULL};
+	  }
+	
+	  $sql .= $csWindow . $region;
+	  $sql .= qq{ ORDER BY cs.entrydate DESC) WHERE ROWNUM <=1};
+	  $sql .= qq{ UNION};
+	  $sql .= qq{ SELECT DISTINCT TO_CHAR(t.entry_date, 'yyyy-mm-dd'), tg.id_tpftarget, cd.chromosome, tg.subregion, cd.speciesname, ROWNUM
+	              FROM tpf t, tpf_target tg, chromosomedict cd
+	              WHERE t.ID_TPFTARGET=tg.ID_TPFTARGET
+	              AND tg.chromosome=cd.id_dict
+	              AND t.iscurrent=1};
+	  $sql .= qq{ AND cd.speciesname = ?
+	              AND cd.chromosome = ?};
+	              
+	  push(@arguments, $species, $chr);
+	             
+	  my $tpfWindow = $daySpan ? qq{ AND t.entry_date > sysdate-$daySpan} : qq{ AND t.entry_date < sysdate};
+	  $sql .= $tpfWindow . $region;
+	  if($subregion) {
+	  	push(@arguments, $subregion);
+	  }
+	
+	  my $qry;
+	  if(exists($latest_tpf_update_handle_for_sql{$sql})) {
+	  		$qry = $latest_tpf_update_handle_for_sql{$sql}; 
+	  }
+	  else {
+	  	$qry = prepare_track_statement($sql);
+	  	$latest_tpf_update_handle_for_sql{$sql} = $qry;
+	  }
+	
+	  $qry->execute(@arguments);
+	
+	  my $date_data = {};
+	  my $date = '';
+	  my $counter;
+	  while ( my (@fields) = $qry->fetchrow() ){
+	    $counter++;
+	    pop @fields;
+	    $date_data->{$fields[0]} = \@fields;
+	  }
+	  return unless $counter;
+	
+	  #warn "NUM: ", scalar keys %$date_data;
+	  if (scalar keys %$date_data == 0 ){
+	    return;
+	  }
+	  elsif (scalar keys %$date_data == 1 ){
+	    return map { @{$date_data->{$_}} } keys %$date_data;
+	  }
+	  else {
+	    my @Dt = sort { ace_sort($b, $a) } keys %$date_data;
+	    return @{$date_data->{$Dt[0]}};
+	  }
+	}
 }
 
 sub get_all_current_TPFs {
