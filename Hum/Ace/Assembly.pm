@@ -569,7 +569,6 @@ sub express_data_fetch {
     my( $self, $ace ) = @_;
 
     # Get Methods first, since they are used by other objects
-    # $self->store_MethodCollection_from_ace_handle($ace);
     my %name_method = map {$_->name, $_} $self->MethodCollection->get_all_transcript_Methods;
 
     my $name = $self->name;
@@ -675,15 +674,6 @@ sub express_data_fetch {
             $name_clone{$clone_name} = $clone;
         }
     }
-
-    return;
-}
-
-sub store_MethodCollection_from_ace_handle {
-    my ($self, $ace) = @_;
-
-    my $coll = Hum::Ace::MethodCollection->new_from_ace_handle($ace);
-    $self->MethodCollection($coll);
 
     return;
 }
