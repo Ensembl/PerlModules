@@ -196,7 +196,7 @@ sub error_same_locus_name_root_in_transcripts_on_different_loci {
             $other_loci_error = sprintf "Locus name root '%s' is used in other %s %s\n",
                 $root,
                 @others > 1 ? 'loci' : 'locus',
-                join(' and ', map "'$_'", @others);
+                join(' and ', map { "'$_'" } @others);
             foreach my $sub (@{$locus_tsct->{$this}}) {
                 my $err = $sub->locus_level_errors;
                 $sub->locus_level_errors($err . $other_loci_error);
@@ -246,7 +246,7 @@ sub error_more_than_one_locus_name_root_in_transcript_names {
                 $this,
                 $other_count > 1 ? 's have' : ' has',
                 @others > 1 ? 's' : '',
-                join(' or ', map "'$_'", @others);
+                join(' or ', map { "'$_'" } @others);
             foreach my $sub (@{$lnr{$this}}) {
                 my $err = $sub->locus_level_errors;
                 $sub->locus_level_errors($err . $this_err_msg);
