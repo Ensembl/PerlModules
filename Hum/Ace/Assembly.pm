@@ -1024,8 +1024,10 @@ sub _generate_desc_and_kws_for_clone {
         }
 
         my $range = scalar @DEline;
-        return '' if ($range < 1);
-        if ($range == 1) {
+        if ($range == 0) {
+            $final_line .= "no genes.";
+        }
+        elsif ($range == 1) {
             $final_line .= ${$DEline[0]}.".";
         }
         elsif ($range == 2) {
