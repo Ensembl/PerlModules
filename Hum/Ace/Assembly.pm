@@ -526,23 +526,23 @@ sub zmap_SimpleFeature_xml {
 
 
 sub zmap_request_xml {
-	my ($self, $action, $sf_hash) = @_;
-	
-	my $xml = Hum::XmlWriter->new;
-	
-	$xml->open_tag('zmap');
-	$xml->open_tag('request', {action => $action});
-	$xml->open_tag('align');
-	$xml->open_tag('block');
-	
+    my ($self, $action, $sf_hash) = @_;
+
+    my $xml = Hum::XmlWriter->new;
+
+    $xml->open_tag('zmap');
+    $xml->open_tag('request', {action => $action});
+    $xml->open_tag('align');
+    $xml->open_tag('block');
+
     for my $featureset (keys %$sf_hash) {
-    	$xml->open_tag('featureset', {name => $featureset});
-    	$xml->add_raw_data_with_indent($sf_hash->{$featureset});
-    	$xml->close_tag;
+        $xml->open_tag('featureset', {name => $featureset});
+        $xml->add_raw_data_with_indent($sf_hash->{$featureset});
+        $xml->close_tag;
     }
-    
+
     $xml->close_all_open_tags;
-    
+
     return $xml->flush;
 }
 
