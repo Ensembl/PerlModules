@@ -21,9 +21,8 @@ use Hum::Sequence::DNA;
 sub new {
     my( $pkg ) = shift;
 
-    return bless {
-        '_SubSeq_list'  => [],
-        }, $pkg;
+    my $new = { '_SubSeq_list' => [] };
+    return bless $new, $pkg;
 }
 
 sub name {
