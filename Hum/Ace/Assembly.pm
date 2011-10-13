@@ -343,19 +343,19 @@ sub clear_SimpleFeatures {
 }
 
 sub add_SimpleFeatures {
-    my $self = shift;
+    my ( $self, @features ) = @_;
 
-    push @{ $self->{'_SimpleFeature_list'} }, @_;
+    push @{ $self->{'_SimpleFeature_list'} }, @features;
     $self->{'_SimpleFeatures_are_sorted'} = 0;
 
     return;
 }
 
 sub set_SimpleFeature_list {
-    my $self = shift;
+    my ( $self, @features ) = @_;
 
     $self->clear_SimpleFeatures;
-    $self->add_SimpleFeatures( @_ );
+    $self->add_SimpleFeatures( @features );
 
     return;
 }
