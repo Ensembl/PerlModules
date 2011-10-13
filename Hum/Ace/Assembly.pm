@@ -499,10 +499,10 @@ sub zmap_SimpleFeature_xml {
 
         # If $old is supplied, we create the minimum update transaction.
 
-        my %new_feat = map { $_->zmap_xml_feature_tag($offset), 1 } @{ $curr_sfs->{$featureset} };
+        my %new_feat = map { $_->zmap_xml_feature_tag($offset) => 1 } @{ $curr_sfs->{$featureset} };
         my %old_feat;
         if ($old) {
-            %old_feat = map { $_->zmap_xml_feature_tag($offset), 1 } @{ $old_sfs->{$featureset} || [] };
+            %old_feat = map { $_->zmap_xml_feature_tag($offset) => 1 } @{ $old_sfs->{$featureset} || [] };
         }
         else {
             %old_feat = ();
