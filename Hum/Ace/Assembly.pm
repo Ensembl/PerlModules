@@ -77,6 +77,8 @@ sub add_SubSeq {
     confess "'$SubSeq' is not a 'Hum::Ace::SubSeq'"
         unless $SubSeq->isa('Hum::Ace::SubSeq');
     push(@{$self->{'_SubSeq_list'}}, $SubSeq);
+
+    return;
 }
 
 sub replace_SubSeq {
@@ -150,6 +152,8 @@ sub set_SubSeq_locus_level_errors {
     }
 
     $self->error_same_locus_name_root_in_transcripts_on_different_loci;
+
+    return;
 }
 
 sub get_all_annotation_in_progress_Loci {
@@ -199,6 +203,8 @@ sub error_same_locus_name_root_in_transcripts_on_different_loci {
             }
         }
     }
+
+    return;
 }
 
 sub error_more_than_one_locus_name_root_in_transcript_names {
@@ -247,6 +253,8 @@ sub error_more_than_one_locus_name_root_in_transcript_names {
             }
         }
     }
+
+    return;
 }
 
 sub error_strand_in_transcript_set {
@@ -285,6 +293,8 @@ sub error_strand_in_transcript_set {
         }
         $sub->locus_level_errors($err);
     }
+
+    return;
 }
 
 sub error_evidence_used_more_than_once_in_transcript_set {
@@ -320,12 +330,16 @@ sub error_evidence_used_more_than_once_in_transcript_set {
             }
         }
     }
+
+    return;
 }
 
 sub clear_SimpleFeatures {
     my ($self) = @_;
 
     $self->{'_SimpleFeature_list'} = [];
+
+    return;
 }
 
 sub add_SimpleFeatures {
@@ -333,6 +347,8 @@ sub add_SimpleFeatures {
 
     push @{ $self->{'_SimpleFeature_list'} }, @_;
     $self->{'_SimpleFeatures_are_sorted'} = 0;
+
+    return;
 }
 
 sub set_SimpleFeature_list {
@@ -340,6 +356,8 @@ sub set_SimpleFeature_list {
 
     $self->clear_SimpleFeatures;
     $self->add_SimpleFeatures( @_ );
+
+    return;
 }
 
 sub get_all_SimpleFeatures {
@@ -416,6 +434,8 @@ sub filter_SimpleFeature_list_from_ace_handle {
         push @$sf_list, $feat;
     }
     #printf STDERR "Found %d editable SimpleFeatures\n", scalar @$sf_list;
+
+    return;
 }
 
 sub ace_string {
@@ -656,6 +676,8 @@ sub express_data_fetch {
             $name_clone{$clone_name} = $clone;
         }
     }
+
+    return;
 }
 
 sub store_MethodCollection_from_ace_handle {
@@ -663,6 +685,8 @@ sub store_MethodCollection_from_ace_handle {
 
     my $coll = Hum::Ace::MethodCollection->new_from_ace_handle($ace);
     $self->MethodCollection($coll);
+
+    return;
 }
 
 sub store_Sequence_from_ace_handle {
@@ -670,6 +694,8 @@ sub store_Sequence_from_ace_handle {
 
     my $seq = $self->new_Sequence_from_ace_handle($ace);
     $self->Sequence($seq);
+
+    return;
 }
 
 sub new_Sequence_from_ace_handle {
@@ -713,6 +739,8 @@ sub add_Clone {
 
     my $list = $self->{'_Clone_list'} ||= [];
     push @$list, $clone;
+
+    return;
 }
 
 sub get_all_Clones {
@@ -779,6 +807,8 @@ sub clone_name_overlapping {
             return $clone->clone_name;
         }
     }
+
+    return;
 }
 
 sub generate_description_for_clone {
