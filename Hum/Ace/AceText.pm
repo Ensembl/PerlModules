@@ -17,38 +17,38 @@ sub new {
     # Trim trailing empty lines so that it
     # is safe to add data onto the end.
     $txt =~ s/\s+$/\n/s;
-    
+
     # Remove pesky nulls
     $txt =~ s/\0//g;
-    
+
     return bless \$txt, $pkg;
 }
 
 sub new_from_class_and_name {
     my ($pkg, $class, $name) = @_;
-    
+
     my $txt = qq{\n$class : "$name"\n};
     return $pkg->new($txt);
 }
 
 sub new_from_class_and_name_with_delete {
     my ($pkg, $class, $name) = @_;
-    
+
     my $txt = qq{\n-D $class : "$name"\n\n$class : "$name"\n};
     return $pkg->new($txt);
 }
 
 sub ace_string {
     my( $self ) = @_;
-    
+
     return $$self;
 }
 
 sub get_values {
     my( $self, $tag_path ) = @_;
-    
+
     my ($pat, $offset) = _make_pattern_and_offset($tag_path);
-    
+
     my( @matches );
     while ($$self =~ /$pat/g) {
         my @ele = quotewords('\s+', 0, $1);
@@ -60,9 +60,9 @@ sub get_values {
 
 sub get_single_value {
     my ($self, $tag_path) = @_;
-    
+
     my ($pat, $offset) = _make_pattern_and_offset($tag_path);
-    
+
     if ($$self =~ /$pat/) {
         my ($value) = (quotewords('\s+', 0, $1))[$offset];
         return $value;
@@ -73,7 +73,7 @@ sub get_single_value {
 
 sub class_and_name {
     my ($self) = @_;
-    
+
     # Assume we have a whole object - the first line is Class "obj-name"
     if ($$self =~ /^(\w.+)/m) {
         my @ele = quotewords('\s+', 0, $1);
@@ -87,7 +87,7 @@ sub class_and_name {
 
 sub count_tag {
     my( $self, $tag_path ) = @_;
-    
+
     my ($pat) = _make_pattern_and_offset($tag_path);
     my $count = 0;
     while ($$self =~ /$pat/g) {
@@ -98,14 +98,14 @@ sub count_tag {
 
 sub delete_tag {
     my( $self, $tag_path ) = @_;
-    
+
     my ($pat) = _make_pattern_and_offset($tag_path);
     $$self =~ s/$pat\n//g;
 }
 
 sub add_tag_values {
     my( $self, @tag_val ) = @_;
-    
+
     foreach my $tv (@tag_val) {
         $$self .= _quoted_ace_line($tv);
     }
@@ -113,17 +113,17 @@ sub add_tag_values {
 
 sub add_tag {
     my $self = shift;
-    
+
     $$self .= _quoted_ace_line(\@_);
 }
 
 sub _quoted_ace_line {
     my( $tv ) = @_;
-    
+
     # This may look a bit odd, but it is emulating
     # acedb's behaviour as exactly as possible!
     my $str = $tv->[0] . "\t";
-    
+
     for (my $i = 1; $i < @$tv; $i++) {
         $_ = $tv->[$i];
 
@@ -143,11 +143,11 @@ sub _quoted_ace_line {
                 $_ = "\"$_\"";
             }
         }
-        
+
         $str .= " " . $_;
     }
     $str .= "\n";
-    
+
     return $str;
 }
 
@@ -156,9 +156,9 @@ sub _quoted_ace_line {
 
     sub _make_pattern_and_offset {
         my( $tag_path ) = @_;
-        
+
         my $offset = 1;
-        
+
         my( $pat );
         unless ($pat = $pattern_cache{$tag_path}) {
             confess "tag path '$tag_path' ends with non-word character"
@@ -167,7 +167,7 @@ sub _quoted_ace_line {
             #warn "Tag path = '$tag_path'\n";
             $pat = $pattern_cache{$tag_path} = [qr/^($tag_path\b.*?)\s*$/im, $offset];
         }
-        
+
         return @$pat
     }
 }
