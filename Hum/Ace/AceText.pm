@@ -130,18 +130,18 @@ sub _quoted_ace_line {
         # Don't quote elements which are numbers or just ':'
         unless (/^[\+\-]?[\.\d]+$/ or $_ eq ':') {
 
-	        # Escape quotes, back and forward slashes,
-	        # percent signs, and semi-colons.
-	        s/([\/"%;\\])/\\$1/g;
+            # Escape quotes, back and forward slashes,
+            # percent signs, and semi-colons.
+            s/([\/"%;\\])/\\$1/g;
 
-	        # Escape newlines and tabs
-	        s/\n/\\n/g;
-	        s/\t/\\t/g;
+            # Escape newlines and tabs
+            s/\n/\\n/g;
+            s/\t/\\t/g;
 
-	        # Quote tag unless it is entirely word characters
+            # Quote tag unless it is entirely word characters
             unless (/^\w+$/) {
-	            $_ = "\"$_\"";
-	        }
+                $_ = "\"$_\"";
+            }
         }
         
         $str .= " " . $_;
