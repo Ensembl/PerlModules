@@ -333,28 +333,11 @@ sub error_evidence_used_more_than_once_in_transcript_set {
     return;
 }
 
-sub clear_SimpleFeatures {
-    my ($self) = @_;
-
-    $self->{'_SimpleFeature_list'} = [];
-
-    return;
-}
-
-sub add_SimpleFeatures {
-    my ( $self, @features ) = @_;
-
-    push @{ $self->{'_SimpleFeature_list'} }, @features;
-    $self->{'_SimpleFeatures_are_sorted'} = 0;
-
-    return;
-}
-
 sub set_SimpleFeature_list {
     my ( $self, @features ) = @_;
 
-    $self->clear_SimpleFeatures;
-    $self->add_SimpleFeatures( @features );
+    @{ $self->{'_SimpleFeature_list'} } = @features;
+    $self->{'_SimpleFeatures_are_sorted'} = 0;
 
     return;
 }
