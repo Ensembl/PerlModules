@@ -157,7 +157,7 @@ sub set_SubSeq_locus_level_errors {
 
 sub get_all_annotation_in_progress_Loci {
     my ($self) = @_;
-    
+
     my %name_locus;
     foreach my $sub ($self->get_all_SubSeqs) {
         next unless $sub->is_mutable;
@@ -166,7 +166,7 @@ sub get_all_annotation_in_progress_Loci {
             $name_locus{$locus->name} = $locus;
         }
     }
-    
+
     return map {$name_locus{$_}} sort {ace_sort($a, $b)} keys %name_locus;
 }
 
@@ -546,7 +546,7 @@ sub express_data_fetch {
             $clone->assembly_strand($strand);
 
             $self->add_Clone($clone);
-            
+
             $name_clone{$clone_name} = $clone;
         }
     }
@@ -632,7 +632,7 @@ sub get_Clone {
 
 sub get_Clone_by_accession_version {
     my ($self, $acc_sv) = @_;
-    
+
     my $clone;
     foreach my $this ($self->get_all_Clones) {
         if ($this->accession_version eq $acc_sv) {
