@@ -441,20 +441,6 @@ sub ace_string {
     return $ace;
 }
 
-sub group_SimpleFeatures_by_featureset {
-
-    my $self = shift;
-
-    my %sfs_by_featureset = ();
-
-    for my $sf ($self->get_all_SimpleFeatures) {
-        $sfs_by_featureset{$sf->method_name} ||= [];
-        push @{ $sfs_by_featureset{$sf->method_name} }, $sf; 
-    }
-
-    return \%sfs_by_featureset;
-}
-
 sub express_data_fetch {
     my( $self, $ace ) = @_;
 
