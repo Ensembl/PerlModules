@@ -39,7 +39,7 @@ sub find_best_in_SubSeq {
         $trim = $site - $end;
     }
     
-    my $seq = $sub->exon_Sequence;
+    my $seq = $sub->mRNA_Sequence;
     if ($trim) {
         my $end = $seq->sequence_length - $trim;
         $seq = $seq->sub_sequence(1, $end);

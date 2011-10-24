@@ -508,31 +508,6 @@ sub clone_Sequence {
     return $self->{'_clone_Sequence'};
 }
 
-sub exon_Sequence {
-    my( $self ) = @_;
-
-    my $clone_seq = $self->clone_Sequence
-        or confess "No clone_Sequence";
-    my $seq = Hum::Sequence::DNA->new;
-    $seq->name($self->name);
-
-    my $seq_str = '';
-    foreach my $exon ($self->get_all_Exons) {
-	my $start = $exon->start;
-	my $end   = $exon->end;
-	$seq_str .= $clone_seq
-	    ->sub_sequence($start, $end)
-	    ->sequence_string;
-    }
-    $seq->sequence_string($seq_str);
-
-    if ($self->strand == -1) {
-        $seq = $seq->reverse_complement;
-    }
-
-    return $seq;
-}
-
 sub exon_Sequence_array {
     my( $self ) = @_;
 
