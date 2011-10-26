@@ -7,6 +7,7 @@ use strict;
 use warnings;
 use Hum::Analysis::Parser::Epic;
 use Hum::FastaFileIO;
+use Hum::Conf qw(GRIT_SOFTWARE);
 use Carp;
 use Cwd;
 
@@ -49,11 +50,7 @@ sub run {
 sub make_command_pipe {
     my ($self, $dir, $query_file, $subject_file) = @_;
 
-    ### It is not a good idea to have an absolute path to epic.pl encoded in a module
-    # my $cmd_pipe = "cd $dir; /software/grit/bin/epic.pl -Bac $query_file $subject_file 2>/dev/null |";
-
-    # my $cmd_pipe = "cd $dir; epic.pl -Bac $query_file $subject_file 2>/dev/null |";
-    my $cmd_pipe = "cd $dir; epic.pl -Bac -D $self->{_dovetail_threshold} $query_file $subject_file |";
+    my $cmd_pipe = "cd $dir; $GRIT_SOFTWARE/epic.pl -Bac -D $self->{_dovetail_threshold} $query_file $subject_file |";
     # warn "Running: $cmd_pipe";
     return $cmd_pipe;
 }
