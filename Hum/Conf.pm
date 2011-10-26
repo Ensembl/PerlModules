@@ -58,6 +58,7 @@ sub _init {
 
     EMBL_FILE_DIR => "$humpub/data/EMBL",
     CONFIG_DEFAULT => "$humpub/scripts/haceprep.cfg",
+    GRIT_SOFTWARE => '/software/grit/bin/',
    );
 
     if ($ENV{'PFETCH_SERVER_LIST'}) {
