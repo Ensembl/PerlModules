@@ -615,6 +615,31 @@ sub store_if_new {
 # This only stores the overlap if it is different
 # to the one in the database, or if there isn't
 # one in the database.
+sub store_new_copy {
+    my ($self) = @_;
+
+	my $previous_status = $self->status_id;
+	$self->status_id(3);    # Refuted
+
+	# Make it clear that the current program has been responsible for the changes
+	$self->program($self->default_program);
+	$self->operator($self->default_operator);
+	$self->remark('');
+	$self->store_status;
+
+	$self->{'_db_id'} = undef;
+
+	# Now reset the status that you're about to store
+	$self->status_id($previous_status);
+
+    $self->store;
+    
+    return 1;
+}
+
+# This only stores the overlap if it is different
+# to the one in the database, or if there isn't
+# one in the database.
 sub store_if_new_without_deletion {
     my ($self) = @_;
 
