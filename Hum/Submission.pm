@@ -17,6 +17,7 @@ use Net::Netrc;
   create_lock
   destroy_lock
   die_if_dumped_recently
+  set_dumped_flag
   prepare_statement
   prepare_cached_statement
   sanger_name
@@ -247,40 +248,49 @@ sub destroy_lock {
 sub die_if_dumped_recently {
     my ($project, $hr) = @_;
 
-    my $last_dump = prepare_statement(
-        qq{
+    my $last_dump = prepare_statement(q{
         SELECT UNIX_TIMESTAMP(d.dump_time)
           , d.dump_time
         FROM project_acc a
           , project_dump d
         WHERE a.sanger_id = d.sanger_id
-          AND a.project_name = '$project'
-        }
-    );
-    $last_dump->execute;
+          AND a.project_name = ?
+    });
+    $last_dump->execute($project);
 
     if (my ($dump_int, $dump_time) = $last_dump->fetchrow) {
         my $limit = time() - ($hr * 60 * 60);
         if ($dump_int > $limit) {
-            die
-"Project '$project' was last dumped on '$dump_time', which is less than ${hr}h ago";
+            die "Project '$project' was last dumped on '$dump_time', which is less than ${hr}h ago";
         }
     }
     return 1;
 }
 
+sub set_dumped_flag {
+    my ($project) = @_;
+
+    my $sth = prepare_statement(q{
+        UPDATE project_check
+        SET dumped_flag = 'Y'
+        WHERE project_name = ?
+    });
+    $sth->execute($project);
+
+    return 1;
+}
+
 sub is_dumped {
-	my ($project) = @_;
-	my $last_dump = prepare_statement(
-        qq{
+    my ($project) = @_;
+
+    my $last_dump = prepare_statement(q{
         SELECT d.dump_time
         FROM project_acc a
           , project_dump d
         WHERE a.sanger_id = d.sanger_id
-          AND a.project_name = '$project'
-        }
-    );
-    $last_dump->execute;
+          AND a.project_name = ?
+    });
+    $last_dump->execute($project);
 
     if (my ($dump_time) = $last_dump->fetchrow) {
         return 1;
