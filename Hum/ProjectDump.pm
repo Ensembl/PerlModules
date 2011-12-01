@@ -584,15 +584,15 @@ sub set_ghost_path {
             mkpath($path) or confess "mkpath('$path') failed : $!";
         }
     }
-    
+
     sub list_ftp_dirs {
         return _list_dirs($FTP_ROOT);
     }
-    
+
     sub list_ghost_dirs {
         return _list_dirs($FTP_GHOST);
     }
-    
+
     sub _list_dirs {
         my( $base_dir ) = @_;
         
@@ -619,7 +619,7 @@ sub set_ghost_path {
         }
         return(@dirs);
     }
-    
+
     sub _add_dir {
         my( $dir ) = @_;
         
