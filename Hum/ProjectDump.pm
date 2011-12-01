@@ -169,18 +169,18 @@ sub new_from_sequence_name {
 sub new_from_accession {
     my( $pkg, $acc ) = @_;
 
-	my $sth = prepare_statement(qq{
+    my $sth = prepare_statement(qq{
        SELECT d.sanger_id
-	   FROM project_acc a
+       FROM project_acc a
          , project_dump d
        WHERE a.accession = '$acc'
-   	   AND a.sanger_id = d.sanger_id
+       AND a.sanger_id = d.sanger_id
        AND d.is_current = 'Y'
        });
 
     $sth->execute;
 
-	my( @sid );
+    my( @sid );
     while (my ($s) = $sth->fetchrow) {
         push(@sid, $s);
     }
@@ -305,7 +305,7 @@ sub is_private {
 }
 
 sub is_pool {
-	return 0;
+    return 0;
 }
 
 sub current_status_number {
@@ -348,7 +348,7 @@ sub _submission_data {
         if (my($time, $type, $md5_sum, $start, $end) = $sth->fetchrow) {
             $data->{'submission_time'}   = $time;
             $data->{'submission_type'}   = $type;
-	        $data->{'embl_file_md5_sum'} = $md5_sum;
+            $data->{'embl_file_md5_sum'} = $md5_sum;
             $data->{'region_start'}      = $start;
             $data->{'region_end'}        = $end;
         }
@@ -563,8 +563,8 @@ sub set_ghost_path {
         # Get the chromosome name if this species splits on chromosome
         if (my $prefix = $sp->ftp_chr_prefix) {
             my $chr = $pdmp->chromosome || 'UNKNOWN';
-            if(ref($chr) eq 'HASH'){
-            	$path .= "/pooled";
+            if (ref($chr) eq 'HASH'){
+                $path .= "/pooled";
             } else {
                 $path .= "/$prefix$chr";
             }
@@ -578,7 +578,7 @@ sub set_ghost_path {
 
     sub make_file_path_dir {
         my( $pdmp ) = @_;
-        
+
         my $path = $pdmp->file_path;
         unless (-d $path) {
             mkpath($path) or confess "mkpath('$path') failed : $!";
@@ -595,14 +595,14 @@ sub set_ghost_path {
 
     sub _list_dirs {
         my( $base_dir ) = @_;
-        
+
         confess("base_dir not supplied") unless $base_dir;
-        
+
         my( @dirs );
         foreach my $species (Hum::Species->fetch_all_Species) {
             my $dir_name   = $species->ftp_dir;
             my $chr_prefix = $species->ftp_chr_prefix;
-            
+
             my $dir = "$base_dir/$dir_name";
             if ($chr_prefix) {
                 local *BASE;
@@ -633,7 +633,7 @@ sub set_ghost_path {
 
 sub file_path {
     my( $pdmp, $path ) = @_;
-    
+
     if ($path) {
         $pdmp->{'_file_path'} = $path;
     }
@@ -642,7 +642,7 @@ sub file_path {
 
 sub read_submission_data {
     my( $pdmp ) = @_;
-    
+
     my $sid = $pdmp->sanger_id or confess "No sanger_id";
     my $get_dump = prepare_statement(qq{
         SELECT a.project_name
@@ -808,10 +808,10 @@ sub write_fasta_file {
                 , "Length: $len bp"
                 );
         }
-	print FASTA ">$header\n" or confess "Can't print to '$file' : $!";
-	while ($$dna =~ m/(.{1,60})/g) {
-	    print FASTA $1, "\n" or confess "Can't print to '$file' : $!";
-	}
+    print FASTA ">$header\n" or confess "Can't print to '$file' : $!";
+    while ($$dna =~ m/(.{1,60})/g) {
+        print FASTA $1, "\n" or confess "Can't print to '$file' : $!";
+    }
     }
     close FASTA or confess "Error creating fasta file ($?) $!";
 }
