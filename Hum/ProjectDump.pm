@@ -548,7 +548,7 @@ sub set_ghost_path {
 {
 
     my $unfinished = 'unfinished_sequence';
-    
+
     sub set_path {
         my( $pdmp, $base_dir ) = @_;
         
