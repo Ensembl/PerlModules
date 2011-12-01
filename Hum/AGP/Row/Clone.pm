@@ -49,7 +49,13 @@ sub strand {
             unless $strand =~ /^-?1$/;
         $self->{'_strand'} = $strand;
     }
-    return $self->{'_strand'};
+    
+    if(!defined($self->{'_strand'})) {
+    	return;
+    }
+    else {
+    	return $self->{'_strand'};
+    }
 }
 
 sub accession_sv {

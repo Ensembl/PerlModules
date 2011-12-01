@@ -150,6 +150,16 @@ sub new_Clone_from_tpf_Clone {
     $cl->htgs_phase($inf->htgs_phase);
     $cl->accession_sv("$acc.$sv");
     $cl->remark($tpf_cl->remark);
+    
+    if($cl->remark) {
+	    if($cl->remark =~ /MINUS/) {
+	    	$cl->strand(-1);
+	    }
+	    elsif($cl->remark =~ /PLUS/) {
+	    	$cl->strand(1);
+	    }
+    }
+    
     return $cl;
 }
 
@@ -280,7 +290,9 @@ sub _process_contig {
         # Add gap if no overlap
         unless ($over) {
             # Set strand for current clone
-            $cl->strand($strand || 1);
+            if(!defined($cl->strand)) {
+	            $cl->strand($strand || 1);
+            }
 			$self->check_for_contained_clones($cl, $contig->[$i-1]);
             $self->insert_missing_overlap_pad->remark('No overlap in database');
             $strand = undef;
@@ -318,7 +330,9 @@ sub _process_contig {
             ### Should if overlap has been manually ail;
             printf STDERR "Dovetail of length '$dovetail' in overlap\n" if $verbose;
             $self->insert_missing_overlap_pad->remark("Bad overlap - dovetail of length $dovetail");
-            $cl->strand($strand || 1);
+            if(!defined($cl->strand)) {
+	            $cl->strand($strand || 1);
+            }
 			$cl = $self->check_for_contained_clones($cl, $contig->[$i-1]);
             $strand = undef;
             if ($pa->is_3prime) {
@@ -335,7 +349,14 @@ sub _process_contig {
             # Not set for first pair, or following miss-join
             $strand = $pa->is_3prime ? 1 : -1;
         }
-        $cl->strand($strand);
+        
+        # If a clone has a strand specified by the TPF, this takes priority
+        if(defined($cl->strand)) {
+	        $strand = $cl->strand;
+        }
+        else {
+        	$cl->strand($strand);
+        }
 
         $cl = $self->check_for_contained_clones($cl, $contig->[$i-1]);
 
@@ -360,7 +381,9 @@ sub _process_contig {
             $cl->seq_start($pb->position);
         }
     }
-    $cl->strand($strand || 1);
+    if(!defined($cl->strand)) {
+    	$cl->strand($strand || 1);
+    }
 	$self->check_for_contained_clones($cl, $contig->[-1]);
 }
 
