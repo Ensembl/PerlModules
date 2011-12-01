@@ -1431,6 +1431,7 @@ more than one match in the project table.
 #         46       SS Indexed Workflow Completed   
 #         47       Indexed Clone Assigned          
 #         48       Indexed Clone Finished          
+#         49       Indexed Manually Improved       
 
 
 
@@ -1448,6 +1449,7 @@ more than one match in the project table.
         46 => 'MULTIPLEXED',    # SS Indexed Workflow Complete
         47 => 'MULTIPLEXED',    # Indexed Clone Assinged
         48 => 'MULTIPLEXED',    # Indexed Clone Finished
+        49 => 'MULTIPLEXED',    # Indexed Manually Improved
         );
 
     sub project_type {
