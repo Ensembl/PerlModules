@@ -52,10 +52,10 @@ sub fetch_latest_with_Sequence {
 sub embl_sequence_get {
     my( $pkg, $acc ) = @_;
     
-	my $mole_entry = Hum::Mole->new($acc);
-	return unless $mole_entry;
+    my $mole_entry = Hum::Mole->new($acc);
+    return unless $mole_entry;
 
-	my $sv = $mole_entry->sv;
+    my $sv = $mole_entry->sv;
     return unless $sv;
     
     my( $self );
@@ -64,11 +64,11 @@ sub embl_sequence_get {
         $self->accession($acc);
         $self->sequence_version($sv);
     }
-  	$self->htgs_phase($mole_entry->htgs_phase);
-  	return unless $self->htgs_phase;
-  	
+      $self->htgs_phase($mole_entry->htgs_phase);
+      return unless $self->htgs_phase;
+      
     $self->_lazy_load_method('_lazy_load_embl_sequence');
-	
+    
     return $self;
 }
 
@@ -108,7 +108,7 @@ sub embl_sequence_get {
                 $self->accession($acc);
                 $self->sequence_version($sv);
                 $self->projectname($proj);
-				
+                
             }
             $self->htgs_phase($htgs_phase);
             $self->_lazy_load_method('_lazy_load_sanger_sequence');
@@ -204,7 +204,12 @@ sub sequence_version {
     if ($sequence_version) {
         $self->{'_sequence_version'} = $sequence_version;
     }
-    return $self->{'_sequence_version'};
+    if(defined($self->{'_sequence_version'})) {
+        return $self->{'_sequence_version'};
+    }
+    else {
+        return;
+    }
 }
 
 sub accession_sv {
@@ -237,12 +242,12 @@ sub sequence_length {
     if ($sequence_length) {
         $self->{'_sequence_length'} = $sequence_length;
     }
-	elsif (
-		!defined($self->{'_sequence_length'})
-	) {
-		$self->_lazy_load_sequence;
-	}
-	
+    elsif (
+        !defined($self->{'_sequence_length'})
+    ) {
+        $self->_lazy_load_sequence;
+    }
+    
     return $self->{'_sequence_length'};
 }
 
@@ -252,12 +257,12 @@ sub embl_checksum {
     if ($embl_checksum) {
         $self->{'_embl_checksum'} = $embl_checksum;
     }
-	elsif (
-		!defined($self->{'_embl_checksum'})
-	) {
-		$self->_lazy_load_sequence;
-	}
-	
+    elsif (
+        !defined($self->{'_embl_checksum'})
+    ) {
+        $self->_lazy_load_sequence;
+    }
+    
     return $self->{'_embl_checksum'};
 }
 
@@ -313,7 +318,7 @@ sub fetch_embl_file_path {
 
 sub _lazy_load_sanger_sequence {
 
-	my ($self) = @_;
+    my ($self) = @_;
 
     my( $seq );
     if ($self->htgs_phase == 3) {
@@ -329,46 +334,51 @@ sub _lazy_load_sanger_sequence {
         $seq = $entry->hum_sequence;
     }
     $seq->name($self->accession . '.' . $self->sequence_version);
-	
-	$self->Sequence($seq);
-	
-	return;
+    
+    $self->Sequence($seq);
+    
+    return;
 }
 
 sub _lazy_load_embl_sequence {
 
-	my ($self) = @_;
+    my ($self) = @_;
 
-    my ($embl) = get_EMBL_entries($self->accession);
+	# We only want to call this if the SV is specified
+    if(!defined($self->sequence_version)) {
+        confess "sequence_version not set";
+    }
+
+    my ($embl) = get_EMBL_entries($self->accession_sv);
     return unless $embl;
 
     $self->Sequence($embl->hum_sequence);
-	
-	return;
+    
+    return;
 }
 
 sub _lazy_load_method {
-	my ($self, $method) = @_;
-	
-	if ($method) {
+    my ($self, $method) = @_;
+    
+    if ($method) {
         $self->{'_lazy_load_method'} = $method;
     }
     return $self->{'_lazy_load_method'};
-	
+    
 }
 
 sub _lazy_load_sequence {
-	my ($self) = @_;
-	
-	if( $self->can($self->_lazy_load_method) ) {
-		my $method = $self->_lazy_load_method;
-		$self->$method;
-	}
-	else {
-		confess("Lazy load method " . $self->_lazy_load_method . " wrongly specified\n");
-	} 
-	
-	return;
+    my ($self) = @_;
+    
+    if( $self->can($self->_lazy_load_method) ) {
+        my $method = $self->_lazy_load_method;
+        $self->$method;
+    }
+    else {
+        confess("Lazy load method " . $self->_lazy_load_method . " wrongly specified\n");
+    } 
+    
+    return;
 }
 
 sub Sequence {
@@ -379,20 +389,20 @@ sub Sequence {
         $self->sequence_length($seq->sequence_length);
         $self->embl_checksum($seq->embl_checksum);
     }
-	# If sequence has been requested and does not exist
-	# then lazy-load sanger sequence
-	elsif (
-		!defined($self->{'Sequence'})
-	) {
-		# Only attempt lazy-load if the lazy load method is defined.
-		if(defined($self->{'_lazy_load_method'})) {
-			$self->_lazy_load_sequence;
-		}
-		else {
-			return;
-		}
-	}
-	
+    # If sequence has been requested and does not exist
+    # then lazy-load sanger sequence
+    elsif (
+        !defined($self->{'Sequence'})
+    ) {
+        # Only attempt lazy-load if the lazy load method is defined.
+        if(defined($self->{'_lazy_load_method'})) {
+            $self->_lazy_load_sequence;
+        }
+        else {
+            return;
+        }
+    }
+    
     return $self->{'_Sequence'};
 }
 
