@@ -206,6 +206,7 @@ sub get_length {
     return $e ? $e->[3] - $e->[2] + 1 : undef;
 }
 
+### Too much code in make_embl() duplicated from Hum::ProjectDump::EMBL
 sub make_embl {
     my ($pdmp) = @_;
 

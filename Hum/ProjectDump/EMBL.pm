@@ -548,22 +548,29 @@ sub add_Keywords {
     my ($pdmp, $embl) = @_;
 
     my $kw      = $embl->newKW;
+    my @kw_list = $pdmp->non_htg_keywords;
+    unless (@kw_list) {
+        @kw_list = $pdmp->htg_keywords;
+    }
+
+    $kw->list(@kw_list);
+    $embl->newXX;
+}
+
+sub htg_keywords {
+    my ($pdmp) = @_;
+
     my @kw_list = ('HTG');
 
     my $phase = $pdmp->htgs_phase or confess 'htgs_phase not set';
     push(@kw_list, "HTGS_PHASE$phase");
 
-    if (my $pool_id = $pdmp->is_pool) {    # 0 = not a pooled project ; 1 = pooled clone ; 2 = pooled project
-        push(@kw_list, ($pool_id == 2 ? 'HTGS_POOLED_MULTICLONE' : 'HTGS_POOLED_CLONE'));
+    my $type = Hum::Tracking::project_type($pdmp->project_name);
+    if ($type eq 'POOLED') {
+        push(@kw_list, 'HTGS_POOLED_CLONE');
     }
-
-    if ($pdmp->seq_reason eq 'PCR_correction') {
-        @kw_list = grep { $_ !~ /'HTG'/ } @kw_list;    # no HTG keywords for PCR submissions, please
-        push(@kw_list, 'PCR_CORRECTION');
-    }
-    elsif ($pdmp->seq_reason eq 'Gap closure') {
-        @kw_list = grep { $_ !~ /'HTG'/ } @kw_list;    # no HTG keywords for PCR submissions, please
-        push(@kw_list, 'GAP_CLOSURE');
+    elsif ($type eq 'PROJECT_POOL') {
+        push(@kw_list, 'HTGS_POOLED_MULTICLONE');
     }
 
     if ($pdmp->is_cancelled) {
@@ -588,9 +595,22 @@ sub add_Keywords {
             push(@kw_list, 'HTGS_ACTIVEFIN');
         }
     }
+    
+    return @kw_list;
+}
 
-    $kw->list(@kw_list);
-    $embl->newXX;
+sub non_htg_keywords {
+    my ($pdmp) = @_;
+    
+    if ($pdmp->seq_reason eq 'PCR_correction') {
+        return('PCR_CORRECTION');
+    }
+    elsif ($pdmp->seq_reason eq 'Gap closure') {
+        return('GAP_CLOSURE');
+    }
+    else {
+        return;
+    }
 }
 
 sub send_warning_email {

@@ -68,42 +68,17 @@ sub add_Description {
     }
 
     my @desc = ($species_chr_desc);
-    if (my $ft_factory = $pdmp->get_FT_Factory) {
-        push(@desc, $ft_factory->get_description_from_otter);
-    }
+    # if (my $ft_factory = $pdmp->get_FT_Factory) {
+    #     push(@desc, $ft_factory->get_description_from_otter);
+    # }
 
     my $de = $embl->newDE;
     $de->list(@desc);
     $embl->newXX;
 }
 
-sub add_Keywords {
-    my( $pdmp, $embl ) = @_;
-
-    my @key_words = ('HTG');
-    if (my $ft_factory = $pdmp->get_FT_Factory) {
-        push(@key_words, $ft_factory->get_keywords_from_otter);
-    }
-    
-    if($pdmp->is_pool){
-    	push(@key_words, 'HTGS_POOLED_CLONE');
-    }
-
-    ### VERY BAD!  Duplicate code to Hum::ProjectDump::EMBL
-    ### Both modules should use a common piece of code!
-
-    if ($pdmp->seq_reason eq 'PCR_correction') {
-        @key_words = grep { $_ !~ /HTG/ }  @key_words; # no HTG keywords for PCR submissions, please
-        push ( @key_words, 'PCR_CORRECTION');
-    }
-    elsif ($pdmp->seq_reason eq 'Gap closure') {
-        @key_words = grep { $_ !~ /HTG/ }  @key_words; # no HTG keywords for PCR submissions, please
-        push ( @key_words, 'GAP_CLOSURE');
-    }
-
-    my $kw = $embl->newKW;
-    $kw->list(@key_words);
-    $embl->newXX;
+sub htg_keywords {
+    return('HTG');
 }
 
 sub add_Headers {
@@ -280,6 +255,8 @@ alone has only been used where it has a phred quality of at least 30.',
     sub add_standard_CC {
         my ($pdmp, $embl) = @_;
 
+        my $type = Hum::Tracking::project_type($pdmp->project_name);
+
         # STD sequencing centre comment for Greg Schuler
         # (see: http://ray.nlm.nih.gov/genome/cloneserver/)
         my $seq_cen = $embl->newCC;
@@ -295,7 +272,7 @@ alone has only been used where it has a phred quality of at least 30.',
                 @std = ('This PCR was performed to close a gap between HTG clones in the reference genome.');
             }
         }
-        elsif ($pdmp->is_pool == 1) {
+        elsif ($type eq 'POOLED') {
             @std = @pooled_std;
         }
         elsif ($pdmp->species eq 'Pig') {
@@ -307,7 +284,7 @@ alone has only been used where it has a phred quality of at least 30.',
         $cc->list(@std);
         $embl->newXX;
 
-        if ($pdmp->is_pool == 1) {
+        if ($type eq 'POOLED') {
             my $cc = $embl->newCC;
             $cc->list('This clone-specific sequence was deconvoluted from pooled multi-clone record '
                   . join(',', $pdmp->secondary));
@@ -315,7 +292,7 @@ alone has only been used where it has a phred quality of at least 30.',
         }
 
         if ($pdmp->species eq 'Zebrafish') {
-            foreach my $entry ($pdmp->is_pool == 1 ? @pooled_zfish_specific : @zfish_specific) {
+            foreach my $entry ($type eq 'POOLED' ? @pooled_zfish_specific : @zfish_specific) {
                 my $cc = $embl->newCC;
                 $cc->list($entry);
                 $embl->newXX;
