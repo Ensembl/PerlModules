@@ -8,13 +8,13 @@ use warnings;
 use Carp;
 use Hum::ProjectDump::EMBL;
 use Hum::Submission qw{
-	prepare_statement
-	accession_from_sanger_name
+    prepare_statement
+    accession_from_sanger_name
 };
 use Hum::Tracking qw{
-	prepare_track_statement
+    prepare_track_statement
     parent_project
-    is_shotgun_complete	                   
+    is_shotgun_complete                    
 };
 
 use base qw{ Hum::ProjectDump::EMBL::Unfinished };
@@ -25,33 +25,31 @@ sub create_new_dump_object {
     # get the parent project acc and set it as project secondary acc
     my $parent = parent_project($project);
     if(!$parent) {
-    	die "No parent project name associated with $project\n";
+        die "No parent project name associated with $project\n";
     }
     $pdmp->parentproject($parent);
     # the pooled project name is also the sequence name
     my $second_acc = accession_from_sanger_name($parent);
     if(!$second_acc){
-    	die "No parent project accession for $project\n";
+        die "No parent project accession for $project\n";
     }
     my $seen;
     foreach my $sec ($pdmp->secondary){
         $seen = 1 if $sec eq $second_acc;
     }
     $pdmp->add_secondary($second_acc) unless $seen;
-    
+
+
     return $pdmp;    
 }
 
 
 sub parentproject {
-	my ( $pdmp, $parent ) = @_;
-	$pdmp->{'_parent'} = $parent if $parent;
-	
-	return $pdmp->{'_parent'};
-}
+    my ( $pdmp, $parent ) = @_;
+    $pdmp->{'_parent'} = $parent if $parent;
 
-sub is_pool {
-    return 1;
+
+    return $pdmp->{'_parent'};
 }
 
 sub add_Headers {
@@ -119,8 +117,6 @@ sub add_Headers {
 
     $pdmp->add_extra_headers($embl, 'comment');
 }
-
-
 
 
 1;

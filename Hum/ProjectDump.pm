@@ -22,62 +22,6 @@ use Hum::Species;
 use Symbol 'gensym';
 use File::Path;
 
-{
-    my( $sth );
-
-    sub fill_in_project_check_for_project {
-        my( $pkg, $project, $parent ) = @_;
-
-        $sth ||= prepare_track_statement(q{
-            SELECT c.sequenced_by
-              , c.funded_by
-            FROM clone_project cp
-              , clone c
-            WHERE cp.clonename = c.clonename
-              AND cp.projectname = ?
-            });
-        $sth->execute($project);
-        my ($seq_by, $fund_by) = $sth->fetchrow;
-        $sth->finish;
-        
-        my $is_present = prepare_statement(qq{
-            SELECT count(*)
-            FROM project_check
-            WHERE project_name = '$project'
-            });
-        $is_present->execute;
-        my ($count) = $is_present->fetchrow;
-        
-        if ($count) {
-            my $update = prepare_statement(qq{
-                UPDATE project_check
-                SET sequenced_by = ?
-                  , funded_by = ?
-                WHERE project_name = ?
-                });
-            $update->execute($seq_by, $fund_by, $project);
-        } else {
-            my $insert = prepare_statement(qq{
-                INSERT project_check (project_name
-                      , is_active
-                      , check_time
-                      , modify_time
-                      , sequenced_by
-                      , funded_by
-                      , pooled)
-                VALUES (?
-                      , 'N'
-                      , '0000-00-00 00:00:00'
-                      , '0000-00-00 00:00:00'
-                      , ?
-                      , ?
-                      , ?)
-                });
-            $insert->execute($project, $seq_by, $fund_by, $parent ? 1 : 0);
-        }
-    }
-}
-
 sub new {
     my( $pkg ) = @_;
 
@@ -304,8 +248,14 @@ sub is_private {
     return Hum::Tracking::is_private($pdmp->project_name);
 }
 
-sub is_pool {
-    return 0;
+sub project_type {
+    my ($self) = @_;
+
+    my $type;
+    unless ($type = $self->{'_project_type'}) {
+        $type = $self->{'_project_type'} = Hum::Tracking::project_type($self->project_name);
+    }
+    return $type;
 }
 
 sub current_status_number {
@@ -644,7 +594,7 @@ sub read_submission_data {
     my( $pdmp ) = @_;
 
     my $sid = $pdmp->sanger_id or confess "No sanger_id";
-    my $get_dump = prepare_statement(qq{
+    my $get_dump = prepare_statement(q{
         SELECT a.project_name
           , a.project_suffix
           , UNIX_TIMESTAMP(d.dump_time) dump_time
@@ -665,10 +615,10 @@ sub read_submission_data {
             ON c.project_name = a.project_name
         WHERE a.sanger_id = d.sanger_id
           AND d.seq_id = s.seq_id
-          AND a.sanger_id = '$sid'
+          AND a.sanger_id = ?
           AND d.is_current = 'Y'
         });
-    $get_dump->execute;
+    $get_dump->execute($sid);
     if (my $ans = $get_dump->fetchrow_hashref) {
         map $pdmp->$_($ans->{$_}), keys %$ans;
     } else {

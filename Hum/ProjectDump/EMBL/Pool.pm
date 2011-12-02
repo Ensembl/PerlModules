@@ -310,10 +310,6 @@ sub sequence_name {
     return $pdmp->project_name;
 }
 
-sub is_pool {
-    return 2;
-}
-
 sub add_FT {
     my ($pdmp, $embl, $length, $binomial, $chr, $libraryname) = @_;
 
