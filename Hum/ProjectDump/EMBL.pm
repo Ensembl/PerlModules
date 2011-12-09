@@ -565,7 +565,7 @@ sub htg_keywords {
     my $phase = $pdmp->htgs_phase or confess 'htgs_phase not set';
     push(@kw_list, "HTGS_PHASE$phase");
 
-    my $type = Hum::Tracking::project_type($pdmp->project_name);
+    my $type = $pdmp->project_type;
     if ($type eq 'POOLED') {
         push(@kw_list, 'HTGS_POOLED_CLONE');
     }

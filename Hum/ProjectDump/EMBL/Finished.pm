@@ -78,7 +78,14 @@ sub add_Description {
 }
 
 sub htg_keywords {
-    return('HTG');
+    my ($pdmp) = @_;
+
+    my @kw = ('HTG');
+    if ($pdmp->project_type eq 'POOLED') {
+        push(@kw, 'HTGS_POOLED_CLONE');
+    }
+
+    return @kw;
 }
 
 sub add_Headers {
@@ -255,8 +262,6 @@ alone has only been used where it has a phred quality of at least 30.',
     sub add_standard_CC {
         my ($pdmp, $embl) = @_;
 
-        my $type = Hum::Tracking::project_type($pdmp->project_name);
-
         # STD sequencing centre comment for Greg Schuler
         # (see: http://ray.nlm.nih.gov/genome/cloneserver/)
         my $seq_cen = $embl->newCC;
@@ -272,7 +277,7 @@ alone has only been used where it has a phred quality of at least 30.',
                 @std = ('This PCR was performed to close a gap between HTG clones in the reference genome.');
             }
         }
-        elsif ($type eq 'POOLED') {
+        elsif ($pdmp->project_type eq 'POOLED') {
             @std = @pooled_std;
         }
         elsif ($pdmp->species eq 'Pig') {
@@ -284,7 +289,7 @@ alone has only been used where it has a phred quality of at least 30.',
         $cc->list(@std);
         $embl->newXX;
 
-        if ($type eq 'POOLED') {
+        if ($pdmp->project_type eq 'POOLED') {
             my $cc = $embl->newCC;
             $cc->list('This clone-specific sequence was deconvoluted from pooled multi-clone record '
                   . join(',', $pdmp->secondary));
@@ -292,7 +297,7 @@ alone has only been used where it has a phred quality of at least 30.',
         }
 
         if ($pdmp->species eq 'Zebrafish') {
-            foreach my $entry ($type eq 'POOLED' ? @pooled_zfish_specific : @zfish_specific) {
+            foreach my $entry ($pdmp->project_type eq 'POOLED' ? @pooled_zfish_specific : @zfish_specific) {
                 my $cc = $embl->newCC;
                 $cc->list($entry);
                 $embl->newXX;
