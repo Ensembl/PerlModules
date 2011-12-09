@@ -204,9 +204,10 @@ all regions were covered by at least one subclone; and the assembly was
 confirmed by restriction digest, except on the rare occasion of the clone
 being a YAC.',
 
-        'The following abbreviations are used to associate primary accession numbers
-given in the feature table with their source databases: Em:, EMBL;
-Sw: SWISSPROT; Tr:, TREMBL.',
+#         'The following abbreviations are used to associate primary accession numbers
+# given in the feature table with their source databases: Em:, EMBL;
+# Sw: SWISSPROT; Tr:, TREMBL.',
+
     );
 
     my @pooled_std = (
@@ -268,6 +269,13 @@ alone has only been used where it has a phred quality of at least 30.',
         $seq_cen->list($pdmp->seq_center_lines, '--------------');
         $embl->newXX;
 
+        if ($pdmp->project_type eq 'POOLED') {
+            @std = @pooled_std;
+        }
+        elsif ($pdmp->project_type eq 'MULTIPLEXED') {
+            @std = ();
+        }
+
         # no standard blurb for PCRs, only single sentences
         if ($pdmp->clone_type eq 'PCR product') {
             if ($pdmp->seq_reason eq 'PCR_correction') {
@@ -276,12 +284,6 @@ alone has only been used where it has a phred quality of at least 30.',
             elsif ($pdmp->seq_reason eq 'Gap closure') {
                 @std = ('This PCR was performed to close a gap between HTG clones in the reference genome.');
             }
-        }
-        elsif ($pdmp->project_type eq 'POOLED') {
-            @std = @pooled_std;
-        }
-        elsif ($pdmp->species eq 'Pig') {
-            @std = @pig_std;
         }
 
         # Add the standard headers
@@ -297,13 +299,17 @@ alone has only been used where it has a phred quality of at least 30.',
         }
 
         if ($pdmp->species eq 'Zebrafish') {
-            foreach my $entry ($pdmp->project_type eq 'POOLED' ? @pooled_zfish_specific : @zfish_specific) {
+            my @entires = @zfish_specific;
+            if ($pdmp->project_type eq 'POOLED' or $pdmp->project_type eq 'MULTIPLEXED') {
+                @entires = @pooled_zfish_specific;
+            }
+            foreach my $entry (@entires) {
                 my $cc = $embl->newCC;
                 $cc->list($entry);
                 $embl->newXX;
             }
         }
-        if ($pdmp->species eq 'Mouse') {
+        elsif ($pdmp->species eq 'Mouse') {
             foreach my $entry (@mouse_specific) {
                 my $cc = $embl->newCC;
                 $cc->list($entry);
