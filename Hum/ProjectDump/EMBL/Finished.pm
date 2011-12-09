@@ -216,6 +216,13 @@ being a YAC.',
 restriction digest.',
     );
 
+    my @multiplexed_std = (
+        'Large depth read coverage across a clone can lead to sequenced reads
+occasionally displaying inconsistency over the length of mononucleotide
+runs and conserved dinucleotide repeats. Where this is found the best
+quality representation as per the assembly algorithm will be submitted'
+    );
+
     my @pig_std = (
         'This sequence was finished as follows unless otherwise noted: all regions
 were covered by high quality data (i.e. phred quality data >= 30); an
@@ -273,7 +280,7 @@ alone has only been used where it has a phred quality of at least 30.',
             @std = @pooled_std;
         }
         elsif ($pdmp->project_type eq 'MULTIPLEXED') {
-            @std = ();
+            @std = @multiplexed_std;
         }
 
         # no standard blurb for PCRs, only single sentences
