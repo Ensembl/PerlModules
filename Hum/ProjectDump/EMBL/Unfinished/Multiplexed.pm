@@ -67,7 +67,7 @@ sub add_Headers {
         @comment_lines,
         "*",
         $self->make_fragment_summary($embl, $contig_map),
-    );   
+    );
 
     $self->add_extra_headers($embl, 'comment');
 }
