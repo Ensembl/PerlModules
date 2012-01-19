@@ -602,11 +602,18 @@ sub htg_keywords {
 sub non_htg_keywords {
     my ($pdmp) = @_;
     
+    my (@kw_list);
+    if ($pdmp->clone_type eq 'Genomic clone') {
+        @kw_list = ('HTG');
+    }
+
     if ($pdmp->seq_reason eq 'PCR_correction') {
-        return('PCR_CORRECTION');
+        push @kw_list, 'PCR_CORRECTION';
+        return @kw_list;
     }
     elsif ($pdmp->seq_reason eq 'Gap closure') {
-        return('GAP_CLOSURE');
+        push @kw_list, 'GAP_CLOSURE';
+        return @kw_list;
     }
     else {
         return;
