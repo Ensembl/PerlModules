@@ -547,12 +547,13 @@ sub add_Headers {
 sub add_Keywords {
     my ($pdmp, $embl) = @_;
 
-    my $kw      = $embl->newKW;
-    my @kw_list = $pdmp->non_htg_keywords;
-    unless (@kw_list) {
+    my (@kw_list);
+    if ($pdmp->clone_type eq 'Genomic clone') {
         @kw_list = $pdmp->htg_keywords;
     }
+    push(@kw_list, $pdmp->non_htg_keywords);
 
+    my $kw = $embl->newKW;
     $kw->list(@kw_list);
     $embl->newXX;
 }
@@ -602,18 +603,11 @@ sub htg_keywords {
 sub non_htg_keywords {
     my ($pdmp) = @_;
     
-    my (@kw_list);
-    if ($pdmp->clone_type eq 'Genomic clone') {
-        @kw_list = ('HTG');
-    }
-
     if ($pdmp->seq_reason eq 'PCR_correction') {
-        push @kw_list, 'PCR_CORRECTION';
-        return @kw_list;
+        return ('PCR_CORRECTION');
     }
     elsif ($pdmp->seq_reason eq 'Gap closure') {
-        push @kw_list, 'GAP_CLOSURE';
-        return @kw_list;
+        return ('GAP_CLOSURE');
     }
     else {
         return;
