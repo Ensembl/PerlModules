@@ -1,4 +1,6 @@
 package Hum::Coverage_Slice;
+use strict;
+use warnings;
 use Moose;
 use Carp;
 use Bio::EnsEMBL::Slice;
