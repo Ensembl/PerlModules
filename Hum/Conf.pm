@@ -13,6 +13,9 @@ sub _init {
     my $humpub = '/warehouse/cbi4_wh01/work1/humpub'; # TRANSIENT WAREHOUSE = slow, needs to be relocated
 
     my $humpub_scratch = '/lustre/scratch101/sanger/humpub'; # SCRATCH = not backed up
+    
+    # The \057 business is to stop webpublish choking on this file
+    my $embl_seq = "\057nfs/embl_seq";
 
     # The Plan: build config from static strings, such as could be
     # loaded from a text file.  Make any substitutions or overrides
@@ -29,13 +32,13 @@ sub _init {
    (
 
     # FTP site variables
-    FTP_GHOST           => "$humpub_scratch/ftp_ghost",
-    FTP_ATTIC           => "$humpub_scratch/ftp_ghost/attic",
+    FTP_GHOST           => "$embl_seq/ftp_ghost",
+    FTP_ATTIC           => "$embl_seq/ftp_ghost/attic",
     FTP_ROOT            => "\057nfs/disk69/ftp/pub/sequences",
 
     # May be overridden by %ENV
     PFETCH_SERVER_LIST  => [
-	[qw{ pfetch.sanger.ac.uk 22400 }], # zeus front end load balancer(s), by name
+        [qw{ pfetch.sanger.ac.uk 22400 }], # zeus front end load balancer(s), by name
                            ],
 
     WAREHOUSE_MYSQL => '/warehouse/humpub_wh01/mysql_backup',
@@ -85,15 +88,15 @@ sub import {
 
 
     foreach (@vars) {
-	if ( defined $humConf{ $_ } ) {
-            no strict 'refs';
-	    # Exporter does a similar job to the following
-	    # statement, but for function names, not
-	    # scalar variables:
-	    *{"${callpack}::$_"} = \$humConf{ $_ };
-	} else {
-	    die "Error: Hum::Conf : $_ not known\n";
-	}
+        if ( defined $humConf{ $_ } ) {
+                no strict 'refs';
+            # Exporter does a similar job to the following
+            # statement, but for function names, not
+            # scalar variables:
+            *{"${callpack}::$_"} = \$humConf{ $_ };
+        } else {
+            die "Error: Hum::Conf : $_ not known\n";
+        }
     }
 }
 
