@@ -11,7 +11,6 @@ our @EXPORT_OK = qw{
     text_is_zmap_clip
     accessions_from_text
     integers_from_text
-    evidence_type_and_name_from_text
     $magic_evi_name_matcher
     magic_evi_name_match
     };
