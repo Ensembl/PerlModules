@@ -455,3 +455,10 @@ sub get_feature_exposure {
 
 no Moose;
 __PACKAGE__->meta->make_immutable;
+
+__END__
+
+=head1 AUTHOR
+
+James Torrance <jt8@sanger.ac.uk>
+
