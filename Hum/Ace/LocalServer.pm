@@ -167,6 +167,10 @@ sub additional_server_parameters {
 sub save_ace {
     my ($self, $ace_data) = @_;
     
+    if ($ace_data =~ /([[:^ascii:]])/) {
+        confess "Non-ASCII character '$1' in ace data";
+    }
+    
     my $ace = $self->ace_handle;
     my $messages = $ace->raw_query("parse = " . $ace_data);
     my $errors = 0;
