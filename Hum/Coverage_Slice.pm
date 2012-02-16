@@ -76,7 +76,14 @@ sub _build_deep_regions {
 
 	# Turn the features into a set of start and end positions
 	my @termini;
-	foreach my $feature (@{$self->features}) {
+	FEATURE: foreach my $feature (@{$self->features}) {
+		
+		# Reject any malformed features
+		if(
+			$feature->start > $feature->end
+			or $feature->end < 1
+			or $feature->start > $self->slice->length
+		) { next FEATURE; }
 		
 		my %start_position = (
 			TERMINUS => "START",
