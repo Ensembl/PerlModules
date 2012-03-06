@@ -129,6 +129,17 @@ sub embl_sequence_get {
     }
 }
 
+sub get_EMBL_entry_from_pfetch_or_web {
+	my ($accession_sv) = @_;
+	
+	my ($entry) = get_EMBL_entries($accession_sv);
+    unless ($entry) {
+        $entry = wwwfetch_EMBL_object($accession_sv);
+    }
+	
+	return $entry;
+}
+
 sub get_EMBL_entry {
     my ($self) = @_;
     
@@ -140,10 +151,7 @@ sub get_EMBL_entry {
     unless ($entry) {
         my $acc = $self->accession        or confess        "accession not set";
         my $sv  = $self->sequence_version or confess "sequence_version not set";
-        ($entry) = get_EMBL_entries("$acc.$sv");
-        unless ($entry) {
-            $entry = wwwfetch_EMBL_object("$acc.$sv");
-        }
+        $entry = get_EMBL_entry_from_pfetch_or_web("$acc.$sv");
     }
     return $entry;
 }
@@ -349,7 +357,7 @@ sub _lazy_load_embl_sequence {
         confess "sequence_version not set";
     }
 
-    my ($embl) = get_EMBL_entries($self->accession_sv);
+    my $embl = get_EMBL_entry_from_pfetch_or_web($self->accession_sv);
     return unless $embl;
 
     $self->Sequence($embl->hum_sequence);
