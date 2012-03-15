@@ -264,6 +264,7 @@ sub _build_nondeep_regions {
 
 	my @deep_regions = @{$self->deep_regions};
 	if(scalar @deep_regions == 0) {
+		push(@nondeep_regions, {START=>1, END=>$self->slice->length});
 		return \@nondeep_regions;
 	}
 	
