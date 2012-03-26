@@ -58,11 +58,13 @@ sub _get_embl_databases {
 	);
 		
 	foreach my $database_category (keys %database_handle_for_category) {
+
+		# If there are multiple names, use the highest alphabetically
+		# This should equate to the most recent		
+		my @database_names = sort @{$mole_db->selectcol_arrayref(qq/select database_name from ini where database_category='$database_category' and current='yes' and available='yes'/)};
 		
-		my @database_names = @{$mole_db->selectcol_arrayref(qq/select database_name from ini where database_category='$database_category' and current='yes' and available='yes'/)};
-	
-		if(scalar @database_names == 1) {
-			my $current_name = $database_names[0];
+		if(scalar @database_names > 0) {
+			my $current_name = $database_names[-1];
 			my $dsn = "DBI:mysql:database=${current_name};host=${mole_host}";
 			${$database_handle_for_category{$database_category}} = DBI->connect($dsn, $mole_user);
 			
