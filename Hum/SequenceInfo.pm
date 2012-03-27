@@ -49,11 +49,43 @@ sub fetch_latest_with_Sequence {
         || $pkg->embl_sequence_get($acc);
 }
 
+# This is only called if all details must be retrieved from web
+# Because it loads the whole sequence from the web, this should be avoided
+# if other info sources are available
+sub embl_web_sequence_get {
+	my ($pkg, $acc) = @_;
+
+	my $embl = get_EMBL_entry_from_pfetch_or_web($acc);
+    return unless $embl;
+
+	my $self = $pkg->new;
+    $self->accession($acc);
+    $self->sequence_version($embl->ID->version);
+
+    my $htgs_phase = 3;
+    foreach my $keyword ($embl->KW->list) {
+    	if($keyword =~ /^HTGS_PHASE(\d)$/) {
+    		$htgs_phase = $1;
+    	}
+    }
+	$self->htgs_phase($htgs_phase);
+
+	# We set the lazy-load method in case the sequence
+	# gets dropped and needs to be reloaded
+	$self->_lazy_load_method('_lazy_load_embl_sequence');
+    $self->Sequence($embl->hum_sequence);
+	
+	return $self;
+}
+
 sub embl_sequence_get {
     my( $pkg, $acc ) = @_;
     
     my $mole_entry = Hum::Mole->new($acc);
-    return unless $mole_entry;
+    # If we can't get this accession from Mole, try EMBL
+    if(!defined($mole_entry)) {
+    	return $pkg->embl_web_sequence_get($acc);
+    }
 
     my $sv = $mole_entry->sv;
     return unless $sv;
