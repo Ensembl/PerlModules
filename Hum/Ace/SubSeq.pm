@@ -1203,7 +1203,15 @@ sub error_in_translation {
         }
     }
     else {
-        unless ($self->end_not_found) {
+        if ($self->end_not_found) {
+            my ($t_start, $t_end) = $self->translation_region;
+            my $tsl_end = $self->strand == 1 ? $t_end     : $t_start;
+            my $end     = $self->strand == 1 ? $self->end : $self->start;
+            unless ($tsl_end == $end) {
+                $err .= "Translation does not end with stop, 'End: Not found' is set, but there is 5' UTR\n";
+            }
+        }
+        else {
             $err .= "Translation does not end with stop, and 'End: Not found' is not set\n";
         }
     }
