@@ -60,7 +60,7 @@ sub zmap_xml_feature_tag {
     $offset ||= 0;
     
     return sprintf qq{<feature name="%s" start="%d" end="%d" strand="%s" style="%s" score="%.3f"></feature>\n},
-        $self->method_name,
+        $self->text,
         $offset + $self->seq_start,
         $offset + $self->seq_end,
         $self->seq_strand == -1 ? '-' : '+',

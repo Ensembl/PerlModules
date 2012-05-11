@@ -538,6 +538,8 @@ block, to ensure a graceful exit.
             $s->finish if $s;
         }
 
+        ### This disconnect has a side effect of calling commit.
+        ### We probably shouldn't have it in there.
         # Then disconnect
         $dbh->disconnect() if $dbh;
     }
