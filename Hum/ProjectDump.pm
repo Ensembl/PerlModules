@@ -931,6 +931,26 @@ BEGIN {
         }
     }
 
+    sub contig_order {
+        my ($pdmp, $contig_order) = @_;
+
+        if ($contig_order) {
+            my $count = $pdmp->contig_count;
+            if ($count != @$contig_order) {
+                confess sprintf "Have %d contigs, but %d elements in array ref argument",
+                    $count, scalar @$contig_order;
+            }
+            foreach my $contig (@$contig_order) {
+                unless ($pdmp->{'_DNA'}{$contig}) {
+                    confess "contig '$contig' in contig order list does not exist";
+                }
+            }
+            $pdmp->{'_contig_order'} = $contig_order;
+        }
+
+        return $pdmp->{'_contig_order'};
+    }
+
     sub delete_contig {
         my( $pdmp, $contig ) = @_;
 
@@ -962,7 +982,7 @@ BEGIN {
         $pdmp->{'_DNA'}{$contig} = \$dna;
         return $pdmp->{'_DNA'}{$contig};
     }
-    
+
     sub contig_length {
         my( $pdmp, $contig ) = @_;
         
@@ -972,7 +992,7 @@ BEGIN {
             or confess "No such contig '$contig'";
         return length($$dna);
     }
-    
+
     sub unpadded_length {
         my( $pdmp, $length ) = @_;
         

@@ -12,6 +12,7 @@ use Hum::Conf 'HUMPUB_BLAST';
 
 use base 'Hum::ProjectDump::EMBL';
 
+my $contig_prefix = "Contig_prefix_ezelthrib";
 
 # Overrides method in Hum::ProjectDump
 sub embl_checksum {
@@ -34,6 +35,9 @@ sub process_repository_data {
     
     warn "Reading gap contigs\n";
     $pdmp->read_gap_contigs;
+    if ($pdmp->current_status_number == 50) {
+        $pdmp->fetch_contig_order_from_caf_file;
+    }
 
     warn "Removing contig under 1kb\n";
     $pdmp->contig_length_cutoff(1000);
@@ -47,8 +51,10 @@ sub process_repository_data {
     warn "Decontaminating contigs\n";
     $pdmp->decontaminate_contigs;
 
-    warn "Ordering contigs\n";
-    $pdmp->order_contigs;
+    unless ($pdmp->current_status_number == 50) {
+        warn "Ordering contigs\n";
+        $pdmp->order_contigs;
+    }
 }
 
 sub store_dump {
@@ -73,7 +79,6 @@ sub store_draft_info {
     $sth->execute;
 }
 
-
 sub read_gap_contigs {
     my( $pdmp ) = @_;
     
@@ -84,15 +89,18 @@ sub read_gap_contigs {
     local *GAP2CAF;
     local $/ = ""; # Paragraph mode for reading caf file
 
-    my $contig_prefix = "Contig_prefix_ezelthrib";
-
     $pdmp->dump_time(time); # Record the time of the dump
     #my $gaf_pipe = "ssh -T -n -x -o 'StrictHostKeyChecking no' $cluster 'cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $contig_prefix | caf_depad | caftagfeature -tagid CONT -clean -vector $HUMPUB_BLAST/contamdb' |";
-    my $gaf_pipe = "cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $contig_prefix | caf_depad | caftagfeature -tagid CONT -clean -vector $HUMPUB_BLAST/contamdb |";
+    my $save_gap2caf_output = '';
+    if ($pdmp->current_status_number == 50) {
+        my $tee_file = $pdmp->tee_file;
+        $save_gap2caf_output = "| tee $tee_file";
+    }
+    my $gaf_pipe = "cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $contig_prefix $save_gap2caf_output | caf_depad | caftagfeature -tagid CONT -clean -vector $HUMPUB_BLAST/contamdb |";
     warn "gap2caf pipe: $gaf_pipe\n";
     open(GAP2CAF, $gaf_pipe)
         || die "COULDN'T OPEN PIPE FROM GAP2CAF : $!\n";
-    
+
     while (<GAP2CAF>) {
         my ($object, $value) = split("\n", $_, 2);
         
@@ -209,7 +217,7 @@ sub cleanup_contigs {
         }
 
         # Filter out contigs shorter than minimum contig length
-            if (length($$dna) < $cutoff) {
+        if (length($$dna) < $cutoff) {
             $pdmp->delete_contig($contig);
         }
     }
@@ -825,29 +833,29 @@ sub order_contigs {
     @group = sort {scalar(@$b) <=> scalar(@$a)
         || $a->[0] cmp $b->[0]} @group;
 
-    my( @contig_order );
+    my $contig_order = [];
     my $c_num = 0;
     
     # Add the left hand chain if we know what it is
     if ($left_chain) {
-        @contig_order = @$left_chain;
+        @$contig_order = @$left_chain;
         $pdmp->record_contig_chains(\$c_num, $left_chain);
     }
     
     # Add the rest of the chains
     foreach my $chain (@group) {
-        push(@contig_order, @$chain);
+        push(@$contig_order, @$chain);
         $pdmp->record_contig_chains(\$c_num, $chain);
     }
 
     # Add the right hand chain if we know what it is
     if ($right_chain) {
-        push(@contig_order, @$right_chain);
+        push(@$contig_order, @$right_chain);
         $pdmp->record_contig_chains(\$c_num, $right_chain);
     }
     
     # Record the order of the contigs
-    $pdmp->{'_contig_order'} = \@contig_order;
+    $pdmp->contig_order($contig_order);
 }
 
 sub record_contig_chains {
@@ -903,6 +911,25 @@ sub revcomp_contig {
             }
         }
     }
+}
+
+sub fetch_contig_order_from_caf_file {
+    my ($pdmp) = @_;
+
+    my $caf_file = $pdmp->tee_file;
+    my $caf_order = "catcaf -summary $caf_file |";
+    open my $CAF, $caf_file or confess "Can't open pipe '$caf_order'; $!";
+    while (<$CAF>) {
+        print;
+    }
+    close $CAF or confess "Error running '$caf_order'; exit $?";
+    # unlink $caf_file or confess "Failed to remove file '$caf_file'; $!";
+}
+
+sub tee_file {
+    my ($pdmp) = @_;
+
+    return sprintf '/tmp/tee_%s_%p', $$, $pdmp;
 }
 
 sub write_quality_file {
