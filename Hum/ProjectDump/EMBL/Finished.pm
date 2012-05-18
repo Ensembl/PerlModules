@@ -163,9 +163,9 @@ sub add_overlap_CC {
          "During sequence assembly data is compared from overlapping clones. Where differences are found these are annotated as variations together with a note of the overlapping clone name. Note that the variation annotation may not be found in the sequence submission corresponding to the overlapping clone, as we submit sequences with only a small overlap.", $clone_LR_end_comment);
 
     foreach my $t (@lrcmts) {
+      $embl->newXX;
       my $cc = $embl->newCC;
       $cc->list($t);
-      $embl->newXX;
     }
   }
 }
@@ -186,9 +186,9 @@ sub add_extra_CC {
 
     return unless @comment;
 
+    $embl->newXX;
     my $cc = $embl->newCC;
     $cc->list( @comment );
-    $embl->newXX;
 }
 
 
@@ -296,13 +296,12 @@ alone has only been used where it has a phred quality of at least 30.',
         # Add the standard headers
         my $cc = $embl->newCC;
         $cc->list(@std);
-        $embl->newXX;
 
         if ($pdmp->project_type eq 'POOLED') {
+            $embl->newXX;
             my $cc = $embl->newCC;
             $cc->list('This clone-specific sequence was deconvoluted from pooled multi-clone record '
                   . join(',', $pdmp->secondary));
-            $embl->newXX;
         }
 
         if ($pdmp->species eq 'Zebrafish') {
@@ -311,24 +310,23 @@ alone has only been used where it has a phred quality of at least 30.',
                 @entires = @pooled_zfish_specific;
             }
             foreach my $entry (@entires) {
+                $embl->newXX;
                 my $cc = $embl->newCC;
                 $cc->list($entry);
-                $embl->newXX;
             }
         }
         elsif ($pdmp->species eq 'Mouse') {
             foreach my $entry (@mouse_specific) {
+                $embl->newXX;
                 my $cc = $embl->newCC;
                 $cc->list($entry);
-                $embl->newXX;
             }
         }
-
-        if ($pdmp->species eq 'H.parasitica') {
+        elsif ($pdmp->species eq 'H.parasitica') {
             foreach my $entry (@h_parasitica_specific) {
+                $embl->newXX;
                 my $cc = $embl->newCC;
                 $cc->list($entry);
-                $embl->newXX;
             }
         }
     }
@@ -498,9 +496,9 @@ For further details see http://bacpac.chori.org/";
         my @list  = ("$clone $comment");
         push(@list, "VECTOR: $vector") if $vector;
 
+        $embl->newXX;
         my $cc = $embl->newCC;
         $cc->list(@list);
-        $embl->newXX;
     }
 }
 

@@ -374,8 +374,8 @@ sub add_FT_entries {
         # was produced externally
         if (my $inst = $pdmp->draft_institute) {
             if (my $remark = $ext_institute_remark{$inst}) {
-                $embl->newCC->list(@$remark);
                 $embl->newXX;
+                $embl->newCC->list(@$remark);
             }
             else {
                 confess "No remark for institute '$inst'";
