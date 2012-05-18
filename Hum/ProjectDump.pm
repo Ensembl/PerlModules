@@ -406,10 +406,21 @@ sub htgs_phase {
         $value =~ /^(1|2|3)$/
             or confess "Value of htgs_phase '$value' can only be '1', '2' or '3'";
         $pdmp->{'_htgs_phase'} = $value;
-        return $value;
     }
     elsif (! $pdmp->{'_htgs_phase'}) {
-        $pdmp->{'_htgs_phase'} = Hum::Tracking::is_finished($pdmp->project_name) ? 3 : 1;
+        my $phase;
+        if (Hum::Tracking::is_finished($pdmp->project_name)) {
+            $phase = 3;
+        }
+        elsif ($pdmp->current_status_number == 49 or $pdmp->current_status_number == 50) {
+            # Status "49" is "Indexed Manually Improved", which should be phase 2
+            # Status "50" is "Manually Improved", which should also be phase 2
+            $phase = 2;
+        }
+        else {
+            $phase = 1;
+        }
+        $pdmp->{'_htgs_phase'} = $phase;
     }
     return $pdmp->{'_htgs_phase'};
 }
