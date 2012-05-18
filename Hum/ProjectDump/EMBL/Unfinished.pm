@@ -12,7 +12,7 @@ use Hum::Conf 'HUMPUB_BLAST';
 
 use base 'Hum::ProjectDump::EMBL';
 
-my $contig_prefix = "Contig_prefix_ezelthrib";
+my $CONTIG_PREFIX = "Contig_prefix_ezelthrib";
 
 # Overrides method in Hum::ProjectDump
 sub embl_checksum {
@@ -35,23 +35,31 @@ sub process_repository_data {
     
     warn "Reading gap contigs\n";
     $pdmp->read_gap_contigs;
-    if ($pdmp->current_status_number == 50) {
-        $pdmp->fetch_contig_order_from_caf_file;
-    }
 
-    warn "Removing contig under 1kb\n";
-    $pdmp->contig_length_cutoff(1000);
-    $pdmp->cleanup_contigs;
+    if ($pdmp->current_status_number == 50) {
+        warn "Using contig order from caf file\n";
+        $pdmp->fetch_contig_order_from_caf_file;
+        $pdmp->contig_length_cutoff(1);
+    }
+    else {
+        warn "Removing contigs under 1kb\n";
+        $pdmp->contig_length_cutoff(1000);
+        $pdmp->cleanup_contigs;
+        $pdmp->contig_length_cutoff($pdmp->htgs_phase == 2 ? 250 : 2000);
+    }
 
     warn "Making Q20 depth report\n";
     $pdmp->contig_and_agarose_depth_estimate;
 
-    $pdmp->contig_length_cutoff($pdmp->htgs_phase == 2 ? 250 : 2000);
-
     warn "Decontaminating contigs\n";
     $pdmp->decontaminate_contigs;
 
-    unless ($pdmp->current_status_number == 50) {
+    # Set the htgs_phase for the EMBL keyword line to 2 if we've got a single contig
+    if ($pdmp->contig_count == 1) {
+        $pdmp->htgs_phase(2);
+    }
+
+    if ($pdmp->current_status_number != 50) {
         warn "Ordering contigs\n";
         $pdmp->order_contigs;
     }
@@ -90,13 +98,13 @@ sub read_gap_contigs {
     local $/ = ""; # Paragraph mode for reading caf file
 
     $pdmp->dump_time(time); # Record the time of the dump
-    #my $gaf_pipe = "ssh -T -n -x -o 'StrictHostKeyChecking no' $cluster 'cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $contig_prefix | caf_depad | caftagfeature -tagid CONT -clean -vector $HUMPUB_BLAST/contamdb' |";
+    #my $gaf_pipe = "ssh -T -n -x -o 'StrictHostKeyChecking no' $cluster 'cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $CONTIG_PREFIX | caf_depad | caftagfeature -tagid CONT -clean -vector $HUMPUB_BLAST/contamdb' |";
     my $save_gap2caf_output = '';
     if ($pdmp->current_status_number == 50) {
         my $tee_file = $pdmp->tee_file;
         $save_gap2caf_output = "| tee $tee_file";
     }
-    my $gaf_pipe = "cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $contig_prefix $save_gap2caf_output | caf_depad | caftagfeature -tagid CONT -clean -vector $HUMPUB_BLAST/contamdb |";
+    my $gaf_pipe = "cd $db_dir; gap2caf -project $db_name -version 0 -silent -cutoff 2 -bayesian -staden -contigs $CONTIG_PREFIX $save_gap2caf_output | caf_depad | caftagfeature -tagid CONT -clean -vector $HUMPUB_BLAST/contamdb |";
     warn "gap2caf pipe: $gaf_pipe\n";
     open(GAP2CAF, $gaf_pipe)
         || die "COULDN'T OPEN PIPE FROM GAP2CAF : $!\n";
@@ -106,12 +114,12 @@ sub read_gap_contigs {
         
         # Read contig DNA BaseQuality and Sequence objects.
         # We know which ones the contigs are without looking for Is_contig
-        # tags as gap2caf was told to put $contig_prefix in front of the
+        # tags as gap2caf was told to put $CONTIG_PREFIX in front of the
         # contig staden id.
         
         if (my ($class, $name) = $object =~ /(DNA|BaseQuality|Sequence)\s+\:\s+(\S+)/) {
 
-            if (my ($contig) = $name =~ /$contig_prefix(\d+)/o) {
+            if (my ($contig) = $name =~ /$CONTIG_PREFIX(\d+)/o) {
                 # It's a Contig object
                 if ($class eq 'DNA') {
                     $value =~ s/\s+//g;
@@ -917,13 +925,19 @@ sub fetch_contig_order_from_caf_file {
     my ($pdmp) = @_;
 
     my $caf_file = $pdmp->tee_file;
-    my $caf_order = "catcaf -summary $caf_file |";
-    open my $CAF, $caf_file or confess "Can't open pipe '$caf_order'; $!";
+    my @caf_order = ('cafcat', '-summary', '-caf', $caf_file);
+    warn "Running: @caf_order";
+    open my $CAF, '-|', @caf_order or confess "Can't open pipe '@caf_order'; $!";
+    my $contig_order = [];
     while (<$CAF>) {
-        print;
+        if (/$CONTIG_PREFIX(\d+)/o) {
+            print STDERR $_;
+            push(@$contig_order, $1);
+        }
     }
-    close $CAF or confess "Error running '$caf_order'; exit $?";
-    # unlink $caf_file or confess "Failed to remove file '$caf_file'; $!";
+    close $CAF or confess "Error running '@caf_order'; exit $?";
+    unlink $caf_file or confess "Failed to remove file '$caf_file'; $!";
+    $pdmp->contig_order($contig_order);
 }
 
 sub tee_file {
