@@ -412,7 +412,10 @@ sub htgs_phase {
         if (Hum::Tracking::is_finished($pdmp->project_name)) {
             $phase = 3;
         }
-        elsif ($pdmp->current_status_number == 49 or $pdmp->current_status_number == 50) {
+        elsif ($pdmp->current_status_number == 49
+            or $pdmp->current_status_number == 50
+            or $pdmp->contig_count == 1)
+        {
             # Status "49" is "Indexed Manually Improved", which should be phase 2
             # Status "50" is "Manually Improved", which should also be phase 2
             $phase = 2;
