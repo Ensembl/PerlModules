@@ -105,7 +105,7 @@ sub write_sequences {
     my $fh = $self->file_handle;
     foreach my $seq_obj (@all_seq) {
         print $fh $seq_obj->fastq_string
-          or confess "Error printing fasta : $!";
+          or confess "Error printing fastq : $!";
     }
 }
 
