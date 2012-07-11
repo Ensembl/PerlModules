@@ -291,7 +291,7 @@ sub get_chromoDB_handle {
     $password = undef;
   }
 
-  my $dbh = DBI->connect("DBI:mysql:host=${CHROMODB_CONNECTION}->{HOST};port=${CHROMODB_CONNECTION}->{PORT};database=$dbname",
+  my $dbh = DBI->connect("DBI:mysql:host=$CHROMODB_CONNECTION->{HOST};port=$CHROMODB_CONNECTION->{PORT};database=$dbname",
                          $user, $password, { RaiseError => 1, PrintError => 0 })
     or die "Can't connect to chromoDB as '$user' ",
       DBI::errstr();
