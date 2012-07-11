@@ -9,6 +9,7 @@ use POSIX ();
 use Exporter;
 use vars qw( @ISA @EXPORT_OK );
 use Net::Netrc;
+use Hum::Conf qw(SUBMISSIONS_CONNECTION);
 
 @ISA       = ('Exporter');
 @EXPORT_OK = qw( sub_db
@@ -64,9 +65,9 @@ sub ref_from_query {
 
     sub sub_db () {
         unless ($db) {
-            my $host   = 'otterlive';
-            my $port   = 3324;
-            my $dbname = 'submissions';
+            my $host   = $SUBMISSIONS_CONNECTION->{HOST};
+            my $port   = $SUBMISSIONS_CONNECTION->{PORT};
+            my $dbname = $SUBMISSIONS_CONNECTION->{NAME};
 
             my ($user, $password);
             if (my $netrc = 'Net::Netrc'->lookup($host)) {
@@ -74,7 +75,7 @@ sub ref_from_query {
                 $password = $netrc->password;
             }
             else {
-                $user     = 'ottro';
+                $user     = $SUBMISSIONS_CONNECTION->{RO_USER};
                 $password = undef;
             }
 

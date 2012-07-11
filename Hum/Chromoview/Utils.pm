@@ -11,6 +11,7 @@ use DBI;
 use Net::Netrc;
 use Hum::Chromoview::ChromoSQL;
 use Hum::Sort ('ace_sort');
+use Hum::Conf qw{CHROMODB_CONNECTION LOUTRE_CONNECTION};
 use Hum::Submission 'prepare_statement';
 use Hum::Tracking ('prepare_track_statement');
 use URI::Escape;
@@ -266,14 +267,12 @@ sub authorize {
 
 sub get_chromoDB_handle {
 
-  # $user will be coming from single sing on
+  # $user will be coming from single sign on
   # and has right to edit TPF
   my ($user, $password) = @_;
 
-  my $host     = 'lutra7';
-  my $dbname   = 'chromoDB';
-  my $port     = 3323;
-  my $mach     = Net::Netrc->lookup($host);
+  my $dbname   = $CHROMODB_CONNECTION->{NAME};
+  my $mach     = Net::Netrc->lookup($CHROMODB_CONNECTION->{HOST});
 
   if ( (defined $user and $user eq 'public') ){
     # chromoview external users	
@@ -288,11 +287,11 @@ sub get_chromoDB_handle {
     $user     = $mach->login;
   }
   else {
-    $user = 'ottro';
+    $user = $CHROMODB_CONNECTION->{RO_USER};
     $password = undef;
   }
 
-  my $dbh = DBI->connect("DBI:mysql:host=$host;port=$port;database=$dbname",
+  my $dbh = DBI->connect("DBI:mysql:host=${CHROMODB_CONNECTION}->{HOST};port=${CHROMODB_CONNETION}->{PORT};database=$dbname",
                          $user, $password, { RaiseError => 1, PrintError => 0 })
     or die "Can't connect to chromoDB as '$user' ",
       DBI::errstr();
@@ -324,9 +323,9 @@ sub get_loutredbh_from_species {
   # and has right to edit TPF
   my ($species) = @_;
 
-  my $host     = 'otterlive';
-  my $port     = 3324;
-  my $user     = 'ottro';
+  my $host     = $LOUTRE_CONNECTION->{HOST};
+  my $port     = $LOUTRE_CONNECTION->{PORT};
+  my $user     = $LOUTRE_CONNECTION->{RO_USER};
   my $password = undef;
 
   if(!$species) {

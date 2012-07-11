@@ -62,6 +62,31 @@ sub _init {
     EMBL_FILE_DIR => "$humpub/data/EMBL",
     CONFIG_DEFAULT => "$humpub/scripts/haceprep.cfg",
     GRIT_SOFTWARE => '/software/grit/bin/',
+	
+	CHROMODB_CONNECTION => {
+		PORT => 3323,
+		HOST => 'lutra6',	#'lutra7',
+		NAME => 'chromoDB',
+		RO_USER => 'ottro',
+		RW_USER => 'ottadmin',
+		RW_PASS => 'lutralutra',
+	},
+	
+	SUBMISSIONS_CONNECTION => {
+		PORT => 3324,
+		HOST => 'lutra6',	#'otterlive',
+		NAME => 'submissions',
+		RO_USER => 'ottro',
+		RW_USER => 'ottadmin',
+		RW_PASS => 'lutralutra',
+	},
+
+	LOUTRE_CONNECTION => {
+		PORT => 3324,
+		HOST => 'lutra6',	 #'otterlive',
+		RO_USER => 'ottro',
+	},
+
    );
 
     if ($ENV{'PFETCH_SERVER_LIST'}) {
