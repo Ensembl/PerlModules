@@ -104,7 +104,7 @@ sub get_Sequences {
     my( @seq_list, @missing_i );
     for (my $i = 0; $i < @id_list; $i++) {
         chomp( my $seq_string = <$fh> );
-        if ($seq_string eq 'no match') {
+        if ($seq_string eq 'no match' or length($seq_string) ==0) {
             # Add to list of indexes of missing sequences
             push(@missing_i, $i);
             $seq_list[$i] = undef;
