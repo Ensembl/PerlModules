@@ -65,7 +65,7 @@ sub _init {
 	
 	CHROMODB_CONNECTION => {
 		PORT => 3323,
-		HOST => 'lutra6',	#'lutra7',
+		HOST => 'lutra7',
 		NAME => 'chromoDB',
 		RO_USER => 'ottro',
 		RW_USER => 'ottadmin',
@@ -74,7 +74,7 @@ sub _init {
 	
 	SUBMISSIONS_CONNECTION => {
 		PORT => 3324,
-		HOST => 'lutra6',	#'otterlive',
+		HOST => 'otterlive',
 		NAME => 'submissions',
 		RO_USER => 'ottro',
 		RW_USER => 'ottadmin',
@@ -83,7 +83,7 @@ sub _init {
 
 	LOUTRE_CONNECTION => {
 		PORT => 3324,
-		HOST => 'lutra6',	 #'otterlive',
+		HOST => 'otterlive',
 		RO_USER => 'ottro',
 	},
 
