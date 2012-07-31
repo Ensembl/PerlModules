@@ -247,7 +247,7 @@ sub coding {
     return $self->{'_coding'};
 }
 
-# Controls nesting of transcript sub-types in ExonCanvas menu
+# Controls nesting of transcript sub-types in TranscriptWindow menu
 sub has_parent {
     my( $self, $flag ) = @_;
     
