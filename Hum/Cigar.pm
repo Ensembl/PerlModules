@@ -45,7 +45,7 @@ sub match_length {
 	return($self->{MATCH_LENGTH});
 }
 
-sub percent_deletion {
+sub deleted_bases {
 	my ($self) = @_;
 	
 	my $count_D = 0;
@@ -53,12 +53,18 @@ sub percent_deletion {
     while ($cigar_string =~ /(\d*)D/g) {
         $count_D += $1 || 1;
     }
-    my $percent_deletion = 100 * ($count_D / $self->match_length);
+	return $count_D;
+}
+
+sub percent_deletion {
+	my ($self) = @_;
+	
+    my $percent_deletion = 100 * ($self->deleted_bases / $self->match_length);
 	
 	return $percent_deletion;
 }
 
-sub percent_insertion {
+sub inserted_bases {
 	my ($self) = @_;
 	
 	my $count_I = 0;
@@ -66,7 +72,13 @@ sub percent_insertion {
     while ($cigar_string =~ /(\d*)I/g) {
         $count_I += $1 || 1;
     }
-    my $percent_insertion = 100 * ($count_I / $self->match_length);
+	return $count_I;
+}
+
+sub percent_insertion {
+	my ($self) = @_;
+	
+    my $percent_insertion = 100 * ($self->inserted_bases / $self->match_length);
 	
 	return $percent_insertion;
 }
