@@ -1267,6 +1267,83 @@ sub compose {
     return "//\n";
 }
 
+###############################################################################
+
+package Hum::EMBL::Line::CO;
+
+use strict;
+use warnings;
+use Carp;
+use vars qw( @ISA );
+
+@ISA = qw( Hum::EMBL::Line );
+Hum::EMBL::Line::CO->makeListAccessFuncs( 'list' );
+
+sub parse {
+    my( $line, $s ) = @_;
+    
+    my @lines = $$s =~ /^CO   (.+)$/mg;
+    $line->list(@lines);
+}
+
+sub text {
+    my( $line, $text ) = @_;
+    
+    if (defined $text) {
+        $line->list($text);
+    }
+    return join ' ', $line->list;
+}
+
+sub assembly_elements {
+	my ($line) = @_;
+	
+	my @element_hashes;
+	my $assembly_string = $line->text;
+	$assembly_string =~ s/\s//g;
+	if($assembly_string =~ /^join\(/) {
+		$assembly_string =~ s/^join\(//;
+		$assembly_string =~ s/\)$//;
+		my @assembly_elements = split(/,/, $assembly_string);
+		foreach my $assembly_element (@assembly_elements) {
+			my %element_hash = (
+				orientation			=> 1,
+				type				=> 'clone',
+			);
+			if($assembly_element =~ /^complement\(/) {
+				$element_hash{orientation} = -1;
+				$assembly_element =~ s/^complement\(//;
+				$assembly_element =~ s/\)$//;
+			}
+			if($assembly_element =~ /^gap\((\d+)\)/) {
+				$element_hash{type} = 'gap';
+				$element_hash{length} = $1;
+			}
+			elsif($assembly_element =~ /^(.*):(\d+)\.\.(\d+)$/) {
+				$element_hash{name} = $1;
+				$element_hash{start} = $2;
+				$element_hash{end} = $3;
+				$element_hash{length} = $element_hash{end} - $element_hash{start} + 1;
+			}
+			else {
+				$element_hash{type} = 'unknown';
+			}
+			push(@element_hashes, \%element_hash);
+		}
+	}
+	
+	return(@element_hashes);
+}
+
+sub _compose {
+    my( $line ) = @_;
+    
+    my( @compose );
+    foreach my $txt ($line->list()) {
+        push( @compose, $line->wrap('CO   ', $txt) );
+    }
+    return @compose;
+}
 
 1;
 

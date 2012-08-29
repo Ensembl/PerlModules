@@ -37,6 +37,7 @@ BEGIN {
          FH => 'Hum::EMBL::Line::FH',
          FT => 'Hum::EMBL::Line::FT',
          CC => 'Hum::EMBL::Line::CC',
+         CO => 'Hum::EMBL::Line::CO',
          XX => 'Hum::EMBL::Line::XX',
          SQ => 'Hum::EMBL::Line::Sequence',
        '  ' => 'Hum::EMBL::Line::Sequence',
