@@ -136,6 +136,15 @@ sub _make_daf_object {
     );
 }
 
+sub store_certificate_code {
+	my ($self, $db_handle, $dna_align_feature_id, $code) = @_;
+	
+	my $certificate_storage_sql = "INSERT INTO tpf_certificate (dna_align_feature_id, code) VALUES (?,?)";
+	my $certificate_storage_handle = $db_handle->prepare($certificate_storage_sql);
+	$certificate_storage_handle->execute($dna_align_feature_id, $code);
+	
+	return;
+}
 
 sub store_alignment_features {
   my ($self, $slice_Ad, $daf_Ad) = @_;
@@ -165,6 +174,9 @@ sub store_alignment_features {
       $self->_print_and_log_msg($msg);
 
       $daf_Ad->store($best_daf);
+      if(defined($bf->certificate_code)) {
+      	$self->store_certificate_code($daf_Ad->dbc->db_handle, $best_daf->dbID, $bf->certificate_code);
+      }
 
       $msg = "MSG: Stored 1 best_overlap (score: $score) in dna_align_feature table ...\n";
       $self->_print_and_log_msg($msg);
@@ -173,6 +185,10 @@ sub store_alignment_features {
       my $hit_name = $best_daf->hseqname;
       if ( ! daf_is_duplicate($slice_Ad, $best_daf, $qry_seq_region_id) ){
         $daf_Ad->store($best_daf);
+        if(defined($bf->certificate_code)) {
+      		$self->store_certificate_code($daf_Ad->dbc->db_handle, $best_daf->dbID, $bf->certificate_code);
+      	}
+        
 
         my $msg = "MSG: Stored 1 best_overlap (score $score) in dna_align_feature table ...\n";
         $self->_print_and_log_msg($msg);
@@ -313,6 +329,10 @@ sub _store_other_overlaps {
         else {
             $count++;
             $daf_Ad->store($other_daf);
+            if(defined($ol->certificate_code)) {
+      			$self->store_certificate_code($daf_Ad->dbc->db_handle, $other_daf->dbID, $ol->certificate_code);
+      		}
+            
         }
     }
 

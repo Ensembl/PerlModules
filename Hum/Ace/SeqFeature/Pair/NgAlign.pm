@@ -14,11 +14,23 @@ sub algorithm {
     return 'ngalign';
 }
 
+sub certificate_code {
+    my ($self, $certificate_code) = @_;
+
+    if ($certificate_code) {
+        $self->{'_certificate_code'} = $certificate_code;
+    }
+    return $self->{'_certificate_code'};
+}
+
 sub cigar_string {
     my ($self, $cigar_string) = @_;
 
     if ($cigar_string) {
         $self->{'_cigar_string'} = $cigar_string;
+    }
+    elsif(!exists($self->{'_cigar_string'})) {
+    	$self->{'_cigar_string'} = undef;
     }
     return $self->{'_cigar_string'};
 }
