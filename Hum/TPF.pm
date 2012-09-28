@@ -168,6 +168,32 @@ sub new_from_db_id {
     return $pkg->_fetch_generic(q{ AND t.id_tpf = ? }, $db_id);
 }
 
+sub dated_from_species_chromsome {
+    my( $pkg, $max_date, $species, $chromsome ) = @_;
+
+    return $pkg->_fetch_generic(q{
+          AND t.entry_date < TO_DATE(?, 'YYYY-MM-DD')
+          AND c.speciesname = ?
+          AND c.chromosome = ?
+          AND g.subregion IS NULL
+          ORDER BY t.entry_date DESC
+        },
+        $max_date, $species, $chromsome);
+}
+
+sub dated_from_species_chromsome_subregion {
+    my( $pkg, $max_date, $species, $chromsome, $subregion ) = @_;
+
+    return $pkg->_fetch_generic(q{
+          AND t.entry_date < TO_DATE(?, 'YYYY-MM-DD')
+          AND c.speciesname = ?
+          AND c.chromosome = ?
+          AND g.subregion = ?
+          ORDER BY t.entry_date DESC
+        },
+        $max_date, $species, $chromsome, $subregion);
+}
+
 sub current_from_species_chromsome {
     my( $pkg, $species, $chromsome ) = @_;
 
