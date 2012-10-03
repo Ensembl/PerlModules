@@ -185,7 +185,7 @@ sub store_alignment_features {
       my $hit_name = $best_daf->hseqname;
       if ( ! daf_is_duplicate($slice_Ad, $best_daf, $qry_seq_region_id) ){
         $daf_Ad->store($best_daf);
-        if(defined($bf->certificate_code)) {
+        if($bf->can('certificate_code') and defined($bf->certificate_code)) {
       		$self->store_certificate_code($daf_Ad->dbc->db_handle, $best_daf->dbID, $bf->certificate_code);
       	}
         
