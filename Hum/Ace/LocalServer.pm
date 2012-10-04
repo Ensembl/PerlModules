@@ -353,9 +353,12 @@ sub kill_server {
         }
         elsif (defined $pid) {
             warn "child $$: Running ($exec_list)\n" if $DEBUG_THIS;
-            exec $exec_list;
+            { exec $exec_list; }
+            # DUP: EditWindow::PfamWindow::initialize $launch_belvu in ensembl-otter
             warn "child $$: exec ($exec_list) FAILED\n ** ERRNO $!\n ** CHILD_ERROR $?\n";
-            CORE::exit( 255 );
+            close STDERR; # _exit does not flush
+            close STDOUT;
+            POSIX::_exit(127); # avoid triggering DESTROY
         }
         else {
             confess "Can't fork server : $!";
@@ -412,14 +415,11 @@ sub DESTROY {
             warn "Not killing server with pid $spid (not server leader '$opid' != '$$').\n";
         }
     } else {
-        # When the fork occurs everything gets copied.
-        # This includes the reference to the $self
-        # which is likely to be held in the calling module.
-        # If the exec fails then the reference STILL exists.
-        # The DESTROY is then called during global destruction.
-        # Trying to kill a failed to exec server is silly
-        # So ... we don't ...
-        # Although I've fixed this a bit with the kill 0, $pid.
+        # We either have not yet called fork, or the fork failed.
+        # There is no child process to kill.
+        #
+        # This method is not called in the child (i.e. after fork
+        # succeeds.)
     }
 }
 
