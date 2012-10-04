@@ -8,6 +8,7 @@ use warnings;
 use Carp;
 use Hum::FastaFileIO;
 use Hum::Pfetch;
+use POSIX ();
 
 sub new {
     my( $pkg ) = @_;
@@ -112,9 +113,13 @@ sub fork_dotter {
             # Exec'ing rm here, which replaces the perl process
             # with rm, ensures that the perl DESTROY methods
             # don't get called by this child.
-            exec("rm -f $query_file $subject_file");
+            unlink $query_file, $subject_file
+              or warn "Some input file(s) not tidied up: $!\n";
         }
-        confess "THINGS WILL NOW GO BADLY WRONG";
+        warn "dotter launch aborted\n";
+        close STDERR; # _exit does not flush
+        close STDOUT;
+        POSIX::_exit(127); # avoid triggering DESTROY
     }
     else {
         confess "Can't fork: $!";
