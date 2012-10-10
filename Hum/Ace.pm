@@ -13,7 +13,6 @@ use Hum::Ace::Clone;
 use Hum::Ace::Locus;
 use Hum::Ace::LocalServer;
 use Hum::Ace::LocalServer::RPC;
-use Hum::Ace::XaceRemote;
 use Hum::Ace::Method;
 use Hum::Ace::AceText;
 
