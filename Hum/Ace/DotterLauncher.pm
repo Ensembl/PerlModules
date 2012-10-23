@@ -117,8 +117,6 @@ sub fork_dotter {
               or warn "Some input file(s) not tidied up: $!\n";
         }
         warn "dotter launch aborted\n";
-        close STDERR; # _exit does not flush
-        close STDOUT;
         POSIX::_exit(127); # avoid triggering DESTROY
     }
     else {
