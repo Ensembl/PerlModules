@@ -188,7 +188,7 @@ sub process_ace_start_end_transcript_seq {
     $self->set_annotation_remarks(@annotation_remarks);
 
     # Parse Supporting evidence tags
-    foreach my $type (qw{ Protein EST ncRNA cDNA Genomic }) {
+    foreach my $type (qw{ Protein EST ncRNA cDNA Genomic SRA }) {
         my $tag = "${type}_match";
         my $list = [];
         foreach my $evidence ($t_seq->at('Annotation.Sequence_matches.' . $tag . '[1]')) {
