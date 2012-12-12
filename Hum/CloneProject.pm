@@ -10,15 +10,24 @@ use Exporter;
 use vars qw( @ISA @EXPORT_OK );
 @ISA = qw( Exporter );
 @EXPORT_OK = qw(fetch_projectname_from_clonename
+				fetch_clonename_from_projectname
                 fetch_project_status);
 
-my ($cp, $p_status);
+my ($cp, $pc, $p_status);
 
 sub _cp {
     return $cp ||= prepare_track_statement(qq{
 			SELECT projectname
             FROM clone_project
             WHERE clonename = ?
+          });
+}
+
+sub _pc {
+    return $pc ||= prepare_track_statement(qq{
+			SELECT clonename
+            FROM clone_project
+            WHERE projectname = ?
           });
 }
 
@@ -36,6 +45,20 @@ sub fetch_projectname_from_clonename {
   my ($clonename) = @_;
   my $sth = _cp();
   $sth->execute($clonename);
+
+	my $array_ref = $sth->fetchall_arrayref();
+	if(scalar(@$array_ref == 1)) {
+		return $array_ref->[0][0];
+	}
+	else {
+		return;
+	}
+}
+
+sub fetch_clonename_from_projectname {
+  my ($projectname) = @_;
+  my $sth = _pc();
+  $sth->execute($projectname);
 
   return $sth->fetchrow;
 }

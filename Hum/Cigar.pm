@@ -13,6 +13,25 @@ sub new {
     return bless {CIGAR=>$cigar}, $pkg;
 }
 
+# Deal with cases where the format has the numbers at the wrong end
+sub flip_format {
+	my ($self) = @_;
+	
+	my @new_parts;
+	foreach my $part ($self->flipped_format_cigar_parts) {
+		my ($type, $count) = $part =~ /^([MDI])(\d*)/;
+		push(@new_parts, "$count$type");
+	}
+	my $new_cigar_string = join("", @new_parts);
+	$self->cigar_string($new_cigar_string);
+	return;
+}
+
+sub flipped_format_cigar_parts {
+	my ($self) = @_;
+	return split(/\s*(?=[A-Z])/, $self->cigar_string);
+}
+
 sub cigar_string {
 	my ($self, $cigar_string) = @_;
 	

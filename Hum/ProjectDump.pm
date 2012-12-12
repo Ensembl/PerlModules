@@ -7,6 +7,7 @@ use Carp;
 use Hum::Submission qw(
     acc_data
     prepare_statement
+    sub_db
     );
 use Hum::Tracking qw(
     track_db
@@ -17,8 +18,9 @@ use Hum::Tracking qw(
     current_project_status_number
     );
 use Hum::EBI_FTP;
-use Hum::Conf qw( FTP_ROOT FTP_GHOST );
+use Hum::Conf qw( FTP_ROOT FTP_GHOST);
 use Hum::Species;
+use Hum::GapTags::Submissions;
 use Symbol 'gensym';
 use File::Path;
 
@@ -183,6 +185,39 @@ BEGIN {
             return $pdmp->{$field};
         }
     }
+}
+
+sub assembly_tag_parser {
+	my ($pdmp) = @_;
+	
+	if(!exists($pdmp->{'_assembly_tag_parser'})) {
+	
+	    $pdmp->{'_assembly_tag_parser'} = Hum::GapTags::Submissions->new({
+	        project => $pdmp->project_name,
+	        dbi => sub_db, 
+	    });
+		
+	}
+	
+	return $pdmp->{'_assembly_tag_parser'};
+}
+
+sub assembly_tags {
+    my ($pdmp, @assembly_tags) = @_;
+
+	if(@assembly_tags) {
+		@{$pdmp->{'_assembly_tags'}} = @assembly_tags;
+	}
+
+	if(!exists($pdmp->{'_assembly_tags'})) {
+	
+	    @{$pdmp->{'_assembly_tags'}} = $pdmp->assembly_tag_parser->get_assembly_tags;
+	    if($pdmp->assembly_tag_parser->result ne 'Ok') {
+	        @{$pdmp->{'_assembly_tags'}} = ();
+	    }
+	}
+
+	return @{$pdmp->{'_assembly_tags'}};
 }
 
 sub submission_time {
@@ -1032,6 +1067,9 @@ BEGIN {
 sub ebi_submit {
     my( $pdmp ) = @_;
 
+	# We only save assembly tags if we're submitting/dumping
+	$pdmp->assembly_tag_parser->save;
+
     my $seq_id = $pdmp->seq_id
         or confess "No seq_id";
 
@@ -1093,6 +1131,9 @@ BEGIN {
 sub store_dump {
     my( $pdmp ) = @_;
     
+    # We only save assembly tags if we're submitting/dumping
+	$pdmp->assembly_tag_parser->save;
+        
     $pdmp->_store_project_acc;
     my $seq_id = $pdmp->_store_sequence
         or confess "Got no seq_id from _store_sequence()";

@@ -33,6 +33,7 @@ use vars qw( @ISA @EXPORT_OK );
 @ISA = qw( Exporter );
 
 @EXPORT_OK = qw(
+  verbatim_chromosome_from_project
   clone_from_project
   clone_from_accession
   clone_type_seq_reason
@@ -1075,6 +1076,31 @@ sub localisation_data {
 
         my ($chr) = $get_chr->fetchrow;
         if ($chr and $chr !~ /^u/i) {
+            return $chr;
+        }
+        else {
+            return;
+        }
+    }
+
+    sub verbatim_chromosome_from_project {
+        my ($project) = @_;
+
+        $get_chr ||= prepare_track_statement(
+            q{
+            SELECT cd.chromosome
+            FROM chromosomedict cd
+              , clone c
+              , clone_project cp
+            WHERE cd.id_dict = c.chromosome
+              AND c.clonename = cp.clonename
+              AND cp.projectname = ?
+            }
+        );
+        $get_chr->execute($project);
+
+        my ($chr) = $get_chr->fetchrow;
+        if ($chr) {
             return $chr;
         }
         else {

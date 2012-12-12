@@ -937,7 +937,7 @@ sub parse {
     my( @class );
     foreach my $line ($$s =~ /^OC   (.+)$/mg) {
         $line =~ s/[\.\s]+$//;  # Trim trailing dots and spaces
-        push(@class, split /;\s*/, $line);
+        push(@class, split(/;\s*/, $line));
     }
     confess "No classification lines in:\n$$s" unless @class;
     

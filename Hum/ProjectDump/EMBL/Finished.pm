@@ -367,7 +367,7 @@ constructed by the MHC Haplotype Consortium and collaborators.',
         my $chr     = $pdmp->chromosome;
 
         return unless $species eq 'Human';
-        return unless $www{$chr};
+        return unless exists($www{$chr});
 
         my $t = "This sequence was generated from part of bacterial clone contigs of
 human chromosome $chr, constructed by the Sanger Centre Chromosome $chr

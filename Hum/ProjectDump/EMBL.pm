@@ -112,6 +112,10 @@ sub make_embl {
 
     # Feature table assembly fragments
     $pdmp->add_FT_entries($embl, $contig_map);
+    
+    # If present, add misc-features
+    $pdmp->add_assembly_tags($embl);
+    
     $embl->newXX;
 
     # Sequence
@@ -340,6 +344,25 @@ sub add_FT_entries {
             }
         }
     }
+}
+
+sub add_assembly_tags {
+	my ($pdmp, $embl) = @_;
+	
+	if($pdmp->assembly_tags) {
+		foreach my $assembly_tag ($pdmp->assembly_tags) {
+			my $assembly_tag_feature = $embl->newFT;
+			$assembly_tag_feature->key($assembly_tag->type);
+			my $loc = $assembly_tag_feature->newLocation;
+			$loc->strand('W');
+			$loc->exons([$assembly_tag->start,$assembly_tag->end]);
+			if($assembly_tag->comment and $assembly_tag->comment !~ /^\s*$/) {
+				$assembly_tag_feature->addQualifierStrings('note', $assembly_tag->comment);
+			}
+		}
+	}
+	
+	return;
 }
 
 {

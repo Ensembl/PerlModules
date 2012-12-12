@@ -22,6 +22,7 @@ use vars qw( @ISA @EXPORT_OK );
     identical_file_checksums
     file_checksum
     run_pressdb
+    system_with_separate_stdout_and_stderr_using_sed
     );
 
 sub paranoid_print {
@@ -196,6 +197,16 @@ sub identical_file_checksums {
     }
 }
 
+sub system_with_separate_stdout_and_stderr_using_sed {
+	my ($cmd) = @_;
+	
+	my @all = `($cmd | sed -e 's/^/stdout: /') 2>&1`;
+	my (@outlines, @errlines);
+	for (@all) { push @{ s/stdout: // ? \@outlines : \@errlines }, $_ }
+	
+	return(\@outlines, \@errlines);
+}
+
 sub file_checksum {
     my( $file ) = @_;
     
@@ -350,6 +361,13 @@ Runs B<pressdb> (which creates a blast version 1
 database) on the file C<finished.new>.  If this
 succeeds, it is renamed C<finished>, but if it
 fails it is moved to C<finished.BAD>.
+
+=head2 system_with_separate_stdout_and_stderr_using_sed
+
+	my ($stdout_listref, $stderr_listref) = system_with_separate_stdout_and_stderr_using_sed($command);
+	
+Implementation of the method for separating stdout and sterr of a 
+system command found in section 16.9 of the Perl Cookbook.
 
 =head1 AUTHOR
 

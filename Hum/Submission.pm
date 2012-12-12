@@ -37,6 +37,11 @@ use Hum::Conf qw(SUBMISSIONS_CONNECTION);
   MySQLdatetime
   datetimeMySQL
   header_supplement_code
+  accession_from_project_name
+  species_from_project_name
+  seq_id_from_project_name
+  sanger_id_from_project_name
+  chromosome_from_project_name
 );
 
 =pod
@@ -594,6 +599,111 @@ sub project_name_and_suffix_from_sequence_name {
     $sth->execute;
     my ($project, $suffix) = $sth->fetchrow;
     return ($project, $suffix);
+}
+
+sub accession_from_project_name {
+    my ($name) = @_;
+
+    my $sth = prepare_statement(
+        qq{
+        SELECT accession
+        FROM project_acc
+        WHERE project_name = '$name'
+        }
+    );
+    $sth->execute;
+    my ($accession) = $sth->fetchrow;
+    return ($accession);
+}
+
+sub chromosome_from_project_name {
+    my ($name) = @_;
+
+    my $sth = prepare_statement(
+        qq{
+        SELECT SC.chr_name
+        FROM sequence S,
+            project_acc PA,
+            project_dump PD,
+            species_chromosome SC
+        WHERE PA.project_name='$name'
+            AND PA.sanger_id=PD.sanger_id
+            AND PD.is_current='Y'
+            AND S.seq_id=PD.seq_id
+            AND S.chromosome_id=SC.chromosome_id
+        }
+    );
+    $sth->execute;
+    my ($chr_name) = $sth->fetchrow;
+    return ($chr_name);
+}
+
+sub seq_id_from_project_name {
+    my ($name) = @_;
+
+    my $sth = prepare_statement(
+        qq{
+        SELECT PD.seq_id
+        FROM project_acc PA,
+            project_dump PD
+        WHERE PA.project_name='$name'
+            AND PA.sanger_id=PD.sanger_id
+            AND PD.is_current='Y';
+        }
+    );
+    $sth->execute;
+    my ($seq_id) = $sth->fetchrow;
+    return ($seq_id);
+}
+
+sub sanger_id_from_project_name {
+    my ($name) = @_;
+
+    my $sth = prepare_statement(
+        qq{
+        SELECT PD.sanger_id
+        FROM project_acc PA,
+            project_dump PD
+        WHERE PA.project_name='$name'
+            AND PA.sanger_id=PD.sanger_id
+            AND PD.is_current='Y';
+        }
+    );
+    $sth->execute;
+	my @sanger_ids;
+    while(my ($sanger_id) = $sth->fetchrow) {
+		push(@sanger_ids, $sanger_id);
+	}
+	
+	if(scalar @sanger_ids == 1) {
+		return $sanger_ids[0];
+	}
+	else {
+		warn "Could not identify a unique Sanger ID for project " . $name . "\n";
+	    return;
+	}
+}
+
+sub species_from_project_name {
+    my ($name) = @_;
+
+    my $sth = prepare_statement(
+        qq{
+        SELECT SC.species_name
+        FROM sequence S,
+            project_acc PA,
+            project_dump PD,
+            species_chromosome SC
+        WHERE PA.project_name='$name'
+            AND PA.sanger_id=PD.sanger_id
+            AND PD.is_current='Y'
+            AND S.seq_id=PD.seq_id
+            AND S.chromosome_id=SC.chromosome_id
+        }
+    );
+    $sth->execute;
+    my ($species) = $sth->fetchrow;
+    return ($species);
 }
 
 ### Unused and untested
