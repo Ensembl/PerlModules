@@ -58,9 +58,14 @@ sub embl_web_sequence_get {
 	my $embl = get_EMBL_entry_from_pfetch_or_web($acc);
     return unless $embl;
 
-	my $self = $pkg->new;
-    $self->accession($acc);
-    $self->sequence_version($embl->ID->version);
+    # Attempt to get this from the Tracking database
+    # This guards against situations where the clone is in Tracking but missing from Mole.
+    my $self;
+    unless($self = $pkg->fetch_by_accession_sv($acc, $embl->ID->version)) {
+    	$self = $pkg->new;
+        $self->accession($acc);
+        $self->sequence_version($embl->ID->version);
+    }
 
     my $htgs_phase = 3;
     foreach my $keyword ($embl->KW->list) {
