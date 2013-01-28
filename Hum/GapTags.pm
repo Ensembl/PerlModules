@@ -406,7 +406,9 @@ sub gap_tag_value_to_embl_comment_and_type {
 	# Process and (in some cases) throw warnings about odd comments
 	if(defined($embl_text)) {
 		# Correct double-spaces
-		$embl_text =~ s/  / /g; 
+		$embl_text =~ s/  / /g;
+		# Eliminate tabs
+		$embl_text =~ s/\t//g;
 		
 		if($embl_text =~ /unsure/i) {
 			$self->add_comment("Possible unsure tag mislabelled as misc_feature: $embl_text");
