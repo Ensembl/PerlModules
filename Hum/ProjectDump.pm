@@ -482,7 +482,9 @@ sub primer_pair {
     if ($pdmp->clone_type eq 'PCR product') {
         unless ($pdmp->{'_primer_pair'}) {
             my ($primer1,$primer2) = Hum::Tracking::primer_pair($pdmp->project_name);
-            $pdmp->{'_primer_pair'} = "fwd_seq: $primer1, rev_seq: $primer2";
+            if(defined($primer1) and defined($primer2)) {
+                $pdmp->{'_primer_pair'} = "fwd_seq: $primer1, rev_seq: $primer2";
+            }
         }
         return $pdmp->{'_primer_pair'};
     }
