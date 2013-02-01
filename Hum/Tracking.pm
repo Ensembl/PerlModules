@@ -1489,7 +1489,6 @@ more than one match in the project table.
         $guess_type ||= prepare_track_statement(q{
             SELECT child_p.projectname child
               , ps.status
-              , ps.statusdate
             FROM project p
               , project_status ps
               , project child_p
@@ -1501,33 +1500,15 @@ more than one match in the project table.
         $guess_type->execute($project);
 
         my $type;
-        my $last_date;
-        while (my ($child, $status, $date) = $guess_type->fetchrow) {
+        while (my ($child, $status) = $guess_type->fetchrow) {
             if ($child) {
                 $type = 'PROJECT_POOL'; 
             }
             elsif (my $t = $status_type{$status}) {
                 $type = $t;
             }
-            $last_date = $date;
         }
         
-        # If the type is ambiguous but the date is before Nov '09, this must be Gap4
-        if(!defined($type) and $last_date =~ /^\d+-(.{3})-(\d+)$/) {
-            my $month = $1;
-            my $year = $2;
-            if(
-                (
-                    $year == 9
-                    and $month !~ /^(DEC|NOV)$/
-                )
-                or $year < 9
-                or $year > 80
-            ) {
-                $type = 'GAP4';
-            }
-        }
-
         return $type;
     }
 }
