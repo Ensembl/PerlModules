@@ -388,6 +388,16 @@ sub add_assembly_tags {
             'Park Parkway, St. Louis, MO 63108, USA',
             'http://genome.wustl.edu/gsc/index.shtml'
         ],
+        SDSTC => [
+            'Draft Sequence Produced by Stanford Genome Technology Center,',
+            '855 S. California Avenue, Palo Alto, CA 94304, USA',
+            'http://med.stanford.edu/sgtc/'
+        ],
+        BCM => [
+            'Draft Sequence Produced by Baylor College of Medicine,',
+            'One Baylor Plaza, Houston, TX 77030, USA,',
+            'http://www.bcm.edu/'
+        ],
     );
 
     sub add_external_draft_CC {
