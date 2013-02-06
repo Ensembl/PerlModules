@@ -153,6 +153,7 @@ sub sanger_library_name {
         $sth->bind_columns(\$libname, \$sang, \$intl, \$first, \$last);
         while ($sth->fetch) {
             next unless $sang and $intl;
+			if($sang eq 'NONE') {$sang = ''}
             if ($intl =~ /^XX/) {
                 my $uc_sang = uc $sang;
                 if ($sanger_info{$uc_sang}) {
