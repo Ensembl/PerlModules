@@ -825,6 +825,7 @@ International Clone name for that clone.
 
             $intl = $clone;
             if ($int and $ext) {
+                if($int eq 'NONE') {$int = ''}
                 substr($intl, 0, length($int)) = "$ext-";
             }
             $clone_intl{$clone} = $intl;

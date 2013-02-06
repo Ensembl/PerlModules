@@ -735,7 +735,7 @@ sub set_intl_clone_name_from_sanger_int_ext {
     $clonename = uc $clonename;
     $int_pre ||= '';
     $ext_pre ||= '';
-    if ($ext_pre =~ /^XX/) {
+    if ($ext_pre =~ /^XX/ or $int_pre eq 'NONE') {
         $clonename = "$ext_pre-$clonename";
     }
     elsif ($ext_pre) {
