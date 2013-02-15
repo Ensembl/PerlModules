@@ -200,7 +200,7 @@ sub sanger_library_name {
             my ($intl_prefix, $plate, $rest) = $intl =~ /^([^-]+)-(\d*)(.+)$/;
             $intl_prefix ||= '';
             $plate       ||= '';
-            $rest        ||= $intl;
+            if(!defined($rest)) {$rest = $intl};
             if (my $lib_info = $intl_sanger{$intl_prefix}) {
                 if ($plate) {
                     foreach my $inf (@$lib_info) {
