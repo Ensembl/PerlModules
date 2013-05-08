@@ -24,6 +24,18 @@ sub new {
     return $self;
 }
 
+sub verbose {
+  my ( $self, $verbose ) = @_;
+  if (defined($verbose)) {
+    $self->{'_verbose'} = $verbose;
+  }
+  # Default of 1
+  if(!exists($self->{'_verbose'})) {
+	  $self->{'_verbose'} = 1;
+  }
+  return $self->{'_verbose'};
+}
+
 sub algorithm {
   my ( $self, $name ) = @_;
   if ($name) {
@@ -213,7 +225,9 @@ sub store_alignment_features {
 
 sub _print_and_log_msg {
   my ($self, $msg) = @_;
-  warn $msg;
+  if($self->verbose) {
+  	warn $msg;
+  }
   $self->log_message($msg);
 }
 
