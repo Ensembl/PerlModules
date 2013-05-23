@@ -53,6 +53,7 @@ use vars qw( @ISA @EXPORT_OK );
   is_full_shotgun_complete
   is_private
   is_shotgun_complete
+  has_limited_order_remark
   library_and_vector
   library_and_vector_from_parent_project
   library_from_clone
@@ -231,6 +232,40 @@ statuses.
         return $is_private;
     }
 }
+
+=pod
+
+=head2 has_limited_order_remark
+
+=cut
+
+{
+    my ($limited_order_remark_sth);
+
+    sub has_limited_order_remark {
+        my ($project) = @_;
+
+        $limited_order_remark_sth ||= prepare_track_statement(
+            qq{
+            SELECT COUNT(*)
+            FROM clone C,
+            clone_project CP
+            WHERE C.remark like '%HTGS_LIMITED_ORDER%'
+            AND CP.clonename=C.clonename
+            AND CP.projectname = ?
+            }
+        );
+        $limited_order_remark_sth->execute($project);
+
+        return $limited_order_remark_sth->fetchrow_arrayref->[0];
+    }
+}
+
+
+
+
+
+
 
 =pod
 
@@ -598,7 +633,7 @@ given accession, or undef.
             SELECT cs.clonename
             FROM sequence s
               , clone_sequence cs
-            WHERE s.seq_id = cs.seq_id
+            WHERE s.id_sequence = cs.id_sequence
               AND cs.is_current = 1
               AND s.accession = ?
             }

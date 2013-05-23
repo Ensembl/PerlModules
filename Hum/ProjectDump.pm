@@ -16,6 +16,7 @@ use Hum::Tracking qw(
     is_assigned_to_finisher
     is_shotgun_complete
     current_project_status_number
+    has_limited_order_remark
     );
 use Hum::EBI_FTP;
 use Hum::Conf qw( FTP_ROOT FTP_GHOST);
@@ -195,6 +196,7 @@ sub assembly_tag_parser {
 	    $pdmp->{'_assembly_tag_parser'} = Hum::GapTags::Submissions->new({
 	        project => $pdmp->project_name,
 	        dbi => sub_db, 
+	        known_sanger => 1,
 	    });
 		
 	}
@@ -255,6 +257,13 @@ sub is_htgs_draft {
 
     my $project = $pdmp->project_name;
     return is_shotgun_complete($project);
+}
+
+sub is_htgs_limited_order {
+    my( $pdmp ) = @_;
+
+    my $project = $pdmp->project_name;
+    return has_limited_order_remark($project);
 }
 
 sub is_htgs_fulltop {

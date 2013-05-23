@@ -628,6 +628,9 @@ sub htg_keywords {
         if ($pdmp->is_htgs_activefin) {
             push(@kw_list, 'HTGS_ACTIVEFIN');
         }
+        if ($pdmp->is_htgs_limited_order) {
+            push(@kw_list, 'HTGS_LIMITED_ORDER');
+        }
     }
     
     return @kw_list;
