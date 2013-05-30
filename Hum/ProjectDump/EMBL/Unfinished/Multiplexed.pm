@@ -114,7 +114,7 @@ sub dump_gap5_data {
     my $gap_5_db            = "$db_dir/$project_name.0";
     my $user                = (getpwuid($<))[0];
     my $out_fastq           = "/tmp/$user-$$-gap5-dump.fastq";
-    my @gap_5_consensus_cmd = (qw{ gap5_consensus -test -format fastq -strip_pads -out }, $out_fastq, $gap_5_db,);
+    my @gap_5_consensus_cmd = (qw{ gap5_consensus -format fastq -strip_pads -out }, $out_fastq, $gap_5_db,);
     warn "Fetching data from gap5 db: @gap_5_consensus_cmd\n";
     $self->dump_time(time); # Record the time of the dump
     system(@gap_5_consensus_cmd) == 0
