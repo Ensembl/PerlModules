@@ -15,7 +15,7 @@ use Hum::EMBL;
 @ISA = qw( Exporter );
 @EXPORT_OK = qw( wwwfetch wwwfetch_EMBL_object );
 
-my $embl_simple_url = 'http://www.ebi.ac.uk/cgi-bin/dbfetch?db=emblsva&format=default&style=raw&id=';
+my $embl_simple_url = 'http://www.ebi.ac.uk/Tools/dbfetch/dbfetch?db=emblsva&format=default&style=raw&id=';
 
 sub wwwfetch {
     my( $ac ) = @_;
