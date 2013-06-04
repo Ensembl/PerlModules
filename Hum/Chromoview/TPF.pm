@@ -40,6 +40,7 @@ sub tpf {
     }
     else {
         $self->prepare_tpf_agp;
+        return $self->{'_tpf'}
     }
 }
 
@@ -51,6 +52,7 @@ sub agp {
     }
     else {
         $self->prepare_tpf_agp;
+        return $self->{'_agp'}
     }
 }
 
