@@ -79,6 +79,20 @@ sub prepare_tpf_agp {
 
 }
 
+sub fetch_all_TPF_Rows {
+    my ($self) = @_;
+    
+    if(!exists($self->{'_tpf_rows'})) {
+        my @rows = $self->tpf->fetch_all_Rows;
+        $self->{'_tpf_rows'} = [];
+        foreach my $row (@rows) {
+            my $chromoview_row = Hum::Chromoview::TPF::Row->new($row);
+            push(@{$self->{'_tpf_rows'}}, $chromoview_row);
+        }
+    }
+    return @{$self->{'_tpf_rows'}};
+}
+
 1;
 
 __END__
