@@ -52,6 +52,18 @@ sub sequence_length {
 	return $seq_len;
 }
 
+sub build_library_and_clone {
+    my ($self) = @_;
+    
+	my ($clonename, $lib) = $self->row->get_sanger_clone_and_libraryname_from_intl_name($self->row->intl_clone_name);
+	$lib =~ s/_/ /g;
+	$lib = '-' unless $lib;
+	$self->{'_library'} = $lib;
+	$self->{'_clonename'} = $clonename;
+    
+    return;
+}
+
 sub library {
     my ($self) = @_;
     
@@ -63,6 +75,15 @@ sub library {
     }
     	
 	return $self->{'_library'};
+}
+
+sub clonename {
+    my ($self) = @_;
+    
+    if(!exists($self->{'_clonename'})) {
+        $self->build_library_and_clone;
+    }
+    return $self->{'_clonename'};
 }
 
 sub data_for_chromoview {
@@ -78,7 +99,7 @@ sub data_for_chromoview {
                 R=>1,
                 contig=>$self->row->contig_name || '?',
                 external_clone=>$self->row->intl_clone_name || '?',
-                project=>undef,
+                internal_clone=>$self->clonename,
                 status=>undef,
                 accession_and_finishing=>$self->row->accession . "/" . $self->finishing_status,
                 length=> $self->sequence_length,
