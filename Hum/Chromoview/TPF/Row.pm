@@ -143,12 +143,25 @@ sub build_status {
     return;
 }
 
+sub gap_string {
+    my ($self) = @_;
+    
+	my $type = $self->row->type_string;
+	my $length = ($self->row->gap_length) ? ("length " . $self->row->gap_length ." bps")
+	: 'length unknown';
+
+	#$tpfGaps->{$rank}++;
+
+	my $gapinfo = 'GAP'." ($type) " . $length;
+    return $gapinfo;
+}
+
 sub data_for_chromoview {
     my ($self) = @_;
     
     if($self->row->is_gap) {
         return {
-            contig => 'GAP',
+            contig => $self->gap_string,
         };
     }
     else {
