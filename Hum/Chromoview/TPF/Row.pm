@@ -166,7 +166,6 @@ sub data_for_chromoview {
     }
     else {
         return {
-                R=>1,
                 contig=>$self->row->contig_name || '?',
                 external_clone=>$self->row->intl_clone_name || '?',
                 internal_clone=>$self->clonename,
