@@ -6,6 +6,7 @@ use strict;
 use warnings;
 use Hum::Chromoview::TPF;
 use Hum::TPF::Row;
+use Hum::CloneProject;
 
 sub new {
     my ($class, $row) = @_;
