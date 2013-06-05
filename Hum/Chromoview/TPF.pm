@@ -6,6 +6,7 @@ use strict;
 use warnings;
 use Hum::TPF;
 use Hum::AGP;
+use Hum::Chromoview::TPF::Row;
 
 sub new {
     my ($class, $species, $chromosome, $subregion) = @_;
