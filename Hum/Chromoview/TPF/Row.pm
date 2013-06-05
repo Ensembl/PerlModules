@@ -68,17 +68,25 @@ sub library {
 sub data_for_chromoview {
     my ($self) = @_;
     
-    return {
-            R=>1,
-            clone=>$self->row->intl_clone_name || '?',
-            project=>undef,
-            status=>undef,
-            accession_and_finishing=>$self->row->accession . "/" . $self->finishing_status,
-            length=> $self->sequence_length,
-            library=> $self->library,
-            
-            accession=>$self->row->accession,
-    };
+    if($self->row->is_gap) {
+        return {
+            contig => 'GAP',
+        };
+    }
+    else {
+        return {
+                R=>1,
+                contig=>$self->row->contig || '?',
+                external_clone=>$self->row->intl_clone_name || '?',
+                project=>undef,
+                status=>undef,
+                accession_and_finishing=>$self->row->accession . "/" . $self->finishing_status,
+                length=> $self->sequence_length,
+                library=> $self->library,
+                
+                accession=>$self->row->accession,
+        };
+    }
 }
 
 1;
