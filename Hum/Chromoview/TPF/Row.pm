@@ -166,12 +166,13 @@ sub data_for_chromoview {
     }
     else {
         return {
-                contig=>$self->row->contig_name || '?',
-                external_clone=>$self->row->intl_clone_name || '?',
+                #contig=>$self->row->contig_name || '?',
+                #external_clone=>$self->row->intl_clone_name || '?',
+                external_clone_and_contig=>$self->row->intl_clone_name . "<BR>" . $self->row->contig_name,
                 internal_clone=>$self->clonename,
                 project_status=>$self->project_status,
                 project_status_date=>$self->project_status_date,
-                accession_and_finishing=>$self->row->accession . "/" . $self->finishing_status,
+                accession_and_finishing=>$self->row->accession . "<BR>" . $self->finishing_status,
                 length=> $self->sequence_length,
                 library=> $self->library,
                 
