@@ -24,11 +24,14 @@ sub row {
 sub acc_sv {
     my ($self) = @_;
     
-    my $acc_sv = '';
-    if ($self->row->accession) {
-        $acc_sv = $self->row->accession . "." . $self->row->SequenceInfo->sequence_version;
+    if(!exists($self->{'_acc_sv'})) {
+    
+        my $acc_sv = '';
+        if ($self->row->accession) {
+            $self->{'_acc_sv'} = $self->row->accession . "." . $self->row->SequenceInfo->sequence_version;
+        }
     }
-    return $acc_sv;
+    return $self->{'_acc_sv'};
 }
 
 sub finishing_status {
@@ -48,10 +51,44 @@ sub finishing_status {
 
 sub sequence_length {
     my ($self) = @_;
-	my $check_r      = eval{$self->row->SequenceInfo;};
-	my $seq_len = eval {$check_r->sequence_length} ? $check_r->sequence_length : '-';
-	return $seq_len;
+    
+    if(!exists($self->{'_sequence_length'})) {
+        
+    	my $check_r = eval{$self->row->SequenceInfo;};
+    	$self->{'_sequence_length'} = eval {$check_r->sequence_length} ? $check_r->sequence_length : '-';
+    }
+	return $self->{'_sequence_length'};
 }
+
+sub contained_status {
+    my ($self, $contained_status) = @_;
+    
+    if($contained_status) {
+        $self->{'_contained_status'} = $contained_status;
+    }
+    ## THIS IS PROBABLY TEMPORARY- PROVIDE DEFAULT STATUS
+    elsif(!exists($self->{'_contained_status'})) {
+        $self->{'_contained_status'} = 'NOT_CONTAINED';
+    }
+    
+	return $self->{'_contained_status'};
+}
+
+## THIS MIGHT NEED SHIFTING TO OVERLAP OBJECT, OR OTHERWISE CHANGING
+sub container_strand {
+    my ($self, $container_strand) = @_;
+    
+    if($container_strand) {
+        $self->{'_container_strand'} = $container_strand;
+    }
+    ## THIS IS PROBABLY TEMPORARY- PROVIDE DEFAULT STRAND
+    elsif(!exists($self->{'_container_strand'})) {
+        $self->{'_container_strand'} = 1;
+    }
+    
+	return $self->{'_container_strand'};
+}
+
 
 sub build_library_and_clone {
     my ($self) = @_;
