@@ -198,7 +198,7 @@ sub data_for_chromoview {
     
     if($self->row->is_gap) {
         return {
-            contig => $self->gap_string,
+            external_clone_and_contig => $self->gap_string,
         };
     }
     else {
