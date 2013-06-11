@@ -21,6 +21,14 @@ sub row {
     return $self->{'_row'};
 }
 
+sub tpf {
+    my ($self, $tpf) = @_;
+    if($tpf) {
+        $self->{'_tpf'} = $tpf;
+    }
+    return $self->{'_tpf'};
+}
+
 sub acc_sv {
     my ($self) = @_;
     
@@ -193,6 +201,14 @@ sub gap_string {
     return $gapinfo;
 }
 
+sub external_clone_and_contig {
+    my ($self) = @_;
+    
+    my $pgp_link = "http://pgpviewer.ensembl.org/PGP_" . lc($self->tpf->species) . "/Location/View?region=" . $self->row->accession;
+    
+    return qq{<a href="$pgp_link">} . $self->row->intl_clone_name . "</a><BR>" . $self->row->contig_name;
+}
+
 sub data_for_chromoview {
     my ($self) = @_;
     
@@ -205,7 +221,7 @@ sub data_for_chromoview {
         return {
                 #contig=>$self->row->contig_name || '?',
                 #external_clone=>$self->row->intl_clone_name || '?',
-                external_clone_and_contig=>$self->row->intl_clone_name . "<BR>" . $self->row->contig_name,
+                external_clone_and_contig=>$self->external_clone_and_contig,
                 internal_clone=>$self->clonename,
                 project_status_and_date=>$self->project_status . "<BR>" . $self->project_status_date,
                 accession_and_finishing=>$self->row->accession . "<BR>" . $self->finishing_status,
