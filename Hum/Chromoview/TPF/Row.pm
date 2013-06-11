@@ -218,6 +218,20 @@ sub accession_and_finishing {
     return qq{<a href="$ena_link">} . $self->acc_sv . "</A><BR>" . $self->finishing_status;
 }
 
+sub internal_clone_and_epn {
+    my ($self) = @_;
+    
+	my $EPN_link = "http://psd-production.internal.sanger.ac.uk:5889/" .
+    	"lookup/group_of_projects?group_of_projects[projects]=" . $self->projectname;
+
+	my $epn_title = "EPN lookup: view available finisher notes";
+	my $epn = qq{<span class='epn' title="$epn_title"><a href="$EPN_link" target="_blank">EPN details</a></span>};
+
+    my $internal_clone_and_epn = $self->clonename . "<BR>$epn";
+	
+	return $internal_clone_and_epn;
+}
+
 sub data_for_chromoview {
     my ($self) = @_;
     
@@ -231,7 +245,7 @@ sub data_for_chromoview {
                 #contig=>$self->row->contig_name || '?',
                 #external_clone=>$self->row->intl_clone_name || '?',
                 external_clone_and_contig=>$self->external_clone_and_contig,
-                internal_clone=>$self->clonename,
+                internal_clone_and_epn=>$self->internal_clone_and_epn,
                 project_status_and_date=>$self->project_status . "<BR>" . $self->project_status_date,
                 accession_and_finishing=> $self->accession_and_finishing,
                 length=> $self->sequence_length,
