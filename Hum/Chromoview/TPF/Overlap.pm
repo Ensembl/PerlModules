@@ -252,6 +252,8 @@ sub certificate_html {
     		my $mouseover_text = 'Certificate submitted, not yet approved';
     		$self->{'_certificate_html'} = qq{<img src='$img_url/black_light.png' alt='$mouseover_text' title='$mouseover_text'>};
     	}
+
+        warn 'Certificate code: ' . $self->certificate_code . "\n";
     	
 	}
 	
@@ -279,6 +281,9 @@ sub certificate_code {
     				$self->{'_certificate_code'} = $fields[0];
     			}
     		}
+    	}
+    	else {
+    	    warn "No connection to chromoDB\n";
     	}
     }
 	
