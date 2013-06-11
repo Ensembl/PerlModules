@@ -88,7 +88,7 @@ sub fetch_all_TPF_Rows {
         $self->{'_tpf_rows'} = [];
         foreach my $row (@rows) {
             my $chromoview_row = Hum::Chromoview::TPF::Row->new($row);
-            $row->tpf($self);
+            $chromoview_row->tpf($self);
             push(@{$self->{'_tpf_rows'}}, $chromoview_row);
         }
     }
