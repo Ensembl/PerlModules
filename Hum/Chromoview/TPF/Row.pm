@@ -209,6 +209,14 @@ sub external_clone_and_contig {
     return qq{<a href="$pgp_link">} . $self->row->intl_clone_name . "</a><BR>" . $self->row->contig_name;
 }
 
+sub accession_and_finishing {
+    my ($self) = @_; 
+    
+    my $oracle_report_link = "http://intweb.sanger.ac.uk/cgi-bin/oracle_reports/report.pl?Internal_Name=" . $self->projectname;
+    
+    return qq{<a href="$oracle_report_link">} . $self->acc_sv . "</A><BR>" . $self->finishing_status;
+}
+
 sub data_for_chromoview {
     my ($self) = @_;
     
@@ -224,7 +232,7 @@ sub data_for_chromoview {
                 external_clone_and_contig=>$self->external_clone_and_contig,
                 internal_clone=>$self->clonename,
                 project_status_and_date=>$self->project_status . "<BR>" . $self->project_status_date,
-                accession_and_finishing=>$self->row->accession . "<BR>" . $self->finishing_status,
+                accession_and_finishing=> $self->accession_and_finishing,
                 length=> $self->sequence_length,
                 library=> $self->library,
                 
