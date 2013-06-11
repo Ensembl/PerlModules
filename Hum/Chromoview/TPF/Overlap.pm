@@ -238,7 +238,7 @@ sub certificate_html {
 	
 	if(!exists($self->{'_certificate_html'})) {
     	
-    	my $img_url = "/gfx/humpub/images";
+    	my $img_url = "/i/";
     		
     	if($self->certificate_code eq 'Y') {
     		my $mouseover_text = 'Certificate approved';
