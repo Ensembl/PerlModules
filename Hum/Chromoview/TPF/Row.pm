@@ -213,7 +213,7 @@ sub accession_and_finishing {
     my ($self) = @_; 
     
     #my $oracle_report_link = "http://intweb.sanger.ac.uk/cgi-bin/oracle_reports/report.pl?Internal_Name=" . $self->projectname;
-    my $ena_link = "http://www.ebi.ac.uk/cgi-bin/emblfetch?style=html&id=" . $self->projectname;
+    my $ena_link = "http://www.ebi.ac.uk/cgi-bin/emblfetch?style=html&id=" . $self->row->accession;
     
     return qq{<a href="$ena_link">} . $self->acc_sv . "</A><BR>" . $self->finishing_status;
 }
