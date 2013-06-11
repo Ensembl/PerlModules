@@ -253,8 +253,6 @@ sub certificate_html {
     		$self->{'_certificate_html'} = qq{<img src='$img_url/black_light.png' alt='$mouseover_text' title='$mouseover_text'>};
     	}
 
-        warn 'Certificate code: ' . $self->certificate_code . "\n";
-    	
 	}
 	
 	return $self->{'_certificate_html'};
