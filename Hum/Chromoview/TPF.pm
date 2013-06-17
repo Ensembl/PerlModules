@@ -57,6 +57,27 @@ sub agp {
     }
 }
 
+sub agp_row_for_accession {
+	my ($self, $query_accession) = @_;
+	
+	if(!exists($self->{'_agp_row_for_accession'})) {
+    	foreach my $row ($self->agp->fetch_all_Rows) {
+    		if(!$row->is_gap) {
+    			my $accession_for_row = $row->accession_sv;
+    			$accession_for_row =~ s/\..*//;
+    			$self->{'_agp_row_for_accession'}{$accession_for_row} = $row;
+    		}
+    	}
+	}
+
+    if(exists($self->{'_agp_row_for_accession'}{$query_accession})) {
+	   return $self->{'_agp_row_for_accession'}{$query_accession};
+    }
+    else {
+        return undef;
+    }
+}
+
 sub prepare_tpf_agp {
 
     my($self) = @_;
@@ -93,6 +114,21 @@ sub fetch_all_TPF_Rows {
         }
     }
     return @{$self->{'_tpf_rows'}};
+}
+
+sub fetch_non_contained_Rows {
+    my ($self) = @_;
+    
+    if(!exists($self->{'_non_contained_tpf_rows'})) {
+        my @rows = $self->tpf->fetch_non_contained_rows;
+        $self->{'_non_contained_tpf_rows'} = [];
+        foreach my $row (@rows) {
+            my $chromoview_row = Hum::Chromoview::TPF::Row->new($row);
+            $chromoview_row->tpf($self);
+            push(@{$self->{'_non_contained_tpf_rows'}}, $chromoview_row);
+        }
+    }
+    return @{$self->{'_non_contained_tpf_rows'}};
 }
 
 1;
