@@ -177,7 +177,12 @@ sub check_for_crossmatch_errors_by_accSv_with_timeout {
 
 sub overlap_quality {
     my ($self) = @_;
-    return $self->overlap_length . "<BR>" . $self->overlap_variation . "<BR>" . $self->sequence_overlap->status_description;
+    my $overlap_alignment_link = join( '/',
+        '../HumPub_OverlapAlignment',
+        $self->current_row->acc_sv,
+        $self->next_row->acc_sv
+    );
+    return qq{<a target='top' href="$overlap_alignment_link">} . $self->overlap_length . "</a><BR>" . $self->overlap_variation . "<BR>" . $self->sequence_overlap->status_description;
 }
 
 sub _build_sequence_overlap {
@@ -238,19 +243,23 @@ sub certificate_html {
 	
 	if(!exists($self->{'_certificate_html'})) {
     	
-    	my $img_url = "/i/";
-    		
-    	if($self->certificate_code eq 'Y') {
-    		my $mouseover_text = 'Certificate approved';
-    		$self->{'_certificate_html'} = qq{<img src='$img_url/purple_light.png' alt='$mouseover_text' title='$mouseover_text'>};
+    	my $img_url = "/research/areas/bioinformatics/grc/gfx/";
+    	if(defined($self->certificate_code)) {
+        	if($self->certificate_code eq 'Y') {
+        		my $mouseover_text = 'Certificate approved';
+        		$self->{'_certificate_html'} = qq{<img src='$img_url/purple_light.png' alt='$mouseover_text' title='$mouseover_text'>};
+        	}
+        	elsif($self->certificate_code eq 'N') {
+        		my $mouseover_text = 'Certificate rejected';
+        		$self->{'_certificate_html'} = qq{<img src='$img_url/blue_light.png' alt='$mouseover_text' title='$mouseover_text'>};
+        	}
+        	elsif($self->certificate_code eq 'U') {
+        		my $mouseover_text = 'Certificate submitted, not yet approved';
+        		$self->{'_certificate_html'} = qq{<img src='$img_url/black_light.png' alt='$mouseover_text' title='$mouseover_text'>};
+        	}
     	}
-    	elsif($self->certificate_code eq 'N') {
-    		my $mouseover_text = 'Certificate rejected';
-    		$self->{'_certificate_html'} = qq{<img src='$img_url/blue_light.png' alt='$mouseover_text' title='$mouseover_text'>};
-    	}
-    	elsif($self->certificate_code eq 'U') {
-    		my $mouseover_text = 'Certificate submitted, not yet approved';
-    		$self->{'_certificate_html'} = qq{<img src='$img_url/black_light.png' alt='$mouseover_text' title='$mouseover_text'>};
+    	else {
+    	    $self->{'_certificate_html'} = '';
     	}
 
 	}

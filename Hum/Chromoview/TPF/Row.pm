@@ -82,6 +82,27 @@ sub contained_status {
 	return $self->{'_contained_status'};
 }
 
+######## NEED TO FIGURE OUT HOW TO ORGANISE THIS DATA, AND WORK OUT HOW CURRENT CLASSES ARE ASSIGNED
+####### PROBABLY SHOULD ELIMINATE THIS, PUT ALL DISPLAY INFO INTO CHROMOVIEW COMPONENT, OR NEW CLASS
+sub contained_status_for_display {
+   my ($self) = @_;
+    
+    my $display_status = '';
+    if($self->contained_status =~ /CONTAINER/) {
+		$display_status = "CONTAINER";
+		#$row_class = "container_row";
+		#$container_class = "container";
+	}
+
+	if($self->contained_status =~ /^CONTAINED/) {
+		$display_status .= "CONTAINED";
+		#$row_class = "contained_row";
+		#$container_class = "contained";
+	}
+	
+	return $display_status;
+}
+
 ## THIS MIGHT NEED SHIFTING TO OVERLAP OBJECT, OR OTHERWISE CHANGING
 sub container_strand {
     my ($self, $container_strand) = @_;
@@ -115,7 +136,7 @@ sub build_library_and_clone {
 	};
     $clonename = $self->row->sanger_clone_name unless $clonename;
     if ( defined $projname and defined $clonename and $projname ne $clonename ) {
-    	my $swap = "Clone ($clonename) - Project ($projname) swap";
+    	my $swap = "Cl/Pr $clonename/$projname swap";
     	$clonename = $swap;
 	}
     
@@ -206,7 +227,7 @@ sub external_clone_and_contig {
     
     my $pgp_link = "http://pgpviewer.ensembl.org/PGP_" . lc($self->tpf->species) . "/Location/View?region=" . $self->row->accession;
     
-    return qq{<a href="$pgp_link">} . $self->row->intl_clone_name . "</a><BR>" . $self->row->contig_name;
+    return qq{<a href="$pgp_link">} . $self->row->intl_clone_name . "</a><BR>" . $self->row->contig_name . "<BR>" . $self->contained_status_for_display;
 }
 
 sub accession_and_finishing {
@@ -221,12 +242,14 @@ sub accession_and_finishing {
 sub internal_clone_and_epn {
     my ($self) = @_;
     
-	my $EPN_link = "http://psd-production.internal.sanger.ac.uk:5889/" .
-    	"lookup/group_of_projects?group_of_projects[projects]=" . $self->projectname;
-
-	my $epn_title = "EPN lookup: view available finisher notes";
-	my $epn = qq{<span class='epn' title="$epn_title"><a href="$EPN_link" target="_blank">EPN details</a></span>};
-
+    my $epn = '';
+    if(defined($self->projectname)) {
+    	my $EPN_link = "http://psd-production.internal.sanger.ac.uk:5889/" .
+        	"lookup/group_of_projects?group_of_projects[projects]=" . $self->projectname;
+    
+    	my $epn_title = "EPN lookup: view available finisher notes";
+    	$epn = qq{<span class='epn' title="$epn_title"><a href="$EPN_link" target="_blank">EPN details</a></span>};
+    }
     my $internal_clone_and_epn = $self->clonename . "<BR>$epn";
 	
 	return $internal_clone_and_epn;
@@ -242,8 +265,6 @@ sub data_for_chromoview {
     }
     else {
         return {
-                #contig=>$self->row->contig_name || '?',
-                #external_clone=>$self->row->intl_clone_name || '?',
                 external_clone_and_contig=>$self->external_clone_and_contig,
                 internal_clone_and_epn=>$self->internal_clone_and_epn,
                 project_status_and_date=>$self->project_status . "<BR>" . $self->project_status_date,
