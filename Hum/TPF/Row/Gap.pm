@@ -28,7 +28,9 @@ sub type_string {
     my %bio_gap_type = (5 => 'CENTROMERE',
                         6 => 'HETEROCHROMATIN',
                         7 => 'SHORT-ARM',
-                        8 => 'TELOMERE'
+                        8 => 'TELOMERE',
+                        9 => 'CENTROMERE_DATA_START',
+                       10 => 'CENTROMERE_DATA_END',
                        );
 
     my $type = $self->type or confess "type not set";
