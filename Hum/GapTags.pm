@@ -128,7 +128,8 @@ sub report_error {
 	}
 	
 	$self->{ERROR_STRING} .= $error . "\n";
-	warn "$error\n";
+        my $proj = $self->{PROJECT};
+	warn "project $proj: $error\n";
 	
 	return;
 }
