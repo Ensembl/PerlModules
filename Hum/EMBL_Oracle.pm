@@ -143,6 +143,11 @@ v_gp_primary.
 
 =back
 
+=head1 ACCESS
+
+To get access to this database, we asked Sanger's network team to ask
+EBI for holes in the relevant firewalls.  Most recent was RT#345841.
+
 =head1 AUTHOR
 
 James Gilbert B<email> jgrg@sanger.ac.uk
