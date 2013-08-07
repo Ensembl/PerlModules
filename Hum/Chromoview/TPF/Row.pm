@@ -236,11 +236,24 @@ sub accession_and_finishing {
     #my $oracle_report_link = "http://intweb.sanger.ac.uk/cgi-bin/oracle_reports/report.pl?Internal_Name=" . $self->projectname;
     my $ena_link = "http://www.ebi.ac.uk/cgi-bin/emblfetch?style=html&id=" . $self->row->accession;
     
-    return qq{<a href="$ena_link">} . $self->acc_sv . "</A><BR>" . $self->finishing_status;
+    my $finishing_status = $self->finishing_status;
+    if($finishing_status eq 'finished') {
+        $finishing_status = qq{<span class='finished_seq'>} . $finishing_status . '</span>';
+    }
+    
+    return qq{<a href="$ena_link">} . $self->acc_sv . "</A><BR>" . $finishing_status;
 }
 
 sub internal_clone_and_epn {
     my ($self) = @_;
+    
+    my $clone_element = '';
+    if(defined($self->clonename)) {
+        my $agp_name = '#agp' . $self->row->accession;
+        my $tpf_name = 'tpf' . $self->row->accession;
+        #$clone_element = qq{<a href="$agp_name" name="$tpf_name">} . $self->clonename . '</a>';
+        $clone_element = $self->clonename;
+    }
     
     my $epn = '';
     if(defined($self->projectname)) {
@@ -250,9 +263,22 @@ sub internal_clone_and_epn {
     	my $epn_title = "EPN lookup: view available finisher notes";
     	$epn = qq{<span class='epn' title="$epn_title"><a href="$EPN_link" target="_blank">EPN details</a></span>};
     }
-    my $internal_clone_and_epn = $self->clonename . "<BR>$epn";
+    my $internal_clone_and_epn = $clone_element . "<BR>$epn";
 	
 	return $internal_clone_and_epn;
+}
+
+sub project_status_and_date {
+    my ($self) = @_;
+    
+    my $project_status = $self->project_status;
+    if($project_status eq 'Analysed') {
+        $project_status = qq{<span class='analysed'>$project_status</span>};
+    }
+    
+    my $project_status_and_date = $project_status . "<BR>" . $self->project_status_date;
+    
+    return $project_status_and_date;
 }
 
 sub data_for_chromoview {
@@ -267,7 +293,7 @@ sub data_for_chromoview {
         return {
                 external_clone_and_contig=>$self->external_clone_and_contig,
                 internal_clone_and_epn=>$self->internal_clone_and_epn,
-                project_status_and_date=>$self->project_status . "<BR>" . $self->project_status_date,
+                project_status_and_date=>$self->project_status_and_date,
                 accession_and_finishing=> $self->accession_and_finishing,
                 length=> $self->sequence_length,
                 library=> $self->library,

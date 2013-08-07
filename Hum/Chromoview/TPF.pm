@@ -8,6 +8,8 @@ use Hum::TPF;
 use Hum::AGP;
 use Hum::Chromoview::TPF::Row;
 
+use Time::Piece; ### DEBUG
+
 sub new {
     my ($class, $species, $chromosome, $subregion) = @_;
     my $self = {
@@ -118,9 +120,9 @@ sub fetch_all_TPF_Rows {
 
 sub fetch_non_contained_Rows {
     my ($self) = @_;
-    
+
     if(!exists($self->{'_non_contained_tpf_rows'})) {
-        my @rows = $self->tpf->fetch_non_contained_rows;
+        my @rows = $self->tpf->fetch_non_contained_Rows;
         $self->{'_non_contained_tpf_rows'} = [];
         foreach my $row (@rows) {
             my $chromoview_row = Hum::Chromoview::TPF::Row->new($row);

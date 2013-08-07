@@ -1,14 +1,11 @@
-
 package Hum::Chromoview::Utils;
 
 ### Author: ck1@sanger.ac.uk
-
 
 use vars qw{ @ISA @EXPORT_OK };
 use strict;
 use warnings;
 use DBI;
-use Net::Netrc;
 use Hum::Chromoview::ChromoSQL;
 use Hum::Sort ('ace_sort');
 use Hum::Conf qw{CHROMODB_CONNECTION LOUTRE_CONNECTION};
@@ -21,72 +18,57 @@ use Config::IniFiles;
 
 @ISA = ('Exporter');
 @EXPORT_OK = qw(
-				is_local
-                authorize
-                check_for_crossmatch_errors_by_accSv
-                concat_js_params
-                datetime2unixTime
-                extra_footer_browsers
-                fetch_seq_region_id_by_accession
-                get_DNA_from_ftpghost
-                get_TPF_modtime
-                get_all_current_TPFs
-                get_chromoDB_handle
-                get_id_tpftargets_by_acc_sv
-                get_id_tpftargets_by_seq_region_id
-                get_latest_TPF_update_of_clone
-                get_latest_clone_entries_with_overlap_of_assembly
-                get_latest_clone_entrydate_of_TPF
-                get_latest_overlap_statusdate_of_TPF
-                get_loutredbh_from_species
-                get_mysql_datetime
-                get_script_root
-                get_seq_len_by_acc_sv
-                get_species_chr_subregion_from_id_tpftarget
-                get_yyyymmdd
-				google_analytics
-                make_hmenus
-                make_search_box
-                make_table_row
-                phase_2_status
-                store_failed_overlap_pairs
-                unixtime2YYYYMMDD
-                unixtime2datetime
-                unixtime2tpftime
-				make_error_email
-               );
+  is_local
+  authorize
+  check_for_crossmatch_errors_by_accSv
+  concat_js_params
+  datetime2unixTime
+  extra_footer_browsers
+  fetch_seq_region_id_by_accession
+  get_DNA_from_ftpghost
+  get_TPF_modtime
+  get_all_current_TPFs
+  get_chromoDB_handle
+  get_id_tpftargets_by_acc_sv
+  get_id_tpftargets_by_seq_region_id
+  get_latest_TPF_update_of_clone
+  get_latest_clone_entries_with_overlap_of_assembly
+  get_latest_clone_entrydate_of_TPF
+  get_latest_overlap_statusdate_of_TPF
+  get_loutre_dbname
+  get_loutredbh_from_species
+  get_mysql_datetime
+  get_script_root
+  get_seq_len_by_acc_sv
+  get_species_chr_subregion_from_id_tpftarget
+  get_yyyymmdd
+  google_analytics
+  make_hmenus
+  make_search_box
+  make_table_row
+  phase_2_status
+  store_failed_overlap_pairs
+  unixtime2YYYYMMDD
+  unixtime2datetime
+  unixtime2tpftime
+  make_error_email
+);
 
 sub make_error_email {
-	return q{<b>Problems with Chromoview?</b> Email <a href="mailto:grc-help@sanger.ac.uk">grc-help@sanger.ac.uk</a>};
+  return q{<b>Problems with Chromoview?</b> Email <a href="mailto:grc-help@sanger.ac.uk">grc-help@sanger.ac.uk</a>};
 }
-			   
+
 sub google_analytics {
-
-	my $google_code = <<BLOCK;
-
-  var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-22455456-1']);
-  _gaq.push(['_trackPageview']);
-
-  (function() {
-    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-  })();
-
-BLOCK
-
-	return $google_code;
-
+  return q();
 }
 
 sub is_local {
-	if($ENV{HTTP_CLIENTREALM} =~/sanger/) {
-		return 1;
-	}
-	else {
-		return 0;
-	}
+  if($ENV{HTTP_CLIENTREALM} =~/sanger/) {
+    return 1;
+  }
+  else {
+    return 0;
+  }
 }
 
 sub store_failed_overlap_pairs {
@@ -157,7 +139,7 @@ sub check_for_crossmatch_errors_by_accSv {
   $qry->execute("$accSv");
 
   if ( my $err = $qry->fetchrow ){
-    $err = $err eq 'c' ? 'Job terminated: crossmatch used up virtual memory set for finding end-overlap' : 
+    $err = $err eq 'c' ? 'Job terminated: crossmatch used up virtual memory set for finding end-overlap' :
                          'No alignment found between clones';
     return $err;
   }
@@ -172,49 +154,49 @@ sub get_seq_len_by_acc_sv {
 }
 
 {
-	my $qry;
+  my $qry;
 
-	sub get_id_tpftargets_by_seq_region_id {
-	  my ($srId) = @_;
-	  my $dba = get_chromoDB_handle();
-	  $qry ||= $dba->prepare(q{SELECT name FROM seq_region WHERE seq_region_id = ?});
-	  $qry->execute($srId);
-	  my $accSv = $qry->fetchrow;
-	  if ( defined $accSv and $accSv =~ /\./ ){
-    	return get_id_tpftargets_by_acc_sv( split(/\./, $accSv) );
-	  }
+  sub get_id_tpftargets_by_seq_region_id {
+    my ($srId) = @_;
+    my $dba = get_chromoDB_handle();
+    $qry ||= $dba->prepare(q{SELECT name FROM seq_region WHERE seq_region_id = ?});
+    $qry->execute($srId);
+    my $accSv = $qry->fetchrow;
+    if ( defined $accSv and $accSv =~ /\./ ){
+      return get_id_tpftargets_by_acc_sv( split(/\./, $accSv) );
+    }
 
-	  return 0;
-	}
+    return 0;
+  }
 }
 
 {
-	my $qry;
+  my $qry;
 
-	sub get_id_tpftargets_by_acc_sv {
+  sub get_id_tpftargets_by_acc_sv {
 
-	  my ($acc, $sv) = @_;
-	  $qry ||= prepare_track_statement(qq{
-                                    	   SELECT DISTINCT tt.id_tpftarget
-                                    	   FROM sequence s, clone_sequence cs, tpf_row tr, tpf t, tpf_target tt
-                                    	   WHERE t.iscurrent=1
-                                    	   AND s.accession=?
-                                    	   AND s.sv=?
-                                    	   AND s.id_sequence=cs.id_sequence
-                                    	   AND cs.clonename=tr.clonename
-                                    	   AND tr.id_tpf=t.id_tpf
-                                    	   AND t.id_tpftarget=tt.id_tpftarget
-                                    	 });
-	  $qry->execute($acc, $sv);
+    my ($acc, $sv) = @_;
+    $qry ||= prepare_track_statement(qq{
+                                         SELECT DISTINCT tt.id_tpftarget
+                                         FROM sequence s, clone_sequence cs, tpf_row tr, tpf t, tpf_target tt
+                                         WHERE t.iscurrent=1
+                                         AND s.accession=?
+                                         AND s.sv=?
+                                         AND s.id_sequence=cs.id_sequence
+                                         AND cs.clonename=tr.clonename
+                                         AND tr.id_tpf=t.id_tpf
+                                         AND t.id_tpftarget=tt.id_tpftarget
+                                       });
+    $qry->execute($acc, $sv);
 
-	  my $id_tpftargets = [];
-	  while ( my $id = $qry->fetchrow ){
-    	push(@$id_tpftargets, $id);
-	  }
+    my $id_tpftargets = [];
+    while ( my $id = $qry->fetchrow ){
+      push(@$id_tpftargets, $id);
+    }
 
-	  return $id_tpftargets;
+    return $id_tpftargets;
 
-	}
+  }
 }
 
 sub fetch_seq_region_id_by_accession {
@@ -234,31 +216,31 @@ sub fetch_seq_region_id_by_accession {
 sub authorize {
 
   my $sanger_user = shift;
-  my $user_group = shift || 'editors'; 
-  
+  my $user_group = shift || 'editors';
+
   my $sw = SangerWeb->new();
-  
+
   my $cfg = Config::IniFiles->new( -file => $sw->server_root."/data/humpub/dbaccess" );
-  
+
   die "Failed to parse dbaccess file" unless $cfg;
-  
+
   my %users = map {$_ => 1} $cfg->val('users', $user_group);
 
   die "No users in group '$user_group'" unless %users;
 
   if ( $users{$sanger_user} ){
-  	
-  	if (wantarray) {
-  		my $db_user = $cfg->val('db','user');
-  		my $db_pass = $cfg->val('db','pass');
-  	
-  		die "DB username and/or password missing from dbaccess file" unless ($db_user && $db_pass);
-  	
-    	return ($db_user, $db_pass);
-  	}
-  	else {
-  		return 1;
-  	}
+
+    if (wantarray) {
+      my $db_user = $cfg->val('db','user');
+      my $db_pass = $cfg->val('db','pass');
+
+      die "DB username and/or password missing from dbaccess file" unless ($db_user && $db_pass);
+
+      return ($db_user, $db_pass);
+    }
+    else {
+      return 1;
+    }
   }
   else {
     return wantarray ? (undef, undef) : undef;
@@ -266,55 +248,47 @@ sub authorize {
 }
 
 sub get_chromoDB_handle {
-
   # $user will be coming from single sign on
   # and has right to edit TPF
   my ($user, $password) = @_;
 
-  my $dbname   = $CHROMODB_CONNECTION->{NAME};
-  my $mach     = Net::Netrc->lookup($CHROMODB_CONNECTION->{HOST});
+  my $dbname  = $CHROMODB_CONNECTION->{NAME};
 
-  if ( (defined $user and $user eq 'public') ){
-    # chromoview external users	
-	$user = 'chromo_tpfedit';
+  if ( defined $user && $user eq 'public' ){ # chromoview external users
+    $user     = 'chromo_tpfedit';
+    $password = undef;
+  } elsif ( ! $user || ! $password ) {
+    $user     = $CHROMODB_CONNECTION->{RO_USER};
     $password = undef;
   }
-  elsif ( $user and $password ){
-    $password = $password;
-  }	
-  elsif ( $mach ){
-    $password = $mach->password;
-    $user     = $mach->login;
-  }
-  else {
-    $user = $CHROMODB_CONNECTION->{RO_USER};
-    $password = undef;
-  }
+  my $dsn = "DBI:mysql:host=$CHROMODB_CONNECTION->{HOST};port=$CHROMODB_CONNECTION->{PORT};database=$dbname";
 
-  my $dbh = DBI->connect("DBI:mysql:host=$CHROMODB_CONNECTION->{HOST};port=$CHROMODB_CONNECTION->{PORT};database=$dbname",
-                         $user, $password, { RaiseError => 1, PrintError => 0 })
-    or die "Can't connect to chromoDB as '$user' ",
-      DBI::errstr();
+  my $dbh = DBI->connect($dsn, $user, $password, { RaiseError => 1, PrintError => 0 });
 
-  return $dbh;
+  return $dbh if $dbh;
+
+  warn sprintf q(Can't connect to chromoDB as '%s' %s [%s]), $user, DBI::errstr();
+  return;
 }
 
 my $equiv_loutre_species = {
-		'x.tropicalis' => 'tropicalis',
-		'm.spretus'	   => 'mus_spretus',
-		's.lycopersicum' => 'tomato'
+  'x.tropicalis'   => 'tropicalis',
+  'm.spretus'      => 'mus_spretus',
+  'm.truncatula'   => 'medicago',
+  's.harrisii'     => 'tas_devil',
+  's.lycopersicum' => 'tomato',
 };
 
 sub get_loutre_dbname {
-	my ($species) = @_;
-	my $dbname = "loutre_";
-	if($equiv_loutre_species->{$species}){
-		$dbname .= $equiv_loutre_species->{$species};
-	} else {
-		$dbname .= $species;
-	}
+  my ($species) = @_;
+  my $dbname = "loutre_";
+  if($equiv_loutre_species->{$species}){
+    $dbname .= $equiv_loutre_species->{$species};
+  } else {
+    $dbname .= $species;
+  }
 
-	return $dbname;
+  return $dbname;
 }
 
 sub get_loutredbh_from_species {
@@ -329,7 +303,7 @@ sub get_loutredbh_from_species {
   my $password = undef;
 
   if(!$species) {
-  	return undef;
+    return undef;
   }
 
   $species = lc($species);
@@ -338,12 +312,12 @@ sub get_loutredbh_from_species {
   my $dbh;
 
   eval {
-  	$dbh = DBI->connect("DBI:mysql:host=$host;port=$port;database=$dbname",
+    $dbh = DBI->connect("DBI:mysql:host=$host;port=$port;database=$dbname",
                          $user, $password, { RaiseError => 1, PrintError => 0 });
   };
 
   if(@$) {
-  	return undef;
+    return undef;
   }
 
   return $dbh;
@@ -383,11 +357,11 @@ sub unixtime2tpftime {
   my @months = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
   my $daypart;
   if($h > 12) {
-  	$h -= 12;
-  	$daypart = 'PM';
+    $h -= 12;
+    $daypart = 'PM';
   }
   else {
-  	$daypart = 'AM';
+    $daypart = 'AM';
   }
 
   return sprintf("%s %2d %s %2d:%02d%s", $months[$m], $d, $y+1900, $h, $min, $daypart);
@@ -725,103 +699,103 @@ sub concat_js_params {
 }
 
 {
-	# Store handles to avoid opening too many Oracle cursors
-	my %latest_tpf_update_handle_for_sql;
-	
-	sub get_latest_TPF_update_of_clone {
-	
-	  my ($species, $chr, $subregion, $daySpan) = @_;
-	  # get latest entrydate of current clone in a TPF
-	
-	  my @arguments;
-	
-	  my $sql = qq{
-	               SELECT * from (
-	               SELECT TO_CHAR(cs.entrydate, 'yyyy-mm-dd'), tg.id_tpftarget, cd.chromosome, tg.subregion, cd.speciesname, ROWNUM
-	               FROM clone_sequence cs, clone c, tpf_row tr, tpf t, tpf_target tg, chromosomedict cd
-	               WHERE cs.is_current=1
-	               AND cs.clonename = c.clonename
-	               AND c.clonename=tr.clonename
-	               AND tr.id_tpf = t.id_tpf
-	               AND t.ID_TPFTARGET=tg.ID_TPFTARGET
-	               AND tg.chromosome=cd.id_dict
-	               AND t.iscurrent=1
-	               AND cd.speciesname = ?
-	               AND cd.chromosome = ?
-	             };
-	             
-	  push(@arguments, $species, $chr);
-	             
-	  my $csWindow;
-	  if($daySpan) {
-	  	$csWindow = qq{ AND cs.ENTRYDATE > sysdate-?};
-	  	push(@arguments, $daySpan);
-	  }
-	  else {
-	  	$csWindow = qq{ AND cs.ENTRYDATE < sysdate};
-	  }
+  # Store handles to avoid opening too many Oracle cursors
+  my %latest_tpf_update_handle_for_sql;
 
-	  my $region;
-	  if($subregion) {
-	  	$region = qq{ AND tg.subregion = ?};
-	  	push(@arguments, $subregion);
-	  }
-	  else {
-	  	$region = qq{ AND tg.subregion IS NULL};
-	  }
-	
-	  $sql .= $csWindow . $region;
-	  $sql .= qq{ ORDER BY cs.entrydate DESC) WHERE ROWNUM <=1};
-	  $sql .= qq{ UNION};
-	  $sql .= qq{ SELECT DISTINCT TO_CHAR(t.entry_date, 'yyyy-mm-dd'), tg.id_tpftarget, cd.chromosome, tg.subregion, cd.speciesname, ROWNUM
-	              FROM tpf t, tpf_target tg, chromosomedict cd
-	              WHERE t.ID_TPFTARGET=tg.ID_TPFTARGET
-	              AND tg.chromosome=cd.id_dict
-	              AND t.iscurrent=1};
-	  $sql .= qq{ AND cd.speciesname = ?
-	              AND cd.chromosome = ?};
-	              
-	  push(@arguments, $species, $chr);
-	             
-	  my $tpfWindow = $daySpan ? qq{ AND t.entry_date > sysdate-$daySpan} : qq{ AND t.entry_date < sysdate};
-	  $sql .= $tpfWindow . $region;
-	  if($subregion) {
-	  	push(@arguments, $subregion);
-	  }
-	
-	  my $qry;
-	  if(exists($latest_tpf_update_handle_for_sql{$sql})) {
-	  		$qry = $latest_tpf_update_handle_for_sql{$sql}; 
-	  }
-	  else {
-	  	$qry = prepare_track_statement($sql);
-	  	$latest_tpf_update_handle_for_sql{$sql} = $qry;
-	  }
-	
-	  $qry->execute(@arguments);
-	
-	  my $date_data = {};
-	  my $date = '';
-	  my $counter;
-	  while ( my (@fields) = $qry->fetchrow() ){
-	    $counter++;
-	    pop @fields;
-	    $date_data->{$fields[0]} = \@fields;
-	  }
-	  return unless $counter;
-	
-	  #warn "NUM: ", scalar keys %$date_data;
-	  if (scalar keys %$date_data == 0 ){
-	    return;
-	  }
-	  elsif (scalar keys %$date_data == 1 ){
-	    return map { @{$date_data->{$_}} } keys %$date_data;
-	  }
-	  else {
-	    my @Dt = sort { ace_sort($b, $a) } keys %$date_data;
-	    return @{$date_data->{$Dt[0]}};
-	  }
-	}
+  sub get_latest_TPF_update_of_clone {
+
+    my ($species, $chr, $subregion, $daySpan) = @_;
+    # get latest entrydate of current clone in a TPF
+
+    my @arguments;
+
+    my $sql = qq{
+                 SELECT * from (
+                 SELECT TO_CHAR(cs.entrydate, 'yyyy-mm-dd'), tg.id_tpftarget, cd.chromosome, tg.subregion, cd.speciesname, ROWNUM
+                 FROM clone_sequence cs, clone c, tpf_row tr, tpf t, tpf_target tg, chromosomedict cd
+                 WHERE cs.is_current=1
+                 AND cs.clonename = c.clonename
+                 AND c.clonename=tr.clonename
+                 AND tr.id_tpf = t.id_tpf
+                 AND t.ID_TPFTARGET=tg.ID_TPFTARGET
+                 AND tg.chromosome=cd.id_dict
+                 AND t.iscurrent=1
+                 AND cd.speciesname = ?
+                 AND cd.chromosome = ?
+               };
+
+    push(@arguments, $species, $chr);
+
+    my $csWindow;
+    if($daySpan) {
+      $csWindow = qq{ AND cs.ENTRYDATE > sysdate-?};
+      push(@arguments, $daySpan);
+    }
+    else {
+      $csWindow = qq{ AND cs.ENTRYDATE < sysdate};
+    }
+
+    my $region;
+    if($subregion) {
+      $region = qq{ AND tg.subregion = ?};
+      push(@arguments, $subregion);
+    }
+    else {
+      $region = qq{ AND tg.subregion IS NULL};
+    }
+
+    $sql .= $csWindow . $region;
+    $sql .= qq{ ORDER BY cs.entrydate DESC) WHERE ROWNUM <=1};
+    $sql .= qq{ UNION};
+    $sql .= qq{ SELECT DISTINCT TO_CHAR(t.entry_date, 'yyyy-mm-dd'), tg.id_tpftarget, cd.chromosome, tg.subregion, cd.speciesname, ROWNUM
+                FROM tpf t, tpf_target tg, chromosomedict cd
+                WHERE t.ID_TPFTARGET=tg.ID_TPFTARGET
+                AND tg.chromosome=cd.id_dict
+                AND t.iscurrent=1};
+    $sql .= qq{ AND cd.speciesname = ?
+                AND cd.chromosome = ?};
+
+    push(@arguments, $species, $chr);
+
+    my $tpfWindow = $daySpan ? qq{ AND t.entry_date > sysdate-$daySpan} : qq{ AND t.entry_date < sysdate};
+    $sql .= $tpfWindow . $region;
+    if($subregion) {
+      push(@arguments, $subregion);
+    }
+
+    my $qry;
+    if(exists($latest_tpf_update_handle_for_sql{$sql})) {
+        $qry = $latest_tpf_update_handle_for_sql{$sql};
+    }
+    else {
+      $qry = prepare_track_statement($sql);
+      $latest_tpf_update_handle_for_sql{$sql} = $qry;
+    }
+
+    $qry->execute(@arguments);
+
+    my $date_data = {};
+    my $date = '';
+    my $counter;
+    while ( my (@fields) = $qry->fetchrow() ){
+      $counter++;
+      pop @fields;
+      $date_data->{$fields[0]} = \@fields;
+    }
+    return unless $counter;
+
+    #warn "NUM: ", scalar keys %$date_data;
+    if (scalar keys %$date_data == 0 ){
+      return;
+    }
+    elsif (scalar keys %$date_data == 1 ){
+      return map { @{$date_data->{$_}} } keys %$date_data;
+    }
+    else {
+      my @Dt = sort { ace_sort($b, $a) } keys %$date_data;
+      return @{$date_data->{$Dt[0]}};
+    }
+  }
 }
 
 sub get_all_current_TPFs {

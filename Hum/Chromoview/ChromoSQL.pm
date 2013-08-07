@@ -150,19 +150,20 @@ sub fetch_subregionsTpf {
 sub get_tpf_row_from_international_name {
   my ($self, $name) = @_;
   my ($prefix, $suffix) = split(/-/, $name);
+  return [] unless $suffix;
+  warn ">> $prefix - $suffix <<";
+  my $qry = prepare_track_statement(q(
+     select l.internal_prefix from library l
+      where l.internal_prefix != l.external_prefix and
+            l.internal_prefix not in ('XX','NONE') and
+            l.external_prefix = ?
+  ));
 
-  my $sql = qq{SELECT c.clonename
-               FROM library l, clone c
-               WHERE c.libraryname=l.libraryname
-               AND l.external_prefix= ?
-               AND c.clonename like ?
-             };
-
-  my $qry = prepare_track_statement($sql);
-  $qry->execute($prefix, "%$suffix");
-  my $clonename = $qry->fetchrow;
-  #confess $clonename;
-  return $self->get_tpf_row_from_clonename($clonename);
+  $qry->execute($prefix);
+  my ($int_prefix) = $qry->fetchrow;
+  return [] unless $int_prefix;
+  warn ">> $int_prefix$suffix <<";
+  return $self->get_tpf_row_from_clonename($int_prefix.$suffix);
 }
 
 sub get_tpf_row_from_clonename {

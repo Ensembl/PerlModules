@@ -112,8 +112,8 @@ sub overlap_position {
     	my $a_dovetail_len = $self->sequence_overlap->a_Position->dovetail_length || '-';
     	my $b_dovetail_len = $self->sequence_overlap->b_Position->dovetail_length || '-';
 
-    	my $dovetail_a = $a_dovetail_len ne '-' ? 'hasDovetail' : '';
-    	my $dovetail_b = $b_dovetail_len ne '-' ? 'hasDovetail' : '';
+    	my $dovetail_a = $a_dovetail_len ne '-' ? 'has_dovetail' : '';
+    	my $dovetail_b = $b_dovetail_len ne '-' ? 'has_dovetail' : '';
 
     	my $overlapPos_a = $self->sequence_overlap->a_Position->position;
     	my $overlapPos_b = $self->sequence_overlap->b_Position->position;
@@ -182,7 +182,13 @@ sub overlap_quality {
         $self->current_row->acc_sv,
         $self->next_row->acc_sv
     );
-    return qq{<a target='top' href="$overlap_alignment_link">} . $self->overlap_length . "</a><BR>" . $self->overlap_variation . "<BR>" . $self->sequence_overlap->status_description;
+    
+    my $overlap_variation = $self->overlap_variation;
+    if($overlap_variation > 0.4) {
+        $overlap_variation = qq{<span class='bad_variation'>$overlap_variation</span>};
+    }
+    
+    return qq{<a target='top' href="$overlap_alignment_link">} . $self->overlap_length . "</a><BR>" . $overlap_variation . "<BR>" . $self->sequence_overlap->status_description;
 }
 
 sub _build_sequence_overlap {
@@ -296,74 +302,6 @@ sub certificate_code {
 	
 	return $self->{'_certificate_code'};
 }
-
-=head1 COMMENT
-sub build {
-    
-    my ($self) = @_;
-   
-   	# use hit_name to retrieve alignment info from daf table
-	$show_align_cgi .= $self->next_row->acc_sv;
-
-	$show_align_cgi .= "&query=" . $self->current_row->acc_sv;
-   
-   
-	my ($match, $a_overlap_end, $a_dovetail_len, $b_dovetail_len, $overlap_len_var);
-	if (defined($self->sequence_overlap)) {
-    	my $ovPro = $self->sequence_overlap->program;
-		if(length($ovPro) > 10) {
-			substr($ovPro, 10, 500, '...');
-		}
-    	$ovPro = qq{<span class='program'> $ovPro </span>} if $ovPro ne 'find_overlaps';
-    	my $dpo = join("<br>", $self->sequence_overlap->statusdate, $ovPro, $self->sequence_overlap->operator);
-
-    	my $percent_variation = $self->sequence_overlap->percent_insertion + $self->sequence_overlap->percent_deletion + $self->sequence_overlap->percent_substitution;
-    	$percent_variation = "<span class='bad_var'>" . $percent_variation . "</span>" if $percent_variation > 0.4;
-
-    	my $overlap_status_desc = $self->sequence_overlap->status_description;
-
-    	my $overlap_len       = $self->sequence_overlap->overlap_length;
-		if($self->current_row->contained_status eq 'CONTAINED') {
-			$overlap_len = $self->current_row->sequence_length;
-		}
-		elsif($self->current_row->contained_status eq 'CONTAINER' or $self->current_row->contained_status eq 'CONTAINER_START') {
-			$overlap_len = eval {$self->next_row_seq_info->sequence_length} ? $self->next_row_seq_info->sequence_length : '-';
-		}
-
-	   my $show_align_cgi = "${scriptroot}/fetch_overlap_feats_and_align?hit=";
-	   
-    	$overlap_len_var .= qq{<span class='overlap'><a target='_blank' href="$show_align_cgi" title='View end overlap alignments'>$overlap_len <br> $percent_variation</a><br>$overlap_status_desc</span>};
-
-    	$a_overlap_end  = $self->sequence_overlap->a_Position->is_3prime == 1 ? "3'" : "5'";
-    	$b_overlap_end  = $self->sequence_overlap->b_Position->is_3prime == 1 ? "3'" : "5'";
-
-    	$a_dovetail_len = $self->sequence_overlap->a_Position->dovetail_length || '-';
-    	$b_dovetail_len = $self->sequence_overlap->b_Position->dovetail_length || '-';
-
-    	get_dovetails($rank,   $inf_a, $a_dovetail_len) if $a_dovetail_len ne '-';
-    	get_dovetails($rank+1, $inf_b, $b_dovetail_len) if $b_dovetail_len ne '-';
-
-    	my $dovetail_a = 'hasDovetail' unless $a_dovetail_len eq '-';
-    	my $dovetail_b = 'hasDovetail' unless $b_dovetail_len eq '-';
-
-    	my $overlapPos_a = $self->sequence_overlap->a_Position->position;
-    	my $overlapPos_b = $self->sequence_overlap->b_Position->position;
-
-		$match = qq{$a_overlap_end / $b_overlap_end <br> $overlapPos_a / $overlapPos_b <br>
-    	<span class="$dovetail_a">$a_dovetail_len</span> / <span class="$dovetail_b">$b_dovetail_len</span>};
-
-
-	}
-	else {
-    	if (my $crossmatch_error = check_for_crossmatch_errors_by_accSv_with_timeout($self->current_row->acc_sv) and $i != $row_sum  ){
-        	$match = qq{<span class='crossmatch'> $crossmatch_error </span>};
-    	}
-	}
-
-    return;
-
-}
-=cut
 
 sub data_for_chromoview {
     my ($self) = @_;
