@@ -155,7 +155,13 @@ sub parse {
             if ($intl =~ /MULTIPLE/i) {
                 $row->is_multi_clone(1);
                 $row->sanger_clone_name($acc);
-            } else {
+            }
+            # Handle missing overlong clone-names differently
+            elsif($intl eq '???') {
+                $row->sanger_clone_name($acc);
+                $uniq_clone{$self}{$acc}++;
+            }
+            else {
                 if ($intl !~ /^\?+$/) {
                     $uniq_clone{$self}{$intl}++;
                 }
