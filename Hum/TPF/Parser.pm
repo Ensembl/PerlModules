@@ -156,7 +156,7 @@ sub parse {
                 $row->is_multi_clone(1);
                 $row->sanger_clone_name($acc);
             } else {
-                if ($intl ne '?') {
+                if ($intl !~ /^\?+$/) {
                     $uniq_clone{$self}{$intl}++;
                 }
                 $row->intl_clone_name($intl);
