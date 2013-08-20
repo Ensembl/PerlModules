@@ -185,7 +185,7 @@ sub sanger_library_name {
         ### to just knock off the XX- prefix, but make an
         ### attempt to identify the library from the start
         ### of the remaining name.
-        if ($intl =~ /^XX.*-(.+)/) {
+        if (defined($intl) and $intl =~ /^XX.*-(.+)/) {
             my $rest = $1;
             if (my ($prefix) = $rest =~ /^([A-Za-z]+)/) {
                 if (my $info = $sanger_info{uc $prefix}) {
@@ -197,9 +197,11 @@ sub sanger_library_name {
             return $rest;
         } else {
 
-            my ($intl_prefix, $plate, $rest) = $intl =~ /^([^-]+)-(\d*)(.+)$/;
+            my ($intl_prefix, $plate, $rest);
+            if(defined($intl)) {($intl_prefix, $plate, $rest) = $intl =~ /^([^-]+)-(\d*)(.+)$/;}
             $intl_prefix ||= '';
             $plate       ||= '';
+            if(!defined($intl)) {$intl = ''};
             if(!defined($rest)) {$rest = $intl};
             if (my $lib_info = $intl_sanger{$intl_prefix}) {
                 if ($plate) {

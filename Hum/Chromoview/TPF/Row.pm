@@ -123,7 +123,9 @@ sub build_library_and_clone {
     my ($self) = @_;
     
 	my ($clonename, $lib) = $self->row->get_sanger_clone_and_libraryname_from_intl_name($self->row->intl_clone_name);
-	$lib =~ s/_/ /g;
+	if(defined($lib)) {
+	   $lib =~ s/_/ /g;
+	}
 	$lib = '-' unless $lib;
 	
     # some clones may have been splitted, use sequence table for projectname
@@ -226,8 +228,13 @@ sub external_clone_and_contig {
     my ($self) = @_;
     
     my $pgp_link = "http://pgpviewer.ensembl.org/PGP_" . lc($self->tpf->species) . "/Location/View?region=" . $self->row->accession;
+
+    my $intl_clone_name = '';
+    if(defined($self->row->intl_clone_name)) {
+        $intl_clone_name = $self->row->intl_clone_name;
+    }
     
-    return qq{<a href="$pgp_link">} . $self->row->intl_clone_name . "</a><BR>" . $self->row->contig_name . "<BR>" . $self->contained_status_for_display;
+    return qq{<a href="$pgp_link">} . $intl_clone_name . "</a><BR>" . $self->row->contig_name . "<BR>" . $self->contained_status_for_display;
 }
 
 sub accession_and_finishing {
