@@ -32,12 +32,20 @@ my %results_for_accession = (
 		embl_checksum => '1929818599',
 	},
 	# Recently updated clone
-	'AC087063' => {
-		accession_sv => 'AC087063.21',
+	'AC246785' => {
+		accession_sv => 'AC246785.2',
 		htgs_phase => '3',
-		sequence_length => '241350',
-		embl_checksum => '1100462988',
+		sequence_length => '215868',
+		embl_checksum => '2015691170',
 	},
+	# Clone in tracking DB but not in Mole
+	'AC247039' => {
+		accession_sv => 'AC247039.2',
+		htgs_phase => '3',
+		sequence_length => '198298',
+		embl_checksum => '294876821',
+	},
+	
 );
 
 foreach my $accession (sort keys %results_for_accession) {

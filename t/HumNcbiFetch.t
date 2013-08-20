@@ -6,7 +6,7 @@
 
 use strict;
 use warnings;
-use Hum::SequenceInfo;
+use Hum::NcbiFetch qw(ncbi_embl_object_fetch wwwfetch_EMBL_object_using_NCBI_fallback);
 use Test::More qw( no_plan );
 
 my %results_for_accession = (
@@ -39,12 +39,13 @@ my %results_for_accession = (
 );
 
 foreach my $accession (sort keys %results_for_accession) {
-	my $seq_info = Hum::Mole->new($accession);
+	my $embl_object = ncbi_embl_object_fetch($accession);
+    my $fallback_embl_object = wwwfetch_EMBL_object_using_NCBI_fallback($accession);
 
-	foreach my $function (sort keys %{$results_for_accession{$accession}}) {
-		my $computed = $seq_info->$function;
-		my $expected = $results_for_accession{$accession}{$function};
-		is($computed, $expected, "$accession $function should be $expected");
-	}
+    foreach my $object ($embl_object, $fallback_embl_object) {
+        my $computed = $embl_object->ID->version;
+        my $expected = $results_for_accession{$accession}{sv};
+        is($computed, $expected, "$accession version should be $expected");
+    } 
 	
 }
