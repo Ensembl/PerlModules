@@ -612,9 +612,19 @@ sub store_if_new {
     return 1;
 }
 
-# This only stores the overlap if it is different
-# to the one in the database, or if there isn't
-# one in the database.
+# This stores the overlap and deletes any pre-existing version
+sub store_new_copy_and_delete_previous_copy {
+    my ($self) = @_;
+
+    $self->remove;
+	$self->{'_db_id'} = undef;
+
+    $self->store;
+    
+    return 1;
+}
+
+# This only stores the overlap and marks the previous one as refuted
 sub store_new_copy {
     my ($self) = @_;
 
