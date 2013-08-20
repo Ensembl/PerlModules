@@ -117,7 +117,6 @@ sub parse {
 
         my( $row );
         if ($line[0] =~ /GAP/i) {
-            my $identifier = uc $1;
             my ($type_str, $length_str, $remark) = @line[1..3];
             $row = Hum::TPF::Row::Gap->new;
             if ($type_str =~ /type-([1234])/i) {

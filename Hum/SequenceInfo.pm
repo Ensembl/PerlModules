@@ -12,7 +12,7 @@ use Hum::Tracking qw{
     prepare_cached_track_statement
     };
 use Hum::Pfetch 'get_EMBL_entries';
-use Hum::NetFetch 'wwwfetch_EMBL_object';
+use Hum::NcbiFetch 'wwwfetch_EMBL_object_using_NCBI_fallback';
 use Hum::FastaFileIO;
 use Hum::Mole;
 
@@ -171,7 +171,7 @@ sub get_EMBL_entry_from_pfetch_or_web {
 	
 	my ($entry) = get_EMBL_entries($accession_sv);
     unless ($entry) {
-        $entry = wwwfetch_EMBL_object($accession_sv);
+        $entry = wwwfetch_EMBL_object_using_NCBI_fallback($accession_sv);
     }
 	
 	return $entry;

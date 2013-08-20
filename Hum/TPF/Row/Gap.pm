@@ -15,8 +15,10 @@ sub is_gap { return 1; }
 sub type {
     my( $self, $type ) = @_;
 
+    my %is_type_permitted = map {$_=>1} 1..10;
+
     if ($type) {
-        confess "Bad type '$type'" unless ($type =~ /^[12345678]$/);
+        confess "Bad type '$type'" unless (exists($is_type_permitted{$type}));
         $self->{'_type'} = $type;
     }
     return $self->{'_type'};
