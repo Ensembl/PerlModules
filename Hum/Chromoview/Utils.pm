@@ -7,6 +7,7 @@ use strict;
 use warnings;
 use DBI;
 use Hum::Chromoview::ChromoSQL;
+use Net::Netrc;
 use Hum::Sort ('ace_sort');
 use Hum::Conf qw{CHROMODB_CONNECTION LOUTRE_CONNECTION};
 use Hum::Submission 'prepare_statement';
@@ -248,19 +249,31 @@ sub authorize {
 }
 
 sub get_chromoDB_handle {
+
   # $user will be coming from single sign on
   # and has right to edit TPF
   my ($user, $password) = @_;
 
-  my $dbname  = $CHROMODB_CONNECTION->{NAME};
+  my $dbname   = $CHROMODB_CONNECTION->{NAME};
+  my $mach     = Net::Netrc->lookup($CHROMODB_CONNECTION->{HOST});
 
-  if ( defined $user && $user eq 'public' ){ # chromoview external users
-    $user     = 'chromo_tpfedit';
-    $password = undef;
-  } elsif ( ! $user || ! $password ) {
-    $user     = $CHROMODB_CONNECTION->{RO_USER};
+  if ( (defined $user and $user eq 'public') ){
+    # chromoview external users	
+	$user = 'chromo_tpfedit';
     $password = undef;
   }
+  elsif ( $user and $password ){
+    $password = $password;
+  }	
+  elsif ( $mach ){
+    $password = $mach->password;
+    $user     = $mach->login;
+  }
+  else {
+    $user = $CHROMODB_CONNECTION->{RO_USER};
+    $password = undef;
+  }
+  
   my $dsn = "DBI:mysql:host=$CHROMODB_CONNECTION->{HOST};port=$CHROMODB_CONNECTION->{PORT};database=$dbname";
 
   my $dbh = DBI->connect($dsn, $user, $password, { RaiseError => 1, PrintError => 0 });
