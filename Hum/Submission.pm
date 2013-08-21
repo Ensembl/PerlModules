@@ -41,6 +41,7 @@ use Hum::Conf qw(SUBMISSIONS_CONNECTION);
   species_from_project_name
   seq_id_from_project_name
   sanger_id_from_project_name
+  sanger_id_from_project_name_and_accession
   chromosome_from_project_name
 );
 
@@ -680,6 +681,35 @@ sub sanger_id_from_project_name {
 	}
 	else {
 		warn "Could not identify a unique Sanger ID for project " . $name . "\n";
+	    return;
+	}
+}
+
+sub sanger_id_from_project_name_and_accession {
+    my ($name, $accession) = @_;
+
+    my $sth = prepare_statement(
+        qq{
+        SELECT PD.sanger_id
+        FROM project_acc PA,
+            project_dump PD
+        WHERE PA.project_name='$name'
+            AND PA.accession='$accession'
+            AND PA.sanger_id=PD.sanger_id
+            AND PD.is_current='Y';
+        }
+    );
+    $sth->execute;
+	my @sanger_ids;
+    while(my ($sanger_id) = $sth->fetchrow) {
+		push(@sanger_ids, $sanger_id);
+	}
+	
+	if(scalar @sanger_ids == 1) {
+		return $sanger_ids[0];
+	}
+	else {
+		warn "Could not identify a unique Sanger ID for project " . $name . " and accession $accession\n";
 	    return;
 	}
 }
