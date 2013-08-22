@@ -30,6 +30,7 @@ use Config::IniFiles;
   get_TPF_modtime
   get_all_current_TPFs
   get_chromoDB_handle
+  get_final_chromoDB_user_and_password
   get_id_tpftargets_by_acc_sv
   get_id_tpftargets_by_seq_region_id
   get_latest_TPF_update_of_clone
@@ -248,18 +249,14 @@ sub authorize {
   }
 }
 
-sub get_chromoDB_handle {
-
-  # $user will be coming from single sign on
-  # and has right to edit TPF
+sub get_final_chromoDB_user_and_password {
   my ($user, $password) = @_;
-
-  my $dbname   = $CHROMODB_CONNECTION->{NAME};
+    
   my $mach     = Net::Netrc->lookup($CHROMODB_CONNECTION->{HOST});
 
   if ( (defined $user and $user eq 'public') ){
     # chromoview external users	
-	$user = 'chromo_tpfedit';
+    $user = 'chromo_tpfedit';
     $password = undef;
   }
   elsif ( $user and $password ){
@@ -273,7 +270,19 @@ sub get_chromoDB_handle {
     $user = $CHROMODB_CONNECTION->{RO_USER};
     $password = undef;
   }
-  
+    
+  return ($user, $password);
+}
+
+sub get_chromoDB_handle {
+
+  # $user will be coming from single sign on
+  # and has right to edit TPF
+  my ($user, $password) = @_;
+
+  ($user, $password) = get_final_chromoDB_user_and_password($user, $password);
+
+  my $dbname   = $CHROMODB_CONNECTION->{NAME};  
   my $dsn = "DBI:mysql:host=$CHROMODB_CONNECTION->{HOST};port=$CHROMODB_CONNECTION->{PORT};database=$dbname";
 
   my $dbh = DBI->connect($dsn, $user, $password, { RaiseError => 1, PrintError => 0 });
