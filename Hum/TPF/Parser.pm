@@ -97,6 +97,8 @@ sub parse {
                         TELOMERE        => 8,
                         'CENTROMERE_DATA_START' => 9,
                         'CENTROMERE_DATA_END' =>   10,
+                        'HETEROCHROMATIN_DATA_START' => 11,
+                        'HETEROCHROMATIN_DATA_END' =>   12,
                        );
     sub parse_line {
         my ($self, $line_str) = @_;

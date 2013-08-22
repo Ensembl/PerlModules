@@ -15,7 +15,7 @@ sub is_gap { return 1; }
 sub type {
     my( $self, $type ) = @_;
 
-    my %is_type_permitted = map {$_=>1} 1..10;
+    my %is_type_permitted = map {$_=>1} 1..12;
 
     if ($type) {
         confess "Bad type '$type'" unless (exists($is_type_permitted{$type}));
@@ -33,6 +33,8 @@ sub type_string {
                         8 => 'TELOMERE',
                         9 => 'CENTROMERE_DATA_START',
                        10 => 'CENTROMERE_DATA_END',
+					   11 => 'HETEROCHROMATIN_DATA_START',
+					   12 => 'HETEROCHROMATIN_DATA_END',
                        );
 
     my $type = $self->type or confess "type not set";
