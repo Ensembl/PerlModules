@@ -68,8 +68,6 @@ sub _init {
         HOST => 'lutra7',
         NAME => 'chromoDB',
         RO_USER => 'ottro',
-        RW_USER => 'ottadmin',
-        RW_PASS => 'lutralutra',
     },
 
     SUBMISSIONS_CONNECTION => {
@@ -77,8 +75,6 @@ sub _init {
         HOST => 'otterlive',
         NAME => 'submissions',
         RO_USER => 'ottro',
-        RW_USER => 'ottadmin',
-        RW_PASS => 'lutralutra',
     },
 
     LOUTRE_CONNECTION => {

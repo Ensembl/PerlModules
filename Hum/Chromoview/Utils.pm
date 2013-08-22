@@ -31,6 +31,7 @@ use Config::IniFiles;
   get_all_current_TPFs
   get_chromoDB_handle
   get_final_chromoDB_user_and_password
+  get_chromoDB_ensembl_connection_string
   get_id_tpftargets_by_acc_sv
   get_id_tpftargets_by_seq_region_id
   get_latest_TPF_update_of_clone
@@ -272,6 +273,14 @@ sub get_final_chromoDB_user_and_password {
   }
     
   return ($user, $password);
+}
+
+sub get_chromoDB_ensembl_connection_string {
+    my ($chromodb_user, $chromodb_pass) = @_;
+    ($chromodb_user, $chromodb_pass) = get_final_chromoDB_user_and_password($chromodb_user, $chromodb_pass);
+    my $connection_string ="-dbhost $CHROMODB_CONNECTION->{HOST} -dbport $CHROMODB_CONNECTION->{PORT} -dbuser $chromodb_user -dbpass $chromodb_pass -dbname $CHROMODB_CONNECTION->{NAME}";
+    
+    return $connection_string;
 }
 
 sub get_chromoDB_handle {
