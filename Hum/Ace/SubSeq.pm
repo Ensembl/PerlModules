@@ -1357,6 +1357,15 @@ sub is_NMD {
     
     # Return if transcript is non-coding
     return 0 unless $self->translation_region_is_set;
+    
+    my $aa_string = $self->translate->sequence_string;
+    $aa_string =~ s/\*$//;  # Trim trailing stop codon
+    if (length($aa_string) <= 35 and ! $self->start_not_found) {
+        printf STDERR "Transcript '%s' cannot be NMD. Translation is only %d amino acids long, so will re-initiate.",
+            $self->name, lenght($aa_string);
+        return 0;
+    }
+    
     my @tr = $self->translation_region;
     my $t_end = $self->strand == 1 ? $tr[1] : $tr[0];
     
@@ -1383,12 +1392,12 @@ sub is_NMD {
             # and the terminal one.
             for (my $j = $i + 1; $j < @exons; $j++) {
                 my $j_ex = $exons[$j];
-                printf STDERR "Adding exon length %d to splice distance\n", $j_ex->length;
+                # printf STDERR "Adding exon length %d to splice distance\n", $j_ex->length;
                 $distance_to_last_splice += $j_ex->length;
             }
             
-            printf STDERR "Distance to end = %d (%s strand)\n",
-                $distance_to_last_splice, $self->strand == 1 ? 'plus' : 'minus';
+            # printf STDERR "Distance to end = %d (%s strand)\n",
+            #     $distance_to_last_splice, $self->strand == 1 ? 'plus' : 'minus';
 
             if ($distance_to_last_splice > 50) {
                 $is_NMD = $distance_to_last_splice;
