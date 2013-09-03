@@ -1390,7 +1390,7 @@ sub is_NMD {
             printf STDERR "Distance to end = %d (%s strand)\n",
                 $distance_to_last_splice, $self->strand == 1 ? 'plus' : 'minus';
 
-            if ($distance_to_last_splice >= 50) {
+            if ($distance_to_last_splice > 50) {
                 $is_NMD = $distance_to_last_splice;
             }
         }
