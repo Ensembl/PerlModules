@@ -120,7 +120,7 @@ sub unknown_amino_acid {
     );
 
     # Make a copy of the standard codon table, with
-    # Selenocysteine replacing the stop for "tga".
+    # selenocysteine replacing the stop for "tga".
     $tables{'seleno_standard'} = { %{$tables{'standard'}} };
     $tables{'seleno_standard'}{'tga'} = 'U';
 
@@ -158,6 +158,11 @@ sub unknown_amino_acid {
         }
         if (length($seq_str) % 3) {
             $pep_str .= $unknown_amino_acid;
+        }
+
+        if ($table_name eq 'seleno_standard') {
+            # Stop at end is not a selenocysteine
+            $pep_str =~ s/U$/*/;
         }
     
         my $pep = Hum::Sequence::Peptide->new;
