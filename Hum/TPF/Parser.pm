@@ -91,14 +91,15 @@ sub parse {
 }
 
 {
-    my %bio_gap_type = (CENTROMERE      => 5,
-                        HETEROCHROMATIN => 6,
-                        'SHORT-ARM'     => 7,
-                        TELOMERE        => 8,
-                        'CENTROMERE_DATA_START' => 9,
-                        'CENTROMERE_DATA_END' =>   10,
-                        'HETEROCHROMATIN_DATA_START' => 11,
-                        'HETEROCHROMATIN_DATA_END' =>   12,
+    my %bio_gap_type = ('CENTROMERE'                    => 5,
+                        'HETEROCHROMATIN'               => 6,
+                        'SHORT-ARM'                     => 7,
+                        'TELOMERE'                      => 8,
+                        'CENTROMERE_DATA_START'         => 9,
+                        'CENTROMERE_DATA_END'           => 10,
+                        'HETEROCHROMATIN_DATA_START'    => 11,
+                        'HETEROCHROMATIN_DATA_END'      => 12,
+                        'PAR'                           => 13,  # Note that Oracle will not accept PAR entries; this line only exists for purposes of parsing that doesn't write to Oracle
                        );
     sub parse_line {
         my ($self, $line_str) = @_;
