@@ -1362,7 +1362,7 @@ sub is_NMD {
     $aa_string =~ s/\*$//;  # Trim trailing stop codon
     if (length($aa_string) <= 35 and ! $self->start_not_found) {
         printf STDERR "Transcript '%s' cannot be NMD. Translation is only %d amino acids long, so will re-initiate.",
-            $self->name, lenght($aa_string);
+            $self->name, length($aa_string);
         return 0;
     }
     
