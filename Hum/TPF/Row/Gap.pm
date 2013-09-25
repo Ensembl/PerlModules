@@ -15,7 +15,7 @@ sub is_gap { return 1; }
 sub type {
     my( $self, $type ) = @_;
 
-    my %is_type_permitted = map {$_=>1} 1..12;
+    my %is_type_permitted = map {$_=>1} 1..13;
 
     if ($type) {
         confess "Bad type '$type'" unless (exists($is_type_permitted{$type}));
