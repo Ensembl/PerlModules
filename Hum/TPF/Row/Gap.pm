@@ -35,6 +35,7 @@ sub type_string {
                        10 => 'CENTROMERE_DATA_END',
 					   11 => 'HETEROCHROMATIN_DATA_START',
 					   12 => 'HETEROCHROMATIN_DATA_END',
+					   13 => 'PAR',
                        );
 
     my $type = $self->type or confess "type not set";
