@@ -288,6 +288,24 @@ sub project_status_and_date {
     return $project_status_and_date;
 }
 
+sub data_for_tpf {
+    my ($self) = @_;
+    
+    if($self->row->is_gap) {
+        return {
+            external_clone_and_contig => $self->gap_string,
+        };
+    }
+    else {
+        return {
+                external_clone_and_contig=>$self->external_clone_and_contig,
+                accession_and_finishing=> $self->accession_and_finishing,
+                
+                accession=>$self->row->accession,
+        };
+    }
+}
+
 sub data_for_chromoview {
     my ($self) = @_;
     

@@ -42,7 +42,7 @@ sub tpf {
         return $self->{'_tpf'};
     }
     else {
-        $self->prepare_tpf_agp;
+        $self->prepare_tpf;
         return $self->{'_tpf'}
     }
 }
@@ -54,7 +54,7 @@ sub agp {
         return $self->{'_agp'};
     }
     else {
-        $self->prepare_tpf_agp;
+        $self->prepare_agp;
         return $self->{'_agp'}
     }
 }
@@ -80,13 +80,22 @@ sub agp_row_for_accession {
     }
 }
 
-sub prepare_tpf_agp {
+sub prepare_tpf {
 
     my($self) = @_;
 
     # fetch TPF
     my $tpf = $self->subregion ? Hum::TPF->current_from_species_chromsome_subregion($self->species, $self->chromosome, $self->subregion) :
     Hum::TPF->current_from_species_chromsome($self->species, $self->chromosome);
+
+    $self->{'_tpf'} = $tpf;
+    
+    return;
+}
+
+sub prepare_agp {
+
+    my($self) = @_;
 
     # fetch AGP
     my $agp = Hum::AGP->new;
@@ -96,12 +105,14 @@ sub prepare_tpf_agp {
     $agp->min_htgs_phase(2);
     $agp->chr_name($self->chromosome);
     $agp->verbose(0);
-    $agp->process_TPF($tpf);
+    $agp->process_TPF($self->tpf);
 
-    $self->{'_tpf'} = $tpf;
     $self->{'_agp'} = $agp;
 
+    return;
+
 }
+
 
 sub fetch_all_TPF_Rows {
     my ($self) = @_;
