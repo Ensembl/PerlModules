@@ -120,21 +120,34 @@ sub get_all_SubSeqs {
 sub set_SubSeq_locus_level_errors {
     my ($self) = @_;
 
-    my %locus_sub;
+    my %locus_sub;  # List of transcripts for each locus
 
-    foreach my $sub (sort { ace_sort($a->name, $b->name) } $self->get_all_SubSeqs) {
+    foreach my $sub ($self->get_all_SubSeqs) {
         next unless $sub->is_mutable;
-        my $tsct_list = $locus_sub{$sub->Locus->name} ||= [];
+        my $locus = $sub->Locus;
+
+        # qc_checked is unset by the SubSeq object after edits
+        next if $locus->qc_checked;
+
+        my $loc_name = $locus->name;
+        my $tsct_list = $locus_sub{$loc_name} ||= [];
         push(@$tsct_list, $sub);
     }
 
     foreach my $loc_name (keys %locus_sub) {
-        my $tsct_list = $locus_sub{$loc_name};
+        my $tsct_list = [ sort { ace_sort($a->name, $b->name) } @{ $locus_sub{$loc_name} } ];
 
-        ### Could check that we actually have the same locus
-        ### object in memory attached to all its sequences.
-        ### Would be v. bad if it wasn't!
+        # Check that we actually have the same Locus object in memory
+        # attached to all its sequences. Very bad if it isn't!
+        my %locus_addr;
+        foreach my $locus (map {$_->Locus} @$tsct_list) {
+            $locus_addr{1 * $locus}++;
+        }
+        my $locus_count = keys %locus_addr;
         my $locus = $tsct_list->[0]->Locus;
+        if ($locus_count > 1) {
+            confess "Error: Same locus name but $locus_count separate locus objects in SubSeqs belonging to locus '$loc_name'";
+        }
 
         # Is there anything wrong with the annotation of this locus?
         my $locus_err = $locus->pre_otter_save_error;
@@ -148,9 +161,14 @@ sub set_SubSeq_locus_level_errors {
         $self->error_strand_in_transcript_set($tsct_list);
         $self->error_evidence_used_more_than_once_in_transcript_set($tsct_list);
         ### Check for transcripts which don't overlap any others in the locus
+
+        $locus->qc_checked(1);
     }
 
-    $self->error_same_locus_name_root_in_transcripts_on_different_loci;
+    # Look for errors in transcript naming if any of the loci have changed.
+    if (keys %locus_sub) {
+        $self->error_same_locus_name_root_in_transcripts_on_different_loci;        
+    }
 
     return;
 }
@@ -177,7 +195,7 @@ sub error_same_locus_name_root_in_transcripts_on_different_loci {
     # shared amongst different loci.
 
     my %root_locus_tsct;
-    foreach my $sub (sort { ace_sort($a->name, $b->name) } $self->get_all_SubSeqs) {
+    foreach my $sub ($self->get_all_SubSeqs) {
         next unless $sub->is_mutable;
         my $root = $sub->locus_name_root;
         my $sub_list = $root_locus_tsct{$root}{$sub->Locus->name} ||= [];

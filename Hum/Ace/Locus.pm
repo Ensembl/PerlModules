@@ -151,6 +151,15 @@ sub is_truncated {
     return $self->{'_is_truncated'} || 0;
 }
 
+sub qc_checked {
+    my($self, $flag) = @_;
+    
+    if (defined $flag) {
+        $self->{'_qc_checked'} = $flag ? 1 : 0;
+    }
+    return $self->{'_qc_checked'};
+}
+
 sub pre_otter_save_error {
     my ($self) = @_;
 

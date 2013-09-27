@@ -781,6 +781,12 @@ sub Locus {
         unless (UNIVERSAL::isa($Locus, 'Hum::Ace::Locus')) {
             confess "Wrong kind of thing '$Locus'";
         }
+        if (my $old = $self->{'_Locus'}) {
+            # Other SubSeq may reference this locus, and they
+            # will need to be re-checked at Locus level.
+            $old->qc_checked(0);
+        }
+        $Locus->qc_checked(0);
         $self->{'_Locus'} = $Locus;
     }
     return $self->{'_Locus'};
@@ -1145,17 +1151,23 @@ sub validate {
 sub pre_otter_save_error {
     my ($self) = @_;
 
-    my $err = '';
-    $err .= $self->error_start_not_found;
-    $err .= $self->error_in_translation;
-    $err .= $self->error_nonsense_mediated_decay;
-    $err .= $self->error_short_introns;
-    ### Add check for short translations that don't have start or end not-found
-    $err .= $self->error_no_evidence;
-    $err .= $self->error_in_name_format;
-    $err .= $self->error_obsolete_transcript_type;
-    $err .= $self->locus_level_errors;
-    return $err;
+    # This cache relies on the fact that we make a new SubSeq object in the
+    # user interface (TranscriptWindow) which is then saved, and the new
+    # SubSeq won't have _qc_error_cache populated
+    my $err = $self->{'_qc_error_cache'};
+    if (! defined($err)) {
+        $err = '';
+        $err .= $self->error_start_not_found;
+        $err .= $self->error_in_translation;
+        $err .= $self->error_nonsense_mediated_decay;
+        $err .= $self->error_short_introns;
+        ### Add check for short translations that don't have start or end not-found
+        $err .= $self->error_no_evidence;
+        $err .= $self->error_in_name_format;
+        $err .= $self->error_obsolete_transcript_type;
+        $self->{'_qc_error_cache'} = $err;
+    }
+    return $err . $self->locus_level_errors;
 }
 
 sub locus_level_errors {
