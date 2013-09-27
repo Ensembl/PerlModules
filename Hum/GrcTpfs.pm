@@ -14,6 +14,7 @@ use Hum::Chromoview::Utils qw(get_all_current_TPFs);
 @EXPORT_OK = qw(
 	get_grc_tpf_objects
 	get_grc_tpf_names
+	get_tpf_object_from_name
 );
 
 sub get_grc_tpf_objects {
@@ -26,8 +27,15 @@ sub get_grc_tpf_names {
 	my ($selected_species) = @_;
 
 	my %species_to_check;
+
+	my @tpfs_for_overlap_checking;
 	
 	if(defined($selected_species)) {
+	    if($selected_species =~ /^Zebrafish\+H$/i) {
+	        $selected_species = 'Zebrafish';
+	        @tpfs_for_overlap_checking = get_zebrafish_h_names();
+	    }
+	    
 		$species_to_check{$selected_species} = 1;
 	}
 	else {
@@ -38,10 +46,10 @@ sub get_grc_tpf_names {
 
 	my %ncbi_tpf_for = %{ get_ncbi_tpfs() };
 
-	my @tpfs_for_overlap_checking;
 	my $all_tpf_names = get_all_current_TPFs();
 	foreach my $tpf_name (@{$all_tpf_names}) {
 		my ($species, $chr, $subregion) = @{$tpf_name};
+		if(!defined($subregion)) {$subregion = ''} 
 		# We only want subregions if they correspond to those which the NCBI holds
 		if(
 			exists($species_to_check{$species})
@@ -52,6 +60,21 @@ sub get_grc_tpf_names {
 	}
 	
 	return @tpfs_for_overlap_checking;
+}
+
+sub get_zebrafish_h_names {
+    my @zebrafish_h_names;
+    foreach my $chromosome (1..25, 'U') {
+        push(
+            @zebrafish_h_names,
+            [
+               'Zebrafish',
+               $chromosome,
+               "H_$chromosome",
+            ],
+        );
+    }
+    return @zebrafish_h_names;
 }
 
 sub get_grc_species {
