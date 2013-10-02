@@ -321,9 +321,9 @@ sub kill_server {
         return $INFO;
     }
     sub start_server {
-        my( $self ) = @_;
+        my( $self, %args ) = @_;
         
-        $self->make_server_wrm;
+        $self->make_server_wrm(%args);
         
         my $path = $self->path
             or confess "path not set";
@@ -367,8 +367,13 @@ sub kill_server {
     }
 }
 
+my $serverconfig_default = [
+    [ qw( WRITE NONE ) ],
+    [ qw( READ  NONE ) ],
+    ];
+
 sub make_server_wrm {
-    my( $self ) = @_;
+    my( $self, %args ) = @_;
 
     my $path = $self->path
         or confess "path not set";
@@ -380,9 +385,9 @@ sub make_server_wrm {
     unless (-e $server_wrm) {
         open my $wrm, "> $server_wrm"
             or die "Can't create '$server_wrm' : $!";
-        print $wrm map "\n$_\n", 
-            'WRITE NONE',
-            'READ NONE';
+        my $serverconfig = $args{'serverconfig'} || [];
+        print $wrm map { sprintf "\n%s %s\n", @{$_} }
+            @{$serverconfig_default}, @{$serverconfig};
         close $wrm or confess "Error writing to '$server_wrm'; $!";
     }
     unlink($serverp_wrm);
