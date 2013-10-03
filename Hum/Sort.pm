@@ -139,18 +139,18 @@ __END__
     @sorted_obj = ace_sort_list(sub { return $_->name }, @objects);
     @sorted_obj = sort { ace_sort($a->name, $b->name) } @objects;
 
+=head2 ace_sort
+
+Sorts objects in a case insensitive and human intuitive way. This is
+especially nice for sorting things like clone names, and is copied from
+how acedb sorts data in its displays.
+
 =head2 ace_sort_list
 
 Faster way to sort using a I<Schwartzian> transform. The first argument
 is a subroutine which returns the string to be used from the object or
 data strutures being sorted. This is faster because each string is split
 into digit and non-digit strings only once.
-
-=head2 ace_sort
-
-Sorts objects in a case insensitive and human intuitive way. This is
-especially nice for sorting things like clone names, and is copied from
-how acedb sorts data in its displays.
 
 =head2 array_ace_sort
 
