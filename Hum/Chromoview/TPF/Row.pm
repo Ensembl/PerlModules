@@ -308,6 +308,7 @@ sub data_for_tpf {
     else {
         return {
                 external_clone_and_contig=>$self->external_clone_and_contig,
+                internal_clone_and_epn=>$self->internal_clone_and_epn,
                 accession_and_finishing=> $self->accession_and_finishing,
                 rank=>$self->rank,
                 accession=>$self->row->accession,
