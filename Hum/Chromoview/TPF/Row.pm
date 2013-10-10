@@ -150,6 +150,15 @@ sub build_library_and_clone {
     return;
 }
 
+sub rank {
+    my ($self, $value) = @_;
+    
+    if(defined($value)) {
+        $self->{'_rank'} = $value;
+    }
+    return $self->{'_rank'};
+}
+
 sub library {
     my ($self) = @_;
     
@@ -300,7 +309,7 @@ sub data_for_tpf {
         return {
                 external_clone_and_contig=>$self->external_clone_and_contig,
                 accession_and_finishing=> $self->accession_and_finishing,
-                
+                rank=>$self->rank,
                 accession=>$self->row->accession,
         };
     }
@@ -316,6 +325,7 @@ sub data_for_chromoview {
     }
     else {
         return {
+                rank=>$self->rank,
                 external_clone_and_contig=>$self->external_clone_and_contig,
                 internal_clone_and_epn=>$self->internal_clone_and_epn,
                 project_status_and_date=>$self->project_status_and_date,

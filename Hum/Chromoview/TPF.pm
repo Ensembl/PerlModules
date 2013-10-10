@@ -135,9 +135,15 @@ sub fetch_non_contained_Rows {
     if(!exists($self->{'_non_contained_tpf_rows'})) {
         my @rows = $self->tpf->fetch_non_contained_Rows;
         $self->{'_non_contained_tpf_rows'} = [];
+        my $rank = 0;
         foreach my $row (@rows) {
+            $rank++;
             my $chromoview_row = Hum::Chromoview::TPF::Row->new($row);
             $chromoview_row->tpf($self);
+            $chromoview_row->rank($rank);
+            if(!$row->is_gap) {
+                $rank += scalar($row->get_contained_clones);
+            }
             push(@{$self->{'_non_contained_tpf_rows'}}, $chromoview_row);
         }
     }
