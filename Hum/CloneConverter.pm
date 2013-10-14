@@ -43,6 +43,10 @@ sub convert {
 
 sub accession2internal {
     my ($accession) = @_;
+	
+	# Remove version if present
+	$accession =~ s/^(.+)\..*/$1/;
+	
     return clone_from_accession($accession);
 }
 
@@ -54,7 +58,7 @@ sub accession2internal {
 
         $get_accession ||= prepare_track_statement(
             q{
-            SELECT s.accession
+            SELECT s.accession, s.sv
             FROM sequence s
               , clone_sequence cs
             WHERE s.id_sequence = cs.id_sequence
@@ -64,8 +68,8 @@ sub accession2internal {
         );
         $get_accession->execute($internal);
 
-        if (my ($accession) = $get_accession->fetchrow) {
-            return $accession;
+        if (my ($accession, $sv) = $get_accession->fetchrow) {
+            return "$accession.$sv";
         }
         else {
             return;
