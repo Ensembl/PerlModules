@@ -23,12 +23,12 @@ use base qw( Net::FTP );
 sub new {
     my ($pkg, $host) = @_;
 
-    $host ||= 'ftp-private.ebi.ac.uk';
+    $host ||= 'ftp.sra.ebi.ac.uk';
     my $ftp = Net::FTP->new($host, Passive => 1)
       or confess "Can't connect() to '$host'; $@";
     $ftp->login() # password is in ~/.netrc
       or confess "Can't login() to '$host'; ", $ftp->message;
-    $ftp->cwd('/YUFSjj8seagh6J4iGCsc/to_ena') # special directory where we put sequence
+    $ftp->cwd('/clone') # special directory where we put sequence
       or confess "Can't change working directory to depository; ", $ftp->message;
 
     return bless $ftp, $pkg;
