@@ -17,7 +17,7 @@ sub new {
     my ($pkg, $arg_ref) = @_;
 
     my @required_variables = qw(project);
-	my @optional_variables = qw(dbi run_id clonename gap_type project_directory);
+	my @optional_variables = qw(dbi run_id clonename gap_type project_directory known_sanger);
     
 	foreach my $required_variable (@required_variables) {
 		if(!exists($arg_ref->{$required_variable})) {
@@ -50,6 +50,9 @@ sub new {
 			$self->{uc($variable)} = undef;
 		}
 	}
+	if(!defined($self->{KNOWN_SANGER})) {
+	    $self->{KNOWN_SANGER} = 0;
+	}
 
     bless($self, $pkg);
 
@@ -59,7 +62,9 @@ sub new {
 	} 
 
 	# Load accession, which will register an error if it's not a Sanger accession
-	$self->accession;
+	if(!$self->{KNOWN_SANGER}) {
+	   $self->accession;
+	}
     
     return $self;
 }
@@ -173,13 +178,15 @@ sub process_coordinates {
 
 	my $finished_length = abs($self->{RIGHT_COORDINATE} - $self->{LEFT_COORDINATE}) + 1;
 	
-	if(!defined($self->oracle_length)) {
-		$self->report_error('No oracle clone length', "Length $finished_length from gap database not in agreement with Oracle length, undefined");
-		$self->{ASSEMBLY_TAG_OBJECTS} = [];
-	}
-	elsif($finished_length != $self->oracle_length) {
-		$self->report_error('Gap length wrong', "Length $finished_length from gap database not in agreement with Oracle length " . $self->oracle_length);
-		$self->{ASSEMBLY_TAG_OBJECTS} = [];
+	if(!$self->{KNOWN_SANGER}) {
+    	if(!defined($self->oracle_length)) {
+    		$self->report_error('No oracle clone length', "Length $finished_length from gap database not in agreement with Oracle length, undefined");
+    		$self->{ASSEMBLY_TAG_OBJECTS} = [];
+    	}
+    	elsif($finished_length != $self->oracle_length) {
+    		$self->report_error('Gap length wrong', "Length $finished_length from gap database not in agreement with Oracle length " . $self->oracle_length);
+    		$self->{ASSEMBLY_TAG_OBJECTS} = [];
+    	}
 	}
 	
 	@{$self->{ASSEMBLY_TAG_OBJECTS}} = grep {
