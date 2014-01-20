@@ -12,7 +12,7 @@ use Hum::Tracking qw{
     prepare_cached_track_statement
     };
 use Hum::Pfetch 'get_EMBL_entries';
-use Hum::NcbiFetch 'wwwfetch_EMBL_object_using_NCBI_fallback';
+use Hum::NcbiFetch qw{wwwfetch_EMBL_object_using_NCBI_fallback ncbi_embl_object_fetch};
 use Hum::FastaFileIO;
 use Hum::Mole;
 
@@ -77,8 +77,8 @@ sub embl_web_sequence_get {
 
 	# We set the lazy-load method in case the sequence
 	# gets dropped and needs to be reloaded
-	$self->_lazy_load_method('_lazy_load_embl_sequence');
     $self->Sequence($embl->hum_sequence);
+    $self->_lazy_load_method('_lazy_load_embl_sequence');
 	
 	return $self;
 }
@@ -173,6 +173,22 @@ sub get_EMBL_entry_from_pfetch_or_web {
     unless ($entry) {
         $entry = wwwfetch_EMBL_object_using_NCBI_fallback($accession_sv);
     }
+	
+	# We set the lazy-load method in case the sequence
+	# gets dropped and needs to be reloaded
+	eval{
+    	$entry->hum_sequence;
+	};
+	# If there is an error, try getting the sequence from NCBI
+	if($@) {
+        $entry = ncbi_embl_object_fetch($accession_sv);
+        eval{
+            $entry->hum_sequence;
+        };
+        if($@) {
+            return;
+        }
+	}
 	
 	return $entry;
 }
