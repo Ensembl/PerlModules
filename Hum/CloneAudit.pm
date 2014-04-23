@@ -5,7 +5,7 @@ use Moose;
 use Carp;
 use DBI;
 use DateTime;
-use Hum::Submission qw{seq_id_from_project_name sanger_id_from_project_name};
+use Hum::Submission qw{seq_id_from_project_name sanger_id_from_project_name_and_accession};
 use Hum::ChromosomeAudit::DBI;
 use Hum::CloneProject qw{fetch_projectname_from_clonename fetch_project_status};
 use Hum::Pfetch qw{get_EMBL_entries};
@@ -77,6 +77,12 @@ has 'submissions_date' => (
 	lazy_build => 1,
 );
 
+has 'acception_date' => (
+	is => 'ro',
+	isa => 'Maybe[DateTime]',
+	lazy_build => 1,
+);
+
 has 'project_status' => (
 	is => 'ro',
 	isa => 'Maybe[Str]',
@@ -96,6 +102,12 @@ has 'sanger_sequence' => (
 );
 
 has 'embl_sequence' => (
+	is => 'ro',
+	isa => 'Maybe[Str]',
+	lazy_build => 1,
+);
+
+has 'embl_clonename' => (
 	is => 'ro',
 	isa => 'Maybe[Str]',
 	lazy_build => 1,
@@ -151,7 +163,7 @@ sub _build_project_date {
 sub _build_project_dump {
 	my ($self) = @_;
 	
-	my $sanger_id = sanger_id_from_project_name($self->projectname);
+	my $sanger_id = sanger_id_from_project_name_and_accession($self->projectname, $self->accession);
 	
 	my $pdmp;
 	if(!defined($sanger_id)) {
@@ -253,6 +265,13 @@ sub days_between_embl_date_and_submissions_date {
 	return $approximate_days;
 }
 
+sub is_acception_after_submission {
+	my ($self) = @_;
+	
+	# Note that if both were on the same day, this assumes that the acception was after the submission
+	return DateTime->compare($self->acception_date, $self->submissions_date) >= 0 ? 1 : 0;
+}
+
 sub _build_submissions_date {
 	my ($self) = @_;
 
@@ -264,18 +283,44 @@ sub _build_submissions_date {
 	
 		if(defined($submissions_date_result_ref) and ref($submissions_date_result_ref) eq 'ARRAY' and scalar(@$submissions_date_result_ref) == 1) {
 			my ($submissions_date_string) = @$submissions_date_result_ref;
-			if($submissions_date_string =~ /^(\d{4})-(\d{2})-(\d{2}) /) {
-				my $day = $3;
-				my $month = $2;
-				my $year = $1;
-		
-				$date = DateTime->new(
-					year       => $year,
-					month      => $month,
-					day        => $day,
-				);
-			}
-			 
+			$date = $self->_sql_date_to_date_time_object($submissions_date_string);			 
+		}
+	}
+	
+	return $date;
+}
+
+sub _sql_date_to_date_time_object {
+	my ($self, $sql_date) = @_;
+	
+	my $date_time_object;
+	if($sql_date =~ /^(\d{4})-(\d{2})-(\d{2}) /) {
+		my $day = $3;
+		my $month = $2;
+		my $year = $1;
+
+		$date_time_object = DateTime->new(
+			year       => $year,
+			month      => $month,
+			day        => $day,
+		);
+	}
+	
+	return $date_time_object;
+}
+
+sub _build_acception_date {
+	my ($self) = @_;
+
+	my $date;
+	
+	if($self->submissions_seq_id) {
+		$self->dbi->acception_date_for_project_sth->execute($self->submissions_seq_id);
+		my $acception_date_result_ref = $self->dbi->acception_date_for_project_sth->fetchrow_arrayref;
+	
+		if(defined($acception_date_result_ref) and ref($acception_date_result_ref) eq 'ARRAY' and scalar(@$acception_date_result_ref) == 1) {
+			my ($acception_date_string) = @$acception_date_result_ref;
+			$date = $self->_sql_date_to_date_time_object($acception_date_string);			 
 		}
 	}
 	
@@ -381,6 +426,13 @@ sub is_sanger_accession {
         return 0;
     }
 
+    # Return 1 if the EMBL entry also indicates this is a Sanger clone
+    return $self->embl_entry_is_from_sanger;
+}
+
+sub embl_entry_is_from_sanger {
+    my ($self) = @_;
+    
     if(!defined($self->embl_entry)) {
         return 0;
     }
@@ -415,8 +467,46 @@ sub is_finished {
 	return 0; 
 }
 
+sub _build_embl_clonename {
+	my ($self) = @_;
+
+    my $embl_clonename;
+
+    if(defined($self->embl_entry)) {
+    	
+    	my @embl_clonenames;
+    	
+    	SEQ_FEATURE: foreach my $seq_feature ($self->embl_entry->FT) {
+    		if($seq_feature->key eq 'source') {
+    		    foreach my $qualifier ($seq_feature->qualifiers) {
+    		        if($qualifier->name eq 'clone') {
+    		            push(@embl_clonenames, $qualifier->value);
+    		        }
+    		    }
+    		    last SEQ_FEATURE;
+    		}
+    	}
+    	
+    	if(scalar @embl_clonenames == 1) {
+    		# Reject cases which indicate multiple clone names, since
+    		# we may want to handle these differently
+    		if($embl_clonenames[0] =~ /[, +]/) {
+    			warn "Possible combination of clone-names $embl_clonenames[0] rejected\n"; 
+    			return;
+    		}
+    		else {
+    		    $embl_clonename = $embl_clonenames[0];
+    		}
+    	}
+    	
+    	
+    }
+	
+	return $embl_clonename;
+}
+
 sub _build_organisation {
-		my ($self) = @_;
+	my ($self) = @_;
 
 	$self->dbi->organisation_sth->execute($self->clonename);
 	my $organisation_result_ref = $self->dbi->organisation_sth->fetchrow_arrayref;

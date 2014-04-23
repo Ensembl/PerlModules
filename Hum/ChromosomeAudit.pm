@@ -75,7 +75,7 @@ has 'has_audit_failed' => (
 
 has 'projectname' => (
 	is  => 'ro',
-	isa => 'Str',
+	isa => 'Maybe[Str]',
 	lazy_build => 1,
 );
 
@@ -321,9 +321,9 @@ sub audit_submissions {
     		$self->report_fatal_error("Cannot parse file path " . $project_dump->file_path);
     		return;
     	}
-    		
+    	
     	if(! -e $project_dump->fasta_file_path) {
-    		$self->report_fatal_error("Cannot locate FASTA file on the NFS");
+    		$self->report_fatal_error("Cannot locate FASTA file " . $project_dump->fasta_file_path . " on the NFS");
     	}
     	$self->fasta_file($project_dump->sequence_name);
     	$self->file_path($project_dump->file_path);

@@ -84,6 +84,10 @@ sub get_grc_species {
 sub get_ncbi_tpfs {
 	my $tpf_root_directory = '/nfs/grcdata/NCBI/';
 	
+	my %banned_directories = (
+		'CHM1' => 1,
+	);
+	
 	my %ncbi_tpf_for;
 	foreach my $species ( get_grc_species() ) {
 		$species = lc($species);
@@ -93,7 +97,11 @@ sub get_ncbi_tpfs {
 		closedir($species_dir_handle);
 		@subregion_dirs = grep {-d "$species_dir/$_"} @subregion_dirs;
 		
-		foreach my $subregion_dir (@subregion_dirs) {
+		SUBREGION_DIR: foreach my $subregion_dir (@subregion_dirs) {
+			
+			if(exists($banned_directories{$subregion_dir})) {
+				next SUBREGION_DIR;
+			}
 			
 			opendir(my $tpf_dir_handle, "$species_dir/$subregion_dir") or die "Cannot open tpf directory\n";
 			my @tpf_files = readdir($tpf_dir_handle);
