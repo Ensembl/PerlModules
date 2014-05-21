@@ -236,7 +236,7 @@ sub gap_string {
 sub external_clone_and_contig {
     my ($self) = @_;
     
-    my $pgp_link = "http://pgpviewer.ensembl.org/PGP_" . lc($self->tpf->species) . "/Location/View?region=" . $self->row->accession;
+    my $pgp_link = "http://geval.sanger.ac.uk/PGP_" . lc($self->tpf->species) . "/Location/View?region=" . $self->row->accession;
 
     my $intl_clone_name = '';
     if(defined($self->row->intl_clone_name)) {
