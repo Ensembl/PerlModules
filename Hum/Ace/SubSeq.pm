@@ -2,6 +2,7 @@
 ### Hum::Ace::SubSeq
 
 package Hum::Ace::SubSeq;
+# is given mix-ins by Bio::Otter::ZMap::XML::SubSeq
 
 use strict;
 use warnings;
