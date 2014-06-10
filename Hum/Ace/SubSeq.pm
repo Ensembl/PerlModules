@@ -917,6 +917,30 @@ sub end {
     return $exons[$#exons]->end;
 }
 
+sub truncated_from { # set by Bio::Otter::Lace::ProcessGFF
+    my ($self, @set) = @_;
+    if (@set) {
+        my ($real_start, $real_end) = @set;
+        die "truncated_from: set start and end, or clear both"
+          if defined($real_start) xor defined($real_end);
+        $self->Locus->is_truncated(defined $real_start ? 1 : 0) if $self->Locus;
+        $self->{'_truncated_from'} = \@set;
+    }
+    return @{ $self->{'_truncated_from'} || [] };
+}
+
+sub start_untruncated { # read only
+    my ($self) = @_;
+    my ($real_start) = $self->truncated_from;
+    return defined $real_start ? $real_start : $self->start;
+}
+
+sub end_untruncated { # read only
+    my ($self) = @_;
+    my (undef, $real_end) = $self->truncated_from;
+    return defined $real_end ? $real_end : $self->end;
+}
+
 sub translator {
     my( $self, $translator ) = @_;
 
