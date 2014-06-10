@@ -5,16 +5,12 @@ package Hum::Analysis::Factory::CrossMatch;
 
 use strict;
 use warnings;
-use Hum::Analysis::Parser::CrossMatch;
-use Hum::FastaFileIO;
 use Carp;
 use Cwd;
 
-sub new {
-    my( $pkg ) = @_;
+use Hum::Analysis::Parser::CrossMatch;
 
-    return bless {}, $pkg;
-}
+use base 'Hum::Analysis::Factory';
 
 sub min_match_length {
     my( $self, $min_match_length ) = @_;
@@ -65,8 +61,8 @@ sub run {
     my( $self, $query, $subject ) = @_;
 
     my $tmp = $self->make_tmp_dir;
-    my   $query_file = $self->_get_file_path('query',   $tmp, $query);
-    my $subject_file = $self->_get_file_path('subject', $tmp, $subject);
+    my   $query_file = $self->get_file_path('query',   $tmp, $query);
+    my $subject_file = $self->get_file_path('subject', $tmp, $subject);
 
     my $cmd_pipe = $self->make_command_pipe($tmp, $query_file, $subject_file);
     open my $fh, $cmd_pipe or confess "Can't open pipe '$cmd_pipe' : $!";
@@ -99,56 +95,6 @@ sub make_command_pipe {
     return $cmd_pipe;
 }
 
-sub _get_file_path {
-    my( $self, $name, $dir, $thing ) = @_;
-    
-    my $type = ref($thing);
-    
-    my( $file );
-    
-    unless ($type) {
-        $file = $thing;
-        if (-f $file) {
-            # Make path absolute if not
-            if ($file !~ m{^/}) {
-                $file = cwd() . '/' . $file;
-            }
-            return $file;
-        } else {
-            confess "No such file '$file'";
-        }
-    }
-    
-    my( $seq_list );
-    if ($type eq 'ARRAY') {
-        $seq_list = $thing;
-    } else {
-        $seq_list = [$thing];
-    }
-    
-    if (grep ! $_->isa('Hum::Sequence'), @$seq_list) {
-        confess "Non Hum::Sequence in '@$seq_list'";
-    }
-    
-    $file = "$dir/$name.seq";
-    my $seq_out = Hum::FastaFileIO->new_DNA_IO("> $file");
-    $seq_out->write_sequences(@$seq_list);
-    return $file;
-}
-
-{
-    my $counter = 0;
-
-    sub make_tmp_dir {
-        my( $self ) = @_;
-
-        $counter++;
-        my $tmp_dir_name = "/tmp/cm_tmp.$$.$counter";
-        mkdir($tmp_dir_name, 0777) or confess "Can't mkdir '$tmp_dir_name' : $!";
-        #warn "Made '$tmp_dir_name'";
-        return $tmp_dir_name;
-    }
-}
 
 
 1;
