@@ -91,8 +91,8 @@ sub get_ncbi_tpfs {
 	my %ncbi_tpf_for;
 	foreach my $species ( get_grc_species() ) {
 		$species = lc($species);
-		my $species_dir = "$tpf_root_directory/$species/MOST_RECENT_TPFS/";
-		opendir(my $species_dir_handle, $species_dir) or die "Cannot open tpf directory\n";
+		my $species_dir = "$tpf_root_directory/$species/GRC/MOST_RECENT/";
+		opendir(my $species_dir_handle, $species_dir) or die "Cannot open tpf directory $species_dir: $!\n";
 		my @subregion_dirs = readdir($species_dir_handle);
 		closedir($species_dir_handle);
 		@subregion_dirs = grep {-d "$species_dir/$_"} @subregion_dirs;
@@ -123,8 +123,8 @@ sub assign_chromosome_and_subregion {
 	
 	my ($chromosome, $subregion);
 	
-	# Reference chromosomes are treated one way
-	if($ncbi_directory eq 'Reference') {
+	# Primary chromosomes are treated one way
+	if($ncbi_directory eq 'Primary') {
 		if($tpf_file =~ /_chr(.*)\.chr\.txt$/) {
 			$chromosome = $1;
 			$subregion = "";
