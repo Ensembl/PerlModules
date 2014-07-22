@@ -77,6 +77,7 @@ sub _connect_to_server {
     my( $type, $server_list ) = @_;
     local $^W = 0;
     
+    my $err;
     foreach my $host_port (@$server_list) {
         my($host, $port) = @$host_port;
         # warn "Trying '$host:$port'\n";
@@ -90,9 +91,11 @@ sub _connect_to_server {
         if ($server) {
             $server->autoflush(1);
             return $server;
-        }
+        } else {
+           $err = "Connecting to $host:$port, $!";
+       }
     }
-    confess "No $type servers available";
+    confess "No $type servers available; last error was $err";
 }
 
 sub get_Sequences {

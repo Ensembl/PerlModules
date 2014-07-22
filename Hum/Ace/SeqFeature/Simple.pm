@@ -2,6 +2,7 @@
 ### Hum::Ace::SeqFeature::Simple
 
 package Hum::Ace::SeqFeature::Simple;
+# is given mix-ins by Bio::Otter::ZMap::XML::SeqFeature::Simple
 
 use strict;
 use warnings;
