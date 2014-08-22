@@ -925,7 +925,7 @@ sub truncated_from { # set by Bio::Otter::Lace::ProcessGFF
         my ($real_start, $real_end) = @$set;
         die "truncated_from: set start and end, or clear both"
           if 2 != @$set or (defined($real_start) xor defined($real_end));
-        $self->Locus->is_truncated(defined $real_start ? 1 : 0) if $self->Locus;
+        $self->Locus->is_truncated(1) if $self->Locus && defined $real_start;
         $self->{'_truncated_from'} = [ $real_start, $real_end ];
     }
     # construct new ARRAYref to avoid exposing the internal one
