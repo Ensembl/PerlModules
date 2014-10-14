@@ -14,8 +14,7 @@ sub _init {
 
     my $humpub_scratch = '/lustre/scratch109/sanger/humpub'; # SCRATCH = not backed up
     
-    # The \057 business is to stop webpublish choking on this file
-    my $embl_seq = "\057nfs/embl_seq";
+    my $embl_seq = "/nfs/embl_seq";
 
     # The Plan: build config from static strings, such as could be
     # loaded from a text file.  Make any substitutions or overrides
@@ -34,7 +33,7 @@ sub _init {
     # FTP site variables
     FTP_GHOST           => "$embl_seq/ftp_ghost",
     FTP_ATTIC           => "$embl_seq/ftp_ghost/attic",
-    FTP_ROOT            => "\057nfs/disk69/ftp/pub/sequences",
+    FTP_ROOT            => "/nfs/disk69/ftp/pub/sequences",
 
     # May be overridden by %ENV
     PFETCH_SERVER_LIST  => [
