@@ -67,33 +67,33 @@ sub accession_sv {
     return $self->{'_accession_sv'};
 }
 
-sub htgs_phase {
-    my( $self, $htgs_phase ) = @_;
+{
+    my %type_phase = (
+        'W' => 1,
+        'D' => 1,
+        'U' => 1,   # Ambiguous.  Used to mean "Unfinished", but now
+                    # used by NCBI/GRC to mean a gap of unknown size
+        'A' => 2,
+        'F' => 3,
+        );
+
+    sub htgs_phase {
+        my( $self, $htgs_phase ) = @_;
     
-    if ($htgs_phase) {
-        $self->{'_htgs_phase'} = $htgs_phase;
+        if ($htgs_phase) {
+            $self->{'_htgs_phase'} = $htgs_phase;
+        }
+        return $self->{'_htgs_phase'} || $type_phase{$self->phase_letter};
     }
-    return $self->{'_htgs_phase'};
 }
 
+sub phase_letter {
+    my ($self, $letter) = @_;
 
-{
-    my %phase_letter = (
-        1 => 'U',   # Unfinished
-        2 => 'A',   # Almost finished
-        3 => 'F',   # Finished
-        );
-    
-    sub phase_letter {
-        my $self = shift;
-        
-        confess "read-only method" if @_;
-        my $phase = $self->htgs_phase
-            or confess "htgs_phase not set";
-        my $letter = $phase_letter{$phase}
-            or confess "No letter for phase '$phase'";
-        return $letter;
+    if ($letter) {
+        $self->{'_phase_letter'} = $letter;
     }
+    return $self->{'_phase_letter'} || 'O'; # "O" means "other type of sequence"
 }
 
 sub elements {

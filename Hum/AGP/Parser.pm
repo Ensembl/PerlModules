@@ -30,17 +30,6 @@ sub file {
     return $self->{'_file'};
 }
 
-my %type_phase = (
-    'W' => 1,
-    'D' => 1,
-
-    'U' => 1,
-    'A' => 2,
-    'P' => 2,
-    'F' => 3,
-	'O' => 3,
-    );
-
 sub parse {
     my( $self ) = @_;
 
@@ -73,9 +62,7 @@ sub parse {
             $row->seq_start($seq_start);
             $row->seq_end($seq_end);
             $row->strand($strand eq '+' ? 1 : -1);
-            my $phase = $type_phase{$type}
-                or confess "No phase number for type '$type'";
-            $row->htgs_phase($phase);
+            $row->phase_letter($type);
             $row->remark($remark);
         }
         $row->chr_start($chr_start);
