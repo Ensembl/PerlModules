@@ -13,6 +13,8 @@ use base 'Hum::Analysis::Parser';
 
 =pod
 
+Example AXT fromat output from lastz:
+
     # lastz.v1.01.25 --identity=95 --step=20 --match=1,5 --format=axt 
     #
     # hsp_threshold      = 30
