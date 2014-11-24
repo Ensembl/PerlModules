@@ -106,14 +106,21 @@ sub get_Sequences {
     my $fh = do_query("-q @id_list\n");
     my( @seq_list, @missing_i );
     for (my $i = 0; $i < @id_list; $i++) {
-        chomp( my $seq_string = <$fh> );
-        if ($seq_string eq 'no match' or length($seq_string) ==0) {
+        my $seq_string = <$fh>;
+        if (!defined $seq_string ||
+            $seq_string =~ /^no match$/ ||
+            $seq_string =~ /^$/) {
+            my $type = (defined $seq_string
+                        ? ($seq_string =~ /^no match$/ ? 'explicit' : 'blank')
+                        : 'eof');
+            warn "No sequence for #$i ($id_list[$i]), $type";
             # Add to list of indexes of missing sequences
             push(@missing_i, $i);
             $seq_list[$i] = undef;
         } else {
             my $seq = Hum::Sequence->new;
             $seq->name($id_list[$i]);
+            chomp $seq_string;
             $seq->sequence_string($seq_string);
             $seq_list[$i] = $seq;
         }
