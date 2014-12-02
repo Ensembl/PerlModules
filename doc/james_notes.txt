@@ -1,0 +1,65 @@
+
+Notes made by James for talking about the Hum::Ace objects.
+
+Hum::Ace objects are data objects used by otter’s UI classes for all the
+editing performed by the annotators. They typically have an ace_string
+method, which returns a string in the “ace” that acedb can parse. These
+string will often start with some “-D” commands to delete any existing
+instances of the objects in the acedb database. ace_string method used to
+compare object to new objects created from UI to see if they have been
+changed.
+
+Hum::Ace::AceText
+
+Used to parse and format ace strings. Lincoln’s Ace.pm does similar
+things, but this is simpler and faster. Implemented as a blessed string,
+which is the ace format text itself.
+
+Hum::Ace::Assembly
+
+Represents the genomic sequence (EnsEMBL Slice) in the editing session
+
+express_data_fetch
+
+Queries the acedb database via the sgifaceserver using Lincoln Stein’s
+Ace.pm, fetches:
+
+    Hum::Ace::Method Method objects in acedb, styles in zmap, attached to
+    SubSeq objects and used to determine properties such as coding /
+    non-coding. (Stored in Hum::Ace::MethodCollection object.)
+
+    Hum::Sequence::DNA sequence
+
+    string species; dataset name
+
+    string assembly_name; the seq_region.name in the loutre database 
+
+    Hum::Ace::SeqFeature::Simple genomic features; polyA signals and sites
+    etc...
+
+    Hum::Ace::SubSeq transcripts stored as list. Each SubSeq is given a Locus
+    and Sequence.
+
+    Hum::Ace::Locus loci added to each SubSeq. Assembly object does not hold
+    direct ref to Loci. Many SubSeq share the same locus object
+
+    Hum::Ace::Clone assembly data
+
+set_SubSeq_locus_level_errors
+
+Loops through SubSeq and Locus objects, running QC checks. Enables locus
+level errors to be set in the SubSeq objects (which loci can’t do because
+they don’t have references to their SubSeqs).
+
+Hum::Ace::SubSeq
+
+The most complex object in the system, representing transcripts.
+
+    is_archival
+
+    Flags if the SubSeq has been saved to acedb.
+
+Hum::Ace::Locus
+
+Editing system tries to preserve its otter ID, since this is the key used
+back on the server to compare new annotation to old.
