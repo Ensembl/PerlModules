@@ -1,0 +1,71 @@
+-*- org -*- for Emacs
+
+Notes from jgrg mini-presentation [2014-12-02 Tue]
+
+* Hum::Ace::
+Aimed to be light-weight representation of transcripts held in acedb
+** ::AceText
++ uses Ace.pm raw_query to talk to sgifaceserver
+  + s = sockets, not RPC
+  + gif = has extensions to provide gifs, and queries to do that
+** ::Assembly
++ has many SubSeq
++ express_data_fetch method
++ /doesn't/ have a list of Locus objects, you must recurse
++ set_SubSeq_Locus_level_errors
+  + holds QC, collected from the lower level objects
+  + then used to render transcripts in red
+** ::Method
++ associated with
+  + ZMap styles
+  + biotypes
+  + status (known, novel, predicted, putative...)
+** ::Sequence::DNA
++ slice genomic
+** ::SeqFeature::Simple
++ PolyA sites / signals
++ etc.
+** ::SubSeq
++ Represents a transcript
+  + Validates its H:A:Exons
+  + has_a H:A:Locus, which may be shared with other SubSeqs
++ Probably has the most methods
++ Caches QC results
++ is_archival - indicates successful save to Otter
++ has an OTTID
++ get_all_exons method
+  + returns them sorted start..end
+** ::Locus
++ has an OTTID
+** ::Clone
++ assembly_data
++ should become irrelevant e.g. for WGS
+** ::Exon
++ has an OTTID
+** Common
++ ace_string method
+  + turn the object into an Ace string
+  + can be used to write to acedb
+    + we must also send the change to ZMap, this is separate
+  + usually like
+    Class "name"
+    -D OldExon
+    -D ...
+    Class "name"
+    Exon x y
+    ...
+  + also used to compare with previous instances, to detect changes
++ having an OTTID
+  + various mechanisms to preserve it whenever possible
+  + used during write_region to detect modified genes
++ uses "end < start" to indicate reverse-strand object
+  + doesn't work when length = (end - start + 1) == 1
+    + e.g. an exon truncated at the edge of the region
++ QC (quality control == error detection) happens after loading the
+  data, because we don't want exceptions raised until we're ready
+
+* Diagram
+  Assembly -> [ SubSeq,
+                SubSeq ... ]
+
+  SubSeq -> Locus # many:1
