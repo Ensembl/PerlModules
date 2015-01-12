@@ -3,8 +3,8 @@
 use strict;
 use warnings;
 
-use lib "${ENV{TEAM_TOOLS}}/t/tlib";
-use CriticModule (-severity => 4);
+use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
+use Test::CriticModule (-severity => 4);
 
 use Test::More tests => 82;
 
