@@ -4,11 +4,15 @@
 
 use strict;
 use warnings;
-use Hum::GrcTpfs qw(get_grc_tpf_names);
+
 use Test::More qw( no_plan );
+use Test::Requires qw( WrapDBI DBD::Oracle );
+
 use Data::Dumper;
 
 #Hum::Tracking::track_db_user('chromoview');
+
+use_ok('Hum::GrcTpfs' => [ qw(get_grc_tpf_names) ]);
 
 my @expected = (
           [
