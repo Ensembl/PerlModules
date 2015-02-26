@@ -126,8 +126,16 @@ sub _format_attribs {
     my ($self, $attr) = @_;
     
     my $tag_str = '';
-    while (my ($attrib, $value) = each %$attr) {
-        $tag_str .= qq{ $attrib="} . $self->xml_escape($value) . qq{"};
+    if (ref($attr) eq 'ARRAY') {
+        for (my $i = 0; $i < @$attr; $i += 2) {
+            my ($attrib, $value) = @{$attr}[$i, $i + 1];
+            $tag_str .= qq{ $attrib="} . $self->xml_escape($value) . qq{"};
+        }
+    }
+    else {
+        while (my ($attrib, $value) = each %$attr) {
+            $tag_str .= qq{ $attrib="} . $self->xml_escape($value) . qq{"};
+        }
     }
     return $tag_str;
 }
@@ -165,8 +173,9 @@ Module for formatting data into nicely indented and correctly escaped XML.
 Tags opened with the C<open_tag> method increase the indentation, and the tag
 name is pused onto a stack where the C<close_tag> method can use it.
 
-Attribute values and data have their XML special characters replaced by XML
-entities. For example C<&> will become C<&amp;>.
+Attribute values and data (which can be supplied in either hash or array
+references) have their XML special characters replaced by XML entities. For
+example C<&> will become C<&amp;>.
 
 =head1 METHODS
 
@@ -181,7 +190,7 @@ use per indentation level. Default is B<2>.
 
 =item open_tag
 
-  $xml->open_tag($tag_name, $attrib_hash);
+  $xml->open_tag($tag_name, $attribs);
 
 For example:
 
@@ -193,6 +202,15 @@ will add the string:
 
 to the XmlWriter object, prefixed by the appropriate number of spaces for the
 current indentation level, and followed by a newline.
+
+If the order of the attributes needs to be preserved, you can use an array ref
+instead of a hash ref. eg:
+
+  $xml->open_tag('feature', [style => 'polyA_signal', start => 2854738, end => 2854743, strand => '+']);
+
+will add the string:
+
+  <feature style="polyA_signal" start="2854738" end="2854743" strand="+">
 
 =item add_data
 
@@ -218,7 +236,7 @@ tags are remembered on a stack.
 
 =item full_tag
 
-  $xml->full_tag($tag_name, $attrib_hash, $data);
+  $xml->full_tag($tag_name, $attribs, $data);
 
 Puts a complete xml tag on one line. Adds the opening and closing tags,
 attributes and values, and any data given in the third argument between the
