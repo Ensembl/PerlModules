@@ -11,6 +11,7 @@ use Hum::TPF::Row::Clone;
 use Hum::TPF::Row::Gap;
 use Hum::Tracking qw{
     prepare_cached_track_statement
+    track_db_disconnect
     prepare_track_statement
     iso2time
     };
@@ -727,6 +728,14 @@ sub get_next_id_tpf {
     $sth->execute;
     my ($id) = $sth->fetchrow;
     $self->db_id($id);
+}
+
+sub DESTROY {
+	my ($pkg) = @_;
+	
+	track_db_disconnect();
+	
+	return;
 }
 
 1;

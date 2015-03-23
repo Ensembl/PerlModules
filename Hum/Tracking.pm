@@ -75,6 +75,7 @@ use vars qw( @ISA @EXPORT_OK );
   track_db_user
   track_db_commit
   track_db_rollback
+  track_db_disconnect
   unfinished_accession
   iso2time
   time2iso
@@ -565,6 +566,22 @@ block, to ensure a graceful exit.
         my $sth = track_db()->prepare_cached($query);
         push(@active_statements, $sth);
         return $sth;
+    }
+
+    sub track_db_disconnect {
+
+        # Close statements gracefully
+        foreach my $s (@active_statements) {
+            $s->finish if $s;
+        }
+
+        ### This disconnect has a side effect of calling commit.
+        ### We probably shouldn't have it in there.
+        # Then disconnect
+        $dbh->disconnect() if $dbh;
+        undef $dbh;
+        
+        return;
     }
 
     END {

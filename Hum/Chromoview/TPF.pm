@@ -150,6 +150,15 @@ sub fetch_non_contained_Rows {
     return @{$self->{'_non_contained_tpf_rows'}};
 }
 
+sub DESTROY {
+	my ($self) = @_;
+
+	$self->{'_tpf'}->DESTROY();
+	delete($self->{'_tpf'});
+
+	return;
+}
+
 1;
 
 __END__
