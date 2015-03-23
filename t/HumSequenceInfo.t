@@ -6,8 +6,11 @@
 
 use strict;
 use warnings;
-use Hum::SequenceInfo;
+
 use Test::More qw( no_plan );
+use Test::Requires qw( WrapDBI DBD::Oracle );
+
+use_ok('Hum::SequenceInfo');
 
 my %results_for_accession = (
 	# Mouse unfinished clone from EMBL

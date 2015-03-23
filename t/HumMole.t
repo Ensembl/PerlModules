@@ -6,8 +6,10 @@
 
 use strict;
 use warnings;
-use Hum::SequenceInfo;
+
 use Test::More qw( no_plan );
+
+use_ok('Hum::Mole');
 
 my %results_for_accession = (
 	# Mouse unfinished clone from EMBL
