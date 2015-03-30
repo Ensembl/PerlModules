@@ -64,7 +64,7 @@ sub _init {
 
     CHROMODB_CONNECTION => {
         PORT => 3323,
-        HOST => 'lutra7',
+        HOST => 'otp2-db',
         NAME => 'chromoDB',
         RO_USER => 'ottro',
     },
