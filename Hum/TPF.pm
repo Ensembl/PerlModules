@@ -730,7 +730,7 @@ sub get_next_id_tpf {
     $self->db_id($id);
 }
 
-sub DESTROY {
+sub disconnect {
 	my ($pkg) = @_;
 	
 	track_db_disconnect();

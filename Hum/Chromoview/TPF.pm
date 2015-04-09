@@ -153,7 +153,7 @@ sub fetch_non_contained_Rows {
 sub DESTROY {
 	my ($self) = @_;
 
-	$self->{'_tpf'}->DESTROY();
+	$self->{'_tpf'}->disconnect();
 	delete($self->{'_tpf'});
 
 	return;
