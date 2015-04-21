@@ -106,7 +106,7 @@ sub get_ncbi_tpfs {
 			opendir(my $tpf_dir_handle, "$species_dir/$subregion_dir") or die "Cannot open tpf directory\n";
 			my @tpf_files = readdir($tpf_dir_handle);
 			closedir($tpf_dir_handle);
-			@tpf_files = grep(/\.txt$/, @tpf_files);
+			@tpf_files = grep(/^tpf.*\.txt$/, @tpf_files);
 			
 			foreach my $tpf_file (@tpf_files) {
 				my ($chromosome, $subregion) = assign_chromosome_and_subregion ($tpf_file, $species, $subregion_dir);
