@@ -410,6 +410,13 @@ sub ace_string {
     return $ace;
 }
 
+sub ensembl_dbID {
+    my ($self, @args) = @_;
+    ($self->{'_ensembl_dbID'}) = @args if @args;
+    my $ensembl_dbID = $self->{'_ensembl_dbID'};
+    return $ensembl_dbID;
+}
+
 #sub DESTROY {
 #    my( $self ) = @_;
 #    
