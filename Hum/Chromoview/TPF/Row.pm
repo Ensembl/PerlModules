@@ -247,21 +247,31 @@ sub external_clone_and_contig {
         $intl_clone_name = $self->row->intl_clone_name;
     }
     
-    return qq{<a href="$pgp_link">} . $intl_clone_name . "</a><BR>" . $self->row->contig_name . "<BR>" . $self->contained_status_for_display;
+    my $contig_name = '';
+    if(defined($self->row->contig_name)) {
+    	$contig_name = $self->row->contig_name;
+    }
+    
+    return qq{<a href="$pgp_link">} . $intl_clone_name . "</a><BR>" . $contig_name . "<BR>" . $self->contained_status_for_display;
 }
 
 sub accession_and_finishing {
     my ($self) = @_; 
     
     #my $oracle_report_link = "http://intweb.sanger.ac.uk/cgi-bin/oracle_reports/report.pl?Internal_Name=" . $self->projectname;
-    my $ena_link = "http://www.ebi.ac.uk/cgi-bin/emblfetch?style=html&id=" . $self->row->accession;
     
     my $finishing_status = $self->finishing_status;
     if($finishing_status eq 'finished') {
         $finishing_status = qq{<span class='finished_seq'>} . $finishing_status . '</span>';
     }
-    
-    return qq{<a href="$ena_link">} . $self->acc_sv . "</A><BR>" . $finishing_status;
+
+    if(defined($self->row->accession)) {
+    	my $ena_link = "http://www.ebi.ac.uk/cgi-bin/emblfetch?style=html&id=" . $self->row->accession;
+	    return qq{<a href="$ena_link">} . $self->acc_sv . "</A><BR>" . $finishing_status;
+    }
+    else {
+    	return "<BR>" . $finishing_status;
+    }
 }
 
 sub internal_clone_and_epn {
@@ -269,9 +279,6 @@ sub internal_clone_and_epn {
     
     my $clone_element = '';
     if(defined($self->clonename)) {
-        my $agp_name = '#agp' . $self->row->accession;
-        my $tpf_name = 'tpf' . $self->row->accession;
-        #$clone_element = qq{<a href="$agp_name" name="$tpf_name">} . $self->clonename . '</a>';
         $clone_element = $self->clonename;
     }
     
