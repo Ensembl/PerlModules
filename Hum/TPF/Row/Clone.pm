@@ -43,7 +43,8 @@ sub get_contained_clones {
 	    return @{$self->{'_contained_clones'}};
 	}
 	else {
-		return ();
+		my @dummy = ();
+		return (@dummy);
 	}
 }
 
