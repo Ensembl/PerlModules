@@ -284,7 +284,7 @@ sub clone {
     # Make new SubSeq object
     my $new = ref($old)->new;
 
-    # Copy scalar fields (But not is_archival!)
+    # Copy scalar fields (But not is_archival, nor ensembl_dbID!)
     foreach my $meth (qw{
         name
         clone_Sequence
