@@ -23,7 +23,7 @@ use base qw( Net::FTP );
 sub new {
     my ($pkg, $host) = @_;
 
-    $host ||= 'ftp.sra.ebi.ac.uk';
+    $host ||= 'webin.ebi.ac.uk';
     my $ftp = Net::FTP->new($host, Passive => 1)
       or confess "Can't connect() to '$host'; $@";
     $ftp->login() # password is in ~/.netrc
