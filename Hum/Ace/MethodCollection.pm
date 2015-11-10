@@ -146,6 +146,7 @@ sub link_Methods_to_ZMapStyles {
             else {
                 $err .= sprintf qq{ZMapStyle '%s' in Method '%s' does not exist\n}, $name, $method->name;
             }
+            $self->_add_method_style($method);
         }
     }
     return $err;
@@ -288,6 +289,7 @@ sub create_full_gene_Methods {
                 # the method and its truncated version
                 my $parent = Hum::Ace::Method->new;
                 $parent->name($method->name . '_parent');
+                $parent->add_child_Method($method);
                 $self->add_Method($parent);
                 $method->column_parent($parent->name);
             }
@@ -302,12 +304,32 @@ sub create_full_gene_Methods {
         foreach my $method ($self->get_all_mutable_GeneMethods) {
             my $new = $method->clone;
             $new->column_parent($prefix->column_parent);
+            my $parent = $self->get_Method_by_name($prefix->column_parent);
+            $parent->add_child_Method($new);
             $new->name($prefix->name . $method->name);
-            $new->ZMapStyle($prefix->ZMapStyle);
+            my $prefix_style = $prefix->ZMapStyle;
+            $new->ZMapStyle($prefix_style);
             $self->add_Method($new);
             $self->add_Method($self->make_trunc_Method($new));
+            $self->_add_method_style($new);
         }
     }
+}
+
+sub _add_method_style {
+    my ($self, $method) = @_;
+    unless ($self->get_ZMapStyle($method->name)) {
+        my $parent_style = $method->ZMapStyle;
+        return unless $parent_style;
+
+        my $method_style = Hum::ZMapStyle->new;
+        $method_style->name($method->name);
+        $method_style->parent_style($parent_style);
+        $method_style->collection($parent_style->collection);
+
+        $self->add_ZMapStyle($method_style);
+    }
+    return;
 }
 
 sub make_trunc_Method {
@@ -315,6 +337,10 @@ sub make_trunc_Method {
 
     my $new_meth = $method->clone;
     $new_meth->name($method->name . '_trunc');
+    if (my $parent_name = $new_meth->column_parent) {
+        my $parent = $self->get_Method_by_name($parent_name);
+        $parent->add_child_Method($new_meth);
+    }
     my $style = $self->get_ZMapStyle($method->style_name);
 
     my $new_style = Hum::ZMapStyle->new;
@@ -351,6 +377,7 @@ sub make_trunc_Method {
     $self->add_ZMapStyle($new_style) unless $self->get_ZMapStyle($new_style->name);
 
     $new_meth->ZMapStyle($new_style);
+    $self->_add_method_style($new_meth);
 
     return $new_meth;
 }
