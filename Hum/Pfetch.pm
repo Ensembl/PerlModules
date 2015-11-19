@@ -42,8 +42,8 @@ sub pfetch_response_handle {
     
     ### Could re-arrange this so that it works with Bio::Otter::Lace::Client
     ### to prompt the user for their password once the cookie has expired.
-    my $jar_file = $ENV{'OTTERLACE_COOKIE_JAR'}
-        or die "OTTERLACE_COOKIE_JAR not set\n";
+    my $jar_file = $ENV{'OTTER_COOKIE_JAR'}
+        or die "OTTER_COOKIE_JAR not set\n";
 
     my $req_str = "request=" . uri_escape($query);
 
