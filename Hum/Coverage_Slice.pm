@@ -47,6 +47,12 @@ has 'deep_regions' => (
 	lazy_build => 1,
 );
 
+has 'pairwise_overlaps' => (
+	is  => 'ro',
+	isa => 'HashRef[HashRef[Str]]',
+	lazy_build => 1,
+);
+
 # Opposite of deep regions
 has 'nondeep_regions' => (
 	is  => 'ro',
@@ -154,6 +160,64 @@ sub _build_deep_regions {
 	}
 
 	return \@merged_deep_regions;	
+}
+
+# Find pairwise overlaps between features
+sub _build_pairwise_overlaps {
+	my ($self) = @_;
+
+	# Turn the features into a set of start and end positions
+	my @termini;
+	FEATURE: foreach my $feature (@{$self->features}) {
+		
+		# Reject any malformed features
+		if(
+			$feature->start > $feature->end
+			or $feature->end < 1
+			or $feature->start > $self->slice->length
+		) { next FEATURE; }
+		
+		my %start_position = (
+			TERMINUS => "START",
+			POSITION => $feature->start,
+			NAME => $feature->display_id,
+		);
+		
+		my %end_position = (
+			TERMINUS => "END",
+			POSITION => $feature->end,
+			NAME => $feature->display_id,
+		);
+		
+		push(@termini, \%start_position, \%end_position);
+	}
+
+	# Sort termini into order
+	@termini = sort { _sort_termini() } @termini;
+	
+	my $depth = 0;
+	my %current_feature_names;
+	my %overlap_between;
+
+	# Find deep regions
+	foreach my $terminus (@termini) {
+		if($terminus->{TERMINUS} eq "START") {
+			$depth++;
+			
+			foreach my $current_feature_name (keys %current_feature_names) {
+				my @sorted_names = sort ($current_feature_name, $terminus->{NAME});
+				$overlap_between{$sorted_names[0]}{$sorted_names[1]} = 1;
+			}
+			
+			$current_feature_names{$terminus->{NAME}} = 1;
+		}
+		else {
+			$depth--;
+			delete($current_feature_names{$terminus->{NAME}});
+		}
+	}
+
+	return \%overlap_between;	
 }
 
 sub _sort_termini {
