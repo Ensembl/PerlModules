@@ -17,12 +17,11 @@ our @EXPORT_OK = qw{
 
 our $magic_evi_name_matcher = qr{
     ([A-Za-z]{2}:)?       # Optional prefix
-    (
+
                           # Something that looks like an accession:
-        [A-Z]+\d{5,}      # one or more letters followed by 5 or more digits
-        |                 # or, for TrEMBL,
-        [A-Z]\d[A-Z\d]{4} # a capital letter, a digit, then 4 letters or digits.
-    )
+    ([A-Z][A-Z\d]{4,}\d)  # a capital letter followed by 4 or more capital letters and digits,
+                          # and ending with a digit
+
     (\-\d+)?              # Optional VARSPLICE suffix found on Uniprot isoforms
     (\.\d+)?              # Optional .SV
 }x;
