@@ -125,7 +125,7 @@ sub fetch_all_id_tpfs_from_id_tpftarget {
         my ($id_tpf) = @_;
 
         $qry ||= prepare_track_statement(qq{
-             SELECT TO_CHAR(entry_date, 'yyyy-mm-dd hh:mm:ss')
+             SELECT TO_CHAR(entry_date, 'YYYY-MM-DD HH24:MI:SS')
              FROM tpf
              WHERE id_tpf = ?
         });
