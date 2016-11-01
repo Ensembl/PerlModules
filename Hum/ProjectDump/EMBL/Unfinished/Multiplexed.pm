@@ -75,6 +75,7 @@ sub add_Headers {
 sub process_repository_data {
     my ($self) = @_;
 
+	$self->contig_length_cutoff(1000);
     my $fastq_file = $self->dump_gap5_data;
     my $fasta_file = $self->strip_zero_quality_data($fastq_file);
     $self->find_contaminants_with_exonerate($fasta_file);
