@@ -12,7 +12,7 @@ sub _init {
 
     my $humpub = '/warehouse/cbi4_wh01/work1/humpub'; # TRANSIENT WAREHOUSE = slow, needs to be relocated
 
-    my $humpub_scratch = '/lustre/scratch109/sanger/humpub'; # SCRATCH = not backed up
+    my $humpub_scratch = '/lustre/scratch115/projects/grit/humpub'; # SCRATCH = not backed up
     
     my $embl_seq = "/nfs/embl_seq";
 
@@ -75,6 +75,22 @@ sub _init {
         NAME => 'submissions',
         RO_USER => 'ottro',
     },
+
+    #### TESTING!
+#    CHROMODB_CONNECTION => {
+#        PORT => 17486,
+#        HOST => 'otp2-db',
+#        NAME => 'mcs16',
+#        RO_USER => 'ottro',
+#    },
+#
+#    SUBMISSIONS_CONNECTION => {
+#        PORT => 19883,
+#        HOST => 'mcs16',
+#        NAME => 'submissions',
+#        RO_USER => 'ottro',
+#    },
+    #### END TESTING!
 
     LOUTRE_CONNECTION => {
         PORT => 3324,
