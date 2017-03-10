@@ -22,7 +22,7 @@ sub DESTROY {
 }
 
 sub new {
-    my ($pkg, $x) = @_;
+    my ($pkg, $x, $i) = @_;
     
     my $scalar;
     my $self = bless \$scalar, $pkg;
@@ -32,6 +32,12 @@ sub new {
     $open_tag{$self} = [];
 
     return $self;
+}
+
+sub set_indent {
+    my ($self, $i) = @_;
+
+    $indent{$self} = $i;
 }
 
 sub add_XML {
@@ -185,8 +191,14 @@ example C<&> will become C<&amp;>.
 
   my $xml = Hum::XmlWriter->new($integer);
 
-Creates a new XmlWriter object. Optional argument is the number of spaces to
-use per indentation level. Default is B<2>.
+Creates a new XmlWriter object. Optional argument is the indentation level to
+start at. Default is B<0>.
+
+=item set_indent
+
+  $xml->set_indent($integer);
+
+Sets the indentation in spaces per level.  Default is B<2>.
 
 =item open_tag
 
