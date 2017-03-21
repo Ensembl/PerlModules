@@ -50,6 +50,18 @@ sub add_XML {
     $string{$self} .= $xml->flush;
 }
 
+sub comment {
+    my ($self, $str) = @_;
+
+    $str =~ s/-+/-/g;
+    if ($str =~ /\n/) {
+        $self->add_raw_data_with_indent("<!--\n" . $str . "\n-->");
+    }
+    else {
+        $self->add_raw_data_with_indent("<!-- " . $str . " -->");
+    }
+}
+
 sub add_data {
     my ($self, $data) = @_;
     $string{$self} .= $self->xml_escape($data);
@@ -224,6 +236,13 @@ will add the string:
 
   <feature style="polyA_signal" start="2854738" end="2854743" strand="+">
 
+=item comment
+
+  $xml->comment($string);
+
+Inserts string as an XML comment. Converts any multi-dash subsequences to a
+single dash.
+
 =item add_data
 
   $xml->add_data($string);
@@ -238,6 +257,12 @@ it to the XmlWriter object.
 
 Appends the string argument to the XmlWriter object without escaping any
 of the XML special characters.
+
+=item add_XML
+
+  $xml->add_XML($other_xml);
+
+Adds the contents of another XmlWriter object.
 
 =item close_tag
 
