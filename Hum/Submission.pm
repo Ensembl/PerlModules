@@ -70,7 +70,7 @@ sub ref_from_query {
     my ($db);
 
     sub sub_db () {
-        unless ($db) {
+        unless ($db and $db->ping) {
             my $host   = $SUBMISSIONS_CONNECTION->{HOST};
             my $port   = $SUBMISSIONS_CONNECTION->{PORT};
             my $dbname = $SUBMISSIONS_CONNECTION->{NAME};
