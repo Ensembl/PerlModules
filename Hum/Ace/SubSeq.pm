@@ -1331,7 +1331,9 @@ sub error_no_evidence {
                 $err .= "Transcript name does not begin with locus name '$locus_name'\n";
             }
         } else {
-            $err .= "Transcript name does not end in '.#-###' format\n";
+            if ($name !~ /^[^-]+-\d{3}$/) {
+              $err .= "Transcript name does not end in '.#-###' format\n";
+            }
         }
 
         my ($trsct_pre) = $name         =~ /$pre_pat/;
